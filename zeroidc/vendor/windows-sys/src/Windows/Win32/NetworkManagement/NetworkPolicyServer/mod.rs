@@ -1,3 +1,33 @@
+pub type ISdo = *mut ::core::ffi::c_void;
+pub type ISdoCollection = *mut ::core::ffi::c_void;
+pub type ISdoDictionaryOld = *mut ::core::ffi::c_void;
+pub type ISdoMachine = *mut ::core::ffi::c_void;
+pub type ISdoMachine2 = *mut ::core::ffi::c_void;
+pub type ISdoServiceControl = *mut ::core::ffi::c_void;
+pub type ITemplateSdo = *mut ::core::ffi::c_void;
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const AUTHSRV_AUTHORIZATION_VALUE_W: &str = "AuthorizationDLLs";
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const AUTHSRV_ENFORCE_NP_FOR_PAP_CHALLENGE_RESPONSE_VALUE_W: &str = "EnforceNetworkPolicyForPAPBasedChallengeResponse";
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const AUTHSRV_EXTENSIONS_VALUE_W: &str = "ExtensionDLLs";
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const AUTHSRV_PARAMETERS_KEY_W: &str = "System\\CurrentControlSet\\Services\\AuthSrv\\Parameters";
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const RADIUS_EXTENSION_FREE_ATTRIBUTES: &str = "RadiusExtensionFreeAttributes";
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const RADIUS_EXTENSION_INIT: &str = "RadiusExtensionInit";
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const RADIUS_EXTENSION_PROCESS: &str = "RadiusExtensionProcess";
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const RADIUS_EXTENSION_PROCESS2: &str = "RadiusExtensionProcess2";
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const RADIUS_EXTENSION_PROCESS_EX: &str = "RadiusExtensionProcessEx";
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const RADIUS_EXTENSION_TERM: &str = "RadiusExtensionTerm";
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub const RADIUS_EXTENSION_VERSION: u32 = 1u32;
+pub const SdoMachine: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3911289575, data2: 40593, data3: 4561, data4: [191, 96, 0, 128, 199, 132, 107, 192] };
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub type ACCOUNTINGPROPERTIES = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
@@ -641,14 +671,6 @@ pub const IAS_AUTH_MSCHAP2_CPW: AUTHENTICATION_TYPE = 10i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const IAS_AUTH_PEAP: AUTHENTICATION_TYPE = 11i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const AUTHSRV_AUTHORIZATION_VALUE_W: &str = "AuthorizationDLLs";
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const AUTHSRV_ENFORCE_NP_FOR_PAP_CHALLENGE_RESPONSE_VALUE_W: &str = "EnforceNetworkPolicyForPAPBasedChallengeResponse";
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const AUTHSRV_EXTENSIONS_VALUE_W: &str = "ExtensionDLLs";
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const AUTHSRV_PARAMETERS_KEY_W: &str = "System\\CurrentControlSet\\Services\\AuthSrv\\Parameters";
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub type CLIENTPROPERTIES = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const PROPERTY_CLIENT_REQUIRE_SIGNATURE: CLIENTPROPERTIES = 1024i32;
@@ -780,13 +802,6 @@ pub const IAS_IDENTITY_NO_DEFAULT: IDENTITY_TYPE = 1i32;
 pub type IPFILTERPROPERTIES = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const PROPERTY_IPFILTER_ATTRIBUTES_COLLECTION: IPFILTERPROPERTIES = 1024i32;
-pub type ISdo = *mut ::core::ffi::c_void;
-pub type ISdoCollection = *mut ::core::ffi::c_void;
-pub type ISdoDictionaryOld = *mut ::core::ffi::c_void;
-pub type ISdoMachine = *mut ::core::ffi::c_void;
-pub type ISdoMachine2 = *mut ::core::ffi::c_void;
-pub type ISdoServiceControl = *mut ::core::ffi::c_void;
-pub type ITemplateSdo = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub type NAMESPROPERTIES = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
@@ -841,18 +856,6 @@ pub const PROPERTY_POLICY_CONDITIONS_COLLECTION: POLICYPROPERTIES = 1030i32;
 pub const PROPERTY_POLICY_ENABLED: POLICYPROPERTIES = 1031i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const PROPERTY_POLICY_SOURCETAG: POLICYPROPERTIES = 1032i32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub type PRADIUS_EXTENSION_FREE_ATTRIBUTES = ::core::option::Option<unsafe extern "system" fn(pattrs: *mut RADIUS_ATTRIBUTE)>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub type PRADIUS_EXTENSION_INIT = ::core::option::Option<unsafe extern "system" fn() -> u32>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub type PRADIUS_EXTENSION_PROCESS = ::core::option::Option<unsafe extern "system" fn(pattrs: *const RADIUS_ATTRIBUTE, pfaction: *mut RADIUS_ACTION) -> u32>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub type PRADIUS_EXTENSION_PROCESS_2 = ::core::option::Option<unsafe extern "system" fn(pecb: *mut RADIUS_EXTENSION_CONTROL_BLOCK) -> u32>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub type PRADIUS_EXTENSION_PROCESS_EX = ::core::option::Option<unsafe extern "system" fn(pinattrs: *const RADIUS_ATTRIBUTE, poutattrs: *mut *mut RADIUS_ATTRIBUTE, pfaction: *mut RADIUS_ACTION) -> u32>;
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub type PRADIUS_EXTENSION_TERM = ::core::option::Option<unsafe extern "system" fn()>;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub type PROFILEPROPERTIES = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
@@ -921,49 +924,6 @@ pub const raContinue: RADIUS_ACTION = 0i32;
 pub const raReject: RADIUS_ACTION = 1i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const raAccept: RADIUS_ACTION = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub struct RADIUS_ATTRIBUTE {
-    pub dwAttrType: u32,
-    pub fDataType: RADIUS_DATA_TYPE,
-    pub cbDataLength: u32,
-    pub Anonymous: RADIUS_ATTRIBUTE_0,
-}
-impl ::core::marker::Copy for RADIUS_ATTRIBUTE {}
-impl ::core::clone::Clone for RADIUS_ATTRIBUTE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub union RADIUS_ATTRIBUTE_0 {
-    pub dwValue: u32,
-    pub lpValue: *const u8,
-}
-impl ::core::marker::Copy for RADIUS_ATTRIBUTE_0 {}
-impl ::core::clone::Clone for RADIUS_ATTRIBUTE_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub struct RADIUS_ATTRIBUTE_ARRAY {
-    pub cbSize: u32,
-    pub Add: isize,
-    pub AttributeAt: isize,
-    pub GetSize: isize,
-    pub InsertAt: isize,
-    pub RemoveAt: isize,
-    pub SetAt: isize,
-}
-impl ::core::marker::Copy for RADIUS_ATTRIBUTE_ARRAY {}
-impl ::core::clone::Clone for RADIUS_ATTRIBUTE_ARRAY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub type RADIUS_ATTRIBUTE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
@@ -1172,44 +1132,12 @@ pub const rdtInteger: RADIUS_DATA_TYPE = 3i32;
 pub const rdtTime: RADIUS_DATA_TYPE = 4i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const rdtIpv6Address: RADIUS_DATA_TYPE = 5i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub struct RADIUS_EXTENSION_CONTROL_BLOCK {
-    pub cbSize: u32,
-    pub dwVersion: u32,
-    pub repPoint: RADIUS_EXTENSION_POINT,
-    pub rcRequestType: RADIUS_CODE,
-    pub rcResponseType: RADIUS_CODE,
-    pub GetRequest: isize,
-    pub GetResponse: isize,
-    pub SetResponseType: isize,
-}
-impl ::core::marker::Copy for RADIUS_EXTENSION_CONTROL_BLOCK {}
-impl ::core::clone::Clone for RADIUS_EXTENSION_CONTROL_BLOCK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const RADIUS_EXTENSION_FREE_ATTRIBUTES: &str = "RadiusExtensionFreeAttributes";
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const RADIUS_EXTENSION_INIT: &str = "RadiusExtensionInit";
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub type RADIUS_EXTENSION_POINT = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const repAuthentication: RADIUS_EXTENSION_POINT = 0i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const repAuthorization: RADIUS_EXTENSION_POINT = 1i32;
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const RADIUS_EXTENSION_PROCESS: &str = "RadiusExtensionProcess";
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const RADIUS_EXTENSION_PROCESS2: &str = "RadiusExtensionProcess2";
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const RADIUS_EXTENSION_PROCESS_EX: &str = "RadiusExtensionProcessEx";
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const RADIUS_EXTENSION_TERM: &str = "RadiusExtensionTerm";
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub const RADIUS_EXTENSION_VERSION: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub type RADIUS_REJECT_REASON_CODE = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
@@ -1222,20 +1150,6 @@ pub const rrrcAccountDisabled: RADIUS_REJECT_REASON_CODE = 2i32;
 pub const rrrcAccountExpired: RADIUS_REJECT_REASON_CODE = 3i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const rrrcAuthenticationFailure: RADIUS_REJECT_REASON_CODE = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
-pub struct RADIUS_VSA_FORMAT {
-    pub VendorId: [u8; 4],
-    pub VendorType: u8,
-    pub VendorLength: u8,
-    pub AttributeSpecific: [u8; 1],
-}
-impl ::core::marker::Copy for RADIUS_VSA_FORMAT {}
-impl ::core::clone::Clone for RADIUS_VSA_FORMAT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub type REMEDIATIONSERVERGROUPPROPERTIES = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
@@ -1290,7 +1204,6 @@ pub const SHV_COMBINATION_TYPE_ONE_OR_MORE_TRANSITIONAL: SHV_COMBINATION_TYPE = 
 pub const SHV_COMBINATION_TYPE_ONE_OR_MORE_UNKNOWN: SHV_COMBINATION_TYPE = 6i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const SHV_COMBINATION_TYPE_MAX: SHV_COMBINATION_TYPE = 7i32;
-pub const SdoMachine: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3911289575, data2: 40593, data3: 4561, data4: [191, 96, 0, 128, 199, 132, 107, 192] };
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub type TEMPLATESPROPERTIES = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
@@ -1355,3 +1268,90 @@ pub const PROPERTY_USER_SAVED_RADIUS_FRAMED_IPV6_PREFIX: USERPROPERTIES = 1039i3
 pub type VENDORPROPERTIES = i32;
 #[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
 pub const PROPERTY_NAS_VENDOR_ID: VENDORPROPERTIES = 1024i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub struct RADIUS_ATTRIBUTE {
+    pub dwAttrType: u32,
+    pub fDataType: RADIUS_DATA_TYPE,
+    pub cbDataLength: u32,
+    pub Anonymous: RADIUS_ATTRIBUTE_0,
+}
+impl ::core::marker::Copy for RADIUS_ATTRIBUTE {}
+impl ::core::clone::Clone for RADIUS_ATTRIBUTE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub union RADIUS_ATTRIBUTE_0 {
+    pub dwValue: u32,
+    pub lpValue: *const u8,
+}
+impl ::core::marker::Copy for RADIUS_ATTRIBUTE_0 {}
+impl ::core::clone::Clone for RADIUS_ATTRIBUTE_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub struct RADIUS_ATTRIBUTE_ARRAY {
+    pub cbSize: u32,
+    pub Add: isize,
+    pub AttributeAt: isize,
+    pub GetSize: isize,
+    pub InsertAt: isize,
+    pub RemoveAt: isize,
+    pub SetAt: isize,
+}
+impl ::core::marker::Copy for RADIUS_ATTRIBUTE_ARRAY {}
+impl ::core::clone::Clone for RADIUS_ATTRIBUTE_ARRAY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub struct RADIUS_EXTENSION_CONTROL_BLOCK {
+    pub cbSize: u32,
+    pub dwVersion: u32,
+    pub repPoint: RADIUS_EXTENSION_POINT,
+    pub rcRequestType: RADIUS_CODE,
+    pub rcResponseType: RADIUS_CODE,
+    pub GetRequest: isize,
+    pub GetResponse: isize,
+    pub SetResponseType: isize,
+}
+impl ::core::marker::Copy for RADIUS_EXTENSION_CONTROL_BLOCK {}
+impl ::core::clone::Clone for RADIUS_EXTENSION_CONTROL_BLOCK {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub struct RADIUS_VSA_FORMAT {
+    pub VendorId: [u8; 4],
+    pub VendorType: u8,
+    pub VendorLength: u8,
+    pub AttributeSpecific: [u8; 1],
+}
+impl ::core::marker::Copy for RADIUS_VSA_FORMAT {}
+impl ::core::clone::Clone for RADIUS_VSA_FORMAT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub type PRADIUS_EXTENSION_FREE_ATTRIBUTES = ::core::option::Option<unsafe extern "system" fn(pattrs: *mut RADIUS_ATTRIBUTE)>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub type PRADIUS_EXTENSION_INIT = ::core::option::Option<unsafe extern "system" fn() -> u32>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub type PRADIUS_EXTENSION_PROCESS = ::core::option::Option<unsafe extern "system" fn(pattrs: *const RADIUS_ATTRIBUTE, pfaction: *mut RADIUS_ACTION) -> u32>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub type PRADIUS_EXTENSION_PROCESS_2 = ::core::option::Option<unsafe extern "system" fn(pecb: *mut RADIUS_EXTENSION_CONTROL_BLOCK) -> u32>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub type PRADIUS_EXTENSION_PROCESS_EX = ::core::option::Option<unsafe extern "system" fn(pinattrs: *const RADIUS_ATTRIBUTE, poutattrs: *mut *mut RADIUS_ATTRIBUTE, pfaction: *mut RADIUS_ACTION) -> u32>;
+#[doc = "*Required features: `\"Win32_NetworkManagement_NetworkPolicyServer\"`*"]
+pub type PRADIUS_EXTENSION_TERM = ::core::option::Option<unsafe extern "system" fn()>;

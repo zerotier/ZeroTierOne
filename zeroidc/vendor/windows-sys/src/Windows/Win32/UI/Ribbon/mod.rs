@@ -16,6 +16,8 @@ pub const UIRibbonImageFromBitmapFactory: ::windows_sys::core::GUID = ::windows_
 #[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
 pub const UI_ALL_COMMANDS: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
+pub const UI_COLLECTION_INVALIDINDEX: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
 pub type UI_COLLECTIONCHANGE = i32;
 #[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
 pub const UI_COLLECTIONCHANGE_INSERT: UI_COLLECTIONCHANGE = 0i32;
@@ -25,8 +27,6 @@ pub const UI_COLLECTIONCHANGE_REMOVE: UI_COLLECTIONCHANGE = 1i32;
 pub const UI_COLLECTIONCHANGE_REPLACE: UI_COLLECTIONCHANGE = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
 pub const UI_COLLECTIONCHANGE_RESET: UI_COLLECTIONCHANGE = 3i32;
-#[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
-pub const UI_COLLECTION_INVALIDINDEX: u32 = 4294967295u32;
 #[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
 pub type UI_COMMANDTYPE = i32;
 #[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
@@ -79,46 +79,6 @@ pub const UI_EVENTLOCATION_QAT: UI_EVENTLOCATION = 1i32;
 pub const UI_EVENTLOCATION_ApplicationMenu: UI_EVENTLOCATION = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
 pub const UI_EVENTLOCATION_ContextPopup: UI_EVENTLOCATION = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
-pub struct UI_EVENTPARAMS {
-    pub EventType: UI_EVENTTYPE,
-    pub Anonymous: UI_EVENTPARAMS_0,
-}
-impl ::core::marker::Copy for UI_EVENTPARAMS {}
-impl ::core::clone::Clone for UI_EVENTPARAMS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
-pub union UI_EVENTPARAMS_0 {
-    pub Modes: i32,
-    pub Params: UI_EVENTPARAMS_COMMAND,
-}
-impl ::core::marker::Copy for UI_EVENTPARAMS_0 {}
-impl ::core::clone::Clone for UI_EVENTPARAMS_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
-pub struct UI_EVENTPARAMS_COMMAND {
-    pub CommandID: u32,
-    pub CommandName: ::windows_sys::core::PCWSTR,
-    pub ParentCommandID: u32,
-    pub ParentCommandName: ::windows_sys::core::PCWSTR,
-    pub SelectionIndex: u32,
-    pub Location: UI_EVENTLOCATION,
-}
-impl ::core::marker::Copy for UI_EVENTPARAMS_COMMAND {}
-impl ::core::clone::Clone for UI_EVENTPARAMS_COMMAND {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
 pub type UI_EVENTTYPE = i32;
 #[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
@@ -221,3 +181,43 @@ pub const UI_VIEWVERB_DESTROY: UI_VIEWVERB = 1i32;
 pub const UI_VIEWVERB_SIZE: UI_VIEWVERB = 2i32;
 #[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
 pub const UI_VIEWVERB_ERROR: UI_VIEWVERB = 3i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
+pub struct UI_EVENTPARAMS {
+    pub EventType: UI_EVENTTYPE,
+    pub Anonymous: UI_EVENTPARAMS_0,
+}
+impl ::core::marker::Copy for UI_EVENTPARAMS {}
+impl ::core::clone::Clone for UI_EVENTPARAMS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
+pub union UI_EVENTPARAMS_0 {
+    pub Modes: i32,
+    pub Params: UI_EVENTPARAMS_COMMAND,
+}
+impl ::core::marker::Copy for UI_EVENTPARAMS_0 {}
+impl ::core::clone::Clone for UI_EVENTPARAMS_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Ribbon\"`*"]
+pub struct UI_EVENTPARAMS_COMMAND {
+    pub CommandID: u32,
+    pub CommandName: ::windows_sys::core::PCWSTR,
+    pub ParentCommandID: u32,
+    pub ParentCommandName: ::windows_sys::core::PCWSTR,
+    pub SelectionIndex: u32,
+    pub Location: UI_EVENTLOCATION,
+}
+impl ::core::marker::Copy for UI_EVENTPARAMS_COMMAND {}
+impl ::core::clone::Clone for UI_EVENTPARAMS_COMMAND {
+    fn clone(&self) -> Self {
+        *self
+    }
+}

@@ -1,452 +1,5 @@
-#[link(name = "windows")]
-extern "system" {
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn CompareStringA(locale: u32, dwcmpflags: u32, lpstring1: *const i8, cchcount1: i32, lpstring2: *const i8, cchcount2: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn CompareStringEx(lplocalename: ::windows_sys::core::PCWSTR, dwcmpflags: COMPARE_STRING_FLAGS, lpstring1: ::windows_sys::core::PCWSTR, cchcount1: i32, lpstring2: ::windows_sys::core::PCWSTR, cchcount2: i32, lpversioninformation: *mut NLSVERSIONINFO, lpreserved: *mut ::core::ffi::c_void, lparam: super::Foundation::LPARAM) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn CompareStringOrdinal(lpstring1: ::windows_sys::core::PCWSTR, cchcount1: i32, lpstring2: ::windows_sys::core::PCWSTR, cchcount2: i32, bignorecase: super::Foundation::BOOL) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn CompareStringW(locale: u32, dwcmpflags: u32, lpstring1: ::windows_sys::core::PCWSTR, cchcount1: i32, lpstring2: ::windows_sys::core::PCWSTR, cchcount2: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ConvertDefaultLocale(locale: u32) -> u32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumCalendarInfoA(lpcalinfoenumproc: CALINFO_ENUMPROCA, locale: u32, calendar: u32, caltype: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumCalendarInfoExA(lpcalinfoenumprocex: CALINFO_ENUMPROCEXA, locale: u32, calendar: u32, caltype: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumCalendarInfoExEx(pcalinfoenumprocexex: CALINFO_ENUMPROCEXEX, lplocalename: ::windows_sys::core::PCWSTR, calendar: u32, lpreserved: ::windows_sys::core::PCWSTR, caltype: u32, lparam: super::Foundation::LPARAM) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumCalendarInfoExW(lpcalinfoenumprocex: CALINFO_ENUMPROCEXW, locale: u32, calendar: u32, caltype: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumCalendarInfoW(lpcalinfoenumproc: CALINFO_ENUMPROCW, locale: u32, calendar: u32, caltype: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumDateFormatsA(lpdatefmtenumproc: DATEFMT_ENUMPROCA, locale: u32, dwflags: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumDateFormatsExA(lpdatefmtenumprocex: DATEFMT_ENUMPROCEXA, locale: u32, dwflags: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumDateFormatsExEx(lpdatefmtenumprocexex: DATEFMT_ENUMPROCEXEX, lplocalename: ::windows_sys::core::PCWSTR, dwflags: ENUM_DATE_FORMATS_FLAGS, lparam: super::Foundation::LPARAM) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumDateFormatsExW(lpdatefmtenumprocex: DATEFMT_ENUMPROCEXW, locale: u32, dwflags: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumDateFormatsW(lpdatefmtenumproc: DATEFMT_ENUMPROCW, locale: u32, dwflags: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumLanguageGroupLocalesA(lplanggrouplocaleenumproc: LANGGROUPLOCALE_ENUMPROCA, languagegroup: u32, dwflags: u32, lparam: isize) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumLanguageGroupLocalesW(lplanggrouplocaleenumproc: LANGGROUPLOCALE_ENUMPROCW, languagegroup: u32, dwflags: u32, lparam: isize) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumSystemCodePagesA(lpcodepageenumproc: CODEPAGE_ENUMPROCA, dwflags: ENUM_SYSTEM_CODE_PAGES_FLAGS) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumSystemCodePagesW(lpcodepageenumproc: CODEPAGE_ENUMPROCW, dwflags: ENUM_SYSTEM_CODE_PAGES_FLAGS) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumSystemGeoID(geoclass: u32, parentgeoid: i32, lpgeoenumproc: GEO_ENUMPROC) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumSystemGeoNames(geoclass: u32, geoenumproc: GEO_ENUMNAMEPROC, data: super::Foundation::LPARAM) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumSystemLanguageGroupsA(lplanguagegroupenumproc: LANGUAGEGROUP_ENUMPROCA, dwflags: ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS, lparam: isize) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumSystemLanguageGroupsW(lplanguagegroupenumproc: LANGUAGEGROUP_ENUMPROCW, dwflags: ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS, lparam: isize) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumSystemLocalesA(lplocaleenumproc: LOCALE_ENUMPROCA, dwflags: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumSystemLocalesEx(lplocaleenumprocex: LOCALE_ENUMPROCEX, dwflags: u32, lparam: super::Foundation::LPARAM, lpreserved: *const ::core::ffi::c_void) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumSystemLocalesW(lplocaleenumproc: LOCALE_ENUMPROCW, dwflags: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumTimeFormatsA(lptimefmtenumproc: TIMEFMT_ENUMPROCA, locale: u32, dwflags: TIME_FORMAT_FLAGS) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumTimeFormatsEx(lptimefmtenumprocex: TIMEFMT_ENUMPROCEX, lplocalename: ::windows_sys::core::PCWSTR, dwflags: u32, lparam: super::Foundation::LPARAM) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumTimeFormatsW(lptimefmtenumproc: TIMEFMT_ENUMPROCW, locale: u32, dwflags: TIME_FORMAT_FLAGS) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumUILanguagesA(lpuilanguageenumproc: UILANGUAGE_ENUMPROCA, dwflags: u32, lparam: isize) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn EnumUILanguagesW(lpuilanguageenumproc: UILANGUAGE_ENUMPROCW, dwflags: u32, lparam: isize) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn FindNLSString(locale: u32, dwfindnlsstringflags: u32, lpstringsource: ::windows_sys::core::PCWSTR, cchsource: i32, lpstringvalue: ::windows_sys::core::PCWSTR, cchvalue: i32, pcchfound: *mut i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn FindNLSStringEx(lplocalename: ::windows_sys::core::PCWSTR, dwfindnlsstringflags: u32, lpstringsource: ::windows_sys::core::PCWSTR, cchsource: i32, lpstringvalue: ::windows_sys::core::PCWSTR, cchvalue: i32, pcchfound: *mut i32, lpversioninformation: *const NLSVERSIONINFO, lpreserved: *const ::core::ffi::c_void, sorthandle: super::Foundation::LPARAM) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn FindStringOrdinal(dwfindstringordinalflags: u32, lpstringsource: ::windows_sys::core::PCWSTR, cchsource: i32, lpstringvalue: ::windows_sys::core::PCWSTR, cchvalue: i32, bignorecase: super::Foundation::BOOL) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn FoldStringA(dwmapflags: FOLD_STRING_MAP_FLAGS, lpsrcstr: ::windows_sys::core::PCSTR, cchsrc: i32, lpdeststr: ::windows_sys::core::PSTR, cchdest: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn FoldStringW(dwmapflags: FOLD_STRING_MAP_FLAGS, lpsrcstr: ::windows_sys::core::PCWSTR, cchsrc: i32, lpdeststr: ::windows_sys::core::PWSTR, cchdest: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetACP() -> u32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetCPInfo(codepage: u32, lpcpinfo: *mut CPINFO) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetCPInfoExA(codepage: u32, dwflags: u32, lpcpinfoex: *mut CPINFOEXA) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetCPInfoExW(codepage: u32, dwflags: u32, lpcpinfoex: *mut CPINFOEXW) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetCalendarInfoA(locale: u32, calendar: u32, caltype: u32, lpcaldata: ::windows_sys::core::PSTR, cchdata: i32, lpvalue: *mut u32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetCalendarInfoEx(lplocalename: ::windows_sys::core::PCWSTR, calendar: u32, lpreserved: ::windows_sys::core::PCWSTR, caltype: u32, lpcaldata: ::windows_sys::core::PWSTR, cchdata: i32, lpvalue: *mut u32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetCalendarInfoW(locale: u32, calendar: u32, caltype: u32, lpcaldata: ::windows_sys::core::PWSTR, cchdata: i32, lpvalue: *mut u32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetCurrencyFormatA(locale: u32, dwflags: u32, lpvalue: ::windows_sys::core::PCSTR, lpformat: *const CURRENCYFMTA, lpcurrencystr: ::windows_sys::core::PSTR, cchcurrency: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetCurrencyFormatEx(lplocalename: ::windows_sys::core::PCWSTR, dwflags: u32, lpvalue: ::windows_sys::core::PCWSTR, lpformat: *const CURRENCYFMTW, lpcurrencystr: ::windows_sys::core::PWSTR, cchcurrency: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetCurrencyFormatW(locale: u32, dwflags: u32, lpvalue: ::windows_sys::core::PCWSTR, lpformat: *const CURRENCYFMTW, lpcurrencystr: ::windows_sys::core::PWSTR, cchcurrency: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetDateFormatA(locale: u32, dwflags: u32, lpdate: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCSTR, lpdatestr: ::windows_sys::core::PSTR, cchdate: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetDateFormatEx(lplocalename: ::windows_sys::core::PCWSTR, dwflags: ENUM_DATE_FORMATS_FLAGS, lpdate: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCWSTR, lpdatestr: ::windows_sys::core::PWSTR, cchdate: i32, lpcalendar: ::windows_sys::core::PCWSTR) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetDateFormatW(locale: u32, dwflags: u32, lpdate: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCWSTR, lpdatestr: ::windows_sys::core::PWSTR, cchdate: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetDistanceOfClosestLanguageInList(pszlanguage: ::windows_sys::core::PCWSTR, pszlanguageslist: ::windows_sys::core::PCWSTR, wchlistdelimiter: u16, pclosestdistance: *mut f64) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetDurationFormat(locale: u32, dwflags: u32, lpduration: *const super::Foundation::SYSTEMTIME, ullduration: u64, lpformat: ::windows_sys::core::PCWSTR, lpdurationstr: ::windows_sys::core::PWSTR, cchduration: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetDurationFormatEx(lplocalename: ::windows_sys::core::PCWSTR, dwflags: u32, lpduration: *const super::Foundation::SYSTEMTIME, ullduration: u64, lpformat: ::windows_sys::core::PCWSTR, lpdurationstr: ::windows_sys::core::PWSTR, cchduration: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetFileMUIInfo(dwflags: u32, pcwszfilepath: ::windows_sys::core::PCWSTR, pfilemuiinfo: *mut FILEMUIINFO, pcbfilemuiinfo: *mut u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetFileMUIPath(dwflags: u32, pcwszfilepath: ::windows_sys::core::PCWSTR, pwszlanguage: ::windows_sys::core::PWSTR, pcchlanguage: *mut u32, pwszfilemuipath: ::windows_sys::core::PWSTR, pcchfilemuipath: *mut u32, pululenumerator: *mut u64) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetGeoInfoA(location: i32, geotype: u32, lpgeodata: ::windows_sys::core::PSTR, cchdata: i32, langid: u16) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetGeoInfoEx(location: ::windows_sys::core::PCWSTR, geotype: u32, geodata: ::windows_sys::core::PWSTR, geodatacount: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetGeoInfoW(location: i32, geotype: u32, lpgeodata: ::windows_sys::core::PWSTR, cchdata: i32, langid: u16) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetLocaleInfoA(locale: u32, lctype: u32, lplcdata: ::windows_sys::core::PSTR, cchdata: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetLocaleInfoEx(lplocalename: ::windows_sys::core::PCWSTR, lctype: u32, lplcdata: ::windows_sys::core::PWSTR, cchdata: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetLocaleInfoW(locale: u32, lctype: u32, lplcdata: ::windows_sys::core::PWSTR, cchdata: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetNLSVersion(function: u32, locale: u32, lpversioninformation: *mut NLSVERSIONINFO) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetNLSVersionEx(function: u32, lplocalename: ::windows_sys::core::PCWSTR, lpversioninformation: *mut NLSVERSIONINFOEX) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetNumberFormatA(locale: u32, dwflags: u32, lpvalue: ::windows_sys::core::PCSTR, lpformat: *const NUMBERFMTA, lpnumberstr: ::windows_sys::core::PSTR, cchnumber: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetNumberFormatEx(lplocalename: ::windows_sys::core::PCWSTR, dwflags: u32, lpvalue: ::windows_sys::core::PCWSTR, lpformat: *const NUMBERFMTW, lpnumberstr: ::windows_sys::core::PWSTR, cchnumber: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetNumberFormatW(locale: u32, dwflags: u32, lpvalue: ::windows_sys::core::PCWSTR, lpformat: *const NUMBERFMTW, lpnumberstr: ::windows_sys::core::PWSTR, cchnumber: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetOEMCP() -> u32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetProcessPreferredUILanguages(dwflags: u32, pulnumlanguages: *mut u32, pwszlanguagesbuffer: ::windows_sys::core::PWSTR, pcchlanguagesbuffer: *mut u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetStringScripts(dwflags: u32, lpstring: ::windows_sys::core::PCWSTR, cchstring: i32, lpscripts: ::windows_sys::core::PWSTR, cchscripts: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetStringTypeA(locale: u32, dwinfotype: u32, lpsrcstr: ::windows_sys::core::PCSTR, cchsrc: i32, lpchartype: *mut u16) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetStringTypeExA(locale: u32, dwinfotype: u32, lpsrcstr: ::windows_sys::core::PCSTR, cchsrc: i32, lpchartype: *mut u16) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetStringTypeExW(locale: u32, dwinfotype: u32, lpsrcstr: ::windows_sys::core::PCWSTR, cchsrc: i32, lpchartype: *mut u16) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetStringTypeW(dwinfotype: u32, lpsrcstr: ::windows_sys::core::PCWSTR, cchsrc: i32, lpchartype: *mut u16) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetSystemDefaultLCID() -> u32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetSystemDefaultLangID() -> u16;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetSystemDefaultLocaleName(lplocalename: ::windows_sys::core::PWSTR, cchlocalename: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetSystemDefaultUILanguage() -> u16;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetSystemPreferredUILanguages(dwflags: u32, pulnumlanguages: *mut u32, pwszlanguagesbuffer: ::windows_sys::core::PWSTR, pcchlanguagesbuffer: *mut u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn GetTextCharset(hdc: super::Graphics::Gdi::HDC) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn GetTextCharsetInfo(hdc: super::Graphics::Gdi::HDC, lpsig: *mut FONTSIGNATURE, dwflags: u32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetThreadLocale() -> u32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetThreadPreferredUILanguages(dwflags: u32, pulnumlanguages: *mut u32, pwszlanguagesbuffer: ::windows_sys::core::PWSTR, pcchlanguagesbuffer: *mut u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetThreadUILanguage() -> u16;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetTimeFormatA(locale: u32, dwflags: u32, lptime: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCSTR, lptimestr: ::windows_sys::core::PSTR, cchtime: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetTimeFormatEx(lplocalename: ::windows_sys::core::PCWSTR, dwflags: TIME_FORMAT_FLAGS, lptime: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCWSTR, lptimestr: ::windows_sys::core::PWSTR, cchtime: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetTimeFormatW(locale: u32, dwflags: u32, lptime: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCWSTR, lptimestr: ::windows_sys::core::PWSTR, cchtime: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetUILanguageInfo(dwflags: u32, pwmszlanguage: ::windows_sys::core::PCWSTR, pwszfallbacklanguages: ::windows_sys::core::PWSTR, pcchfallbacklanguages: *mut u32, pattributes: *mut u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetUserDefaultGeoName(geoname: ::windows_sys::core::PWSTR, geonamecount: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetUserDefaultLCID() -> u32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetUserDefaultLangID() -> u16;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetUserDefaultLocaleName(lplocalename: ::windows_sys::core::PWSTR, cchlocalename: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetUserDefaultUILanguage() -> u16;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn GetUserGeoID(geoclass: u32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn GetUserPreferredUILanguages(dwflags: u32, pulnumlanguages: *mut u32, pwszlanguagesbuffer: ::windows_sys::core::PWSTR, pcchlanguagesbuffer: *mut u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn IdnToAscii(dwflags: u32, lpunicodecharstr: ::windows_sys::core::PCWSTR, cchunicodechar: i32, lpasciicharstr: ::windows_sys::core::PWSTR, cchasciichar: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn IdnToNameprepUnicode(dwflags: u32, lpunicodecharstr: ::windows_sys::core::PCWSTR, cchunicodechar: i32, lpnameprepcharstr: ::windows_sys::core::PWSTR, cchnameprepchar: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn IdnToUnicode(dwflags: u32, lpasciicharstr: ::windows_sys::core::PCWSTR, cchasciichar: i32, lpunicodecharstr: ::windows_sys::core::PWSTR, cchunicodechar: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn IsDBCSLeadByte(testchar: u8) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn IsDBCSLeadByteEx(codepage: u32, testchar: u8) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn IsNLSDefinedString(function: u32, dwflags: u32, lpversioninformation: *const NLSVERSIONINFO, lpstring: ::windows_sys::core::PCWSTR, cchstr: i32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn IsNormalizedString(normform: NORM_FORM, lpstring: ::windows_sys::core::PCWSTR, cwlength: i32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn IsTextUnicode(lpv: *const ::core::ffi::c_void, isize: i32, lpiresult: *mut IS_TEXT_UNICODE_RESULT) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn IsValidCodePage(codepage: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn IsValidLanguageGroup(languagegroup: u32, dwflags: ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn IsValidLocale(locale: u32, dwflags: IS_VALID_LOCALE_FLAGS) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn IsValidLocaleName(lplocalename: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn IsValidNLSVersion(function: u32, lplocalename: ::windows_sys::core::PCWSTR, lpversioninformation: *const NLSVERSIONINFOEX) -> u32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn IsWellFormedTag(psztag: ::windows_sys::core::PCWSTR) -> u8;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn LCIDToLocaleName(locale: u32, lpname: ::windows_sys::core::PWSTR, cchname: i32, dwflags: u32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn LCMapStringA(locale: u32, dwmapflags: u32, lpsrcstr: ::windows_sys::core::PCSTR, cchsrc: i32, lpdeststr: ::windows_sys::core::PSTR, cchdest: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn LCMapStringEx(lplocalename: ::windows_sys::core::PCWSTR, dwmapflags: u32, lpsrcstr: ::windows_sys::core::PCWSTR, cchsrc: i32, lpdeststr: ::windows_sys::core::PWSTR, cchdest: i32, lpversioninformation: *const NLSVERSIONINFO, lpreserved: *const ::core::ffi::c_void, sorthandle: super::Foundation::LPARAM) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn LCMapStringW(locale: u32, dwmapflags: u32, lpsrcstr: ::windows_sys::core::PCWSTR, cchsrc: i32, lpdeststr: ::windows_sys::core::PWSTR, cchdest: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn LocaleNameToLCID(lpname: ::windows_sys::core::PCWSTR, dwflags: u32) -> u32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn MappingDoAction(pbag: *mut MAPPING_PROPERTY_BAG, dwrangeindex: u32, pszactionid: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn MappingFreePropertyBag(pbag: *const MAPPING_PROPERTY_BAG) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn MappingFreeServices(pserviceinfo: *const MAPPING_SERVICE_INFO) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn MappingGetServices(poptions: *const MAPPING_ENUM_OPTIONS, prgservices: *mut *mut MAPPING_SERVICE_INFO, pdwservicescount: *mut u32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn MappingRecognizeText(pserviceinfo: *const MAPPING_SERVICE_INFO, psztext: ::windows_sys::core::PCWSTR, dwlength: u32, dwindex: u32, poptions: *const MAPPING_OPTIONS, pbag: *mut MAPPING_PROPERTY_BAG) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn MultiByteToWideChar(codepage: u32, dwflags: MULTI_BYTE_TO_WIDE_CHAR_FLAGS, lpmultibytestr: ::windows_sys::core::PCSTR, cbmultibyte: i32, lpwidecharstr: ::windows_sys::core::PWSTR, cchwidechar: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn NormalizeString(normform: NORM_FORM, lpsrcstring: ::windows_sys::core::PCWSTR, cwsrclength: i32, lpdststring: ::windows_sys::core::PWSTR, cwdstlength: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn NotifyUILanguageChange(dwflags: u32, pcwstrnewlanguage: ::windows_sys::core::PCWSTR, pcwstrpreviouslanguage: ::windows_sys::core::PCWSTR, dwreserved: u32, pdwstatusrtrn: *mut u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ResolveLocaleName(lpnametoresolve: ::windows_sys::core::PCWSTR, lplocalename: ::windows_sys::core::PWSTR, cchlocalename: i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn RestoreThreadPreferredUILanguages(snapshot: HSAVEDUILANGUAGES);
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptApplyDigitSubstitution(psds: *const SCRIPT_DIGITSUBSTITUTE, psc: *mut SCRIPT_CONTROL, pss: *mut SCRIPT_STATE) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptApplyLogicalWidth(pidx: *const i32, cchars: i32, cglyphs: i32, pwlogclust: *const u16, psva: *const SCRIPT_VISATTR, piadvance: *const i32, psa: *const SCRIPT_ANALYSIS, pabc: *mut super::Graphics::Gdi::ABC, pijustify: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptBreak(pwcchars: ::windows_sys::core::PCWSTR, cchars: i32, psa: *const SCRIPT_ANALYSIS, psla: *mut SCRIPT_LOGATTR) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn ScriptCPtoX(icp: i32, ftrailing: super::Foundation::BOOL, cchars: i32, cglyphs: i32, pwlogclust: *const u16, psva: *const SCRIPT_VISATTR, piadvance: *const i32, psa: *const SCRIPT_ANALYSIS, pix: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptCacheGetHeight(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, tmheight: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptFreeCache(psc: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptGetCMap(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, pwcinchars: ::windows_sys::core::PCWSTR, cchars: i32, dwflags: u32, pwoutglyphs: *mut u16) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptGetFontAlternateGlyphs(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, tagfeature: u32, wglyphid: u16, cmaxalternates: i32, palternateglyphs: *mut u16, pcalternates: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptGetFontFeatureTags(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, cmaxtags: i32, pfeaturetags: *mut u32, pctags: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptGetFontLanguageTags(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, tagscript: u32, cmaxtags: i32, plangsystags: *mut u32, pctags: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptGetFontProperties(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, sfp: *mut SCRIPT_FONTPROPERTIES) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptGetFontScriptTags(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, cmaxtags: i32, pscripttags: *mut u32, pctags: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptGetGlyphABCWidth(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, wglyph: u16, pabc: *mut super::Graphics::Gdi::ABC) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptGetLogicalWidths(psa: *const SCRIPT_ANALYSIS, cchars: i32, cglyphs: i32, piglyphwidth: *const i32, pwlogclust: *const u16, psva: *const SCRIPT_VISATTR, pidx: *const i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptGetProperties(ppsp: *mut *mut *mut SCRIPT_PROPERTIES, pinumscripts: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptIsComplex(pwcinchars: ::windows_sys::core::PCWSTR, cinchars: i32, dwflags: SCRIPT_IS_COMPLEX_FLAGS) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptItemize(pwcinchars: ::windows_sys::core::PCWSTR, cinchars: i32, cmaxitems: i32, pscontrol: *const SCRIPT_CONTROL, psstate: *const SCRIPT_STATE, pitems: *mut SCRIPT_ITEM, pcitems: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptItemizeOpenType(pwcinchars: ::windows_sys::core::PCWSTR, cinchars: i32, cmaxitems: i32, pscontrol: *const SCRIPT_CONTROL, psstate: *const SCRIPT_STATE, pitems: *mut SCRIPT_ITEM, pscripttags: *mut u32, pcitems: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptJustify(psva: *const SCRIPT_VISATTR, piadvance: *const i32, cglyphs: i32, idx: i32, iminkashida: i32, pijustify: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptLayout(cruns: i32, pblevel: *const u8, pivisualtological: *mut i32, pilogicaltovisual: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptPlace(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, pwglyphs: *const u16, cglyphs: i32, psva: *const SCRIPT_VISATTR, psa: *mut SCRIPT_ANALYSIS, piadvance: *mut i32, pgoffset: *mut GOFFSET, pabc: *mut super::Graphics::Gdi::ABC) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptPlaceOpenType(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *mut SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, rcrangechars: *const i32, rprangeproperties: *const *const textrange_properties, cranges: i32, pwcchars: ::windows_sys::core::PCWSTR, pwlogclust: *const u16, pcharprops: *const script_charprop, cchars: i32, pwglyphs: *const u16, pglyphprops: *const script_glyphprop, cglyphs: i32, piadvance: *mut i32, pgoffset: *mut GOFFSET, pabc: *mut super::Graphics::Gdi::ABC) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptPositionSingleGlyph(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, tagfeature: u32, lparameter: i32, wglyphid: u16, iadvance: i32, goffset: GOFFSET, pioutadvance: *mut i32, poutgoffset: *mut GOFFSET) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptRecordDigitSubstitution(locale: u32, psds: *mut SCRIPT_DIGITSUBSTITUTE) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptShape(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, pwcchars: ::windows_sys::core::PCWSTR, cchars: i32, cmaxglyphs: i32, psa: *mut SCRIPT_ANALYSIS, pwoutglyphs: *mut u16, pwlogclust: *mut u16, psva: *mut SCRIPT_VISATTR, pcglyphs: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptShapeOpenType(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *mut SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, rcrangechars: *const i32, rprangeproperties: *const *const textrange_properties, cranges: i32, pwcchars: ::windows_sys::core::PCWSTR, cchars: i32, cmaxglyphs: i32, pwlogclust: *mut u16, pcharprops: *mut script_charprop, pwoutglyphs: *mut u16, poutglyphprops: *mut script_glyphprop, pcglyphs: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptStringAnalyse(hdc: super::Graphics::Gdi::HDC, pstring: *const ::core::ffi::c_void, cstring: i32, cglyphs: i32, icharset: i32, dwflags: u32, ireqwidth: i32, pscontrol: *const SCRIPT_CONTROL, psstate: *const SCRIPT_STATE, pidx: *const i32, ptabdef: *const SCRIPT_TABDEF, pbinclass: *const u8, pssa: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn ScriptStringCPtoX(ssa: *const ::core::ffi::c_void, icp: i32, ftrailing: super::Foundation::BOOL, px: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptStringFree(pssa: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptStringGetLogicalWidths(ssa: *const ::core::ffi::c_void, pidx: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptStringGetOrder(ssa: *const ::core::ffi::c_void, puorder: *mut u32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-    pub fn ScriptStringOut(ssa: *const ::core::ffi::c_void, ix: i32, iy: i32, uoptions: super::Graphics::Gdi::ETO_OPTIONS, prc: *const super::Foundation::RECT, iminsel: i32, imaxsel: i32, fdisabled: super::Foundation::BOOL) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptStringValidate(ssa: *const ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptStringXtoCP(ssa: *const ::core::ffi::c_void, ix: i32, pich: *mut i32, pitrailing: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptString_pLogAttr(ssa: *const ::core::ffi::c_void) -> *mut SCRIPT_LOGATTR;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn ScriptString_pSize(ssa: *const ::core::ffi::c_void) -> *mut super::Foundation::SIZE;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptString_pcOutChars(ssa: *const ::core::ffi::c_void) -> *mut i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(feature = "Win32_Graphics_Gdi")]
-    pub fn ScriptSubstituteSingleGlyph(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, tagfeature: u32, lparameter: i32, wglyphid: u16, pwoutglyphid: *mut u16) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
-    pub fn ScriptTextOut(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, x: i32, y: i32, fuoptions: u32, lprc: *const super::Foundation::RECT, psa: *const SCRIPT_ANALYSIS, pwcreserved: ::windows_sys::core::PCWSTR, ireserved: i32, pwglyphs: *const u16, cglyphs: i32, piadvance: *const i32, pijustify: *const i32, pgoffset: *const GOFFSET) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn ScriptXtoCP(ix: i32, cchars: i32, cglyphs: i32, pwlogclust: *const u16, psva: *const SCRIPT_VISATTR, piadvance: *const i32, psa: *const SCRIPT_ANALYSIS, picp: *mut i32, pitrailing: *mut i32) -> ::windows_sys::core::HRESULT;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn SetCalendarInfoA(locale: u32, calendar: u32, caltype: u32, lpcaldata: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn SetCalendarInfoW(locale: u32, calendar: u32, caltype: u32, lpcaldata: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn SetLocaleInfoA(locale: u32, lctype: u32, lplcdata: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn SetLocaleInfoW(locale: u32, lctype: u32, lplcdata: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn SetProcessPreferredUILanguages(dwflags: u32, pwszlanguagesbuffer: ::windows_sys::core::PCWSTR, pulnumlanguages: *mut u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn SetThreadLocale(locale: u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn SetThreadPreferredUILanguages(dwflags: u32, pwszlanguagesbuffer: ::windows_sys::core::PCWSTR, pulnumlanguages: *mut u32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn SetThreadPreferredUILanguages2(flags: u32, languages: ::windows_sys::core::PCWSTR, numlanguagesset: *mut u32, snapshot: *mut HSAVEDUILANGUAGES) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn SetThreadUILanguage(langid: u16) -> u16;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn SetUserGeoID(geoid: i32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn SetUserGeoName(geoname: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn TranslateCharsetInfo(lpsrc: *mut u32, lpcs: *mut CHARSETINFO, dwflags: TRANSLATE_CHARSET_INFO_FLAGS) -> super::Foundation::BOOL;
+#[cfg_attr(windows, link(name = "windows"))]
+extern "cdecl" {
     #[doc = "*Required features: `\"Win32_Globalization\"`*"]
     pub fn UCNV_FROM_U_CALLBACK_ESCAPE(context: *const ::core::ffi::c_void, fromuargs: *mut UConverterFromUnicodeArgs, codeunits: *const u16, length: i32, codepoint: i32, reason: UConverterCallbackReason, err: *mut UErrorCode);
     #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -463,35 +16,6 @@ extern "system" {
     pub fn UCNV_TO_U_CALLBACK_STOP(context: *const ::core::ffi::c_void, touargs: *mut UConverterToUnicodeArgs, codeunits: ::windows_sys::core::PCSTR, length: i32, reason: UConverterCallbackReason, err: *mut UErrorCode);
     #[doc = "*Required features: `\"Win32_Globalization\"`*"]
     pub fn UCNV_TO_U_CALLBACK_SUBSTITUTE(context: *const ::core::ffi::c_void, touargs: *mut UConverterToUnicodeArgs, codeunits: ::windows_sys::core::PCSTR, length: i32, reason: UConverterCallbackReason, err: *mut UErrorCode);
-    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn VerifyScripts(dwflags: u32, lplocalescripts: ::windows_sys::core::PCWSTR, cchlocalescripts: i32, lptestscripts: ::windows_sys::core::PCWSTR, cchtestscripts: i32) -> super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn WideCharToMultiByte(codepage: u32, dwflags: u32, lpwidecharstr: ::windows_sys::core::PCWSTR, cchwidechar: i32, lpmultibytestr: ::windows_sys::core::PSTR, cbmultibyte: i32, lpdefaultchar: ::windows_sys::core::PCSTR, lpuseddefaultchar: *mut i32) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrcatA(lpstring1: ::windows_sys::core::PSTR, lpstring2: ::windows_sys::core::PCSTR) -> ::windows_sys::core::PSTR;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrcatW(lpstring1: ::windows_sys::core::PWSTR, lpstring2: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::PWSTR;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrcmpA(lpstring1: ::windows_sys::core::PCSTR, lpstring2: ::windows_sys::core::PCSTR) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrcmpW(lpstring1: ::windows_sys::core::PCWSTR, lpstring2: ::windows_sys::core::PCWSTR) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrcmpiA(lpstring1: ::windows_sys::core::PCSTR, lpstring2: ::windows_sys::core::PCSTR) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrcmpiW(lpstring1: ::windows_sys::core::PCWSTR, lpstring2: ::windows_sys::core::PCWSTR) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrcpyA(lpstring1: ::windows_sys::core::PSTR, lpstring2: ::windows_sys::core::PCSTR) -> ::windows_sys::core::PSTR;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrcpyW(lpstring1: ::windows_sys::core::PWSTR, lpstring2: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::PWSTR;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrcpynA(lpstring1: ::windows_sys::core::PSTR, lpstring2: ::windows_sys::core::PCSTR, imaxlength: i32) -> ::windows_sys::core::PSTR;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrcpynW(lpstring1: ::windows_sys::core::PWSTR, lpstring2: ::windows_sys::core::PCWSTR, imaxlength: i32) -> ::windows_sys::core::PWSTR;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrlenA(lpstring: ::windows_sys::core::PCSTR) -> i32;
-    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-    pub fn lstrlenW(lpstring: ::windows_sys::core::PCWSTR) -> i32;
     #[doc = "*Required features: `\"Win32_Globalization\"`*"]
     pub fn u_UCharsToChars(us: *const u16, cs: ::windows_sys::core::PCSTR, length: i32);
     #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -2527,6 +2051,512 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Globalization\"`*"]
     pub fn utrans_unregisterID(id: *const u16, idlength: i32);
 }
+#[cfg_attr(windows, link(name = "windows"))]
+extern "system" {
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn CompareStringA(locale: u32, dwcmpflags: u32, lpstring1: *const i8, cchcount1: i32, lpstring2: *const i8, cchcount2: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn CompareStringEx(lplocalename: ::windows_sys::core::PCWSTR, dwcmpflags: COMPARE_STRING_FLAGS, lpstring1: ::windows_sys::core::PCWSTR, cchcount1: i32, lpstring2: ::windows_sys::core::PCWSTR, cchcount2: i32, lpversioninformation: *mut NLSVERSIONINFO, lpreserved: *mut ::core::ffi::c_void, lparam: super::Foundation::LPARAM) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn CompareStringOrdinal(lpstring1: ::windows_sys::core::PCWSTR, cchcount1: i32, lpstring2: ::windows_sys::core::PCWSTR, cchcount2: i32, bignorecase: super::Foundation::BOOL) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn CompareStringW(locale: u32, dwcmpflags: u32, lpstring1: ::windows_sys::core::PCWSTR, cchcount1: i32, lpstring2: ::windows_sys::core::PCWSTR, cchcount2: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ConvertDefaultLocale(locale: u32) -> u32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumCalendarInfoA(lpcalinfoenumproc: CALINFO_ENUMPROCA, locale: u32, calendar: u32, caltype: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumCalendarInfoExA(lpcalinfoenumprocex: CALINFO_ENUMPROCEXA, locale: u32, calendar: u32, caltype: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumCalendarInfoExEx(pcalinfoenumprocexex: CALINFO_ENUMPROCEXEX, lplocalename: ::windows_sys::core::PCWSTR, calendar: u32, lpreserved: ::windows_sys::core::PCWSTR, caltype: u32, lparam: super::Foundation::LPARAM) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumCalendarInfoExW(lpcalinfoenumprocex: CALINFO_ENUMPROCEXW, locale: u32, calendar: u32, caltype: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumCalendarInfoW(lpcalinfoenumproc: CALINFO_ENUMPROCW, locale: u32, calendar: u32, caltype: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumDateFormatsA(lpdatefmtenumproc: DATEFMT_ENUMPROCA, locale: u32, dwflags: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumDateFormatsExA(lpdatefmtenumprocex: DATEFMT_ENUMPROCEXA, locale: u32, dwflags: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumDateFormatsExEx(lpdatefmtenumprocexex: DATEFMT_ENUMPROCEXEX, lplocalename: ::windows_sys::core::PCWSTR, dwflags: ENUM_DATE_FORMATS_FLAGS, lparam: super::Foundation::LPARAM) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumDateFormatsExW(lpdatefmtenumprocex: DATEFMT_ENUMPROCEXW, locale: u32, dwflags: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumDateFormatsW(lpdatefmtenumproc: DATEFMT_ENUMPROCW, locale: u32, dwflags: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumLanguageGroupLocalesA(lplanggrouplocaleenumproc: LANGGROUPLOCALE_ENUMPROCA, languagegroup: u32, dwflags: u32, lparam: isize) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumLanguageGroupLocalesW(lplanggrouplocaleenumproc: LANGGROUPLOCALE_ENUMPROCW, languagegroup: u32, dwflags: u32, lparam: isize) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumSystemCodePagesA(lpcodepageenumproc: CODEPAGE_ENUMPROCA, dwflags: ENUM_SYSTEM_CODE_PAGES_FLAGS) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumSystemCodePagesW(lpcodepageenumproc: CODEPAGE_ENUMPROCW, dwflags: ENUM_SYSTEM_CODE_PAGES_FLAGS) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumSystemGeoID(geoclass: u32, parentgeoid: i32, lpgeoenumproc: GEO_ENUMPROC) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumSystemGeoNames(geoclass: u32, geoenumproc: GEO_ENUMNAMEPROC, data: super::Foundation::LPARAM) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumSystemLanguageGroupsA(lplanguagegroupenumproc: LANGUAGEGROUP_ENUMPROCA, dwflags: ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS, lparam: isize) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumSystemLanguageGroupsW(lplanguagegroupenumproc: LANGUAGEGROUP_ENUMPROCW, dwflags: ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS, lparam: isize) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumSystemLocalesA(lplocaleenumproc: LOCALE_ENUMPROCA, dwflags: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumSystemLocalesEx(lplocaleenumprocex: LOCALE_ENUMPROCEX, dwflags: u32, lparam: super::Foundation::LPARAM, lpreserved: *const ::core::ffi::c_void) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumSystemLocalesW(lplocaleenumproc: LOCALE_ENUMPROCW, dwflags: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumTimeFormatsA(lptimefmtenumproc: TIMEFMT_ENUMPROCA, locale: u32, dwflags: TIME_FORMAT_FLAGS) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumTimeFormatsEx(lptimefmtenumprocex: TIMEFMT_ENUMPROCEX, lplocalename: ::windows_sys::core::PCWSTR, dwflags: u32, lparam: super::Foundation::LPARAM) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumTimeFormatsW(lptimefmtenumproc: TIMEFMT_ENUMPROCW, locale: u32, dwflags: TIME_FORMAT_FLAGS) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumUILanguagesA(lpuilanguageenumproc: UILANGUAGE_ENUMPROCA, dwflags: u32, lparam: isize) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn EnumUILanguagesW(lpuilanguageenumproc: UILANGUAGE_ENUMPROCW, dwflags: u32, lparam: isize) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn FindNLSString(locale: u32, dwfindnlsstringflags: u32, lpstringsource: ::windows_sys::core::PCWSTR, cchsource: i32, lpstringvalue: ::windows_sys::core::PCWSTR, cchvalue: i32, pcchfound: *mut i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn FindNLSStringEx(lplocalename: ::windows_sys::core::PCWSTR, dwfindnlsstringflags: u32, lpstringsource: ::windows_sys::core::PCWSTR, cchsource: i32, lpstringvalue: ::windows_sys::core::PCWSTR, cchvalue: i32, pcchfound: *mut i32, lpversioninformation: *const NLSVERSIONINFO, lpreserved: *const ::core::ffi::c_void, sorthandle: super::Foundation::LPARAM) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn FindStringOrdinal(dwfindstringordinalflags: u32, lpstringsource: ::windows_sys::core::PCWSTR, cchsource: i32, lpstringvalue: ::windows_sys::core::PCWSTR, cchvalue: i32, bignorecase: super::Foundation::BOOL) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn FoldStringA(dwmapflags: FOLD_STRING_MAP_FLAGS, lpsrcstr: ::windows_sys::core::PCSTR, cchsrc: i32, lpdeststr: ::windows_sys::core::PSTR, cchdest: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn FoldStringW(dwmapflags: FOLD_STRING_MAP_FLAGS, lpsrcstr: ::windows_sys::core::PCWSTR, cchsrc: i32, lpdeststr: ::windows_sys::core::PWSTR, cchdest: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetACP() -> u32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetCPInfo(codepage: u32, lpcpinfo: *mut CPINFO) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetCPInfoExA(codepage: u32, dwflags: u32, lpcpinfoex: *mut CPINFOEXA) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetCPInfoExW(codepage: u32, dwflags: u32, lpcpinfoex: *mut CPINFOEXW) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetCalendarInfoA(locale: u32, calendar: u32, caltype: u32, lpcaldata: ::windows_sys::core::PSTR, cchdata: i32, lpvalue: *mut u32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetCalendarInfoEx(lplocalename: ::windows_sys::core::PCWSTR, calendar: u32, lpreserved: ::windows_sys::core::PCWSTR, caltype: u32, lpcaldata: ::windows_sys::core::PWSTR, cchdata: i32, lpvalue: *mut u32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetCalendarInfoW(locale: u32, calendar: u32, caltype: u32, lpcaldata: ::windows_sys::core::PWSTR, cchdata: i32, lpvalue: *mut u32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetCurrencyFormatA(locale: u32, dwflags: u32, lpvalue: ::windows_sys::core::PCSTR, lpformat: *const CURRENCYFMTA, lpcurrencystr: ::windows_sys::core::PSTR, cchcurrency: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetCurrencyFormatEx(lplocalename: ::windows_sys::core::PCWSTR, dwflags: u32, lpvalue: ::windows_sys::core::PCWSTR, lpformat: *const CURRENCYFMTW, lpcurrencystr: ::windows_sys::core::PWSTR, cchcurrency: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetCurrencyFormatW(locale: u32, dwflags: u32, lpvalue: ::windows_sys::core::PCWSTR, lpformat: *const CURRENCYFMTW, lpcurrencystr: ::windows_sys::core::PWSTR, cchcurrency: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetDateFormatA(locale: u32, dwflags: u32, lpdate: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCSTR, lpdatestr: ::windows_sys::core::PSTR, cchdate: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetDateFormatEx(lplocalename: ::windows_sys::core::PCWSTR, dwflags: ENUM_DATE_FORMATS_FLAGS, lpdate: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCWSTR, lpdatestr: ::windows_sys::core::PWSTR, cchdate: i32, lpcalendar: ::windows_sys::core::PCWSTR) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetDateFormatW(locale: u32, dwflags: u32, lpdate: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCWSTR, lpdatestr: ::windows_sys::core::PWSTR, cchdate: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetDistanceOfClosestLanguageInList(pszlanguage: ::windows_sys::core::PCWSTR, pszlanguageslist: ::windows_sys::core::PCWSTR, wchlistdelimiter: u16, pclosestdistance: *mut f64) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetDurationFormat(locale: u32, dwflags: u32, lpduration: *const super::Foundation::SYSTEMTIME, ullduration: u64, lpformat: ::windows_sys::core::PCWSTR, lpdurationstr: ::windows_sys::core::PWSTR, cchduration: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetDurationFormatEx(lplocalename: ::windows_sys::core::PCWSTR, dwflags: u32, lpduration: *const super::Foundation::SYSTEMTIME, ullduration: u64, lpformat: ::windows_sys::core::PCWSTR, lpdurationstr: ::windows_sys::core::PWSTR, cchduration: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetFileMUIInfo(dwflags: u32, pcwszfilepath: ::windows_sys::core::PCWSTR, pfilemuiinfo: *mut FILEMUIINFO, pcbfilemuiinfo: *mut u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetFileMUIPath(dwflags: u32, pcwszfilepath: ::windows_sys::core::PCWSTR, pwszlanguage: ::windows_sys::core::PWSTR, pcchlanguage: *mut u32, pwszfilemuipath: ::windows_sys::core::PWSTR, pcchfilemuipath: *mut u32, pululenumerator: *mut u64) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetGeoInfoA(location: i32, geotype: u32, lpgeodata: ::windows_sys::core::PSTR, cchdata: i32, langid: u16) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetGeoInfoEx(location: ::windows_sys::core::PCWSTR, geotype: u32, geodata: ::windows_sys::core::PWSTR, geodatacount: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetGeoInfoW(location: i32, geotype: u32, lpgeodata: ::windows_sys::core::PWSTR, cchdata: i32, langid: u16) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetLocaleInfoA(locale: u32, lctype: u32, lplcdata: ::windows_sys::core::PSTR, cchdata: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetLocaleInfoEx(lplocalename: ::windows_sys::core::PCWSTR, lctype: u32, lplcdata: ::windows_sys::core::PWSTR, cchdata: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetLocaleInfoW(locale: u32, lctype: u32, lplcdata: ::windows_sys::core::PWSTR, cchdata: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetNLSVersion(function: u32, locale: u32, lpversioninformation: *mut NLSVERSIONINFO) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetNLSVersionEx(function: u32, lplocalename: ::windows_sys::core::PCWSTR, lpversioninformation: *mut NLSVERSIONINFOEX) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetNumberFormatA(locale: u32, dwflags: u32, lpvalue: ::windows_sys::core::PCSTR, lpformat: *const NUMBERFMTA, lpnumberstr: ::windows_sys::core::PSTR, cchnumber: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetNumberFormatEx(lplocalename: ::windows_sys::core::PCWSTR, dwflags: u32, lpvalue: ::windows_sys::core::PCWSTR, lpformat: *const NUMBERFMTW, lpnumberstr: ::windows_sys::core::PWSTR, cchnumber: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetNumberFormatW(locale: u32, dwflags: u32, lpvalue: ::windows_sys::core::PCWSTR, lpformat: *const NUMBERFMTW, lpnumberstr: ::windows_sys::core::PWSTR, cchnumber: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetOEMCP() -> u32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetProcessPreferredUILanguages(dwflags: u32, pulnumlanguages: *mut u32, pwszlanguagesbuffer: ::windows_sys::core::PWSTR, pcchlanguagesbuffer: *mut u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetStringScripts(dwflags: u32, lpstring: ::windows_sys::core::PCWSTR, cchstring: i32, lpscripts: ::windows_sys::core::PWSTR, cchscripts: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetStringTypeA(locale: u32, dwinfotype: u32, lpsrcstr: ::windows_sys::core::PCSTR, cchsrc: i32, lpchartype: *mut u16) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetStringTypeExA(locale: u32, dwinfotype: u32, lpsrcstr: ::windows_sys::core::PCSTR, cchsrc: i32, lpchartype: *mut u16) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetStringTypeExW(locale: u32, dwinfotype: u32, lpsrcstr: ::windows_sys::core::PCWSTR, cchsrc: i32, lpchartype: *mut u16) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetStringTypeW(dwinfotype: u32, lpsrcstr: ::windows_sys::core::PCWSTR, cchsrc: i32, lpchartype: *mut u16) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetSystemDefaultLCID() -> u32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetSystemDefaultLangID() -> u16;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetSystemDefaultLocaleName(lplocalename: ::windows_sys::core::PWSTR, cchlocalename: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetSystemDefaultUILanguage() -> u16;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetSystemPreferredUILanguages(dwflags: u32, pulnumlanguages: *mut u32, pwszlanguagesbuffer: ::windows_sys::core::PWSTR, pcchlanguagesbuffer: *mut u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn GetTextCharset(hdc: super::Graphics::Gdi::HDC) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn GetTextCharsetInfo(hdc: super::Graphics::Gdi::HDC, lpsig: *mut FONTSIGNATURE, dwflags: u32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetThreadLocale() -> u32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetThreadPreferredUILanguages(dwflags: u32, pulnumlanguages: *mut u32, pwszlanguagesbuffer: ::windows_sys::core::PWSTR, pcchlanguagesbuffer: *mut u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetThreadUILanguage() -> u16;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetTimeFormatA(locale: u32, dwflags: u32, lptime: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCSTR, lptimestr: ::windows_sys::core::PSTR, cchtime: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetTimeFormatEx(lplocalename: ::windows_sys::core::PCWSTR, dwflags: TIME_FORMAT_FLAGS, lptime: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCWSTR, lptimestr: ::windows_sys::core::PWSTR, cchtime: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetTimeFormatW(locale: u32, dwflags: u32, lptime: *const super::Foundation::SYSTEMTIME, lpformat: ::windows_sys::core::PCWSTR, lptimestr: ::windows_sys::core::PWSTR, cchtime: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetUILanguageInfo(dwflags: u32, pwmszlanguage: ::windows_sys::core::PCWSTR, pwszfallbacklanguages: ::windows_sys::core::PWSTR, pcchfallbacklanguages: *mut u32, pattributes: *mut u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetUserDefaultGeoName(geoname: ::windows_sys::core::PWSTR, geonamecount: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetUserDefaultLCID() -> u32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetUserDefaultLangID() -> u16;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetUserDefaultLocaleName(lplocalename: ::windows_sys::core::PWSTR, cchlocalename: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetUserDefaultUILanguage() -> u16;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn GetUserGeoID(geoclass: u32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn GetUserPreferredUILanguages(dwflags: u32, pulnumlanguages: *mut u32, pwszlanguagesbuffer: ::windows_sys::core::PWSTR, pcchlanguagesbuffer: *mut u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn IdnToAscii(dwflags: u32, lpunicodecharstr: ::windows_sys::core::PCWSTR, cchunicodechar: i32, lpasciicharstr: ::windows_sys::core::PWSTR, cchasciichar: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn IdnToNameprepUnicode(dwflags: u32, lpunicodecharstr: ::windows_sys::core::PCWSTR, cchunicodechar: i32, lpnameprepcharstr: ::windows_sys::core::PWSTR, cchnameprepchar: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn IdnToUnicode(dwflags: u32, lpasciicharstr: ::windows_sys::core::PCWSTR, cchasciichar: i32, lpunicodecharstr: ::windows_sys::core::PWSTR, cchunicodechar: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn IsDBCSLeadByte(testchar: u8) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn IsDBCSLeadByteEx(codepage: u32, testchar: u8) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn IsNLSDefinedString(function: u32, dwflags: u32, lpversioninformation: *const NLSVERSIONINFO, lpstring: ::windows_sys::core::PCWSTR, cchstr: i32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn IsNormalizedString(normform: NORM_FORM, lpstring: ::windows_sys::core::PCWSTR, cwlength: i32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn IsTextUnicode(lpv: *const ::core::ffi::c_void, isize: i32, lpiresult: *mut IS_TEXT_UNICODE_RESULT) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn IsValidCodePage(codepage: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn IsValidLanguageGroup(languagegroup: u32, dwflags: ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn IsValidLocale(locale: u32, dwflags: IS_VALID_LOCALE_FLAGS) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn IsValidLocaleName(lplocalename: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn IsValidNLSVersion(function: u32, lplocalename: ::windows_sys::core::PCWSTR, lpversioninformation: *const NLSVERSIONINFOEX) -> u32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn IsWellFormedTag(psztag: ::windows_sys::core::PCWSTR) -> u8;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn LCIDToLocaleName(locale: u32, lpname: ::windows_sys::core::PWSTR, cchname: i32, dwflags: u32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn LCMapStringA(locale: u32, dwmapflags: u32, lpsrcstr: ::windows_sys::core::PCSTR, cchsrc: i32, lpdeststr: ::windows_sys::core::PSTR, cchdest: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn LCMapStringEx(lplocalename: ::windows_sys::core::PCWSTR, dwmapflags: u32, lpsrcstr: ::windows_sys::core::PCWSTR, cchsrc: i32, lpdeststr: ::windows_sys::core::PWSTR, cchdest: i32, lpversioninformation: *const NLSVERSIONINFO, lpreserved: *const ::core::ffi::c_void, sorthandle: super::Foundation::LPARAM) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn LCMapStringW(locale: u32, dwmapflags: u32, lpsrcstr: ::windows_sys::core::PCWSTR, cchsrc: i32, lpdeststr: ::windows_sys::core::PWSTR, cchdest: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn LocaleNameToLCID(lpname: ::windows_sys::core::PCWSTR, dwflags: u32) -> u32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn MappingDoAction(pbag: *mut MAPPING_PROPERTY_BAG, dwrangeindex: u32, pszactionid: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn MappingFreePropertyBag(pbag: *const MAPPING_PROPERTY_BAG) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn MappingFreeServices(pserviceinfo: *const MAPPING_SERVICE_INFO) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn MappingGetServices(poptions: *const MAPPING_ENUM_OPTIONS, prgservices: *mut *mut MAPPING_SERVICE_INFO, pdwservicescount: *mut u32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn MappingRecognizeText(pserviceinfo: *const MAPPING_SERVICE_INFO, psztext: ::windows_sys::core::PCWSTR, dwlength: u32, dwindex: u32, poptions: *const MAPPING_OPTIONS, pbag: *mut MAPPING_PROPERTY_BAG) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn MultiByteToWideChar(codepage: u32, dwflags: MULTI_BYTE_TO_WIDE_CHAR_FLAGS, lpmultibytestr: ::windows_sys::core::PCSTR, cbmultibyte: i32, lpwidecharstr: ::windows_sys::core::PWSTR, cchwidechar: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn NormalizeString(normform: NORM_FORM, lpsrcstring: ::windows_sys::core::PCWSTR, cwsrclength: i32, lpdststring: ::windows_sys::core::PWSTR, cwdstlength: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn NotifyUILanguageChange(dwflags: u32, pcwstrnewlanguage: ::windows_sys::core::PCWSTR, pcwstrpreviouslanguage: ::windows_sys::core::PCWSTR, dwreserved: u32, pdwstatusrtrn: *mut u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ResolveLocaleName(lpnametoresolve: ::windows_sys::core::PCWSTR, lplocalename: ::windows_sys::core::PWSTR, cchlocalename: i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn RestoreThreadPreferredUILanguages(snapshot: HSAVEDUILANGUAGES);
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptApplyDigitSubstitution(psds: *const SCRIPT_DIGITSUBSTITUTE, psc: *mut SCRIPT_CONTROL, pss: *mut SCRIPT_STATE) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptApplyLogicalWidth(pidx: *const i32, cchars: i32, cglyphs: i32, pwlogclust: *const u16, psva: *const SCRIPT_VISATTR, piadvance: *const i32, psa: *const SCRIPT_ANALYSIS, pabc: *mut super::Graphics::Gdi::ABC, pijustify: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptBreak(pwcchars: ::windows_sys::core::PCWSTR, cchars: i32, psa: *const SCRIPT_ANALYSIS, psla: *mut SCRIPT_LOGATTR) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn ScriptCPtoX(icp: i32, ftrailing: super::Foundation::BOOL, cchars: i32, cglyphs: i32, pwlogclust: *const u16, psva: *const SCRIPT_VISATTR, piadvance: *const i32, psa: *const SCRIPT_ANALYSIS, pix: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptCacheGetHeight(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, tmheight: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptFreeCache(psc: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptGetCMap(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, pwcinchars: ::windows_sys::core::PCWSTR, cchars: i32, dwflags: u32, pwoutglyphs: *mut u16) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptGetFontAlternateGlyphs(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, tagfeature: u32, wglyphid: u16, cmaxalternates: i32, palternateglyphs: *mut u16, pcalternates: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptGetFontFeatureTags(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, cmaxtags: i32, pfeaturetags: *mut u32, pctags: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptGetFontLanguageTags(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, tagscript: u32, cmaxtags: i32, plangsystags: *mut u32, pctags: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptGetFontProperties(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, sfp: *mut SCRIPT_FONTPROPERTIES) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptGetFontScriptTags(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, cmaxtags: i32, pscripttags: *mut u32, pctags: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptGetGlyphABCWidth(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, wglyph: u16, pabc: *mut super::Graphics::Gdi::ABC) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptGetLogicalWidths(psa: *const SCRIPT_ANALYSIS, cchars: i32, cglyphs: i32, piglyphwidth: *const i32, pwlogclust: *const u16, psva: *const SCRIPT_VISATTR, pidx: *const i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptGetProperties(ppsp: *mut *mut *mut SCRIPT_PROPERTIES, pinumscripts: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptIsComplex(pwcinchars: ::windows_sys::core::PCWSTR, cinchars: i32, dwflags: SCRIPT_IS_COMPLEX_FLAGS) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptItemize(pwcinchars: ::windows_sys::core::PCWSTR, cinchars: i32, cmaxitems: i32, pscontrol: *const SCRIPT_CONTROL, psstate: *const SCRIPT_STATE, pitems: *mut SCRIPT_ITEM, pcitems: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptItemizeOpenType(pwcinchars: ::windows_sys::core::PCWSTR, cinchars: i32, cmaxitems: i32, pscontrol: *const SCRIPT_CONTROL, psstate: *const SCRIPT_STATE, pitems: *mut SCRIPT_ITEM, pscripttags: *mut u32, pcitems: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptJustify(psva: *const SCRIPT_VISATTR, piadvance: *const i32, cglyphs: i32, idx: i32, iminkashida: i32, pijustify: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptLayout(cruns: i32, pblevel: *const u8, pivisualtological: *mut i32, pilogicaltovisual: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptPlace(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, pwglyphs: *const u16, cglyphs: i32, psva: *const SCRIPT_VISATTR, psa: *mut SCRIPT_ANALYSIS, piadvance: *mut i32, pgoffset: *mut GOFFSET, pabc: *mut super::Graphics::Gdi::ABC) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptPlaceOpenType(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *mut SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, rcrangechars: *const i32, rprangeproperties: *const *const TEXTRANGE_PROPERTIES, cranges: i32, pwcchars: ::windows_sys::core::PCWSTR, pwlogclust: *const u16, pcharprops: *const SCRIPT_CHARPROP, cchars: i32, pwglyphs: *const u16, pglyphprops: *const SCRIPT_GLYPHPROP, cglyphs: i32, piadvance: *mut i32, pgoffset: *mut GOFFSET, pabc: *mut super::Graphics::Gdi::ABC) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptPositionSingleGlyph(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, tagfeature: u32, lparameter: i32, wglyphid: u16, iadvance: i32, goffset: GOFFSET, pioutadvance: *mut i32, poutgoffset: *mut GOFFSET) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptRecordDigitSubstitution(locale: u32, psds: *mut SCRIPT_DIGITSUBSTITUTE) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptShape(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, pwcchars: ::windows_sys::core::PCWSTR, cchars: i32, cmaxglyphs: i32, psa: *mut SCRIPT_ANALYSIS, pwoutglyphs: *mut u16, pwlogclust: *mut u16, psva: *mut SCRIPT_VISATTR, pcglyphs: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptShapeOpenType(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *mut SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, rcrangechars: *const i32, rprangeproperties: *const *const TEXTRANGE_PROPERTIES, cranges: i32, pwcchars: ::windows_sys::core::PCWSTR, cchars: i32, cmaxglyphs: i32, pwlogclust: *mut u16, pcharprops: *mut SCRIPT_CHARPROP, pwoutglyphs: *mut u16, poutglyphprops: *mut SCRIPT_GLYPHPROP, pcglyphs: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptStringAnalyse(hdc: super::Graphics::Gdi::HDC, pstring: *const ::core::ffi::c_void, cstring: i32, cglyphs: i32, icharset: i32, dwflags: u32, ireqwidth: i32, pscontrol: *const SCRIPT_CONTROL, psstate: *const SCRIPT_STATE, pidx: *const i32, ptabdef: *const SCRIPT_TABDEF, pbinclass: *const u8, pssa: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn ScriptStringCPtoX(ssa: *const ::core::ffi::c_void, icp: i32, ftrailing: super::Foundation::BOOL, px: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptStringFree(pssa: *mut *mut ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptStringGetLogicalWidths(ssa: *const ::core::ffi::c_void, pidx: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptStringGetOrder(ssa: *const ::core::ffi::c_void, puorder: *mut u32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+    pub fn ScriptStringOut(ssa: *const ::core::ffi::c_void, ix: i32, iy: i32, uoptions: super::Graphics::Gdi::ETO_OPTIONS, prc: *const super::Foundation::RECT, iminsel: i32, imaxsel: i32, fdisabled: super::Foundation::BOOL) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptStringValidate(ssa: *const ::core::ffi::c_void) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptStringXtoCP(ssa: *const ::core::ffi::c_void, ix: i32, pich: *mut i32, pitrailing: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptString_pLogAttr(ssa: *const ::core::ffi::c_void) -> *mut SCRIPT_LOGATTR;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn ScriptString_pSize(ssa: *const ::core::ffi::c_void) -> *mut super::Foundation::SIZE;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptString_pcOutChars(ssa: *const ::core::ffi::c_void) -> *mut i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(feature = "Win32_Graphics_Gdi")]
+    pub fn ScriptSubstituteSingleGlyph(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, psa: *const SCRIPT_ANALYSIS, tagscript: u32, taglangsys: u32, tagfeature: u32, lparameter: i32, wglyphid: u16, pwoutglyphid: *mut u16) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`, `\"Win32_Graphics_Gdi\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Graphics_Gdi"))]
+    pub fn ScriptTextOut(hdc: super::Graphics::Gdi::HDC, psc: *mut *mut ::core::ffi::c_void, x: i32, y: i32, fuoptions: u32, lprc: *const super::Foundation::RECT, psa: *const SCRIPT_ANALYSIS, pwcreserved: ::windows_sys::core::PCWSTR, ireserved: i32, pwglyphs: *const u16, cglyphs: i32, piadvance: *const i32, pijustify: *const i32, pgoffset: *const GOFFSET) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn ScriptXtoCP(ix: i32, cchars: i32, cglyphs: i32, pwlogclust: *const u16, psva: *const SCRIPT_VISATTR, piadvance: *const i32, psa: *const SCRIPT_ANALYSIS, picp: *mut i32, pitrailing: *mut i32) -> ::windows_sys::core::HRESULT;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn SetCalendarInfoA(locale: u32, calendar: u32, caltype: u32, lpcaldata: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn SetCalendarInfoW(locale: u32, calendar: u32, caltype: u32, lpcaldata: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn SetLocaleInfoA(locale: u32, lctype: u32, lplcdata: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn SetLocaleInfoW(locale: u32, lctype: u32, lplcdata: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn SetProcessPreferredUILanguages(dwflags: u32, pwszlanguagesbuffer: ::windows_sys::core::PCWSTR, pulnumlanguages: *mut u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn SetThreadLocale(locale: u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn SetThreadPreferredUILanguages(dwflags: u32, pwszlanguagesbuffer: ::windows_sys::core::PCWSTR, pulnumlanguages: *mut u32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn SetThreadPreferredUILanguages2(flags: u32, languages: ::windows_sys::core::PCWSTR, numlanguagesset: *mut u32, snapshot: *mut HSAVEDUILANGUAGES) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn SetThreadUILanguage(langid: u16) -> u16;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn SetUserGeoID(geoid: i32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn SetUserGeoName(geoname: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn TranslateCharsetInfo(lpsrc: *mut u32, lpcs: *mut CHARSETINFO, dwflags: TRANSLATE_CHARSET_INFO_FLAGS) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn VerifyScripts(dwflags: u32, lplocalescripts: ::windows_sys::core::PCWSTR, cchlocalescripts: i32, lptestscripts: ::windows_sys::core::PCWSTR, cchtestscripts: i32) -> super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn WideCharToMultiByte(codepage: u32, dwflags: u32, lpwidecharstr: ::windows_sys::core::PCWSTR, cchwidechar: i32, lpmultibytestr: ::windows_sys::core::PSTR, cbmultibyte: i32, lpdefaultchar: ::windows_sys::core::PCSTR, lpuseddefaultchar: *mut i32) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrcatA(lpstring1: ::windows_sys::core::PSTR, lpstring2: ::windows_sys::core::PCSTR) -> ::windows_sys::core::PSTR;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrcatW(lpstring1: ::windows_sys::core::PWSTR, lpstring2: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::PWSTR;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrcmpA(lpstring1: ::windows_sys::core::PCSTR, lpstring2: ::windows_sys::core::PCSTR) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrcmpW(lpstring1: ::windows_sys::core::PCWSTR, lpstring2: ::windows_sys::core::PCWSTR) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrcmpiA(lpstring1: ::windows_sys::core::PCSTR, lpstring2: ::windows_sys::core::PCSTR) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrcmpiW(lpstring1: ::windows_sys::core::PCWSTR, lpstring2: ::windows_sys::core::PCWSTR) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrcpyA(lpstring1: ::windows_sys::core::PSTR, lpstring2: ::windows_sys::core::PCSTR) -> ::windows_sys::core::PSTR;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrcpyW(lpstring1: ::windows_sys::core::PWSTR, lpstring2: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::PWSTR;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrcpynA(lpstring1: ::windows_sys::core::PSTR, lpstring2: ::windows_sys::core::PCSTR, imaxlength: i32) -> ::windows_sys::core::PSTR;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrcpynW(lpstring1: ::windows_sys::core::PWSTR, lpstring2: ::windows_sys::core::PCWSTR, imaxlength: i32) -> ::windows_sys::core::PWSTR;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrlenA(lpstring: ::windows_sys::core::PCSTR) -> i32;
+    #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+    pub fn lstrlenW(lpstring: ::windows_sys::core::PCWSTR) -> i32;
+}
+pub type IComprehensiveSpellCheckProvider = *mut ::core::ffi::c_void;
+pub type IEnumCodePage = *mut ::core::ffi::c_void;
+pub type IEnumRfc1766 = *mut ::core::ffi::c_void;
+pub type IEnumScript = *mut ::core::ffi::c_void;
+pub type IEnumSpellingError = *mut ::core::ffi::c_void;
+pub type IMLangCodePages = *mut ::core::ffi::c_void;
+pub type IMLangConvertCharset = *mut ::core::ffi::c_void;
+pub type IMLangFontLink = *mut ::core::ffi::c_void;
+pub type IMLangFontLink2 = *mut ::core::ffi::c_void;
+pub type IMLangLineBreakConsole = *mut ::core::ffi::c_void;
+pub type IMLangString = *mut ::core::ffi::c_void;
+pub type IMLangStringAStr = *mut ::core::ffi::c_void;
+pub type IMLangStringBufA = *mut ::core::ffi::c_void;
+pub type IMLangStringBufW = *mut ::core::ffi::c_void;
+pub type IMLangStringWStr = *mut ::core::ffi::c_void;
+pub type IMultiLanguage = *mut ::core::ffi::c_void;
+pub type IMultiLanguage2 = *mut ::core::ffi::c_void;
+pub type IMultiLanguage3 = *mut ::core::ffi::c_void;
+pub type IOptionDescription = *mut ::core::ffi::c_void;
+pub type ISpellCheckProvider = *mut ::core::ffi::c_void;
+pub type ISpellCheckProviderFactory = *mut ::core::ffi::c_void;
+pub type ISpellChecker = *mut ::core::ffi::c_void;
+pub type ISpellChecker2 = *mut ::core::ffi::c_void;
+pub type ISpellCheckerChangedEventHandler = *mut ::core::ffi::c_void;
+pub type ISpellCheckerFactory = *mut ::core::ffi::c_void;
+pub type ISpellingError = *mut ::core::ffi::c_void;
+pub type IUserDictionariesRegistrar = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const ALL_SERVICES: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -2605,21 +2635,6 @@ pub const C3_NOTAPPLICABLE: u32 = 0u32;
 pub const C3_SYMBOL: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const C3_VOWELMARK: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CALINFO_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CALINFO_ENUMPROCEXA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: u32) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CALINFO_ENUMPROCEXEX = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: u32, param2: ::windows_sys::core::PCWSTR, param3: super::Foundation::LPARAM) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CALINFO_ENUMPROCEXW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: u32) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CALINFO_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const CAL_GREGORIAN: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -2780,108 +2795,9 @@ pub const CAL_UMALQURA: u32 = 23u32;
 pub const CAL_USE_CP_ACP: u32 = 1073741824u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const CANITER_SKIP_ZEROES: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct CHARSETINFO {
-    pub ciCharset: u32,
-    pub ciACP: u32,
-    pub fs: FONTSIGNATURE,
-}
-impl ::core::marker::Copy for CHARSETINFO {}
-impl ::core::clone::Clone for CHARSETINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const CMLangConvertCharset: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3597496217, data2: 52650, data3: 4560, data4: [184, 34, 0, 192, 79, 201, 179, 31] };
 pub const CMLangString: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3226297807, data2: 46861, data3: 4560, data4: [177, 136, 0, 170, 0, 56, 201, 105] };
 pub const CMultiLanguage: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 660349922, data2: 14151, data3: 4560, data4: [159, 234, 0, 170, 0, 63, 134, 70] };
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CODEPAGE_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type CODEPAGE_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type COMPARE_STRING_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const LINGUISTIC_IGNORECASE: COMPARE_STRING_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const LINGUISTIC_IGNOREDIACRITIC: COMPARE_STRING_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const NORM_IGNORECASE: COMPARE_STRING_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const NORM_IGNOREKANATYPE: COMPARE_STRING_FLAGS = 65536u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const NORM_IGNORENONSPACE: COMPARE_STRING_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const NORM_IGNORESYMBOLS: COMPARE_STRING_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const NORM_IGNOREWIDTH: COMPARE_STRING_FLAGS = 131072u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const NORM_LINGUISTIC_CASING: COMPARE_STRING_FLAGS = 134217728u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SORT_DIGITSASNUMBERS: COMPARE_STRING_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SORT_STRINGSORT: COMPARE_STRING_FLAGS = 4096u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type CORRECTIVE_ACTION = i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const CORRECTIVE_ACTION_NONE: CORRECTIVE_ACTION = 0i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const CORRECTIVE_ACTION_GET_SUGGESTIONS: CORRECTIVE_ACTION = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const CORRECTIVE_ACTION_REPLACE: CORRECTIVE_ACTION = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const CORRECTIVE_ACTION_DELETE: CORRECTIVE_ACTION = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct CPINFO {
-    pub MaxCharSize: u32,
-    pub DefaultChar: [u8; 2],
-    pub LeadByte: [u8; 12],
-}
-impl ::core::marker::Copy for CPINFO {}
-impl ::core::clone::Clone for CPINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct CPINFOEXA {
-    pub MaxCharSize: u32,
-    pub DefaultChar: [u8; 2],
-    pub LeadByte: [u8; 12],
-    pub UnicodeDefaultChar: u16,
-    pub CodePage: u32,
-    pub CodePageName: [super::Foundation::CHAR; 260],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for CPINFOEXA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for CPINFOEXA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct CPINFOEXW {
-    pub MaxCharSize: u32,
-    pub DefaultChar: [u8; 2],
-    pub LeadByte: [u8; 12],
-    pub UnicodeDefaultChar: u16,
-    pub CodePage: u32,
-    pub CodePageName: [u16; 260],
-}
-impl ::core::marker::Copy for CPINFOEXW {}
-impl ::core::clone::Clone for CPINFOEXW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const CPIOD_FORCE_PROMPT: i32 = -2147483648i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -3136,71 +3052,6 @@ pub const CT_CTYPE1: u32 = 1u32;
 pub const CT_CTYPE2: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const CT_CTYPE3: u32 = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct CURRENCYFMTA {
-    pub NumDigits: u32,
-    pub LeadingZero: u32,
-    pub Grouping: u32,
-    pub lpDecimalSep: ::windows_sys::core::PSTR,
-    pub lpThousandSep: ::windows_sys::core::PSTR,
-    pub NegativeOrder: u32,
-    pub PositiveOrder: u32,
-    pub lpCurrencySymbol: ::windows_sys::core::PSTR,
-}
-impl ::core::marker::Copy for CURRENCYFMTA {}
-impl ::core::clone::Clone for CURRENCYFMTA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct CURRENCYFMTW {
-    pub NumDigits: u32,
-    pub LeadingZero: u32,
-    pub Grouping: u32,
-    pub lpDecimalSep: ::windows_sys::core::PWSTR,
-    pub lpThousandSep: ::windows_sys::core::PWSTR,
-    pub NegativeOrder: u32,
-    pub PositiveOrder: u32,
-    pub lpCurrencySymbol: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for CURRENCYFMTW {}
-impl ::core::clone::Clone for CURRENCYFMTW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type DATEFMT_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type DATEFMT_ENUMPROCEXA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: u32) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type DATEFMT_ENUMPROCEXEX = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: u32, param2: super::Foundation::LPARAM) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type DATEFMT_ENUMPROCEXW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: u32) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type DATEFMT_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct DetectEncodingInfo {
-    pub nLangID: u32,
-    pub nCodePage: u32,
-    pub nDocPercent: i32,
-    pub nConfidence: i32,
-}
-impl ::core::marker::Copy for DetectEncodingInfo {}
-impl ::core::clone::Clone for DetectEncodingInfo {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const ELS_GUID_LANGUAGE_DETECTION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3481141425, data2: 37019, data3: 19861, data4: [168, 244, 97, 31, 124, 55, 119, 2] };
 pub const ELS_GUID_SCRIPT_DETECTION: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 761574457, data2: 27823, data3: 20331, data4: [182, 136, 229, 208, 244, 250, 167, 215] };
 pub const ELS_GUID_TRANSLITERATION_BENGALI_TO_LATIN: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4108310565, data2: 37284, data3: 18591, data4: [133, 94, 154, 217, 190, 229, 87, 39] };
@@ -3210,91 +3061,8 @@ pub const ELS_GUID_TRANSLITERATION_HANGUL_DECOMPOSITION: ::windows_sys::core::GU
 pub const ELS_GUID_TRANSLITERATION_HANS_TO_HANT: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1017957832, data2: 21904, data3: 17116, data4: [154, 123, 181, 166, 181, 179, 182, 59] };
 pub const ELS_GUID_TRANSLITERATION_HANT_TO_HANS: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2745709371, data2: 62716, data3: 17142, data4: [160, 196, 4, 98, 254, 115, 23, 203] };
 pub const ELS_GUID_TRANSLITERATION_MALAYALAM_TO_LATIN: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3636036529, data2: 63679, data3: 18987, data4: [188, 213, 91, 94, 162, 6, 19, 225] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct ENUMTEXTMETRICA {
-    pub etmNewTextMetricEx: NEWTEXTMETRICEXA,
-    pub etmAxesList: super::Graphics::Gdi::AXESLISTA,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for ENUMTEXTMETRICA {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for ENUMTEXTMETRICA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct ENUMTEXTMETRICW {
-    pub etmNewTextMetricEx: NEWTEXTMETRICEXW,
-    pub etmAxesList: super::Graphics::Gdi::AXESLISTW,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for ENUMTEXTMETRICW {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for ENUMTEXTMETRICW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const ENUM_ALL_CALENDARS: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type ENUM_DATE_FORMATS_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const DATE_SHORTDATE: ENUM_DATE_FORMATS_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const DATE_LONGDATE: ENUM_DATE_FORMATS_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const DATE_YEARMONTH: ENUM_DATE_FORMATS_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const DATE_MONTHDAY: ENUM_DATE_FORMATS_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const DATE_AUTOLAYOUT: ENUM_DATE_FORMATS_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const DATE_LTRREADING: ENUM_DATE_FORMATS_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const DATE_RTLREADING: ENUM_DATE_FORMATS_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const DATE_USE_ALT_CALENDAR: ENUM_DATE_FORMATS_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type ENUM_SYSTEM_CODE_PAGES_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const CP_INSTALLED: ENUM_SYSTEM_CODE_PAGES_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const CP_SUPPORTED: ENUM_SYSTEM_CODE_PAGES_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const LGRPID_INSTALLED: ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const LGRPID_SUPPORTED: ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct FILEMUIINFO {
-    pub dwSize: u32,
-    pub dwVersion: u32,
-    pub dwFileType: u32,
-    pub pChecksum: [u8; 16],
-    pub pServiceChecksum: [u8; 16],
-    pub dwLanguageNameOffset: u32,
-    pub dwTypeIDMainSize: u32,
-    pub dwTypeIDMainOffset: u32,
-    pub dwTypeNameMainOffset: u32,
-    pub dwTypeIDMUISize: u32,
-    pub dwTypeIDMUIOffset: u32,
-    pub dwTypeNameMUIOffset: u32,
-    pub abBuffer: [u8; 8],
-}
-impl ::core::marker::Copy for FILEMUIINFO {}
-impl ::core::clone::Clone for FILEMUIINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const FIND_ENDSWITH: u32 = 2097152u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -3304,49 +3072,7 @@ pub const FIND_FROMSTART: u32 = 4194304u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const FIND_STARTSWITH: u32 = 1048576u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type FOLD_STRING_MAP_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MAP_COMPOSITE: FOLD_STRING_MAP_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MAP_EXPAND_LIGATURES: FOLD_STRING_MAP_FLAGS = 8192u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MAP_FOLDCZONE: FOLD_STRING_MAP_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MAP_FOLDDIGITS: FOLD_STRING_MAP_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MAP_PRECOMPOSED: FOLD_STRING_MAP_FLAGS = 32u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct FONTSIGNATURE {
-    pub fsUsb: [u32; 4],
-    pub fsCsb: [u32; 2],
-}
-impl ::core::marker::Copy for FONTSIGNATURE {}
-impl ::core::clone::Clone for FONTSIGNATURE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const GEOID_NOT_AVAILABLE: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type GEO_ENUMNAMEPROC = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: super::Foundation::LPARAM) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type GEO_ENUMPROC = ::core::option::Option<unsafe extern "system" fn(param0: i32) -> super::Foundation::BOOL>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct GOFFSET {
-    pub du: i32,
-    pub dv: i32,
-}
-impl ::core::marker::Copy for GOFFSET {}
-impl ::core::clone::Clone for GOFFSET {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const GSS_ALLOW_INHERITED_COMMON: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -3355,10 +3081,6 @@ pub const HIGHLEVEL_SERVICE_TYPES: u32 = 1u32;
 pub const HIGH_SURROGATE_END: u32 = 56319u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const HIGH_SURROGATE_START: u32 = 55296u32;
-pub type HIMC = isize;
-pub type HIMCC = isize;
-pub type HSAVEDUILANGUAGES = isize;
-pub type IComprehensiveSpellCheckProvider = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const IDN_ALLOW_UNASSIGNED: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -3367,106 +3089,6 @@ pub const IDN_EMAIL_ADDRESS: u32 = 4u32;
 pub const IDN_RAW_PUNYCODE: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const IDN_USE_STD3_ASCII_RULES: u32 = 2u32;
-pub type IEnumCodePage = *mut ::core::ffi::c_void;
-pub type IEnumRfc1766 = *mut ::core::ffi::c_void;
-pub type IEnumScript = *mut ::core::ffi::c_void;
-pub type IEnumSpellingError = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_ALPHANUMERIC: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_CHARCODE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_CHINESE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_FULLSHAPE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_HANGUL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_HANJACONVERT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_JAPANESE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_KATAKANA: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_LANGUAGE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_NATIVE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_NATIVESYMBOL: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IME_CMODE_ROMAN: u32 = 16u32;
-pub type IMLangCodePages = *mut ::core::ffi::c_void;
-pub type IMLangConvertCharset = *mut ::core::ffi::c_void;
-pub type IMLangFontLink = *mut ::core::ffi::c_void;
-pub type IMLangFontLink2 = *mut ::core::ffi::c_void;
-pub type IMLangLineBreakConsole = *mut ::core::ffi::c_void;
-pub type IMLangString = *mut ::core::ffi::c_void;
-pub type IMLangStringAStr = *mut ::core::ffi::c_void;
-pub type IMLangStringBufA = *mut ::core::ffi::c_void;
-pub type IMLangStringBufW = *mut ::core::ffi::c_void;
-pub type IMLangStringWStr = *mut ::core::ffi::c_void;
-pub type IMultiLanguage = *mut ::core::ffi::c_void;
-pub type IMultiLanguage2 = *mut ::core::ffi::c_void;
-pub type IMultiLanguage3 = *mut ::core::ffi::c_void;
-pub type IOptionDescription = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type IS_TEXT_UNICODE_RESULT = u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_ASCII16: IS_TEXT_UNICODE_RESULT = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_REVERSE_ASCII16: IS_TEXT_UNICODE_RESULT = 16u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_STATISTICS: IS_TEXT_UNICODE_RESULT = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_REVERSE_STATISTICS: IS_TEXT_UNICODE_RESULT = 32u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_CONTROLS: IS_TEXT_UNICODE_RESULT = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_REVERSE_CONTROLS: IS_TEXT_UNICODE_RESULT = 64u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_SIGNATURE: IS_TEXT_UNICODE_RESULT = 8u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_REVERSE_SIGNATURE: IS_TEXT_UNICODE_RESULT = 128u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_ILLEGAL_CHARS: IS_TEXT_UNICODE_RESULT = 256u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_ODD_LENGTH: IS_TEXT_UNICODE_RESULT = 512u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_NULL_BYTES: IS_TEXT_UNICODE_RESULT = 4096u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_UNICODE_MASK: IS_TEXT_UNICODE_RESULT = 15u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_REVERSE_MASK: IS_TEXT_UNICODE_RESULT = 240u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_NOT_UNICODE_MASK: IS_TEXT_UNICODE_RESULT = 3840u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const IS_TEXT_UNICODE_NOT_ASCII_MASK: IS_TEXT_UNICODE_RESULT = 61440u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type IS_VALID_LOCALE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const LCID_INSTALLED: IS_VALID_LOCALE_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const LCID_SUPPORTED: IS_VALID_LOCALE_FLAGS = 2u32;
-pub type ISpellCheckProvider = *mut ::core::ffi::c_void;
-pub type ISpellCheckProviderFactory = *mut ::core::ffi::c_void;
-pub type ISpellChecker = *mut ::core::ffi::c_void;
-pub type ISpellChecker2 = *mut ::core::ffi::c_void;
-pub type ISpellCheckerChangedEventHandler = *mut ::core::ffi::c_void;
-pub type ISpellCheckerFactory = *mut ::core::ffi::c_void;
-pub type ISpellingError = *mut ::core::ffi::c_void;
-pub type IUserDictionariesRegistrar = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LANGGROUPLOCALE_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: u32, param2: ::windows_sys::core::PCSTR, param3: isize) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LANGGROUPLOCALE_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: u32, param2: ::windows_sys::core::PCWSTR, param3: isize) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LANGUAGEGROUP_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: ::windows_sys::core::PCSTR, param2: ::windows_sys::core::PCSTR, param3: u32, param4: isize) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LANGUAGEGROUP_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: ::windows_sys::core::PCWSTR, param2: ::windows_sys::core::PCWSTR, param3: u32, param4: isize) -> super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const LCID_ALTERNATE_SORTS: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -3533,34 +3155,12 @@ pub const LGRPID_TURKISH: u32 = 6u32;
 pub const LGRPID_VIETNAMESE: u32 = 14u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const LGRPID_WESTERN_EUROPE: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct LOCALESIGNATURE {
-    pub lsUsb: [u32; 4],
-    pub lsCsbDefault: [u32; 2],
-    pub lsCsbSupported: [u32; 2],
-}
-impl ::core::marker::Copy for LOCALESIGNATURE {}
-impl ::core::clone::Clone for LOCALESIGNATURE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const LOCALE_ALL: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const LOCALE_ALLOW_NEUTRAL_NAMES: u32 = 134217728u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const LOCALE_ALTERNATE_SORTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LOCALE_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LOCALE_ENUMPROCEX = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: u32, param2: super::Foundation::LPARAM) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type LOCALE_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const LOCALE_FONTSIGNATURE: u32 = 88u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -3905,125 +3505,6 @@ pub const LOWLEVEL_SERVICE_TYPES: u32 = 2u32;
 pub const LOW_SURROGATE_END: u32 = 57343u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const LOW_SURROGATE_START: u32 = 56320u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct MAPPING_DATA_RANGE {
-    pub dwStartIndex: u32,
-    pub dwEndIndex: u32,
-    pub pszDescription: ::windows_sys::core::PWSTR,
-    pub dwDescriptionLength: u32,
-    pub pData: *mut ::core::ffi::c_void,
-    pub dwDataSize: u32,
-    pub pszContentType: ::windows_sys::core::PWSTR,
-    pub prgActionIds: *mut ::windows_sys::core::PWSTR,
-    pub dwActionsCount: u32,
-    pub prgActionDisplayNames: *mut ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for MAPPING_DATA_RANGE {}
-impl ::core::clone::Clone for MAPPING_DATA_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct MAPPING_ENUM_OPTIONS {
-    pub Size: usize,
-    pub pszCategory: ::windows_sys::core::PWSTR,
-    pub pszInputLanguage: ::windows_sys::core::PWSTR,
-    pub pszOutputLanguage: ::windows_sys::core::PWSTR,
-    pub pszInputScript: ::windows_sys::core::PWSTR,
-    pub pszOutputScript: ::windows_sys::core::PWSTR,
-    pub pszInputContentType: ::windows_sys::core::PWSTR,
-    pub pszOutputContentType: ::windows_sys::core::PWSTR,
-    pub pGuid: *mut ::windows_sys::core::GUID,
-    pub _bitfield: u32,
-}
-impl ::core::marker::Copy for MAPPING_ENUM_OPTIONS {}
-impl ::core::clone::Clone for MAPPING_ENUM_OPTIONS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct MAPPING_OPTIONS {
-    pub Size: usize,
-    pub pszInputLanguage: ::windows_sys::core::PWSTR,
-    pub pszOutputLanguage: ::windows_sys::core::PWSTR,
-    pub pszInputScript: ::windows_sys::core::PWSTR,
-    pub pszOutputScript: ::windows_sys::core::PWSTR,
-    pub pszInputContentType: ::windows_sys::core::PWSTR,
-    pub pszOutputContentType: ::windows_sys::core::PWSTR,
-    pub pszUILanguage: ::windows_sys::core::PWSTR,
-    pub pfnRecognizeCallback: PFN_MAPPINGCALLBACKPROC,
-    pub pRecognizeCallerData: *mut ::core::ffi::c_void,
-    pub dwRecognizeCallerDataSize: u32,
-    pub pfnActionCallback: PFN_MAPPINGCALLBACKPROC,
-    pub pActionCallerData: *mut ::core::ffi::c_void,
-    pub dwActionCallerDataSize: u32,
-    pub dwServiceFlag: u32,
-    pub _bitfield: u32,
-}
-impl ::core::marker::Copy for MAPPING_OPTIONS {}
-impl ::core::clone::Clone for MAPPING_OPTIONS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct MAPPING_PROPERTY_BAG {
-    pub Size: usize,
-    pub prgResultRanges: *mut MAPPING_DATA_RANGE,
-    pub dwRangesCount: u32,
-    pub pServiceData: *mut ::core::ffi::c_void,
-    pub dwServiceDataSize: u32,
-    pub pCallerData: *mut ::core::ffi::c_void,
-    pub dwCallerDataSize: u32,
-    pub pContext: *mut ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for MAPPING_PROPERTY_BAG {}
-impl ::core::clone::Clone for MAPPING_PROPERTY_BAG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct MAPPING_SERVICE_INFO {
-    pub Size: usize,
-    pub pszCopyright: ::windows_sys::core::PWSTR,
-    pub wMajorVersion: u16,
-    pub wMinorVersion: u16,
-    pub wBuildVersion: u16,
-    pub wStepVersion: u16,
-    pub dwInputContentTypesCount: u32,
-    pub prgInputContentTypes: *mut ::windows_sys::core::PWSTR,
-    pub dwOutputContentTypesCount: u32,
-    pub prgOutputContentTypes: *mut ::windows_sys::core::PWSTR,
-    pub dwInputLanguagesCount: u32,
-    pub prgInputLanguages: *mut ::windows_sys::core::PWSTR,
-    pub dwOutputLanguagesCount: u32,
-    pub prgOutputLanguages: *mut ::windows_sys::core::PWSTR,
-    pub dwInputScriptsCount: u32,
-    pub prgInputScripts: *mut ::windows_sys::core::PWSTR,
-    pub dwOutputScriptsCount: u32,
-    pub prgOutputScripts: *mut ::windows_sys::core::PWSTR,
-    pub guid: ::windows_sys::core::GUID,
-    pub pszCategory: ::windows_sys::core::PWSTR,
-    pub pszDescription: ::windows_sys::core::PWSTR,
-    pub dwPrivateDataSize: u32,
-    pub pPrivateData: *mut ::core::ffi::c_void,
-    pub pContext: *mut ::core::ffi::c_void,
-    pub _bitfield: u32,
-}
-impl ::core::marker::Copy for MAPPING_SERVICE_INFO {}
-impl ::core::clone::Clone for MAPPING_SERVICE_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const MAX_DEFAULTCHAR: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -4041,88 +3522,7 @@ pub const MAX_RFC1766_NAME: u32 = 6u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const MAX_SCRIPT_NAME: u32 = 48u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type MIMECONTF = i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_MAILNEWS: MIMECONTF = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_BROWSER: MIMECONTF = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_MINIMAL: MIMECONTF = 4i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_IMPORT: MIMECONTF = 8i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_SAVABLE_MAILNEWS: MIMECONTF = 256i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_SAVABLE_BROWSER: MIMECONTF = 512i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_EXPORT: MIMECONTF = 1024i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_PRIVCONVERTER: MIMECONTF = 65536i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_VALID: MIMECONTF = 131072i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_VALID_NLS: MIMECONTF = 262144i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_MIME_IE4: MIMECONTF = 268435456i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_MIME_LATEST: MIMECONTF = 536870912i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MIMECONTF_MIME_REGISTRY: MIMECONTF = 1073741824i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct MIMECPINFO {
-    pub dwFlags: u32,
-    pub uiCodePage: u32,
-    pub uiFamilyCodePage: u32,
-    pub wszDescription: [u16; 64],
-    pub wszWebCharset: [u16; 50],
-    pub wszHeaderCharset: [u16; 50],
-    pub wszBodyCharset: [u16; 50],
-    pub wszFixedWidthFont: [u16; 32],
-    pub wszProportionalFont: [u16; 32],
-    pub bGDICharset: u8,
-}
-impl ::core::marker::Copy for MIMECPINFO {}
-impl ::core::clone::Clone for MIMECPINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct MIMECSETINFO {
-    pub uiCodePage: u32,
-    pub uiInternetEncoding: u32,
-    pub wszCharset: [u16; 50],
-}
-impl ::core::marker::Copy for MIMECSETINFO {}
-impl ::core::clone::Clone for MIMECSETINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const MIN_SPELLING_NTDDI: u32 = 100794368u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type MLDETECTCP = i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTCP_NONE: MLDETECTCP = 0i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTCP_7BIT: MLDETECTCP = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTCP_8BIT: MLDETECTCP = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTCP_DBCS: MLDETECTCP = 4i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTCP_HTML: MLDETECTCP = 8i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTCP_NUMBER: MLDETECTCP = 16i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type MLSTR_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLSTR_READ: MLSTR_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLSTR_WRITE: MLSTR_FLAGS = 2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const MUI_COMPLEX_SCRIPT_FILTER: u32 = 512u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -4190,6 +3590,921 @@ pub const MUI_USE_SEARCH_ALL_LANGUAGES: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const MUI_VERIFY_FILE_EXISTS: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const NLS_CP_CPINFO: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const NLS_CP_MBTOWC: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const NLS_CP_WCTOMB: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const NUMSYS_NAME_CAPACITY: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const OFFLINE_SERVICES: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ONLINE_SERVICES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SCRIPT_DIGITSUBSTITUTE_CONTEXT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SCRIPT_DIGITSUBSTITUTE_NATIONAL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SCRIPT_DIGITSUBSTITUTE_NONE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SCRIPT_DIGITSUBSTITUTE_TRADITIONAL: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SCRIPT_TAG_UNKNOWN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SCRIPT_UNDEFINED: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SGCM_RTL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SORTING_PARADIGM_ICU: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SORTING_PARADIGM_NLS: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_BREAK: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_CLIP: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_DONTGLYPH: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_DZWG: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_FALLBACK: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_FIT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_FULLMEASURE: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_GCP: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_GLYPHS: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_HIDEHOTKEY: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_HOTKEY: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_HOTKEYONLY: u32 = 9216u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_LAYOUTRTL: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_LINK: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_LPKANSIFALLBACK: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_METAFILE: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_NOKASHIDA: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_PASSWORD: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_PIDX: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_RTL: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SSA_TAB: u32 = 2u32;
+pub const SpellCheckerFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2058577491, data2: 6038, data3: 18507, data4: [189, 250, 231, 79, 29, 183, 193, 220] };
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U16_MAX_LENGTH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U8_LEAD3_T1_BITS: &str = " 000000000000\u{10}00";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U8_LEAD4_T1_BITS: &str = "\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{1e}\u{f}\u{f}\u{f}\u{0}\u{0}\u{0}\u{0}";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U8_MAX_LENGTH: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UBIDI_DEFAULT_LTR: u32 = 254u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UBIDI_DEFAULT_RTL: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UBIDI_DO_MIRRORING: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UBIDI_INSERT_LRM_FOR_NUMERIC: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UBIDI_KEEP_BASE_COMBINING: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UBIDI_LEVEL_OVERRIDE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UBIDI_MAP_NOWHERE: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UBIDI_MAX_EXPLICIT_LEVEL: u32 = 125u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UBIDI_OUTPUT_REVERSE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UBIDI_REMOVE_BIDI_CONTROLS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCAL_UNKNOWN_ZONE_ID: &str = "Etc/Unknown";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCHAR_MAX_VALUE: u32 = 1114111u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCHAR_MIN_VALUE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCLN_NO_AUTO_CLEANUP: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_ESCAPE_C: &str = "C";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_ESCAPE_CSS2: &str = "S";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_ESCAPE_JAVA: &str = "J";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_ESCAPE_UNICODE: &str = "U";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_ESCAPE_XML_DEC: &str = "D";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_ESCAPE_XML_HEX: &str = "X";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_LOCALE_OPTION_STRING: &str = ",locale=";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_MAX_CONVERTER_NAME_LENGTH: u32 = 60u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_OPTION_SEP_STRING: &str = ",";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_SI: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_SKIP_STOP_ON_ILLEGAL: &str = "i";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_SO: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_SUB_STOP_ON_ILLEGAL: &str = "i";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_SWAP_LFNL_OPTION_STRING: &str = ",swaplfnl";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_VALUE_SEP_STRING: &str = "=";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCNV_VERSION_OPTION_STRING: &str = ",version=";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_ENABLE_PLUGINS: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_FORMAT_FASTPATHS_49: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_HAVE_PARSEALLINPUT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_BREAK_ITERATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_COLLATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_CONVERSION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_FILE_IO: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_FILTERED_BREAK_ITERATION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_FORMATTING: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_IDNA: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_LEGACY_CONVERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_NORMALIZATION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_REGULAR_EXPRESSIONS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_SERVICE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_NO_TRANSLITERATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_ONLY_COLLATION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCONFIG_ONLY_HTML_CONVERSION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCPTRIE_ERROR_VALUE_NEG_DATA_OFFSET: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCPTRIE_FAST_DATA_BLOCK_LENGTH: i32 = 64i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCPTRIE_FAST_DATA_MASK: i32 = 63i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCPTRIE_FAST_SHIFT: i32 = 6i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCPTRIE_HIGH_VALUE_NEG_DATA_OFFSET: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UCPTRIE_SMALL_MAX: i32 = 4095i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_ABBR_GENERIC_TZ: &str = "v";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_ABBR_MONTH: &str = "MMM";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_ABBR_MONTH_DAY: &str = "MMMd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_ABBR_MONTH_WEEKDAY_DAY: &str = "MMMEd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_ABBR_QUARTER: &str = "QQQ";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_ABBR_SPECIFIC_TZ: &str = "z";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_ABBR_UTC_TZ: &str = "ZZZZ";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_ABBR_WEEKDAY: &str = "E";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_DAY: &str = "d";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_GENERIC_TZ: &str = "vvvv";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_HOUR: &str = "j";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_HOUR24: &str = "H";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_HOUR24_MINUTE: &str = "Hm";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_HOUR24_MINUTE_SECOND: &str = "Hms";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_HOUR_MINUTE: &str = "jm";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_HOUR_MINUTE_SECOND: &str = "jms";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_LOCATION_TZ: &str = "VVVV";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_MINUTE: &str = "m";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_MINUTE_SECOND: &str = "ms";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_MONTH: &str = "MMMM";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_MONTH_DAY: &str = "MMMMd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_MONTH_WEEKDAY_DAY: &str = "MMMMEEEEd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_NUM_MONTH: &str = "M";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_NUM_MONTH_DAY: &str = "Md";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_NUM_MONTH_WEEKDAY_DAY: &str = "MEd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_QUARTER: &str = "QQQQ";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_SECOND: &str = "s";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_SPECIFIC_TZ: &str = "zzzz";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_WEEKDAY: &str = "EEEE";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR: &str = "y";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_ABBR_MONTH: &str = "yMMM";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_ABBR_MONTH_DAY: &str = "yMMMd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_ABBR_MONTH_WEEKDAY_DAY: &str = "yMMMEd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_ABBR_QUARTER: &str = "yQQQ";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_MONTH: &str = "yMMMM";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_MONTH_DAY: &str = "yMMMMd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_MONTH_WEEKDAY_DAY: &str = "yMMMMEEEEd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_NUM_MONTH: &str = "yM";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_NUM_MONTH_DAY: &str = "yMd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_NUM_MONTH_WEEKDAY_DAY: &str = "yMEd";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UDAT_YEAR_QUARTER: &str = "yQQQQ";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_CHECK_BIDI: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_CHECK_CONTEXTJ: i32 = 8i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_CHECK_CONTEXTO: i32 = 64i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_DEFAULT: i32 = 0i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_BIDI: i32 = 2048i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_CONTEXTJ: i32 = 4096i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_CONTEXTO_DIGITS: i32 = 16384i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_CONTEXTO_PUNCTUATION: i32 = 8192i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_DISALLOWED: i32 = 128i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_DOMAIN_NAME_TOO_LONG: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_EMPTY_LABEL: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_HYPHEN_3_4: i32 = 32i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_INVALID_ACE_LABEL: i32 = 1024i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_LABEL_HAS_DOT: i32 = 512i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_LABEL_TOO_LONG: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_LEADING_COMBINING_MARK: i32 = 64i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_LEADING_HYPHEN: i32 = 8i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_PUNYCODE: i32 = 256i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_ERROR_TRAILING_HYPHEN: i32 = 16i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_NONTRANSITIONAL_TO_ASCII: i32 = 16i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_NONTRANSITIONAL_TO_UNICODE: i32 = 32i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UIDNA_USE_STD3_RULES: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UITER_UNKNOWN_INDEX: i32 = -2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_CANADA: &str = "en_CA";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_CANADA_FRENCH: &str = "fr_CA";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_CHINA: &str = "zh_CN";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_CHINESE: &str = "zh";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_COUNTRY_CAPACITY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_ENGLISH: &str = "en";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_FRANCE: &str = "fr_FR";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_FRENCH: &str = "fr";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_FULLNAME_CAPACITY: u32 = 157u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_GERMAN: &str = "de";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_GERMANY: &str = "de_DE";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_ITALIAN: &str = "it";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_ITALY: &str = "it_IT";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_JAPAN: &str = "ja_JP";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_JAPANESE: &str = "ja";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_KEYWORDS_CAPACITY: u32 = 96u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_KEYWORD_AND_VALUES_CAPACITY: u32 = 100u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_KEYWORD_ASSIGN_UNICODE: u32 = 61u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_KEYWORD_ITEM_SEPARATOR_UNICODE: u32 = 59u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_KEYWORD_SEPARATOR_UNICODE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_KOREA: &str = "ko_KR";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_KOREAN: &str = "ko";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_LANG_CAPACITY: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_PRC: &str = "zh_CN";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_SCRIPT_CAPACITY: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_SIMPLIFIED_CHINESE: &str = "zh_CN";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_TAIWAN: &str = "zh_TW";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_TRADITIONAL_CHINESE: &str = "zh_TW";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_UK: &str = "en_GB";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const ULOC_US: &str = "en_US";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UMSGPAT_ARG_NAME_NOT_NUMBER: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UMSGPAT_ARG_NAME_NOT_VALID: i32 = -2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UNISCRIBE_OPENTYPE: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UNORM_INPUT_IS_FCD: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const USEARCH_DONE: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const USET_ADD_CASE_MAPPINGS: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const USET_CASE_INSENSITIVE: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const USET_IGNORE_SPACE: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const USET_SERIALIZED_STATIC_ARRAY_CAPACITY: i32 = 8i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const USPREP_ALLOW_UNASSIGNED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const USPREP_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const USP_E_SCRIPT_NOT_IN_FONT: ::windows_sys::core::HRESULT = -2147220992i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTEXT_MAGIC: i32 = 878368812i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTEXT_PROVIDER_HAS_META_DATA: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTEXT_PROVIDER_LENGTH_IS_EXPENSIVE: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTEXT_PROVIDER_OWNS_TEXT: i32 = 5i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTEXT_PROVIDER_STABLE_CHUNKS: i32 = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTEXT_PROVIDER_WRITABLE: i32 = 3i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTF16_MAX_CHAR_LENGTH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTF32_MAX_CHAR_LENGTH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTF8_ERROR_VALUE_1: u32 = 21u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTF8_ERROR_VALUE_2: u32 = 159u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTF8_MAX_CHAR_LENGTH: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTF_ERROR_VALUE: u32 = 65535u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTF_MAX_CHAR_LENGTH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const UTF_SIZE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_ASCII_FAMILY: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_CHAR16_IS_TYPEDEF: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_CHARSET_FAMILY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_CHARSET_IS_UTF8: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_CHECK_DYLOAD: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_COMBINED_IMPLEMENTATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_COMPARE_CODE_POINT_ORDER: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_COMPARE_IGNORE_CASE: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_COPYRIGHT_STRING_LENGTH: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_CPLUSPLUS_VERSION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_DEBUG: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_DEFAULT_SHOW_DRAFT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_DEFINE_FALSE_AND_TRUE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_DISABLE_RENAMING: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_EBCDIC_FAMILY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_EDITS_NO_RESET: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_ENABLE_DYLOAD: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_ENABLE_TRACING: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_FOLD_CASE_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_FOLD_CASE_EXCLUDE_SPECIAL_I: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_GCC_MAJOR_MINOR: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_CHAR16_T: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_DEBUG_LOCATION_NEW: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_INTTYPES_H: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_LIB_SUFFIX: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_PLACEMENT_NEW: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_RBNF: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_RVALUE_REFERENCES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_STDINT_H: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_STD_STRING: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_WCHAR_H: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HAVE_WCSCPY: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HIDE_DEPRECATED_API: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HIDE_DRAFT_API: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HIDE_INTERNAL_API: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HIDE_OBSOLETE_API: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_HIDE_OBSOLETE_UTF_OLD_H: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_ICUDATA_TYPE_LETTER: &str = "e";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_ICU_DATA_KEY: &str = "DataVersion";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_ICU_VERSION_BUNDLE: &str = "icuver";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_IOSTREAM_SOURCE: u32 = 199711u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_IS_BIG_ENDIAN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_LIB_SUFFIX_C_NAME_STRING: &str = "";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_MAX_VERSION_LENGTH: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_MAX_VERSION_STRING_LENGTH: u32 = 20u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_MILLIS_PER_DAY: u32 = 86400000u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_MILLIS_PER_HOUR: u32 = 3600000u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_MILLIS_PER_MINUTE: u32 = 60000u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_MILLIS_PER_SECOND: u32 = 1000u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_NO_DEFAULT_INCLUDE_UTF_HEADERS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_OMIT_UNCHANGED_TEXT: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_OVERRIDE_CXX_ALLOCATION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PARSE_CONTEXT_LEN: i32 = 16i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_AIX: u32 = 3100u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_ANDROID: u32 = 4050u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_BROWSER_NATIVE_CLIENT: u32 = 4020u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_BSD: u32 = 3000u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_CYGWIN: u32 = 1900u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_DARWIN: u32 = 3500u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_EMSCRIPTEN: u32 = 5010u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_FUCHSIA: u32 = 4100u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_HPUX: u32 = 2100u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_IPHONE: u32 = 3550u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_IRIX: u32 = 3200u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_LINUX: u32 = 4000u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_MINGW: u32 = 1800u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_OS390: u32 = 9000u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_OS400: u32 = 9400u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_QNX: u32 = 3700u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_SOLARIS: u32 = 2600u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_UNKNOWN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PF_WINDOWS: u32 = 1000u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PLATFORM: u32 = 1800u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PLATFORM_HAS_WIN32_API: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PLATFORM_HAS_WINUWP_API: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PLATFORM_IMPLEMENTS_POSIX: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PLATFORM_IS_DARWIN_BASED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PLATFORM_IS_LINUX_BASED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_PLATFORM_USES_ONLY_WIN32_API: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SENTINEL: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_AGGREGATE_TASHKEEL: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_AGGREGATE_TASHKEEL_MASK: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_AGGREGATE_TASHKEEL_NOOP: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGITS_ALEN2AN_INIT_AL: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGITS_ALEN2AN_INIT_LR: u32 = 96u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGITS_AN2EN: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGITS_EN2AN: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGITS_MASK: u32 = 224u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGITS_NOOP: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGITS_RESERVED: u32 = 160u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGIT_TYPE_AN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGIT_TYPE_AN_EXTENDED: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGIT_TYPE_MASK: u32 = 768u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_DIGIT_TYPE_RESERVED: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LAMALEF_AUTO: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LAMALEF_BEGIN: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LAMALEF_END: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LAMALEF_MASK: u32 = 65539u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LAMALEF_NEAR: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LAMALEF_RESIZE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LENGTH_FIXED_SPACES_AT_BEGINNING: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LENGTH_FIXED_SPACES_AT_END: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LENGTH_FIXED_SPACES_NEAR: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LENGTH_GROW_SHRINK: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LENGTH_MASK: u32 = 65539u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LETTERS_MASK: u32 = 24u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LETTERS_NOOP: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LETTERS_SHAPE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LETTERS_SHAPE_TASHKEEL_ISOLATED: u32 = 24u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_LETTERS_UNSHAPE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_PRESERVE_PRESENTATION: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_PRESERVE_PRESENTATION_MASK: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_PRESERVE_PRESENTATION_NOOP: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_SEEN_MASK: u32 = 7340032u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_SEEN_TWOCELL_NEAR: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_SPACES_RELATIVE_TO_TEXT_BEGIN_END: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_SPACES_RELATIVE_TO_TEXT_MASK: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TAIL_NEW_UNICODE: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TAIL_TYPE_MASK: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TASHKEEL_BEGIN: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TASHKEEL_END: u32 = 393216u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TASHKEEL_MASK: u32 = 917504u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TASHKEEL_REPLACE_BY_TATWEEL: u32 = 786432u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TASHKEEL_RESIZE: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TEXT_DIRECTION_LOGICAL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TEXT_DIRECTION_MASK: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TEXT_DIRECTION_VISUAL_LTR: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_TEXT_DIRECTION_VISUAL_RTL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_YEHHAMZA_MASK: u32 = 58720256u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHAPE_YEHHAMZA_TWOCELL_NEAR: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SHOW_CPLUSPLUS_API: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SIZEOF_UCHAR: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_SIZEOF_WCHAR_T: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_TITLECASE_ADJUST_TO_CASED: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_TITLECASE_NO_BREAK_ADJUSTMENT: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_TITLECASE_NO_LOWERCASE: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_TITLECASE_SENTENCES: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_TITLECASE_WHOLE_STRING: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_UNICODE_VERSION: &str = "8.0";
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const U_USING_ICU_NAMESPACE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const VS_ALLOW_LATIN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const WC_COMPOSITECHECK: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const WC_DEFAULTCHAR: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const WC_DISCARDNS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const WC_ERR_INVALID_CHARS: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const WC_NO_BEST_FIT_CHARS: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const WC_SEPCHARS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type COMPARE_STRING_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const LINGUISTIC_IGNORECASE: COMPARE_STRING_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const LINGUISTIC_IGNOREDIACRITIC: COMPARE_STRING_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const NORM_IGNORECASE: COMPARE_STRING_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const NORM_IGNOREKANATYPE: COMPARE_STRING_FLAGS = 65536u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const NORM_IGNORENONSPACE: COMPARE_STRING_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const NORM_IGNORESYMBOLS: COMPARE_STRING_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const NORM_IGNOREWIDTH: COMPARE_STRING_FLAGS = 131072u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const NORM_LINGUISTIC_CASING: COMPARE_STRING_FLAGS = 134217728u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SORT_DIGITSASNUMBERS: COMPARE_STRING_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const SORT_STRINGSORT: COMPARE_STRING_FLAGS = 4096u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type CORRECTIVE_ACTION = i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const CORRECTIVE_ACTION_NONE: CORRECTIVE_ACTION = 0i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const CORRECTIVE_ACTION_GET_SUGGESTIONS: CORRECTIVE_ACTION = 1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const CORRECTIVE_ACTION_REPLACE: CORRECTIVE_ACTION = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const CORRECTIVE_ACTION_DELETE: CORRECTIVE_ACTION = 3i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type ENUM_DATE_FORMATS_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const DATE_SHORTDATE: ENUM_DATE_FORMATS_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const DATE_LONGDATE: ENUM_DATE_FORMATS_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const DATE_YEARMONTH: ENUM_DATE_FORMATS_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const DATE_MONTHDAY: ENUM_DATE_FORMATS_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const DATE_AUTOLAYOUT: ENUM_DATE_FORMATS_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const DATE_LTRREADING: ENUM_DATE_FORMATS_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const DATE_RTLREADING: ENUM_DATE_FORMATS_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const DATE_USE_ALT_CALENDAR: ENUM_DATE_FORMATS_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type ENUM_SYSTEM_CODE_PAGES_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const CP_INSTALLED: ENUM_SYSTEM_CODE_PAGES_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const CP_SUPPORTED: ENUM_SYSTEM_CODE_PAGES_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const LGRPID_INSTALLED: ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const LGRPID_SUPPORTED: ENUM_SYSTEM_LANGUAGE_GROUPS_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type FOLD_STRING_MAP_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MAP_COMPOSITE: FOLD_STRING_MAP_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MAP_EXPAND_LIGATURES: FOLD_STRING_MAP_FLAGS = 8192u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MAP_FOLDCZONE: FOLD_STRING_MAP_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MAP_FOLDDIGITS: FOLD_STRING_MAP_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MAP_PRECOMPOSED: FOLD_STRING_MAP_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type IS_TEXT_UNICODE_RESULT = u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_ASCII16: IS_TEXT_UNICODE_RESULT = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_REVERSE_ASCII16: IS_TEXT_UNICODE_RESULT = 16u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_STATISTICS: IS_TEXT_UNICODE_RESULT = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_REVERSE_STATISTICS: IS_TEXT_UNICODE_RESULT = 32u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_CONTROLS: IS_TEXT_UNICODE_RESULT = 4u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_REVERSE_CONTROLS: IS_TEXT_UNICODE_RESULT = 64u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_SIGNATURE: IS_TEXT_UNICODE_RESULT = 8u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_REVERSE_SIGNATURE: IS_TEXT_UNICODE_RESULT = 128u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_ILLEGAL_CHARS: IS_TEXT_UNICODE_RESULT = 256u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_ODD_LENGTH: IS_TEXT_UNICODE_RESULT = 512u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_NULL_BYTES: IS_TEXT_UNICODE_RESULT = 4096u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_UNICODE_MASK: IS_TEXT_UNICODE_RESULT = 15u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_REVERSE_MASK: IS_TEXT_UNICODE_RESULT = 240u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_NOT_UNICODE_MASK: IS_TEXT_UNICODE_RESULT = 3840u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const IS_TEXT_UNICODE_NOT_ASCII_MASK: IS_TEXT_UNICODE_RESULT = 61440u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type IS_VALID_LOCALE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const LCID_INSTALLED: IS_VALID_LOCALE_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const LCID_SUPPORTED: IS_VALID_LOCALE_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type MIMECONTF = i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_MAILNEWS: MIMECONTF = 1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_BROWSER: MIMECONTF = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_MINIMAL: MIMECONTF = 4i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_IMPORT: MIMECONTF = 8i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_SAVABLE_MAILNEWS: MIMECONTF = 256i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_SAVABLE_BROWSER: MIMECONTF = 512i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_EXPORT: MIMECONTF = 1024i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_PRIVCONVERTER: MIMECONTF = 65536i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_VALID: MIMECONTF = 131072i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_VALID_NLS: MIMECONTF = 262144i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_MIME_IE4: MIMECONTF = 268435456i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_MIME_LATEST: MIMECONTF = 536870912i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MIMECONTF_MIME_REGISTRY: MIMECONTF = 1073741824i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type MLCONVCHAR = i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLCONVCHARF_AUTODETECT: MLCONVCHAR = 1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLCONVCHARF_ENTITIZE: MLCONVCHAR = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLCONVCHARF_NCR_ENTITIZE: MLCONVCHAR = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLCONVCHARF_NAME_ENTITIZE: MLCONVCHAR = 4i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLCONVCHARF_USEDEFCHAR: MLCONVCHAR = 8i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLCONVCHARF_NOBESTFITCHARS: MLCONVCHAR = 16i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLCONVCHARF_DETECTJPN: MLCONVCHAR = 32i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type MLCP = i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTF_MAILNEWS: MLCP = 1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTF_BROWSER: MLCP = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTF_VALID: MLCP = 4i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTF_VALID_NLS: MLCP = 8i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTF_PRESERVE_ORDER: MLCP = 16i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTF_PREFERRED_ONLY: MLCP = 32i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTF_FILTER_SPECIALCHAR: MLCP = 64i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTF_EURO_UTF8: MLCP = 128i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type MLDETECTCP = i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTCP_NONE: MLDETECTCP = 0i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTCP_7BIT: MLDETECTCP = 1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTCP_8BIT: MLDETECTCP = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTCP_DBCS: MLDETECTCP = 4i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTCP_HTML: MLDETECTCP = 8i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLDETECTCP_NUMBER: MLDETECTCP = 16i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type MLSTR_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLSTR_READ: MLSTR_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub const MLSTR_WRITE: MLSTR_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type MULTI_BYTE_TO_WIDE_CHAR_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const MB_COMPOSITE: MULTI_BYTE_TO_WIDE_CHAR_FLAGS = 2u32;
@@ -4199,72 +4514,6 @@ pub const MB_ERR_INVALID_CHARS: MULTI_BYTE_TO_WIDE_CHAR_FLAGS = 8u32;
 pub const MB_PRECOMPOSED: MULTI_BYTE_TO_WIDE_CHAR_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const MB_USEGLYPHCHARS: MULTI_BYTE_TO_WIDE_CHAR_FLAGS = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct NEWTEXTMETRICEXA {
-    pub ntmTm: super::Graphics::Gdi::NEWTEXTMETRICA,
-    pub ntmFontSig: FONTSIGNATURE,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for NEWTEXTMETRICEXA {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for NEWTEXTMETRICEXA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
-#[cfg(feature = "Win32_Graphics_Gdi")]
-pub struct NEWTEXTMETRICEXW {
-    pub ntmTm: super::Graphics::Gdi::NEWTEXTMETRICW,
-    pub ntmFontSig: FONTSIGNATURE,
-}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::marker::Copy for NEWTEXTMETRICEXW {}
-#[cfg(feature = "Win32_Graphics_Gdi")]
-impl ::core::clone::Clone for NEWTEXTMETRICEXW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct NLSVERSIONINFO {
-    pub dwNLSVersionInfoSize: u32,
-    pub dwNLSVersion: u32,
-    pub dwDefinedVersion: u32,
-    pub dwEffectiveId: u32,
-    pub guidCustomVersion: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for NLSVERSIONINFO {}
-impl ::core::clone::Clone for NLSVERSIONINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct NLSVERSIONINFOEX {
-    pub dwNLSVersionInfoSize: u32,
-    pub dwNLSVersion: u32,
-    pub dwDefinedVersion: u32,
-    pub dwEffectiveId: u32,
-    pub guidCustomVersion: ::windows_sys::core::GUID,
-}
-impl ::core::marker::Copy for NLSVERSIONINFOEX {}
-impl ::core::clone::Clone for NLSVERSIONINFOEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const NLS_CP_CPINFO: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const NLS_CP_MBTOWC: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const NLS_CP_WCTOMB: u32 = 2147483648u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type NORM_FORM = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -4277,59 +4526,6 @@ pub const NormalizationD: NORM_FORM = 2i32;
 pub const NormalizationKC: NORM_FORM = 5i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const NormalizationKD: NORM_FORM = 6i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct NUMBERFMTA {
-    pub NumDigits: u32,
-    pub LeadingZero: u32,
-    pub Grouping: u32,
-    pub lpDecimalSep: ::windows_sys::core::PSTR,
-    pub lpThousandSep: ::windows_sys::core::PSTR,
-    pub NegativeOrder: u32,
-}
-impl ::core::marker::Copy for NUMBERFMTA {}
-impl ::core::clone::Clone for NUMBERFMTA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct NUMBERFMTW {
-    pub NumDigits: u32,
-    pub LeadingZero: u32,
-    pub Grouping: u32,
-    pub lpDecimalSep: ::windows_sys::core::PWSTR,
-    pub lpThousandSep: ::windows_sys::core::PWSTR,
-    pub NegativeOrder: u32,
-}
-impl ::core::marker::Copy for NUMBERFMTW {}
-impl ::core::clone::Clone for NUMBERFMTW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const NUMSYS_NAME_CAPACITY: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const OFFLINE_SERVICES: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ONLINE_SERVICES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type PFN_MAPPINGCALLBACKPROC = ::core::option::Option<unsafe extern "system" fn(pbag: *mut MAPPING_PROPERTY_BAG, data: *mut ::core::ffi::c_void, dwdatasize: u32, result: ::windows_sys::core::HRESULT)>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct RFC1766INFO {
-    pub lcid: u32,
-    pub wszRfc1766: [u16; 6],
-    pub wszLocaleName: [u16; 32],
-}
-impl ::core::marker::Copy for RFC1766INFO {}
-impl ::core::clone::Clone for RFC1766INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type SCRIPTCONTF = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -4432,81 +4628,6 @@ pub const SCRIPTCONTF_SCRIPT_USER: SCRIPTFONTCONTF = 65536i32;
 pub const SCRIPTCONTF_SCRIPT_HIDE: SCRIPTFONTCONTF = 131072i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const SCRIPTCONTF_SCRIPT_SYSTEM: SCRIPTFONTCONTF = 262144i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPTINFO {
-    pub ScriptId: u8,
-    pub uiCodePage: u32,
-    pub wszDescription: [u16; 48],
-    pub wszFixedWidthFont: [u16; 32],
-    pub wszProportionalFont: [u16; 32],
-}
-impl ::core::marker::Copy for SCRIPTINFO {}
-impl ::core::clone::Clone for SCRIPTINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPT_ANALYSIS {
-    pub _bitfield: u16,
-    pub s: SCRIPT_STATE,
-}
-impl ::core::marker::Copy for SCRIPT_ANALYSIS {}
-impl ::core::clone::Clone for SCRIPT_ANALYSIS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPT_CONTROL {
-    pub _bitfield: u32,
-}
-impl ::core::marker::Copy for SCRIPT_CONTROL {}
-impl ::core::clone::Clone for SCRIPT_CONTROL {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPT_DIGITSUBSTITUTE {
-    pub _bitfield1: u32,
-    pub _bitfield2: u32,
-    pub dwReserved: u32,
-}
-impl ::core::marker::Copy for SCRIPT_DIGITSUBSTITUTE {}
-impl ::core::clone::Clone for SCRIPT_DIGITSUBSTITUTE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SCRIPT_DIGITSUBSTITUTE_CONTEXT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SCRIPT_DIGITSUBSTITUTE_NATIONAL: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SCRIPT_DIGITSUBSTITUTE_NONE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SCRIPT_DIGITSUBSTITUTE_TRADITIONAL: u32 = 3u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPT_FONTPROPERTIES {
-    pub cBytes: i32,
-    pub wgBlank: u16,
-    pub wgDefault: u16,
-    pub wgInvalid: u16,
-    pub wgKashida: u16,
-    pub iKashidaWidth: i32,
-}
-impl ::core::marker::Copy for SCRIPT_FONTPROPERTIES {}
-impl ::core::clone::Clone for SCRIPT_FONTPROPERTIES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type SCRIPT_IS_COMPLEX_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -4515,18 +4636,6 @@ pub const SIC_ASCIIDIGIT: SCRIPT_IS_COMPLEX_FLAGS = 2u32;
 pub const SIC_COMPLEX: SCRIPT_IS_COMPLEX_FLAGS = 1u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const SIC_NEUTRAL: SCRIPT_IS_COMPLEX_FLAGS = 4u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPT_ITEM {
-    pub iCharPos: i32,
-    pub a: SCRIPT_ANALYSIS,
-}
-impl ::core::marker::Copy for SCRIPT_ITEM {}
-impl ::core::clone::Clone for SCRIPT_ITEM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type SCRIPT_JUSTIFY = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -4561,117 +4670,6 @@ pub const SCRIPT_JUSTIFY_ARABIC_BARA: SCRIPT_JUSTIFY = 13i32;
 pub const SCRIPT_JUSTIFY_ARABIC_SEEN: SCRIPT_JUSTIFY = 14i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const SCRIPT_JUSTIFY_ARABIC_SEEN_M: SCRIPT_JUSTIFY = 15i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPT_LOGATTR {
-    pub _bitfield: u8,
-}
-impl ::core::marker::Copy for SCRIPT_LOGATTR {}
-impl ::core::clone::Clone for SCRIPT_LOGATTR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPT_PROPERTIES {
-    pub _bitfield1: u32,
-    pub _bitfield2: u32,
-}
-impl ::core::marker::Copy for SCRIPT_PROPERTIES {}
-impl ::core::clone::Clone for SCRIPT_PROPERTIES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPT_STATE {
-    pub _bitfield: u16,
-}
-impl ::core::marker::Copy for SCRIPT_STATE {}
-impl ::core::clone::Clone for SCRIPT_STATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPT_TABDEF {
-    pub cTabStops: i32,
-    pub iScale: i32,
-    pub pTabStops: *mut i32,
-    pub iTabOrigin: i32,
-}
-impl ::core::marker::Copy for SCRIPT_TABDEF {}
-impl ::core::clone::Clone for SCRIPT_TABDEF {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SCRIPT_TAG_UNKNOWN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SCRIPT_UNDEFINED: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct SCRIPT_VISATTR {
-    pub _bitfield: u16,
-}
-impl ::core::marker::Copy for SCRIPT_VISATTR {}
-impl ::core::clone::Clone for SCRIPT_VISATTR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SGCM_RTL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SORTING_PARADIGM_ICU: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SORTING_PARADIGM_NLS: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_BREAK: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_CLIP: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_DONTGLYPH: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_DZWG: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_FALLBACK: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_FIT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_FULLMEASURE: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_GCP: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_GLYPHS: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_HIDEHOTKEY: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_HOTKEY: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_HOTKEYONLY: u32 = 9216u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_LAYOUTRTL: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_LINK: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_LPKANSIFALLBACK: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_METAFILE: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_NOKASHIDA: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_PASSWORD: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_PIDX: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_RTL: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const SSA_TAB: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type SYSGEOCLASS = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -4722,16 +4720,6 @@ pub const GEO_ID: SYSGEOTYPE = 18i32;
 pub type SYSNLS_FUNCTION = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const COMPARE_STRING: SYSNLS_FUNCTION = 1i32;
-pub const SpellCheckerFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2058577491, data2: 6038, data3: 18507, data4: [189, 250, 231, 79, 29, 183, 193, 220] };
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type TIMEFMT_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type TIMEFMT_ENUMPROCEX = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: super::Foundation::LPARAM) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type TIMEFMT_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type TIME_FORMAT_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -4753,14 +4741,6 @@ pub const TCI_SRCFONTSIG: TRANSLATE_CHARSET_INFO_FLAGS = 3u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const TCI_SRCLOCALE: TRANSLATE_CHARSET_INFO_FLAGS = 4096u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U16_MAX_LENGTH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U8_LEAD3_T1_BITS: &str = " 000000000000\u{10}00";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U8_LEAD4_T1_BITS: &str = "\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{0}\u{1e}\u{f}\u{f}\u{f}\u{0}\u{0}\u{0}\u{0}";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U8_MAX_LENGTH: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UAcceptResult = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const ULOC_ACCEPT_FAILED: UAcceptResult = 0i32;
@@ -4778,30 +4758,6 @@ pub const U_ALPHAINDEX_UNDERFLOW: UAlphabeticIndexLabelType = 1i32;
 pub const U_ALPHAINDEX_INFLOW: UAlphabeticIndexLabelType = 2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const U_ALPHAINDEX_OVERFLOW: UAlphabeticIndexLabelType = 3i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UBIDI_DEFAULT_LTR: u32 = 254u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UBIDI_DEFAULT_RTL: u32 = 255u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UBIDI_DO_MIRRORING: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UBIDI_INSERT_LRM_FOR_NUMERIC: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UBIDI_KEEP_BASE_COMBINING: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UBIDI_LEVEL_OVERRIDE: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UBIDI_MAP_NOWHERE: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UBIDI_MAX_EXPLICIT_LEVEL: u32 = 125u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UBIDI_OUTPUT_REVERSE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UBIDI_REMOVE_BIDI_CONTROLS: u32 = 8u32;
-#[repr(C)]
-pub struct UBiDi(pub u8);
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UBiDiClassCallback = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, c: i32) -> UCharDirection>;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UBiDiDirection = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -4850,8 +4806,6 @@ pub const UBIDI_OPTION_INSERT_MARKS: UBiDiReorderingOption = 1i32;
 pub const UBIDI_OPTION_REMOVE_CONTROLS: UBiDiReorderingOption = 2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UBIDI_OPTION_STREAMING: UBiDiReorderingOption = 4i32;
-#[repr(C)]
-pub struct UBiDiTransform(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UBidiPairedBracketType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -5486,8 +5440,6 @@ pub const UBLOCK_TANGUT_SUPPLEMENT: UBlockCode = 307i32;
 pub const UBLOCK_YEZIDI: UBlockCode = 308i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UBLOCK_INVALID_CODE: UBlockCode = -1i32;
-#[repr(C)]
-pub struct UBreakIterator(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UBreakIteratorType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -5499,82 +5451,6 @@ pub const UBRK_LINE: UBreakIteratorType = 2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UBRK_SENTENCE: UBreakIteratorType = 3i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCAL_UNKNOWN_ZONE_ID: &str = "Etc/Unknown";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCHAR_MAX_VALUE: u32 = 1114111u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCHAR_MIN_VALUE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCLN_NO_AUTO_CLEANUP: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_ESCAPE_C: &str = "C";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_ESCAPE_CSS2: &str = "S";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_ESCAPE_JAVA: &str = "J";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_ESCAPE_UNICODE: &str = "U";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_ESCAPE_XML_DEC: &str = "D";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_ESCAPE_XML_HEX: &str = "X";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_LOCALE_OPTION_STRING: &str = ",locale=";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_MAX_CONVERTER_NAME_LENGTH: u32 = 60u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_OPTION_SEP_STRING: &str = ",";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_SI: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_SKIP_STOP_ON_ILLEGAL: &str = "i";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_SO: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_SUB_STOP_ON_ILLEGAL: &str = "i";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_SWAP_LFNL_OPTION_STRING: &str = ",swaplfnl";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_VALUE_SEP_STRING: &str = "=";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCNV_VERSION_OPTION_STRING: &str = ",version=";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_ENABLE_PLUGINS: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_FORMAT_FASTPATHS_49: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_HAVE_PARSEALLINPUT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_BREAK_ITERATION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_COLLATION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_CONVERSION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_FILE_IO: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_FILTERED_BREAK_ITERATION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_FORMATTING: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_IDNA: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_LEGACY_CONVERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_NORMALIZATION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_REGULAR_EXPRESSIONS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_SERVICE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_NO_TRANSLITERATION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_ONLY_COLLATION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCONFIG_ONLY_HTML_CONVERSION: u32 = 0u32;
-#[repr(C)]
-pub struct UCPMap(pub u8);
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UCPMapRangeOption = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCPMAP_RANGE_NORMAL: UCPMapRangeOption = 0i32;
@@ -5582,57 +5458,6 @@ pub const UCPMAP_RANGE_NORMAL: UCPMapRangeOption = 0i32;
 pub const UCPMAP_RANGE_FIXED_LEAD_SURROGATES: UCPMapRangeOption = 1i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCPMAP_RANGE_FIXED_ALL_SURROGATES: UCPMapRangeOption = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCPMapValueFilter = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, value: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCPTRIE_ERROR_VALUE_NEG_DATA_OFFSET: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCPTRIE_FAST_DATA_BLOCK_LENGTH: i32 = 64i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCPTRIE_FAST_DATA_MASK: i32 = 63i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCPTRIE_FAST_SHIFT: i32 = 6i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCPTRIE_HIGH_VALUE_NEG_DATA_OFFSET: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UCPTRIE_SMALL_MAX: i32 = 4095i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UCPTrie {
-    pub index: *const u16,
-    pub data: UCPTrieData,
-    pub indexLength: i32,
-    pub dataLength: i32,
-    pub highStart: i32,
-    pub shifted12HighStart: u16,
-    pub r#type: i8,
-    pub valueWidth: i8,
-    pub reserved32: u32,
-    pub reserved16: u16,
-    pub index3NullOffset: u16,
-    pub dataNullOffset: i32,
-    pub nullValue: u32,
-}
-impl ::core::marker::Copy for UCPTrie {}
-impl ::core::clone::Clone for UCPTrie {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub union UCPTrieData {
-    pub ptr0: *const ::core::ffi::c_void,
-    pub ptr16: *const u16,
-    pub ptr32: *const u32,
-    pub ptr8: *const u8,
-}
-impl ::core::marker::Copy for UCPTrieData {}
-impl ::core::clone::Clone for UCPTrieData {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UCPTrieType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -5815,8 +5640,6 @@ pub const UCAL_WEEKEND: UCalendarWeekdayType = 1i32;
 pub const UCAL_WEEKEND_ONSET: UCalendarWeekdayType = 2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCAL_WEEKEND_CEASE: UCalendarWeekdayType = 3i32;
-#[repr(C)]
-pub struct UCaseMap(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UCharCategory = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -5932,48 +5755,6 @@ pub const U_RIGHT_TO_LEFT_ISOLATE: UCharDirection = 21i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const U_POP_DIRECTIONAL_ISOLATE: UCharDirection = 22i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharEnumTypeRange = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, start: i32, limit: i32, r#type: UCharCategory) -> i8>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UCharIterator {
-    pub context: *const ::core::ffi::c_void,
-    pub length: i32,
-    pub start: i32,
-    pub index: i32,
-    pub limit: i32,
-    pub reservedField: i32,
-    pub getIndex: UCharIteratorGetIndex,
-    pub r#move: UCharIteratorMove,
-    pub hasNext: UCharIteratorHasNext,
-    pub hasPrevious: UCharIteratorHasPrevious,
-    pub current: UCharIteratorCurrent,
-    pub next: UCharIteratorNext,
-    pub previous: UCharIteratorPrevious,
-    pub reservedFn: UCharIteratorReserved,
-    pub getState: UCharIteratorGetState,
-    pub setState: UCharIteratorSetState,
-}
-impl ::core::marker::Copy for UCharIterator {}
-impl ::core::clone::Clone for UCharIterator {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharIteratorCurrent = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator) -> i32>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharIteratorGetIndex = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator, origin: UCharIteratorOrigin) -> i32>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharIteratorGetState = ::core::option::Option<unsafe extern "system" fn(iter: *const UCharIterator) -> u32>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharIteratorHasNext = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator) -> i8>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharIteratorHasPrevious = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator) -> i8>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharIteratorMove = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator, delta: i32, origin: UCharIteratorOrigin) -> i32>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharIteratorNext = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator) -> i32>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UCharIteratorOrigin = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UITER_START: UCharIteratorOrigin = 0i32;
@@ -5986,12 +5767,6 @@ pub const UITER_ZERO: UCharIteratorOrigin = 3i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UITER_LENGTH: UCharIteratorOrigin = 4i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharIteratorPrevious = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator) -> i32>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharIteratorReserved = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator, something: i32) -> i32>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UCharIteratorSetState = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator, state: u32, perrorcode: *mut UErrorCode)>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UCharNameChoice = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const U_UNICODE_CHAR_NAME: UCharNameChoice = 0i32;
@@ -5999,10 +5774,6 @@ pub const U_UNICODE_CHAR_NAME: UCharNameChoice = 0i32;
 pub const U_EXTENDED_CHAR_NAME: UCharNameChoice = 2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const U_CHAR_NAME_ALIAS: UCharNameChoice = 3i32;
-#[repr(C)]
-pub struct UCharsetDetector(pub u8);
-#[repr(C)]
-pub struct UCharsetMatch(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UColAttribute = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -6089,8 +5860,6 @@ pub type UColRuleOption = i32;
 pub const UCOL_TAILORING_ONLY: UColRuleOption = 0i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCOL_FULL_RULES: UColRuleOption = 1i32;
-#[repr(C)]
-pub struct UCollationElements(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UCollationResult = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -6099,12 +5868,6 @@ pub const UCOL_EQUAL: UCollationResult = 0i32;
 pub const UCOL_GREATER: UCollationResult = 1i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCOL_LESS: UCollationResult = -1i32;
-#[repr(C)]
-pub struct UCollator(pub u8);
-#[repr(C)]
-pub struct UConstrainedFieldPosition(pub u8);
-#[repr(C)]
-pub struct UConverter(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UConverterCallbackReason = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -6120,53 +5883,11 @@ pub const UCNV_CLOSE: UConverterCallbackReason = 4i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCNV_CLONE: UConverterCallbackReason = 5i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UConverterFromUCallback = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, args: *mut UConverterFromUnicodeArgs, codeunits: *const u16, length: i32, codepoint: i32, reason: UConverterCallbackReason, perrorcode: *mut UErrorCode)>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UConverterFromUnicodeArgs {
-    pub size: u16,
-    pub flush: i8,
-    pub converter: *mut UConverter,
-    pub source: *const u16,
-    pub sourceLimit: *const u16,
-    pub target: ::windows_sys::core::PSTR,
-    pub targetLimit: ::windows_sys::core::PCSTR,
-    pub offsets: *mut i32,
-}
-impl ::core::marker::Copy for UConverterFromUnicodeArgs {}
-impl ::core::clone::Clone for UConverterFromUnicodeArgs {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UConverterPlatform = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCNV_UNKNOWN: UConverterPlatform = -1i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCNV_IBM: UConverterPlatform = 0i32;
-#[repr(C)]
-pub struct UConverterSelector(pub u8);
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UConverterToUCallback = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, args: *mut UConverterToUnicodeArgs, codeunits: ::windows_sys::core::PCSTR, length: i32, reason: UConverterCallbackReason, perrorcode: *mut UErrorCode)>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UConverterToUnicodeArgs {
-    pub size: u16,
-    pub flush: i8,
-    pub converter: *mut UConverter,
-    pub source: ::windows_sys::core::PCSTR,
-    pub sourceLimit: ::windows_sys::core::PCSTR,
-    pub target: *mut u16,
-    pub targetLimit: *const u16,
-    pub offsets: *mut i32,
-}
-impl ::core::marker::Copy for UConverterToUnicodeArgs {}
-impl ::core::clone::Clone for UConverterToUnicodeArgs {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UConverterType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -6285,88 +6006,6 @@ pub type UCurrencyUsage = i32;
 pub const UCURR_USAGE_STANDARD: UCurrencyUsage = 0i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCURR_USAGE_CASH: UCurrencyUsage = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_ABBR_GENERIC_TZ: &str = "v";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_ABBR_MONTH: &str = "MMM";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_ABBR_MONTH_DAY: &str = "MMMd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_ABBR_MONTH_WEEKDAY_DAY: &str = "MMMEd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_ABBR_QUARTER: &str = "QQQ";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_ABBR_SPECIFIC_TZ: &str = "z";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_ABBR_UTC_TZ: &str = "ZZZZ";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_ABBR_WEEKDAY: &str = "E";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_DAY: &str = "d";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_GENERIC_TZ: &str = "vvvv";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_HOUR: &str = "j";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_HOUR24: &str = "H";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_HOUR24_MINUTE: &str = "Hm";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_HOUR24_MINUTE_SECOND: &str = "Hms";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_HOUR_MINUTE: &str = "jm";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_HOUR_MINUTE_SECOND: &str = "jms";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_LOCATION_TZ: &str = "VVVV";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_MINUTE: &str = "m";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_MINUTE_SECOND: &str = "ms";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_MONTH: &str = "MMMM";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_MONTH_DAY: &str = "MMMMd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_MONTH_WEEKDAY_DAY: &str = "MMMMEEEEd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_NUM_MONTH: &str = "M";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_NUM_MONTH_DAY: &str = "Md";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_NUM_MONTH_WEEKDAY_DAY: &str = "MEd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_QUARTER: &str = "QQQQ";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_SECOND: &str = "s";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_SPECIFIC_TZ: &str = "zzzz";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_WEEKDAY: &str = "EEEE";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR: &str = "y";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_ABBR_MONTH: &str = "yMMM";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_ABBR_MONTH_DAY: &str = "yMMMd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_ABBR_MONTH_WEEKDAY_DAY: &str = "yMMMEd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_ABBR_QUARTER: &str = "yQQQ";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_MONTH: &str = "yMMMM";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_MONTH_DAY: &str = "yMMMMd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_MONTH_WEEKDAY_DAY: &str = "yMMMMEEEEd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_NUM_MONTH: &str = "yM";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_NUM_MONTH_DAY: &str = "yMd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_NUM_MONTH_WEEKDAY_DAY: &str = "yMEd";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UDAT_YEAR_QUARTER: &str = "yQQQQ";
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UDateAbsoluteUnit = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -6581,10 +6220,6 @@ pub const UDAT_ZODIAC_NAMES_WIDE: UDateFormatSymbolType = 25i32;
 pub const UDAT_ZODIAC_NAMES_ABBREVIATED: UDateFormatSymbolType = 26i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UDAT_ZODIAC_NAMES_NARROW: UDateFormatSymbolType = 27i32;
-#[repr(C)]
-pub struct UDateFormatSymbols(pub u8);
-#[repr(C)]
-pub struct UDateIntervalFormat(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UDateRelativeDateTimeFormatterStyle = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -6785,10 +6420,6 @@ pub const U_EA_FULLWIDTH: UEastAsianWidth = 3i32;
 pub const U_EA_NARROW: UEastAsianWidth = 4i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const U_EA_WIDE: UEastAsianWidth = 5i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UEnumCharNamesFn = ::core::option::Option<unsafe extern "system" fn(context: *mut ::core::ffi::c_void, code: i32, namechoice: UCharNameChoice, name: ::windows_sys::core::PCSTR, length: i32) -> i8>;
-#[repr(C)]
-pub struct UEnumeration(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UErrorCode = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -7113,21 +6744,6 @@ pub const UFIELD_CATEGORY_DATE_INTERVAL: UFieldCategory = 5i32;
 pub const UFIELD_CATEGORY_LIST_SPAN: UFieldCategory = 4099i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UFIELD_CATEGORY_DATE_INTERVAL_SPAN: UFieldCategory = 4101i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UFieldPosition {
-    pub field: i32,
-    pub beginIndex: i32,
-    pub endIndex: i32,
-}
-impl ::core::marker::Copy for UFieldPosition {}
-impl ::core::clone::Clone for UFieldPosition {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-pub struct UFieldPositionIterator(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UFormattableType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -7144,18 +6760,6 @@ pub const UFMT_ARRAY: UFormattableType = 4i32;
 pub const UFMT_INT64: UFormattableType = 5i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UFMT_OBJECT: UFormattableType = 6i32;
-#[repr(C)]
-pub struct UFormattedDateInterval(pub u8);
-#[repr(C)]
-pub struct UFormattedList(pub u8);
-#[repr(C)]
-pub struct UFormattedNumber(pub u8);
-#[repr(C)]
-pub struct UFormattedNumberRange(pub u8);
-#[repr(C)]
-pub struct UFormattedRelativeDateTime(pub u8);
-#[repr(C)]
-pub struct UFormattedValue(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UGender = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -7164,8 +6768,6 @@ pub const UGENDER_MALE: UGender = 0i32;
 pub const UGENDER_FEMALE: UGender = 1i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UGENDER_OTHER: UGender = 2i32;
-#[repr(C)]
-pub struct UGenderInfo(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UGraphemeClusterBreak = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -7218,78 +6820,6 @@ pub const U_HST_TRAILING_JAMO: UHangulSyllableType = 3i32;
 pub const U_HST_LV_SYLLABLE: UHangulSyllableType = 4i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const U_HST_LVT_SYLLABLE: UHangulSyllableType = 5i32;
-#[repr(C)]
-pub struct UHashtable(pub u8);
-#[repr(C)]
-pub struct UIDNA(pub u8);
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UIDNAInfo {
-    pub size: i16,
-    pub isTransitionalDifferent: i8,
-    pub reservedB3: i8,
-    pub errors: u32,
-    pub reservedI2: i32,
-    pub reservedI3: i32,
-}
-impl ::core::marker::Copy for UIDNAInfo {}
-impl ::core::clone::Clone for UIDNAInfo {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_CHECK_BIDI: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_CHECK_CONTEXTJ: i32 = 8i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_CHECK_CONTEXTO: i32 = 64i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_DEFAULT: i32 = 0i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_BIDI: i32 = 2048i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_CONTEXTJ: i32 = 4096i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_CONTEXTO_DIGITS: i32 = 16384i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_CONTEXTO_PUNCTUATION: i32 = 8192i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_DISALLOWED: i32 = 128i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_DOMAIN_NAME_TOO_LONG: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_EMPTY_LABEL: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_HYPHEN_3_4: i32 = 32i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_INVALID_ACE_LABEL: i32 = 1024i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_LABEL_HAS_DOT: i32 = 512i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_LABEL_TOO_LONG: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_LEADING_COMBINING_MARK: i32 = 64i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_LEADING_HYPHEN: i32 = 8i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_PUNYCODE: i32 = 256i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_ERROR_TRAILING_HYPHEN: i32 = 16i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_NONTRANSITIONAL_TO_ASCII: i32 = 16i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_NONTRANSITIONAL_TO_UNICODE: i32 = 32i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UIDNA_USE_STD3_RULES: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type UILANGUAGE_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: isize) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type UILANGUAGE_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: isize) -> super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UITER_UNKNOWN_INDEX: i32 = -2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UIndicPositionalCategory = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -7621,66 +7151,6 @@ pub const U_JT_RIGHT_JOINING: UJoiningType = 4i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const U_JT_TRANSPARENT: UJoiningType = 5i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_CANADA: &str = "en_CA";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_CANADA_FRENCH: &str = "fr_CA";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_CHINA: &str = "zh_CN";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_CHINESE: &str = "zh";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_COUNTRY_CAPACITY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_ENGLISH: &str = "en";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_FRANCE: &str = "fr_FR";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_FRENCH: &str = "fr";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_FULLNAME_CAPACITY: u32 = 157u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_GERMAN: &str = "de";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_GERMANY: &str = "de_DE";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_ITALIAN: &str = "it";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_ITALY: &str = "it_IT";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_JAPAN: &str = "ja_JP";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_JAPANESE: &str = "ja";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_KEYWORDS_CAPACITY: u32 = 96u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_KEYWORD_AND_VALUES_CAPACITY: u32 = 100u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_KEYWORD_ASSIGN_UNICODE: u32 = 61u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_KEYWORD_ITEM_SEPARATOR_UNICODE: u32 = 59u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_KEYWORD_SEPARATOR_UNICODE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_KOREA: &str = "ko_KR";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_KOREAN: &str = "ko";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_LANG_CAPACITY: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_PRC: &str = "zh_CN";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_SCRIPT_CAPACITY: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_SIMPLIFIED_CHINESE: &str = "zh_CN";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_TAIWAN: &str = "zh_TW";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_TRADITIONAL_CHINESE: &str = "zh_TW";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_UK: &str = "en_GB";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const ULOC_US: &str = "en_US";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type ULayoutType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const ULOC_LAYOUT_LTR: ULayoutType = 0i32;
@@ -7792,8 +7262,6 @@ pub const UBRK_LINE_SOFT_LIMIT: ULineBreakTag = 100i32;
 pub const UBRK_LINE_HARD: ULineBreakTag = 100i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UBRK_LINE_HARD_LIMIT: ULineBreakTag = 200i32;
-#[repr(C)]
-pub struct UListFormatter(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UListFormatterField = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -7830,8 +7298,6 @@ pub type ULocDataLocaleType = i32;
 pub const ULOC_ACTUAL_LOCALE: ULocDataLocaleType = 0i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const ULOC_VALID_LOCALE: ULocDataLocaleType = 1i32;
-#[repr(C)]
-pub struct ULocaleData(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type ULocaleDataDelimiterType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -7852,12 +7318,6 @@ pub const ULOCDATA_ES_AUXILIARY: ULocaleDataExemplarSetType = 1i32;
 pub const ULOCDATA_ES_INDEX: ULocaleDataExemplarSetType = 2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const ULOCDATA_ES_PUNCTUATION: ULocaleDataExemplarSetType = 3i32;
-#[repr(C)]
-pub struct ULocaleDisplayNames(pub u8);
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UMSGPAT_ARG_NAME_NOT_NUMBER: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UMSGPAT_ARG_NAME_NOT_VALID: i32 = -2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UMeasureFormatWidth = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -7878,12 +7338,6 @@ pub const UMS_SI: UMeasurementSystem = 0i32;
 pub const UMS_US: UMeasurementSystem = 1i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UMS_UK: UMeasurementSystem = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UMemAllocFn = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, size: usize) -> *mut ::core::ffi::c_void>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UMemFreeFn = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, mem: *mut ::core::ffi::c_void)>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UMemReallocFn = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, mem: *mut ::core::ffi::c_void, size: usize) -> *mut ::core::ffi::c_void>;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UMessagePatternApostropheMode = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -7934,26 +7388,6 @@ pub const UMSGPAT_PART_TYPE_ARG_SELECTOR: UMessagePatternPartType = 11i32;
 pub const UMSGPAT_PART_TYPE_ARG_INT: UMessagePatternPartType = 12i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UMSGPAT_PART_TYPE_ARG_DOUBLE: UMessagePatternPartType = 13i32;
-#[repr(C)]
-pub struct UMutableCPTrie(pub u8);
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UNESCAPE_CHAR_AT = ::core::option::Option<unsafe extern "system" fn(offset: i32, context: *mut ::core::ffi::c_void) -> u16>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UNICODERANGE {
-    pub wcFrom: u16,
-    pub wcTo: u16,
-}
-impl ::core::marker::Copy for UNICODERANGE {}
-impl ::core::clone::Clone for UNICODERANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UNISCRIBE_OPENTYPE: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UNORM_INPUT_IS_FCD: u32 = 131072u32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UNormalization2Mode = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -7990,8 +7424,6 @@ pub const UNORM_NFKC: UNormalizationMode = 5i32;
 pub const UNORM_FCD: UNormalizationMode = 6i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UNORM_MODE_COUNT: UNormalizationMode = 7i32;
-#[repr(C)]
-pub struct UNormalizer2(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UNumberCompactStyle = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -8242,8 +7674,6 @@ pub const UNUM_CURRENCY_CODE: UNumberFormatTextAttribute = 5i32;
 pub const UNUM_DEFAULT_RULESET: UNumberFormatTextAttribute = 6i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UNUM_PUBLIC_RULESETS: UNumberFormatTextAttribute = 7i32;
-#[repr(C)]
-pub struct UNumberFormatter(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UNumberGroupingStrategy = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -8316,8 +7746,6 @@ pub const UNUM_UNIT_WIDTH_ISO_CODE: UNumberUnitWidth = 3i32;
 pub const UNUM_UNIT_WIDTH_HIDDEN: UNumberUnitWidth = 4i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UNUM_UNIT_WIDTH_COUNT: UNumberUnitWidth = 5i32;
-#[repr(C)]
-pub struct UNumberingSystem(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UNumericType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -8328,22 +7756,6 @@ pub const U_NT_DECIMAL: UNumericType = 1i32;
 pub const U_NT_DIGIT: UNumericType = 2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const U_NT_NUMERIC: UNumericType = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UParseError {
-    pub line: i32,
-    pub offset: i32,
-    pub preContext: [u16; 16],
-    pub postContext: [u16; 16],
-}
-impl ::core::marker::Copy for UParseError {}
-impl ::core::clone::Clone for UParseError {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-pub struct UPluralRules(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UPluralType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -8583,10 +7995,6 @@ pub const U_SHORT_PROPERTY_NAME: UPropertyNameChoice = 0i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const U_LONG_PROPERTY_NAME: UPropertyNameChoice = 1i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type URegexFindProgressCallback = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, matchindex: i64) -> i8>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type URegexMatchCallback = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, steps: i32) -> i8>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type URegexpFlag = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UREGEX_CASE_INSENSITIVE: URegexpFlag = 2i32;
@@ -8604,8 +8012,6 @@ pub const UREGEX_UNIX_LINES: URegexpFlag = 1i32;
 pub const UREGEX_UWORD: URegexpFlag = 256i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UREGEX_ERROR_ON_UNKNOWN_ESCAPES: URegexpFlag = 512i32;
-#[repr(C)]
-pub struct URegion(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type URegionType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -8622,10 +8028,6 @@ pub const URGN_SUBCONTINENT: URegionType = 4i32;
 pub const URGN_GROUPING: URegionType = 5i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const URGN_DEPRECATED: URegionType = 6i32;
-#[repr(C)]
-pub struct URegularExpression(pub u8);
-#[repr(C)]
-pub struct URelativeDateTimeFormatter(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type URelativeDateTimeFormatterField = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -8664,22 +8066,6 @@ pub const UDAT_REL_UNIT_THURSDAY: URelativeDateTimeUnit = 12i32;
 pub const UDAT_REL_UNIT_FRIDAY: URelativeDateTimeUnit = 13i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UDAT_REL_UNIT_SATURDAY: URelativeDateTimeUnit = 14i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UReplaceableCallbacks {
-    pub length: isize,
-    pub charAt: isize,
-    pub char32At: isize,
-    pub replace: isize,
-    pub extract: isize,
-    pub copy: isize,
-}
-impl ::core::marker::Copy for UReplaceableCallbacks {}
-impl ::core::clone::Clone for UReplaceableCallbacks {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UResType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -8698,8 +8084,6 @@ pub const URES_INT: UResType = 7i32;
 pub const URES_ARRAY: UResType = 8i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const URES_INT_VECTOR: UResType = 14i32;
-#[repr(C)]
-pub struct UResourceBundle(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type URestrictionLevel = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -8716,22 +8100,6 @@ pub const USPOOF_MINIMALLY_RESTRICTIVE: URestrictionLevel = 1342177280i32;
 pub const USPOOF_UNRESTRICTIVE: URestrictionLevel = 1610612736i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const USPOOF_RESTRICTION_LEVEL_MASK: URestrictionLevel = 2130706432i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const USEARCH_DONE: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const USET_ADD_CASE_MAPPINGS: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const USET_CASE_INSENSITIVE: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const USET_IGNORE_SPACE: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const USET_SERIALIZED_STATIC_ARRAY_CAPACITY: i32 = 8i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const USPREP_ALLOW_UNASSIGNED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const USPREP_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const USP_E_SCRIPT_NOT_IN_FONT: ::windows_sys::core::HRESULT = -2147220992i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UScriptCode = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -9146,8 +8514,6 @@ pub const USCRIPT_USAGE_LIMITED_USE: UScriptUsage = 3i32;
 pub const USCRIPT_USAGE_ASPIRATIONAL: UScriptUsage = 4i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const USCRIPT_USAGE_RECOMMENDED: UScriptUsage = 5i32;
-#[repr(C)]
-pub struct USearch(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type USearchAttribute = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -9210,22 +8576,6 @@ pub const UBRK_SENTENCE_TERM_LIMIT: USentenceBreakTag = 100i32;
 pub const UBRK_SENTENCE_SEP: USentenceBreakTag = 100i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UBRK_SENTENCE_SEP_LIMIT: USentenceBreakTag = 200i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct USerializedSet {
-    pub array: *const u16,
-    pub bmpLength: i32,
-    pub length: i32,
-    pub staticArray: [u16; 8],
-}
-impl ::core::marker::Copy for USerializedSet {}
-impl ::core::clone::Clone for USerializedSet {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-pub struct USet(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type USetSpanCondition = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -9234,10 +8584,6 @@ pub const USET_SPAN_NOT_CONTAINED: USetSpanCondition = 0i32;
 pub const USET_SPAN_CONTAINED: USetSpanCondition = 1i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const USET_SPAN_SIMPLE: USetSpanCondition = 2i32;
-#[repr(C)]
-pub struct USpoofCheckResult(pub u8);
-#[repr(C)]
-pub struct USpoofChecker(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type USpoofChecks = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -9262,10 +8608,6 @@ pub const USPOOF_HIDDEN_OVERLAY: USpoofChecks = 256i32;
 pub const USPOOF_ALL_CHECKS: USpoofChecks = 65535i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const USPOOF_AUX_INFO: USpoofChecks = 1073741824i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UStringCaseMapper = ::core::option::Option<unsafe extern "system" fn(csm: *const UCaseMap, dest: *mut u16, destcapacity: i32, src: *const u16, srclength: i32, perrorcode: *mut UErrorCode) -> i32>;
-#[repr(C)]
-pub struct UStringPrepProfile(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UStringPrepProfileType = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -9296,8 +8638,6 @@ pub const USPREP_RFC4505_TRACE: UStringPrepProfileType = 11i32;
 pub const USPREP_RFC4518_LDAP: UStringPrepProfileType = 12i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const USPREP_RFC4518_LDAP_CI: UStringPrepProfileType = 13i32;
-#[repr(C)]
-pub struct UStringSearch(pub u8);
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UStringTrieBuildOption = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -9322,112 +8662,6 @@ pub const UCAL_ZONE_TYPE_ANY: USystemTimeZoneType = 0i32;
 pub const UCAL_ZONE_TYPE_CANONICAL: USystemTimeZoneType = 1i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCAL_ZONE_TYPE_CANONICAL_LOCATION: USystemTimeZoneType = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTEXT_MAGIC: i32 = 878368812i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTEXT_PROVIDER_HAS_META_DATA: i32 = 4i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTEXT_PROVIDER_LENGTH_IS_EXPENSIVE: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTEXT_PROVIDER_OWNS_TEXT: i32 = 5i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTEXT_PROVIDER_STABLE_CHUNKS: i32 = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTEXT_PROVIDER_WRITABLE: i32 = 3i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTF16_MAX_CHAR_LENGTH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTF32_MAX_CHAR_LENGTH: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTF8_ERROR_VALUE_1: u32 = 21u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTF8_ERROR_VALUE_2: u32 = 159u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTF8_MAX_CHAR_LENGTH: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTF_ERROR_VALUE: u32 = 65535u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTF_MAX_CHAR_LENGTH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const UTF_SIZE: u32 = 16u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UText {
-    pub magic: u32,
-    pub flags: i32,
-    pub providerProperties: i32,
-    pub sizeOfStruct: i32,
-    pub chunkNativeLimit: i64,
-    pub extraSize: i32,
-    pub nativeIndexingLimit: i32,
-    pub chunkNativeStart: i64,
-    pub chunkOffset: i32,
-    pub chunkLength: i32,
-    pub chunkContents: *const u16,
-    pub pFuncs: *const UTextFuncs,
-    pub pExtra: *mut ::core::ffi::c_void,
-    pub context: *const ::core::ffi::c_void,
-    pub p: *const ::core::ffi::c_void,
-    pub q: *const ::core::ffi::c_void,
-    pub r: *const ::core::ffi::c_void,
-    pub privP: *mut ::core::ffi::c_void,
-    pub a: i64,
-    pub b: i32,
-    pub c: i32,
-    pub privA: i64,
-    pub privB: i32,
-    pub privC: i32,
-}
-impl ::core::marker::Copy for UText {}
-impl ::core::clone::Clone for UText {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTextAccess = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText, nativeindex: i64, forward: i8) -> i8>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTextClone = ::core::option::Option<unsafe extern "system" fn(dest: *mut UText, src: *const UText, deep: i8, status: *mut UErrorCode) -> *mut UText>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTextClose = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText)>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTextCopy = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText, nativestart: i64, nativelimit: i64, nativedest: i64, r#move: i8, status: *mut UErrorCode)>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTextExtract = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText, nativestart: i64, nativelimit: i64, dest: *mut u16, destcapacity: i32, status: *mut UErrorCode) -> i32>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UTextFuncs {
-    pub tableSize: i32,
-    pub reserved1: i32,
-    pub reserved2: i32,
-    pub reserved3: i32,
-    pub clone: UTextClone,
-    pub nativeLength: UTextNativeLength,
-    pub access: UTextAccess,
-    pub extract: UTextExtract,
-    pub replace: UTextReplace,
-    pub copy: UTextCopy,
-    pub mapOffsetToNative: UTextMapOffsetToNative,
-    pub mapNativeIndexToUTF16: UTextMapNativeIndexToUTF16,
-    pub close: UTextClose,
-    pub spare1: UTextClose,
-    pub spare2: UTextClose,
-    pub spare3: UTextClose,
-}
-impl ::core::marker::Copy for UTextFuncs {}
-impl ::core::clone::Clone for UTextFuncs {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTextMapNativeIndexToUTF16 = ::core::option::Option<unsafe extern "system" fn(ut: *const UText, nativeindex: i64) -> i32>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTextMapOffsetToNative = ::core::option::Option<unsafe extern "system" fn(ut: *const UText) -> i64>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTextNativeLength = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText) -> i64>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTextReplace = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText, nativestart: i64, nativelimit: i64, replacementtext: *const u16, replacmentlength: i32, status: *mut UErrorCode) -> i32>;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UTimeScaleValue = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -9545,12 +8779,6 @@ pub const UCAL_TZ_TRANSITION_PREVIOUS: UTimeZoneTransitionType = 2i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UCAL_TZ_TRANSITION_PREVIOUS_INCLUSIVE: UTimeZoneTransitionType = 3i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTraceData = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, fnnumber: i32, level: i32, fmt: ::windows_sys::core::PCSTR, args: *mut i8)>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTraceEntry = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, fnnumber: i32)>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type UTraceExit = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, fnnumber: i32, fmt: ::windows_sys::core::PCSTR, args: *mut i8)>;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UTraceFunctionNumber = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UTRACE_FUNCTION_START: UTraceFunctionNumber = 0i32;
@@ -9626,20 +8854,6 @@ pub type UTransDirection = i32;
 pub const UTRANS_FORWARD: UTransDirection = 0i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const UTRANS_REVERSE: UTransDirection = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct UTransPosition {
-    pub contextStart: i32,
-    pub contextLimit: i32,
-    pub start: i32,
-    pub limit: i32,
-}
-impl ::core::marker::Copy for UTransPosition {}
-impl ::core::clone::Clone for UTransPosition {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type UVerticalOrientation = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
@@ -9721,300 +8935,6 @@ pub const U_WB_ZWJ: UWordBreakValues = 21i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const U_WB_WSEGSPACE: UWordBreakValues = 22i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_ASCII_FAMILY: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_CHAR16_IS_TYPEDEF: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_CHARSET_FAMILY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_CHARSET_IS_UTF8: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_CHECK_DYLOAD: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_COMBINED_IMPLEMENTATION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_COMPARE_CODE_POINT_ORDER: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_COMPARE_IGNORE_CASE: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_COPYRIGHT_STRING_LENGTH: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_CPLUSPLUS_VERSION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_DEBUG: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_DEFAULT_SHOW_DRAFT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_DEFINE_FALSE_AND_TRUE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_DISABLE_RENAMING: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_EBCDIC_FAMILY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_EDITS_NO_RESET: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_ENABLE_DYLOAD: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_ENABLE_TRACING: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_FOLD_CASE_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_FOLD_CASE_EXCLUDE_SPECIAL_I: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_GCC_MAJOR_MINOR: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_CHAR16_T: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_DEBUG_LOCATION_NEW: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_INTTYPES_H: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_LIB_SUFFIX: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_PLACEMENT_NEW: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_RBNF: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_RVALUE_REFERENCES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_STDINT_H: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_STD_STRING: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_WCHAR_H: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HAVE_WCSCPY: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HIDE_DEPRECATED_API: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HIDE_DRAFT_API: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HIDE_INTERNAL_API: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HIDE_OBSOLETE_API: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_HIDE_OBSOLETE_UTF_OLD_H: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_ICUDATA_TYPE_LETTER: &str = "e";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_ICU_DATA_KEY: &str = "DataVersion";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_ICU_VERSION_BUNDLE: &str = "icuver";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_IOSTREAM_SOURCE: u32 = 199711u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_IS_BIG_ENDIAN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_LIB_SUFFIX_C_NAME_STRING: &str = "";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_MAX_VERSION_LENGTH: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_MAX_VERSION_STRING_LENGTH: u32 = 20u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_MILLIS_PER_DAY: u32 = 86400000u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_MILLIS_PER_HOUR: u32 = 3600000u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_MILLIS_PER_MINUTE: u32 = 60000u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_MILLIS_PER_SECOND: u32 = 1000u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_NO_DEFAULT_INCLUDE_UTF_HEADERS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_OMIT_UNCHANGED_TEXT: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_OVERRIDE_CXX_ALLOCATION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PARSE_CONTEXT_LEN: i32 = 16i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_AIX: u32 = 3100u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_ANDROID: u32 = 4050u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_BROWSER_NATIVE_CLIENT: u32 = 4020u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_BSD: u32 = 3000u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_CYGWIN: u32 = 1900u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_DARWIN: u32 = 3500u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_EMSCRIPTEN: u32 = 5010u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_FUCHSIA: u32 = 4100u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_HPUX: u32 = 2100u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_IPHONE: u32 = 3550u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_IRIX: u32 = 3200u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_LINUX: u32 = 4000u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_MINGW: u32 = 1800u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_OS390: u32 = 9000u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_OS400: u32 = 9400u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_QNX: u32 = 3700u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_SOLARIS: u32 = 2600u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_UNKNOWN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PF_WINDOWS: u32 = 1000u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PLATFORM: u32 = 1800u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PLATFORM_HAS_WIN32_API: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PLATFORM_HAS_WINUWP_API: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PLATFORM_IMPLEMENTS_POSIX: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PLATFORM_IS_DARWIN_BASED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PLATFORM_IS_LINUX_BASED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_PLATFORM_USES_ONLY_WIN32_API: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SENTINEL: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_AGGREGATE_TASHKEEL: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_AGGREGATE_TASHKEEL_MASK: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_AGGREGATE_TASHKEEL_NOOP: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGITS_ALEN2AN_INIT_AL: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGITS_ALEN2AN_INIT_LR: u32 = 96u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGITS_AN2EN: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGITS_EN2AN: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGITS_MASK: u32 = 224u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGITS_NOOP: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGITS_RESERVED: u32 = 160u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGIT_TYPE_AN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGIT_TYPE_AN_EXTENDED: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGIT_TYPE_MASK: u32 = 768u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_DIGIT_TYPE_RESERVED: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LAMALEF_AUTO: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LAMALEF_BEGIN: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LAMALEF_END: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LAMALEF_MASK: u32 = 65539u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LAMALEF_NEAR: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LAMALEF_RESIZE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LENGTH_FIXED_SPACES_AT_BEGINNING: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LENGTH_FIXED_SPACES_AT_END: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LENGTH_FIXED_SPACES_NEAR: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LENGTH_GROW_SHRINK: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LENGTH_MASK: u32 = 65539u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LETTERS_MASK: u32 = 24u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LETTERS_NOOP: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LETTERS_SHAPE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LETTERS_SHAPE_TASHKEEL_ISOLATED: u32 = 24u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_LETTERS_UNSHAPE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_PRESERVE_PRESENTATION: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_PRESERVE_PRESENTATION_MASK: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_PRESERVE_PRESENTATION_NOOP: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_SEEN_MASK: u32 = 7340032u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_SEEN_TWOCELL_NEAR: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_SPACES_RELATIVE_TO_TEXT_BEGIN_END: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_SPACES_RELATIVE_TO_TEXT_MASK: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TAIL_NEW_UNICODE: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TAIL_TYPE_MASK: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TASHKEEL_BEGIN: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TASHKEEL_END: u32 = 393216u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TASHKEEL_MASK: u32 = 917504u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TASHKEEL_REPLACE_BY_TATWEEL: u32 = 786432u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TASHKEEL_RESIZE: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TEXT_DIRECTION_LOGICAL: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TEXT_DIRECTION_MASK: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TEXT_DIRECTION_VISUAL_LTR: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_TEXT_DIRECTION_VISUAL_RTL: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_YEHHAMZA_MASK: u32 = 58720256u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHAPE_YEHHAMZA_TWOCELL_NEAR: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SHOW_CPLUSPLUS_API: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SIZEOF_UCHAR: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_SIZEOF_WCHAR_T: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_TITLECASE_ADJUST_TO_CASED: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_TITLECASE_NO_BREAK_ADJUSTMENT: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_TITLECASE_NO_LOWERCASE: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_TITLECASE_SENTENCES: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_TITLECASE_WHOLE_STRING: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_UNICODE_VERSION: &str = "8.0";
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const U_USING_ICU_NAMESPACE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const VS_ALLOW_LATIN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const WC_COMPOSITECHECK: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const WC_DEFAULTCHAR: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const WC_DISCARDNS: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const WC_ERR_INVALID_CHARS: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const WC_NO_BEST_FIT_CHARS: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const WC_SEPCHARS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub type WORDLIST_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
 pub const WORDLIST_TYPE_IGNORE: WORDLIST_TYPE = 0i32;
@@ -10026,94 +8946,1153 @@ pub const WORDLIST_TYPE_EXCLUDE: WORDLIST_TYPE = 2i32;
 pub const WORDLIST_TYPE_AUTOCORRECT: WORDLIST_TYPE = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct opentype_feature_record {
+pub struct CHARSETINFO {
+    pub ciCharset: u32,
+    pub ciACP: u32,
+    pub fs: FONTSIGNATURE,
+}
+impl ::core::marker::Copy for CHARSETINFO {}
+impl ::core::clone::Clone for CHARSETINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct CPINFO {
+    pub MaxCharSize: u32,
+    pub DefaultChar: [u8; 2],
+    pub LeadByte: [u8; 12],
+}
+impl ::core::marker::Copy for CPINFO {}
+impl ::core::clone::Clone for CPINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct CPINFOEXA {
+    pub MaxCharSize: u32,
+    pub DefaultChar: [u8; 2],
+    pub LeadByte: [u8; 12],
+    pub UnicodeDefaultChar: u16,
+    pub CodePage: u32,
+    pub CodePageName: [super::Foundation::CHAR; 260],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for CPINFOEXA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for CPINFOEXA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct CPINFOEXW {
+    pub MaxCharSize: u32,
+    pub DefaultChar: [u8; 2],
+    pub LeadByte: [u8; 12],
+    pub UnicodeDefaultChar: u16,
+    pub CodePage: u32,
+    pub CodePageName: [u16; 260],
+}
+impl ::core::marker::Copy for CPINFOEXW {}
+impl ::core::clone::Clone for CPINFOEXW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct CURRENCYFMTA {
+    pub NumDigits: u32,
+    pub LeadingZero: u32,
+    pub Grouping: u32,
+    pub lpDecimalSep: ::windows_sys::core::PSTR,
+    pub lpThousandSep: ::windows_sys::core::PSTR,
+    pub NegativeOrder: u32,
+    pub PositiveOrder: u32,
+    pub lpCurrencySymbol: ::windows_sys::core::PSTR,
+}
+impl ::core::marker::Copy for CURRENCYFMTA {}
+impl ::core::clone::Clone for CURRENCYFMTA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct CURRENCYFMTW {
+    pub NumDigits: u32,
+    pub LeadingZero: u32,
+    pub Grouping: u32,
+    pub lpDecimalSep: ::windows_sys::core::PWSTR,
+    pub lpThousandSep: ::windows_sys::core::PWSTR,
+    pub NegativeOrder: u32,
+    pub PositiveOrder: u32,
+    pub lpCurrencySymbol: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for CURRENCYFMTW {}
+impl ::core::clone::Clone for CURRENCYFMTW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct DetectEncodingInfo {
+    pub nLangID: u32,
+    pub nCodePage: u32,
+    pub nDocPercent: i32,
+    pub nConfidence: i32,
+}
+impl ::core::marker::Copy for DetectEncodingInfo {}
+impl ::core::clone::Clone for DetectEncodingInfo {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct ENUMTEXTMETRICA {
+    pub etmNewTextMetricEx: NEWTEXTMETRICEXA,
+    pub etmAxesList: super::Graphics::Gdi::AXESLISTA,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for ENUMTEXTMETRICA {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for ENUMTEXTMETRICA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct ENUMTEXTMETRICW {
+    pub etmNewTextMetricEx: NEWTEXTMETRICEXW,
+    pub etmAxesList: super::Graphics::Gdi::AXESLISTW,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for ENUMTEXTMETRICW {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for ENUMTEXTMETRICW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct FILEMUIINFO {
+    pub dwSize: u32,
+    pub dwVersion: u32,
+    pub dwFileType: u32,
+    pub pChecksum: [u8; 16],
+    pub pServiceChecksum: [u8; 16],
+    pub dwLanguageNameOffset: u32,
+    pub dwTypeIDMainSize: u32,
+    pub dwTypeIDMainOffset: u32,
+    pub dwTypeNameMainOffset: u32,
+    pub dwTypeIDMUISize: u32,
+    pub dwTypeIDMUIOffset: u32,
+    pub dwTypeNameMUIOffset: u32,
+    pub abBuffer: [u8; 8],
+}
+impl ::core::marker::Copy for FILEMUIINFO {}
+impl ::core::clone::Clone for FILEMUIINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct FONTSIGNATURE {
+    pub fsUsb: [u32; 4],
+    pub fsCsb: [u32; 2],
+}
+impl ::core::marker::Copy for FONTSIGNATURE {}
+impl ::core::clone::Clone for FONTSIGNATURE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct GOFFSET {
+    pub du: i32,
+    pub dv: i32,
+}
+impl ::core::marker::Copy for GOFFSET {}
+impl ::core::clone::Clone for GOFFSET {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HIMC = isize;
+pub type HIMCC = isize;
+pub type HSAVEDUILANGUAGES = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct LOCALESIGNATURE {
+    pub lsUsb: [u32; 4],
+    pub lsCsbDefault: [u32; 2],
+    pub lsCsbSupported: [u32; 2],
+}
+impl ::core::marker::Copy for LOCALESIGNATURE {}
+impl ::core::clone::Clone for LOCALESIGNATURE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct MAPPING_DATA_RANGE {
+    pub dwStartIndex: u32,
+    pub dwEndIndex: u32,
+    pub pszDescription: ::windows_sys::core::PWSTR,
+    pub dwDescriptionLength: u32,
+    pub pData: *mut ::core::ffi::c_void,
+    pub dwDataSize: u32,
+    pub pszContentType: ::windows_sys::core::PWSTR,
+    pub prgActionIds: *mut ::windows_sys::core::PWSTR,
+    pub dwActionsCount: u32,
+    pub prgActionDisplayNames: *mut ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for MAPPING_DATA_RANGE {}
+impl ::core::clone::Clone for MAPPING_DATA_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct MAPPING_ENUM_OPTIONS {
+    pub Size: usize,
+    pub pszCategory: ::windows_sys::core::PWSTR,
+    pub pszInputLanguage: ::windows_sys::core::PWSTR,
+    pub pszOutputLanguage: ::windows_sys::core::PWSTR,
+    pub pszInputScript: ::windows_sys::core::PWSTR,
+    pub pszOutputScript: ::windows_sys::core::PWSTR,
+    pub pszInputContentType: ::windows_sys::core::PWSTR,
+    pub pszOutputContentType: ::windows_sys::core::PWSTR,
+    pub pGuid: *mut ::windows_sys::core::GUID,
+    pub _bitfield: u32,
+}
+impl ::core::marker::Copy for MAPPING_ENUM_OPTIONS {}
+impl ::core::clone::Clone for MAPPING_ENUM_OPTIONS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct MAPPING_OPTIONS {
+    pub Size: usize,
+    pub pszInputLanguage: ::windows_sys::core::PWSTR,
+    pub pszOutputLanguage: ::windows_sys::core::PWSTR,
+    pub pszInputScript: ::windows_sys::core::PWSTR,
+    pub pszOutputScript: ::windows_sys::core::PWSTR,
+    pub pszInputContentType: ::windows_sys::core::PWSTR,
+    pub pszOutputContentType: ::windows_sys::core::PWSTR,
+    pub pszUILanguage: ::windows_sys::core::PWSTR,
+    pub pfnRecognizeCallback: PFN_MAPPINGCALLBACKPROC,
+    pub pRecognizeCallerData: *mut ::core::ffi::c_void,
+    pub dwRecognizeCallerDataSize: u32,
+    pub pfnActionCallback: PFN_MAPPINGCALLBACKPROC,
+    pub pActionCallerData: *mut ::core::ffi::c_void,
+    pub dwActionCallerDataSize: u32,
+    pub dwServiceFlag: u32,
+    pub _bitfield: u32,
+}
+impl ::core::marker::Copy for MAPPING_OPTIONS {}
+impl ::core::clone::Clone for MAPPING_OPTIONS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct MAPPING_PROPERTY_BAG {
+    pub Size: usize,
+    pub prgResultRanges: *mut MAPPING_DATA_RANGE,
+    pub dwRangesCount: u32,
+    pub pServiceData: *mut ::core::ffi::c_void,
+    pub dwServiceDataSize: u32,
+    pub pCallerData: *mut ::core::ffi::c_void,
+    pub dwCallerDataSize: u32,
+    pub pContext: *mut ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for MAPPING_PROPERTY_BAG {}
+impl ::core::clone::Clone for MAPPING_PROPERTY_BAG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct MAPPING_SERVICE_INFO {
+    pub Size: usize,
+    pub pszCopyright: ::windows_sys::core::PWSTR,
+    pub wMajorVersion: u16,
+    pub wMinorVersion: u16,
+    pub wBuildVersion: u16,
+    pub wStepVersion: u16,
+    pub dwInputContentTypesCount: u32,
+    pub prgInputContentTypes: *mut ::windows_sys::core::PWSTR,
+    pub dwOutputContentTypesCount: u32,
+    pub prgOutputContentTypes: *mut ::windows_sys::core::PWSTR,
+    pub dwInputLanguagesCount: u32,
+    pub prgInputLanguages: *mut ::windows_sys::core::PWSTR,
+    pub dwOutputLanguagesCount: u32,
+    pub prgOutputLanguages: *mut ::windows_sys::core::PWSTR,
+    pub dwInputScriptsCount: u32,
+    pub prgInputScripts: *mut ::windows_sys::core::PWSTR,
+    pub dwOutputScriptsCount: u32,
+    pub prgOutputScripts: *mut ::windows_sys::core::PWSTR,
+    pub guid: ::windows_sys::core::GUID,
+    pub pszCategory: ::windows_sys::core::PWSTR,
+    pub pszDescription: ::windows_sys::core::PWSTR,
+    pub dwPrivateDataSize: u32,
+    pub pPrivateData: *mut ::core::ffi::c_void,
+    pub pContext: *mut ::core::ffi::c_void,
+    pub _bitfield: u32,
+}
+impl ::core::marker::Copy for MAPPING_SERVICE_INFO {}
+impl ::core::clone::Clone for MAPPING_SERVICE_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct MIMECPINFO {
+    pub dwFlags: u32,
+    pub uiCodePage: u32,
+    pub uiFamilyCodePage: u32,
+    pub wszDescription: [u16; 64],
+    pub wszWebCharset: [u16; 50],
+    pub wszHeaderCharset: [u16; 50],
+    pub wszBodyCharset: [u16; 50],
+    pub wszFixedWidthFont: [u16; 32],
+    pub wszProportionalFont: [u16; 32],
+    pub bGDICharset: u8,
+}
+impl ::core::marker::Copy for MIMECPINFO {}
+impl ::core::clone::Clone for MIMECPINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct MIMECSETINFO {
+    pub uiCodePage: u32,
+    pub uiInternetEncoding: u32,
+    pub wszCharset: [u16; 50],
+}
+impl ::core::marker::Copy for MIMECSETINFO {}
+impl ::core::clone::Clone for MIMECSETINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct NEWTEXTMETRICEXA {
+    pub ntmTm: super::Graphics::Gdi::NEWTEXTMETRICA,
+    pub ntmFontSig: FONTSIGNATURE,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for NEWTEXTMETRICEXA {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for NEWTEXTMETRICEXA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Graphics_Gdi\"`*"]
+#[cfg(feature = "Win32_Graphics_Gdi")]
+pub struct NEWTEXTMETRICEXW {
+    pub ntmTm: super::Graphics::Gdi::NEWTEXTMETRICW,
+    pub ntmFontSig: FONTSIGNATURE,
+}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::marker::Copy for NEWTEXTMETRICEXW {}
+#[cfg(feature = "Win32_Graphics_Gdi")]
+impl ::core::clone::Clone for NEWTEXTMETRICEXW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct NLSVERSIONINFO {
+    pub dwNLSVersionInfoSize: u32,
+    pub dwNLSVersion: u32,
+    pub dwDefinedVersion: u32,
+    pub dwEffectiveId: u32,
+    pub guidCustomVersion: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for NLSVERSIONINFO {}
+impl ::core::clone::Clone for NLSVERSIONINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct NLSVERSIONINFOEX {
+    pub dwNLSVersionInfoSize: u32,
+    pub dwNLSVersion: u32,
+    pub dwDefinedVersion: u32,
+    pub dwEffectiveId: u32,
+    pub guidCustomVersion: ::windows_sys::core::GUID,
+}
+impl ::core::marker::Copy for NLSVERSIONINFOEX {}
+impl ::core::clone::Clone for NLSVERSIONINFOEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct NUMBERFMTA {
+    pub NumDigits: u32,
+    pub LeadingZero: u32,
+    pub Grouping: u32,
+    pub lpDecimalSep: ::windows_sys::core::PSTR,
+    pub lpThousandSep: ::windows_sys::core::PSTR,
+    pub NegativeOrder: u32,
+}
+impl ::core::marker::Copy for NUMBERFMTA {}
+impl ::core::clone::Clone for NUMBERFMTA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct NUMBERFMTW {
+    pub NumDigits: u32,
+    pub LeadingZero: u32,
+    pub Grouping: u32,
+    pub lpDecimalSep: ::windows_sys::core::PWSTR,
+    pub lpThousandSep: ::windows_sys::core::PWSTR,
+    pub NegativeOrder: u32,
+}
+impl ::core::marker::Copy for NUMBERFMTW {}
+impl ::core::clone::Clone for NUMBERFMTW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct OPENTYPE_FEATURE_RECORD {
     pub tagFeature: u32,
     pub lParameter: i32,
 }
-impl ::core::marker::Copy for opentype_feature_record {}
-impl ::core::clone::Clone for opentype_feature_record {
+impl ::core::marker::Copy for OPENTYPE_FEATURE_RECORD {}
+impl ::core::clone::Clone for OPENTYPE_FEATURE_RECORD {
     fn clone(&self) -> Self {
         *self
     }
 }
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct script_charprop {
-    pub _bitfield: u16,
+pub struct RFC1766INFO {
+    pub lcid: u32,
+    pub wszRfc1766: [u16; 6],
+    pub wszLocaleName: [u16; 32],
 }
-impl ::core::marker::Copy for script_charprop {}
-impl ::core::clone::Clone for script_charprop {
+impl ::core::marker::Copy for RFC1766INFO {}
+impl ::core::clone::Clone for RFC1766INFO {
     fn clone(&self) -> Self {
         *self
     }
 }
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct script_glyphprop {
-    pub sva: SCRIPT_VISATTR,
-    pub reserved: u16,
-}
-impl ::core::marker::Copy for script_glyphprop {}
-impl ::core::clone::Clone for script_glyphprop {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type tagMLCONVCHARF = i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLCONVCHARF_AUTODETECT: tagMLCONVCHARF = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLCONVCHARF_ENTITIZE: tagMLCONVCHARF = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLCONVCHARF_NCR_ENTITIZE: tagMLCONVCHARF = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLCONVCHARF_NAME_ENTITIZE: tagMLCONVCHARF = 4i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLCONVCHARF_USEDEFCHAR: tagMLCONVCHARF = 8i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLCONVCHARF_NOBESTFITCHARS: tagMLCONVCHARF = 16i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLCONVCHARF_DETECTJPN: tagMLCONVCHARF = 32i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub type tagMLCPF = i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTF_MAILNEWS: tagMLCPF = 1i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTF_BROWSER: tagMLCPF = 2i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTF_VALID: tagMLCPF = 4i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTF_VALID_NLS: tagMLCPF = 8i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTF_PRESERVE_ORDER: tagMLCPF = 16i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTF_PREFERRED_ONLY: tagMLCPF = 32i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTF_FILTER_SPECIALCHAR: tagMLCPF = 64i32;
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub const MLDETECTF_EURO_UTF8: tagMLCPF = 128i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct tagSCRIPFONTINFO {
+pub struct SCRIPTFONTINFO {
     pub scripts: i64,
     pub wszFont: [u16; 32],
 }
-impl ::core::marker::Copy for tagSCRIPFONTINFO {}
-impl ::core::clone::Clone for tagSCRIPFONTINFO {
+impl ::core::marker::Copy for SCRIPTFONTINFO {}
+impl ::core::clone::Clone for SCRIPTFONTINFO {
     fn clone(&self) -> Self {
         *self
     }
 }
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Globalization\"`*"]
-pub struct textrange_properties {
-    pub potfRecords: *mut opentype_feature_record,
-    pub cotfRecords: i32,
+pub struct SCRIPTINFO {
+    pub ScriptId: u8,
+    pub uiCodePage: u32,
+    pub wszDescription: [u16; 48],
+    pub wszFixedWidthFont: [u16; 32],
+    pub wszProportionalFont: [u16; 32],
 }
-impl ::core::marker::Copy for textrange_properties {}
-impl ::core::clone::Clone for textrange_properties {
+impl ::core::marker::Copy for SCRIPTINFO {}
+impl ::core::clone::Clone for SCRIPTINFO {
     fn clone(&self) -> Self {
         *self
     }
 }
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_ANALYSIS {
+    pub _bitfield: u16,
+    pub s: SCRIPT_STATE,
+}
+impl ::core::marker::Copy for SCRIPT_ANALYSIS {}
+impl ::core::clone::Clone for SCRIPT_ANALYSIS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_CHARPROP {
+    pub _bitfield: u16,
+}
+impl ::core::marker::Copy for SCRIPT_CHARPROP {}
+impl ::core::clone::Clone for SCRIPT_CHARPROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_CONTROL {
+    pub _bitfield: u32,
+}
+impl ::core::marker::Copy for SCRIPT_CONTROL {}
+impl ::core::clone::Clone for SCRIPT_CONTROL {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_DIGITSUBSTITUTE {
+    pub _bitfield1: u32,
+    pub _bitfield2: u32,
+    pub dwReserved: u32,
+}
+impl ::core::marker::Copy for SCRIPT_DIGITSUBSTITUTE {}
+impl ::core::clone::Clone for SCRIPT_DIGITSUBSTITUTE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_FONTPROPERTIES {
+    pub cBytes: i32,
+    pub wgBlank: u16,
+    pub wgDefault: u16,
+    pub wgInvalid: u16,
+    pub wgKashida: u16,
+    pub iKashidaWidth: i32,
+}
+impl ::core::marker::Copy for SCRIPT_FONTPROPERTIES {}
+impl ::core::clone::Clone for SCRIPT_FONTPROPERTIES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_GLYPHPROP {
+    pub sva: SCRIPT_VISATTR,
+    pub reserved: u16,
+}
+impl ::core::marker::Copy for SCRIPT_GLYPHPROP {}
+impl ::core::clone::Clone for SCRIPT_GLYPHPROP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_ITEM {
+    pub iCharPos: i32,
+    pub a: SCRIPT_ANALYSIS,
+}
+impl ::core::marker::Copy for SCRIPT_ITEM {}
+impl ::core::clone::Clone for SCRIPT_ITEM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_LOGATTR {
+    pub _bitfield: u8,
+}
+impl ::core::marker::Copy for SCRIPT_LOGATTR {}
+impl ::core::clone::Clone for SCRIPT_LOGATTR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_PROPERTIES {
+    pub _bitfield1: u32,
+    pub _bitfield2: u32,
+}
+impl ::core::marker::Copy for SCRIPT_PROPERTIES {}
+impl ::core::clone::Clone for SCRIPT_PROPERTIES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_STATE {
+    pub _bitfield: u16,
+}
+impl ::core::marker::Copy for SCRIPT_STATE {}
+impl ::core::clone::Clone for SCRIPT_STATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_TABDEF {
+    pub cTabStops: i32,
+    pub iScale: i32,
+    pub pTabStops: *mut i32,
+    pub iTabOrigin: i32,
+}
+impl ::core::marker::Copy for SCRIPT_TABDEF {}
+impl ::core::clone::Clone for SCRIPT_TABDEF {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct SCRIPT_VISATTR {
+    pub _bitfield: u16,
+}
+impl ::core::marker::Copy for SCRIPT_VISATTR {}
+impl ::core::clone::Clone for SCRIPT_VISATTR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct TEXTRANGE_PROPERTIES {
+    pub potfRecords: *mut OPENTYPE_FEATURE_RECORD,
+    pub cotfRecords: i32,
+}
+impl ::core::marker::Copy for TEXTRANGE_PROPERTIES {}
+impl ::core::clone::Clone for TEXTRANGE_PROPERTIES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct UBiDi(pub u8);
+#[repr(C)]
+pub struct UBiDiTransform(pub u8);
+#[repr(C)]
+pub struct UBreakIterator(pub u8);
+#[repr(C)]
+pub struct UCPMap(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UCPTrie {
+    pub index: *const u16,
+    pub data: UCPTrieData,
+    pub indexLength: i32,
+    pub dataLength: i32,
+    pub highStart: i32,
+    pub shifted12HighStart: u16,
+    pub r#type: i8,
+    pub valueWidth: i8,
+    pub reserved32: u32,
+    pub reserved16: u16,
+    pub index3NullOffset: u16,
+    pub dataNullOffset: i32,
+    pub nullValue: u32,
+}
+impl ::core::marker::Copy for UCPTrie {}
+impl ::core::clone::Clone for UCPTrie {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub union UCPTrieData {
+    pub ptr0: *const ::core::ffi::c_void,
+    pub ptr16: *const u16,
+    pub ptr32: *const u32,
+    pub ptr8: *const u8,
+}
+impl ::core::marker::Copy for UCPTrieData {}
+impl ::core::clone::Clone for UCPTrieData {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct UCaseMap(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UCharIterator {
+    pub context: *const ::core::ffi::c_void,
+    pub length: i32,
+    pub start: i32,
+    pub index: i32,
+    pub limit: i32,
+    pub reservedField: i32,
+    pub getIndex: UCharIteratorGetIndex,
+    pub r#move: UCharIteratorMove,
+    pub hasNext: UCharIteratorHasNext,
+    pub hasPrevious: UCharIteratorHasPrevious,
+    pub current: UCharIteratorCurrent,
+    pub next: UCharIteratorNext,
+    pub previous: UCharIteratorPrevious,
+    pub reservedFn: UCharIteratorReserved,
+    pub getState: UCharIteratorGetState,
+    pub setState: UCharIteratorSetState,
+}
+impl ::core::marker::Copy for UCharIterator {}
+impl ::core::clone::Clone for UCharIterator {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct UCharsetDetector(pub u8);
+#[repr(C)]
+pub struct UCharsetMatch(pub u8);
+#[repr(C)]
+pub struct UCollationElements(pub u8);
+#[repr(C)]
+pub struct UCollator(pub u8);
+#[repr(C)]
+pub struct UConstrainedFieldPosition(pub u8);
+#[repr(C)]
+pub struct UConverter(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UConverterFromUnicodeArgs {
+    pub size: u16,
+    pub flush: i8,
+    pub converter: *mut UConverter,
+    pub source: *const u16,
+    pub sourceLimit: *const u16,
+    pub target: ::windows_sys::core::PSTR,
+    pub targetLimit: ::windows_sys::core::PCSTR,
+    pub offsets: *mut i32,
+}
+impl ::core::marker::Copy for UConverterFromUnicodeArgs {}
+impl ::core::clone::Clone for UConverterFromUnicodeArgs {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct UConverterSelector(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UConverterToUnicodeArgs {
+    pub size: u16,
+    pub flush: i8,
+    pub converter: *mut UConverter,
+    pub source: ::windows_sys::core::PCSTR,
+    pub sourceLimit: ::windows_sys::core::PCSTR,
+    pub target: *mut u16,
+    pub targetLimit: *const u16,
+    pub offsets: *mut i32,
+}
+impl ::core::marker::Copy for UConverterToUnicodeArgs {}
+impl ::core::clone::Clone for UConverterToUnicodeArgs {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct UDateFormatSymbols(pub u8);
+#[repr(C)]
+pub struct UDateIntervalFormat(pub u8);
+#[repr(C)]
+pub struct UEnumeration(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UFieldPosition {
+    pub field: i32,
+    pub beginIndex: i32,
+    pub endIndex: i32,
+}
+impl ::core::marker::Copy for UFieldPosition {}
+impl ::core::clone::Clone for UFieldPosition {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct UFieldPositionIterator(pub u8);
+#[repr(C)]
+pub struct UFormattedDateInterval(pub u8);
+#[repr(C)]
+pub struct UFormattedList(pub u8);
+#[repr(C)]
+pub struct UFormattedNumber(pub u8);
+#[repr(C)]
+pub struct UFormattedNumberRange(pub u8);
+#[repr(C)]
+pub struct UFormattedRelativeDateTime(pub u8);
+#[repr(C)]
+pub struct UFormattedValue(pub u8);
+#[repr(C)]
+pub struct UGenderInfo(pub u8);
+#[repr(C)]
+pub struct UHashtable(pub u8);
+#[repr(C)]
+pub struct UIDNA(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UIDNAInfo {
+    pub size: i16,
+    pub isTransitionalDifferent: i8,
+    pub reservedB3: i8,
+    pub errors: u32,
+    pub reservedI2: i32,
+    pub reservedI3: i32,
+}
+impl ::core::marker::Copy for UIDNAInfo {}
+impl ::core::clone::Clone for UIDNAInfo {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct UListFormatter(pub u8);
+#[repr(C)]
+pub struct ULocaleData(pub u8);
+#[repr(C)]
+pub struct ULocaleDisplayNames(pub u8);
+#[repr(C)]
+pub struct UMutableCPTrie(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UNICODERANGE {
+    pub wcFrom: u16,
+    pub wcTo: u16,
+}
+impl ::core::marker::Copy for UNICODERANGE {}
+impl ::core::clone::Clone for UNICODERANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct UNormalizer2(pub u8);
+#[repr(C)]
+pub struct UNumberFormatter(pub u8);
+#[repr(C)]
+pub struct UNumberingSystem(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UParseError {
+    pub line: i32,
+    pub offset: i32,
+    pub preContext: [u16; 16],
+    pub postContext: [u16; 16],
+}
+impl ::core::marker::Copy for UParseError {}
+impl ::core::clone::Clone for UParseError {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct UPluralRules(pub u8);
+#[repr(C)]
+pub struct URegion(pub u8);
+#[repr(C)]
+pub struct URegularExpression(pub u8);
+#[repr(C)]
+pub struct URelativeDateTimeFormatter(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UReplaceableCallbacks {
+    pub length: isize,
+    pub charAt: isize,
+    pub char32At: isize,
+    pub replace: isize,
+    pub extract: isize,
+    pub copy: isize,
+}
+impl ::core::marker::Copy for UReplaceableCallbacks {}
+impl ::core::clone::Clone for UReplaceableCallbacks {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct UResourceBundle(pub u8);
+#[repr(C)]
+pub struct USearch(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct USerializedSet {
+    pub array: *const u16,
+    pub bmpLength: i32,
+    pub length: i32,
+    pub staticArray: [u16; 8],
+}
+impl ::core::marker::Copy for USerializedSet {}
+impl ::core::clone::Clone for USerializedSet {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+pub struct USet(pub u8);
+#[repr(C)]
+pub struct USpoofCheckResult(pub u8);
+#[repr(C)]
+pub struct USpoofChecker(pub u8);
+#[repr(C)]
+pub struct UStringPrepProfile(pub u8);
+#[repr(C)]
+pub struct UStringSearch(pub u8);
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UText {
+    pub magic: u32,
+    pub flags: i32,
+    pub providerProperties: i32,
+    pub sizeOfStruct: i32,
+    pub chunkNativeLimit: i64,
+    pub extraSize: i32,
+    pub nativeIndexingLimit: i32,
+    pub chunkNativeStart: i64,
+    pub chunkOffset: i32,
+    pub chunkLength: i32,
+    pub chunkContents: *const u16,
+    pub pFuncs: *const UTextFuncs,
+    pub pExtra: *mut ::core::ffi::c_void,
+    pub context: *const ::core::ffi::c_void,
+    pub p: *const ::core::ffi::c_void,
+    pub q: *const ::core::ffi::c_void,
+    pub r: *const ::core::ffi::c_void,
+    pub privP: *mut ::core::ffi::c_void,
+    pub a: i64,
+    pub b: i32,
+    pub c: i32,
+    pub privA: i64,
+    pub privB: i32,
+    pub privC: i32,
+}
+impl ::core::marker::Copy for UText {}
+impl ::core::clone::Clone for UText {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UTextFuncs {
+    pub tableSize: i32,
+    pub reserved1: i32,
+    pub reserved2: i32,
+    pub reserved3: i32,
+    pub clone: UTextClone,
+    pub nativeLength: UTextNativeLength,
+    pub access: UTextAccess,
+    pub extract: UTextExtract,
+    pub replace: UTextReplace,
+    pub copy: UTextCopy,
+    pub mapOffsetToNative: UTextMapOffsetToNative,
+    pub mapNativeIndexToUTF16: UTextMapNativeIndexToUTF16,
+    pub close: UTextClose,
+    pub spare1: UTextClose,
+    pub spare2: UTextClose,
+    pub spare3: UTextClose,
+}
+impl ::core::marker::Copy for UTextFuncs {}
+impl ::core::clone::Clone for UTextFuncs {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub struct UTransPosition {
+    pub contextStart: i32,
+    pub contextLimit: i32,
+    pub start: i32,
+    pub limit: i32,
+}
+impl ::core::marker::Copy for UTransPosition {}
+impl ::core::clone::Clone for UTransPosition {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CALINFO_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CALINFO_ENUMPROCEXA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: u32) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CALINFO_ENUMPROCEXEX = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: u32, param2: ::windows_sys::core::PCWSTR, param3: super::Foundation::LPARAM) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CALINFO_ENUMPROCEXW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: u32) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CALINFO_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CODEPAGE_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type CODEPAGE_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type DATEFMT_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type DATEFMT_ENUMPROCEXA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: u32) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type DATEFMT_ENUMPROCEXEX = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: u32, param2: super::Foundation::LPARAM) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type DATEFMT_ENUMPROCEXW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: u32) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type DATEFMT_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type GEO_ENUMNAMEPROC = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: super::Foundation::LPARAM) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type GEO_ENUMPROC = ::core::option::Option<unsafe extern "system" fn(param0: i32) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LANGGROUPLOCALE_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: u32, param2: ::windows_sys::core::PCSTR, param3: isize) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LANGGROUPLOCALE_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: u32, param2: ::windows_sys::core::PCWSTR, param3: isize) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LANGUAGEGROUP_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: ::windows_sys::core::PCSTR, param2: ::windows_sys::core::PCSTR, param3: u32, param4: isize) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LANGUAGEGROUP_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: u32, param1: ::windows_sys::core::PCWSTR, param2: ::windows_sys::core::PCWSTR, param3: u32, param4: isize) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LOCALE_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LOCALE_ENUMPROCEX = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: u32, param2: super::Foundation::LPARAM) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type LOCALE_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type PFN_MAPPINGCALLBACKPROC = ::core::option::Option<unsafe extern "system" fn(pbag: *mut MAPPING_PROPERTY_BAG, data: *mut ::core::ffi::c_void, dwdatasize: u32, result: ::windows_sys::core::HRESULT)>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type TIMEFMT_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type TIMEFMT_ENUMPROCEX = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: super::Foundation::LPARAM) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type TIMEFMT_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UBiDiClassCallback = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, c: i32) -> UCharDirection>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCPMapValueFilter = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, value: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharEnumTypeRange = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, start: i32, limit: i32, r#type: UCharCategory) -> i8>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharIteratorCurrent = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator) -> i32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharIteratorGetIndex = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator, origin: UCharIteratorOrigin) -> i32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharIteratorGetState = ::core::option::Option<unsafe extern "system" fn(iter: *const UCharIterator) -> u32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharIteratorHasNext = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator) -> i8>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharIteratorHasPrevious = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator) -> i8>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharIteratorMove = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator, delta: i32, origin: UCharIteratorOrigin) -> i32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharIteratorNext = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator) -> i32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharIteratorPrevious = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator) -> i32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharIteratorReserved = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator, something: i32) -> i32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UCharIteratorSetState = ::core::option::Option<unsafe extern "system" fn(iter: *mut UCharIterator, state: u32, perrorcode: *mut UErrorCode)>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UConverterFromUCallback = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, args: *mut UConverterFromUnicodeArgs, codeunits: *const u16, length: i32, codepoint: i32, reason: UConverterCallbackReason, perrorcode: *mut UErrorCode)>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UConverterToUCallback = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, args: *mut UConverterToUnicodeArgs, codeunits: ::windows_sys::core::PCSTR, length: i32, reason: UConverterCallbackReason, perrorcode: *mut UErrorCode)>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UEnumCharNamesFn = ::core::option::Option<unsafe extern "system" fn(context: *mut ::core::ffi::c_void, code: i32, namechoice: UCharNameChoice, name: ::windows_sys::core::PCSTR, length: i32) -> i8>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type UILANGUAGE_ENUMPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: isize) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type UILANGUAGE_ENUMPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: isize) -> super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UMemAllocFn = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, size: usize) -> *mut ::core::ffi::c_void>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UMemFreeFn = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, mem: *mut ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UMemReallocFn = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, mem: *mut ::core::ffi::c_void, size: usize) -> *mut ::core::ffi::c_void>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UNESCAPE_CHAR_AT = ::core::option::Option<unsafe extern "system" fn(offset: i32, context: *mut ::core::ffi::c_void) -> u16>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type URegexFindProgressCallback = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, matchindex: i64) -> i8>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type URegexMatchCallback = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, steps: i32) -> i8>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UStringCaseMapper = ::core::option::Option<unsafe extern "system" fn(csm: *const UCaseMap, dest: *mut u16, destcapacity: i32, src: *const u16, srclength: i32, perrorcode: *mut UErrorCode) -> i32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTextAccess = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText, nativeindex: i64, forward: i8) -> i8>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTextClone = ::core::option::Option<unsafe extern "system" fn(dest: *mut UText, src: *const UText, deep: i8, status: *mut UErrorCode) -> *mut UText>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTextClose = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText)>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTextCopy = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText, nativestart: i64, nativelimit: i64, nativedest: i64, r#move: i8, status: *mut UErrorCode)>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTextExtract = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText, nativestart: i64, nativelimit: i64, dest: *mut u16, destcapacity: i32, status: *mut UErrorCode) -> i32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTextMapNativeIndexToUTF16 = ::core::option::Option<unsafe extern "system" fn(ut: *const UText, nativeindex: i64) -> i32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTextMapOffsetToNative = ::core::option::Option<unsafe extern "system" fn(ut: *const UText) -> i64>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTextNativeLength = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText) -> i64>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTextReplace = ::core::option::Option<unsafe extern "system" fn(ut: *mut UText, nativestart: i64, nativelimit: i64, replacementtext: *const u16, replacmentlength: i32, status: *mut UErrorCode) -> i32>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTraceData = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, fnnumber: i32, level: i32, fmt: ::windows_sys::core::PCSTR, args: *mut i8)>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTraceEntry = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, fnnumber: i32)>;
+#[doc = "*Required features: `\"Win32_Globalization\"`*"]
+pub type UTraceExit = ::core::option::Option<unsafe extern "system" fn(context: *const ::core::ffi::c_void, fnnumber: i32, fmt: ::windows_sys::core::PCSTR, args: *mut i8)>;

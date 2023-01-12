@@ -449,12 +449,16 @@ static int cli(int argc,char **argv)
 			if (json) {
 				printf("%s" ZT_EOL_S,OSUtils::jsonDump(j).c_str());
 			} else {
-				printf("200 peers\n<ztaddr>   <ver>  <role> <lat> <link> <lastTX> <lastRX> <path>" ZT_EOL_S);
+				bool anyTunneled = false;
+				printf("200 peers\n<ztaddr>   <ver>  <role> <lat> <link>   <lastTX> <lastRX> <path>" ZT_EOL_S);
 				if (j.is_array()) {
 					for(unsigned long k=0;k<j.size();++k) {
 						nlohmann::json &p = j[k];
 						std::string bestPath;
 						nlohmann::json &paths = p["paths"];
+						if (p["tunneled"]) {
+							anyTunneled = true;
+						}
 						if (paths.is_array()) {
 							for(unsigned long i=0;i<paths.size();++i) {
 								nlohmann::json &path = paths[i];
@@ -465,12 +469,19 @@ static int cli(int argc,char **argv)
 									int64_t lastSendDiff = (uint64_t)path["lastSend"] ? now - (uint64_t)path["lastSend"] : -1;
 									int64_t lastReceiveDiff = (uint64_t)path["lastReceive"] ? now - (uint64_t)path["lastReceive"] : -1;
 									OSUtils::ztsnprintf(tmp,sizeof(tmp),"%-8lld %-8lld %s",lastSendDiff,lastReceiveDiff,addr.c_str());
-									bestPath = std::string("DIRECT ") + tmp;
+									if (p["tunneled"]) {
+										bestPath = std::string("RELAY ") + tmp;
+									}
+									else {
+										bestPath = std::string("DIRECT   ") + tmp;
+									}
 									break;
 								}
 							}
 						}
-						if (bestPath.length() == 0) bestPath = "RELAY";
+						if (bestPath.length() == 0) {
+							bestPath = "RELAY";
+						}
 						char ver[128];
 						int64_t vmaj = p["versionMajor"];
 						int64_t vmin = p["versionMinor"];
@@ -488,6 +499,9 @@ static int cli(int argc,char **argv)
 							(int)OSUtils::jsonInt(p["latency"],0),
 							bestPath.c_str());
 					}
+				}
+				if (anyTunneled) {
+					printf("NOTE: Currently tunneling through a TCP relay. Ensure that UDP is not blocked.\n");
 				}
 			}
 			return 0;

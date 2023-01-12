@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_EventCollector\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -52,6 +52,12 @@ pub const EC_OPEN_ALWAYS: u32 = 0u32;
 pub const EC_OPEN_EXISTING: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
 pub const EC_READ_ACCESS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
+pub const EC_VARIANT_TYPE_ARRAY: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
+pub const EC_VARIANT_TYPE_MASK: u32 = 127u32;
+#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
+pub const EC_WRITE_ACCESS: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
 pub type EC_SUBSCRIPTION_CONFIGURATION_MODE = i32;
 #[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
@@ -188,6 +194,20 @@ pub type EC_SUBSCRIPTION_TYPE = i32;
 pub const EcSubscriptionTypeSourceInitiated: EC_SUBSCRIPTION_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
 pub const EcSubscriptionTypeCollectorInitiated: EC_SUBSCRIPTION_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
+pub type EC_VARIANT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
+pub const EcVarTypeNull: EC_VARIANT_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
+pub const EcVarTypeBoolean: EC_VARIANT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
+pub const EcVarTypeUInt32: EC_VARIANT_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
+pub const EcVarTypeDateTime: EC_VARIANT_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
+pub const EcVarTypeString: EC_VARIANT_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
+pub const EcVarObjectArrayPropertyHandle: EC_VARIANT_TYPE = 5i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_EventCollector\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -226,23 +246,3 @@ impl ::core::clone::Clone for EC_VARIANT_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
-pub type EC_VARIANT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
-pub const EcVarTypeNull: EC_VARIANT_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
-pub const EcVarTypeBoolean: EC_VARIANT_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
-pub const EcVarTypeUInt32: EC_VARIANT_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
-pub const EcVarTypeDateTime: EC_VARIANT_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
-pub const EcVarTypeString: EC_VARIANT_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
-pub const EcVarObjectArrayPropertyHandle: EC_VARIANT_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
-pub const EC_VARIANT_TYPE_ARRAY: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
-pub const EC_VARIANT_TYPE_MASK: u32 = 127u32;
-#[doc = "*Required features: `\"Win32_System_EventCollector\"`*"]
-pub const EC_WRITE_ACCESS: u32 = 2u32;

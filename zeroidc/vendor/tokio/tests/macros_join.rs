@@ -1,13 +1,14 @@
 #![cfg(feature = "macros")]
-#![allow(clippy::blacklisted_name)]
+#![allow(clippy::disallowed_names)]
 use std::sync::Arc;
 
-#[cfg(target_arch = "wasm32")]
+#[cfg(tokio_wasm_not_wasi)]
+#[cfg(target_pointer_width = "64")]
 use wasm_bindgen_test::wasm_bindgen_test as test;
-#[cfg(target_arch = "wasm32")]
+#[cfg(tokio_wasm_not_wasi)]
 use wasm_bindgen_test::wasm_bindgen_test as maybe_tokio_test;
 
-#[cfg(not(target_arch = "wasm32"))]
+#[cfg(not(tokio_wasm_not_wasi))]
 use tokio::test as maybe_tokio_test;
 
 use tokio::sync::{oneshot, Semaphore};
@@ -64,6 +65,7 @@ async fn two_await() {
 }
 
 #[test]
+#[cfg(target_pointer_width = "64")]
 fn join_size() {
     use futures::future;
     use std::mem;
@@ -72,21 +74,21 @@ fn join_size() {
         let ready = future::ready(0i32);
         tokio::join!(ready)
     };
-    assert_eq!(mem::size_of_val(&fut), 20);
+    assert_eq!(mem::size_of_val(&fut), 32);
 
     let fut = async {
         let ready1 = future::ready(0i32);
         let ready2 = future::ready(0i32);
         tokio::join!(ready1, ready2)
     };
-    assert_eq!(mem::size_of_val(&fut), 32);
+    assert_eq!(mem::size_of_val(&fut), 40);
 }
 
 async fn non_cooperative_task(permits: Arc<Semaphore>) -> usize {
     let mut exceeded_budget = 0;
 
     for _ in 0..5 {
-        // Another task should run after after this task uses its whole budget
+        // Another task should run after this task uses its whole budget
         for _ in 0..128 {
             let _permit = permits.clone().acquire_owned().await.unwrap();
         }

@@ -1,4 +1,3 @@
-use oauth2::helpers::variant_name;
 use ring::hmac;
 use ring::rand;
 use ring::signature as ring_signature;
@@ -250,7 +249,12 @@ impl JsonWebKey<CoreJwsSigningAlgorithm, CoreJsonWebKeyType, CoreJsonWebKeyUse> 
                 }
             }
             ref other => Err(SignatureVerificationError::UnsupportedAlg(
-                variant_name(other).to_string(),
+                serde_plain::to_string(other).unwrap_or_else(|err| {
+                    panic!(format!(
+                        "signature alg {:?} failed to serialize to a string: {}",
+                        other, err
+                    ))
+                }),
             )),
         }
     }
@@ -298,7 +302,12 @@ impl
             CoreJwsSigningAlgorithm::HmacSha512 => hmac::HMAC_SHA512,
             ref other => {
                 return Err(SigningError::UnsupportedAlg(
-                    variant_name(other).to_string(),
+                    serde_plain::to_string(other).unwrap_or_else(|err| {
+                        panic!(format!(
+                            "signature alg {:?} failed to serialize to a string: {}",
+                            other, err
+                        ))
+                    }),
                 ))
             }
         };
@@ -323,7 +332,7 @@ const RSA_FOOTER: &str = "-----END RSA PRIVATE KEY-----";
 ///
 pub struct CoreRsaPrivateSigningKey {
     key_pair: ring_signature::RsaKeyPair,
-    rng: Box<dyn rand::SecureRandom>,
+    rng: Box<dyn rand::SecureRandom + Send>,
     kid: Option<JsonWebKeyId>,
 }
 impl CoreRsaPrivateSigningKey {
@@ -336,7 +345,7 @@ impl CoreRsaPrivateSigningKey {
 
     pub(crate) fn from_pem_internal(
         pem: &str,
-        rng: Box<dyn rand::SecureRandom>,
+        rng: Box<dyn rand::SecureRandom + Send>,
         kid: Option<JsonWebKeyId>,
     ) -> Result<Self, String> {
         let trimmed_pem = pem.trim();
@@ -356,7 +365,7 @@ impl CoreRsaPrivateSigningKey {
     }
 
     /// Filters characters from the base64 input string.
-    /// Charcters are specified according to lax base64 parsing.
+    /// Characters are specified according to lax base64 parsing.
     ///
     /// RFC 7468 Lax Parsing
     fn lax_base64_parsing(input: &str) -> String {
@@ -396,7 +405,12 @@ impl
             CoreJwsSigningAlgorithm::RsaSsaPssSha512 => &ring_signature::RSA_PSS_SHA512,
             ref other => {
                 return Err(SigningError::UnsupportedAlg(
-                    variant_name(other).to_string(),
+                    serde_plain::to_string(other).unwrap_or_else(|err| {
+                        panic!(format!(
+                            "signature alg {:?} failed to serialize to a string: {}",
+                            other, err
+                        ))
+                    }),
                 ))
             }
         };
@@ -484,19 +498,41 @@ impl JsonCurveType for CoreJsonWebKeyType {}
 ///
 /// Usage restriction for a JSON Web key.
 ///
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq)]
 #[non_exhaustive]
 pub enum CoreJsonWebKeyUse {
     ///
     /// Key may be used for digital signatures.
     ///
-    #[serde(rename = "sig")]
     Signature,
+
     ///
     /// Key may be used for encryption.
     ///
-    #[serde(rename = "enc")]
     Encryption,
+
+    ///
+    /// Fallback case for other key uses not understood by this library.
+    ///
+    Other(String),
+}
+impl CoreJsonWebKeyUse {
+    fn from_str(s: &str) -> Self {
+        match s {
+            "sig" => Self::Signature,
+            "enc" => Self::Encryption,
+            other => Self::Other(other.to_string()),
+        }
+    }
+}
+impl AsRef<str> for CoreJsonWebKeyUse {
+    fn as_ref(&self) -> &str {
+        match self {
+            CoreJsonWebKeyUse::Signature => "sig",
+            CoreJsonWebKeyUse::Encryption => "enc",
+            CoreJsonWebKeyUse::Other(other) => other.as_str(),
+        }
+    }
 }
 impl JsonWebKeyUse for CoreJsonWebKeyUse {
     fn allows_signature(&self) -> bool {
@@ -506,9 +542,15 @@ impl JsonWebKeyUse for CoreJsonWebKeyUse {
         matches!(*self, CoreJsonWebKeyUse::Encryption)
     }
 }
+// FIXME: Once https://github.com/serde-rs/serde/issues/912 is resolved, use #[serde(other)] instead
+// of custom serializer/deserializers. Right now this isn't possible because serde(other) only
+// supports unit variants.
+deserialize_from_str!(CoreJsonWebKeyUse);
+serialize_as_str!(CoreJsonWebKeyUse);
 
 #[cfg(test)]
 mod tests {
+    use crate::core::CoreJsonWebKeySet;
     use ring::test::rand::FixedByteRandom;
 
     use crate::jwt::tests::{TEST_EC_PUB_KEY_P256, TEST_EC_PUB_KEY_P384, TEST_RSA_PUB_KEY};
@@ -1245,5 +1287,60 @@ mod tests {
             .unwrap();
 
         assert_ne!(sig1, sig2);
+    }
+
+    // Tests that JsonWebKeySet ignores unsupported keys during deserialization so that clients can
+    // use providers that include unsupported keys as long as they only use supported ones to sign
+    // payloads.
+    #[test]
+    fn test_jwks_unsupported_key() {
+        let jwks_json = "{
+            \"keys\": [
+                {
+                    \"kty\": \"RSA\",
+                    \"use\": \"sig\",
+                    \"kid\": \"2011-04-29\",
+                    \"n\": \"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhD\
+                             R1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6C\
+                             f0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1\
+                             n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1\
+                             jF44-csFCur-kEgU8awapJzKnqDKgw\",
+                    \"e\": \"AQAB\"
+                },
+                {
+                    \"kty\": \"MAGIC\",
+                    \"use\": \"sig\",
+                    \"kid\": \"2040-01-01\",
+                    \"magic\": \"magic\"
+                },
+                {
+                    \"kty\": \"EC\",
+                    \"use\": \"sig\",
+                    \"kid\": \"2011-05-01\",
+                    \"crv\": \"P-256\",
+                    \"x\": \"kXCGZIr3oI6sKbnT6rRsIdxFXw3_VbLk_cveajgqXk8\",
+                    \"y\": \"StDvKIgXqAxJ6DuebREh-1vgvZRW3dfrOxSIKzBtRI0\"
+                }
+            ]
+        }";
+        let jwks = serde_json::from_str::<CoreJsonWebKeySet>(jwks_json)
+            .expect("deserialization should succeed");
+
+        assert_eq!(jwks.keys().len(), 2);
+
+        assert_eq!(jwks.keys()[0].kty, CoreJsonWebKeyType::RSA);
+        assert_eq!(jwks.keys()[0].use_, Some(CoreJsonWebKeyUse::Signature));
+        assert_eq!(
+            jwks.keys()[0].kid,
+            Some(JsonWebKeyId::new("2011-04-29".to_string()))
+        );
+
+        assert_eq!(jwks.keys()[1].kty, CoreJsonWebKeyType::EllipticCurve);
+        assert_eq!(jwks.keys()[1].use_, Some(CoreJsonWebKeyUse::Signature));
+        assert_eq!(
+            jwks.keys()[1].kid,
+            Some(JsonWebKeyId::new("2011-05-01".to_string()))
+        );
+        assert_eq!(jwks.keys()[1].crv, Some(CoreJsonCurveType::P256));
     }
 }

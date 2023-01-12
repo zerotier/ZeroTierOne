@@ -37,6 +37,11 @@ pub const NA_NameSetByPolicy: &str = "NA_NameSetByPolicy";
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
 pub const NA_NetworkClass: &str = "NA_NetworkClass";
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
+pub const NLM_MAX_ADDRESS_LIST_SIZE: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
+pub const NLM_UNKNOWN_DATAPLAN_STATUS: u32 = 4294967295u32;
+pub const NetworkListManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3702524929, data2: 22287, data3: 19099, data4: [141, 105, 25, 159, 219, 165, 114, 59] };
+#[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
 pub type NLM_CONNECTION_COST = i32;
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
 pub const NLM_CONNECTION_COST_UNKNOWN: NLM_CONNECTION_COST = 0i32;
@@ -78,27 +83,6 @@ pub const NLM_CONNECTIVITY_IPV6_SUBNET: NLM_CONNECTIVITY = 256i32;
 pub const NLM_CONNECTIVITY_IPV6_LOCALNETWORK: NLM_CONNECTIVITY = 512i32;
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
 pub const NLM_CONNECTIVITY_IPV6_INTERNET: NLM_CONNECTIVITY = 1024i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct NLM_DATAPLAN_STATUS {
-    pub InterfaceGuid: ::windows_sys::core::GUID,
-    pub UsageData: NLM_USAGE_DATA,
-    pub DataLimitInMegabytes: u32,
-    pub InboundBandwidthInKbps: u32,
-    pub OutboundBandwidthInKbps: u32,
-    pub NextBillingCycle: super::super::Foundation::FILETIME,
-    pub MaxTransferSizeInMegabytes: u32,
-    pub Reserved: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for NLM_DATAPLAN_STATUS {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for NLM_DATAPLAN_STATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
 pub type NLM_DOMAIN_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
@@ -123,8 +107,6 @@ pub const NLM_INTERNET_CONNECTIVITY_WEBHIJACK: NLM_INTERNET_CONNECTIVITY = 1i32;
 pub const NLM_INTERNET_CONNECTIVITY_PROXIED: NLM_INTERNET_CONNECTIVITY = 2i32;
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
 pub const NLM_INTERNET_CONNECTIVITY_CORPORATE: NLM_INTERNET_CONNECTIVITY = 4i32;
-#[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
-pub const NLM_MAX_ADDRESS_LIST_SIZE: u32 = 10u32;
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
 pub type NLM_NETWORK_CATEGORY = i32;
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
@@ -154,6 +136,27 @@ pub const NLM_NETWORK_PROPERTY_CHANGE_ICON: NLM_NETWORK_PROPERTY_CHANGE = 8i32;
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
 pub const NLM_NETWORK_PROPERTY_CHANGE_CATEGORY_VALUE: NLM_NETWORK_PROPERTY_CHANGE = 16i32;
 #[repr(C)]
+#[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct NLM_DATAPLAN_STATUS {
+    pub InterfaceGuid: ::windows_sys::core::GUID,
+    pub UsageData: NLM_USAGE_DATA,
+    pub DataLimitInMegabytes: u32,
+    pub InboundBandwidthInKbps: u32,
+    pub OutboundBandwidthInKbps: u32,
+    pub NextBillingCycle: super::super::Foundation::FILETIME,
+    pub MaxTransferSizeInMegabytes: u32,
+    pub Reserved: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for NLM_DATAPLAN_STATUS {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for NLM_DATAPLAN_STATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
 pub struct NLM_SIMULATED_PROFILE_INFO {
     pub ProfileName: [u16; 256],
@@ -178,8 +181,6 @@ impl ::core::clone::Clone for NLM_SOCKADDR {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`*"]
-pub const NLM_UNKNOWN_DATAPLAN_STATUS: u32 = 4294967295u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Networking_NetworkListManager\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -195,4 +196,3 @@ impl ::core::clone::Clone for NLM_USAGE_DATA {
         *self
     }
 }
-pub const NetworkListManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3702524929, data2: 22287, data3: 19099, data4: [141, 105, 25, 159, 219, 165, 114, 59] };

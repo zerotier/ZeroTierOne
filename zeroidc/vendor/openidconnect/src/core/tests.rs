@@ -1,3 +1,5 @@
+use crate::core::CoreJwsSigningAlgorithm;
+
 use super::CoreGrantType;
 
 #[test]
@@ -7,5 +9,17 @@ fn test_grant_type_serialize() {
     assert_eq!(
         CoreGrantType::Implicit,
         serde_json::from_str::<CoreGrantType>(&serialized_implicit).unwrap()
+    );
+}
+
+#[test]
+fn test_signature_alg_serde_plain() {
+    assert_eq!(
+        serde_plain::to_string(&CoreJwsSigningAlgorithm::RsaSsaPkcs1V15Sha256).unwrap(),
+        "RS256"
+    );
+    assert_eq!(
+        serde_plain::from_str::<CoreJwsSigningAlgorithm>("RS256").unwrap(),
+        CoreJwsSigningAlgorithm::RsaSsaPkcs1V15Sha256
     );
 }

@@ -1,6 +1,10 @@
-#[cfg(feature = "Win32_System_Diagnostics_Debug_WebApp")]
-pub mod WebApp;
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
+extern "cdecl" {
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+    pub fn RtlRestoreContext(contextrecord: *const CONTEXT, exceptionrecord: *const EXCEPTION_RECORD);
+}
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
@@ -20,11 +24,13 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn CheckRemoteDebuggerPresent(hprocess: super::super::super::Foundation::HANDLE, pbdebuggerpresent: *mut super::super::super::Foundation::BOOL) -> super::super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(feature = "Win32_System_SystemInformation")]
     pub fn CheckSumMappedFile(baseaddress: *const ::core::ffi::c_void, filelength: u32, headersum: *mut u32, checksum: *mut u32) -> *mut IMAGE_NT_HEADERS64;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(target_arch = "x86")]
+    #[cfg(feature = "Win32_System_SystemInformation")]
     pub fn CheckSumMappedFile(baseaddress: *const ::core::ffi::c_void, filelength: u32, headersum: *mut u32, checksum: *mut u32) -> *mut IMAGE_NT_HEADERS32;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
     pub fn CloseThreadWaitChainSession(wcthandle: *const ::core::ffi::c_void);
@@ -142,16 +148,16 @@ extern "system" {
     pub fn GetEnabledXStateFeatures() -> u64;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
     pub fn GetErrorMode() -> u32;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
     pub fn GetImageConfigInformation(loadedimage: *const LOADED_IMAGE, imageconfiginformation: *mut IMAGE_LOAD_CONFIG_DIRECTORY64) -> super::super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(target_arch = "x86")]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
     pub fn GetImageConfigInformation(loadedimage: *const LOADED_IMAGE, imageconfiginformation: *mut IMAGE_LOAD_CONFIG_DIRECTORY32) -> super::super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
     pub fn GetImageUnusedHeaderBytes(loadedimage: *const LOADED_IMAGE, sizeunusedheaderbytes: *mut u32) -> u32;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
     pub fn GetSymLoadError() -> u32;
@@ -194,32 +200,38 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn ImageGetDigestStream(filehandle: super::super::super::Foundation::HANDLE, digestlevel: u32, digestfunction: DIGEST_FUNCTION, digesthandle: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
     pub fn ImageLoad(dllname: ::windows_sys::core::PCSTR, dllpath: ::windows_sys::core::PCSTR) -> *mut LOADED_IMAGE;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(feature = "Win32_System_SystemInformation")]
     pub fn ImageNtHeader(base: *const ::core::ffi::c_void) -> *mut IMAGE_NT_HEADERS64;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(target_arch = "x86")]
+    #[cfg(feature = "Win32_System_SystemInformation")]
     pub fn ImageNtHeader(base: *const ::core::ffi::c_void) -> *mut IMAGE_NT_HEADERS32;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn ImageRemoveCertificate(filehandle: super::super::super::Foundation::HANDLE, index: u32) -> super::super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(feature = "Win32_System_SystemInformation")]
     pub fn ImageRvaToSection(ntheaders: *const IMAGE_NT_HEADERS64, base: *const ::core::ffi::c_void, rva: u32) -> *mut IMAGE_SECTION_HEADER;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(target_arch = "x86")]
+    #[cfg(feature = "Win32_System_SystemInformation")]
     pub fn ImageRvaToSection(ntheaders: *const IMAGE_NT_HEADERS32, base: *const ::core::ffi::c_void, rva: u32) -> *mut IMAGE_SECTION_HEADER;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(feature = "Win32_System_SystemInformation")]
     pub fn ImageRvaToVa(ntheaders: *const IMAGE_NT_HEADERS64, base: *const ::core::ffi::c_void, rva: u32, lastrvasection: *const *const IMAGE_SECTION_HEADER) -> *mut ::core::ffi::c_void;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(target_arch = "x86")]
+    #[cfg(feature = "Win32_System_SystemInformation")]
     pub fn ImageRvaToVa(ntheaders: *const IMAGE_NT_HEADERS32, base: *const ::core::ffi::c_void, rva: u32, lastrvasection: *const *const IMAGE_SECTION_HEADER) -> *mut ::core::ffi::c_void;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
     pub fn ImageUnload(loadedimage: *mut LOADED_IMAGE) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
     pub fn ImagehlpApiVersion() -> *mut API_VERSION;
@@ -241,16 +253,16 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn MakeSureDirectoryPathExists(dirpath: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
     pub fn MapAndLoad(imagename: ::windows_sys::core::PCSTR, dllpath: ::windows_sys::core::PCSTR, loadedimage: *mut LOADED_IMAGE, dotdll: super::super::super::Foundation::BOOL, readonly: super::super::super::Foundation::BOOL) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
     pub fn MapFileAndCheckSumA(filename: ::windows_sys::core::PCSTR, headersum: *mut u32, checksum: *mut u32) -> u32;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
     pub fn MapFileAndCheckSumW(filename: ::windows_sys::core::PCWSTR, headersum: *mut u32, checksum: *mut u32) -> u32;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
-    pub fn MessageBeep(utype: u32) -> super::super::super::Foundation::BOOL;
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
+    pub fn MessageBeep(utype: super::super::super::UI::WindowsAndMessaging::MESSAGEBOX_STYLE) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn MiniDumpReadDumpStream(baseofdump: *const ::core::ffi::c_void, streamnumber: u32, dir: *mut *mut MINIDUMP_DIRECTORY, streampointer: *mut *mut ::core::ffi::c_void, streamsize: *mut u32) -> super::super::super::Foundation::BOOL;
@@ -344,7 +356,11 @@ extern "system" {
     #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
     pub fn RtlGrowFunctionTable(dynamictable: *mut ::core::ffi::c_void, newentrycount: u32);
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+    #[cfg(target_arch = "aarch64")]
+    #[cfg(feature = "Win32_Foundation")]
+    pub fn RtlInstallFunctionTableCallback(tableidentifier: u64, baseaddress: u64, length: u32, callback: PGET_RUNTIME_FUNCTION_CALLBACK, context: *const ::core::ffi::c_void, outofprocesscallbackdll: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOLEAN;
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+    #[cfg(target_arch = "x86_64")]
     #[cfg(feature = "Win32_Foundation")]
     pub fn RtlInstallFunctionTableCallback(tableidentifier: u64, baseaddress: u64, length: u32, callback: PGET_RUNTIME_FUNCTION_CALLBACK, context: *const ::core::ffi::c_void, outofprocesscallbackdll: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOLEAN;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
@@ -358,9 +374,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn RtlRaiseException(exceptionrecord: *const EXCEPTION_RECORD);
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-    pub fn RtlRestoreContext(contextrecord: *const CONTEXT, exceptionrecord: *const EXCEPTION_RECORD);
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
     pub fn RtlUnwind(targetframe: *const ::core::ffi::c_void, targetip: *const ::core::ffi::c_void, exceptionrecord: *const EXCEPTION_RECORD, returnvalue: *const ::core::ffi::c_void);
@@ -386,13 +399,13 @@ extern "system" {
     pub fn SetCheckUserInterruptShared(lpstartaddress: LPCALL_BACK_USER_INTERRUPT_ROUTINE);
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
     pub fn SetErrorMode(umode: THREAD_ERROR_MODE) -> u32;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
     pub fn SetImageConfigInformation(loadedimage: *mut LOADED_IMAGE, imageconfiginformation: *const IMAGE_LOAD_CONFIG_DIRECTORY64) -> super::super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
     #[cfg(target_arch = "x86")]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
     pub fn SetImageConfigInformation(loadedimage: *mut LOADED_IMAGE, imageconfiginformation: *const IMAGE_LOAD_CONFIG_DIRECTORY32) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
     pub fn SetSymLoadError(error: u32);
@@ -951,17 +964,17 @@ extern "system" {
     pub fn UnDecorateSymbolName(name: ::windows_sys::core::PCSTR, outputstring: ::windows_sys::core::PSTR, maxstringlength: u32, flags: u32) -> u32;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
     pub fn UnDecorateSymbolNameW(name: ::windows_sys::core::PCWSTR, outputstring: ::windows_sys::core::PWSTR, maxstringlength: u32, flags: u32) -> u32;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
     pub fn UnMapAndLoad(loadedimage: *mut LOADED_IMAGE) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
     pub fn UnhandledExceptionFilter(exceptioninfo: *const EXCEPTION_POINTERS) -> i32;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_SystemInformation\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_SystemInformation"))]
     pub fn UpdateDebugInfoFile(imagefilename: ::windows_sys::core::PCSTR, symbolpath: ::windows_sys::core::PCSTR, debugfilepath: ::windows_sys::core::PSTR, ntheaders: *const IMAGE_NT_HEADERS32) -> super::super::super::Foundation::BOOL;
-    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-    #[cfg(feature = "Win32_Foundation")]
+    #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_SystemInformation\"`*"]
+    #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_SystemInformation"))]
     pub fn UpdateDebugInfoFileEx(imagefilename: ::windows_sys::core::PCSTR, symbolpath: ::windows_sys::core::PCSTR, debugfilepath: ::windows_sys::core::PSTR, ntheaders: *const IMAGE_NT_HEADERS32, oldchecksum: u32) -> super::super::super::Foundation::BOOL;
     #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Threading\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Threading"))]
@@ -982,136 +995,265 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn WriteProcessMemory(hprocess: super::super::super::Foundation::HANDLE, lpbaseaddress: *const ::core::ffi::c_void, lpbuffer: *const ::core::ffi::c_void, nsize: usize, lpnumberofbyteswritten: *mut usize) -> super::super::super::Foundation::BOOL;
 }
+pub type AsyncIDebugApplicationNodeEvents = *mut ::core::ffi::c_void;
+pub type DebugBaseEventCallbacks = *mut ::core::ffi::c_void;
+pub type DebugBaseEventCallbacksWide = *mut ::core::ffi::c_void;
+pub type IActiveScript = *mut ::core::ffi::c_void;
+pub type IActiveScriptAuthor = *mut ::core::ffi::c_void;
+pub type IActiveScriptAuthorProcedure = *mut ::core::ffi::c_void;
+pub type IActiveScriptDebug32 = *mut ::core::ffi::c_void;
+pub type IActiveScriptDebug64 = *mut ::core::ffi::c_void;
+pub type IActiveScriptEncode = *mut ::core::ffi::c_void;
+pub type IActiveScriptError = *mut ::core::ffi::c_void;
+pub type IActiveScriptError64 = *mut ::core::ffi::c_void;
+pub type IActiveScriptErrorDebug = *mut ::core::ffi::c_void;
+pub type IActiveScriptErrorDebug110 = *mut ::core::ffi::c_void;
+pub type IActiveScriptGarbageCollector = *mut ::core::ffi::c_void;
+pub type IActiveScriptHostEncode = *mut ::core::ffi::c_void;
+pub type IActiveScriptParse32 = *mut ::core::ffi::c_void;
+pub type IActiveScriptParse64 = *mut ::core::ffi::c_void;
+pub type IActiveScriptParseProcedure2_32 = *mut ::core::ffi::c_void;
+pub type IActiveScriptParseProcedure2_64 = *mut ::core::ffi::c_void;
+pub type IActiveScriptParseProcedure32 = *mut ::core::ffi::c_void;
+pub type IActiveScriptParseProcedure64 = *mut ::core::ffi::c_void;
+pub type IActiveScriptParseProcedureOld32 = *mut ::core::ffi::c_void;
+pub type IActiveScriptParseProcedureOld64 = *mut ::core::ffi::c_void;
+pub type IActiveScriptProfilerCallback = *mut ::core::ffi::c_void;
+pub type IActiveScriptProfilerCallback2 = *mut ::core::ffi::c_void;
+pub type IActiveScriptProfilerCallback3 = *mut ::core::ffi::c_void;
+pub type IActiveScriptProfilerControl = *mut ::core::ffi::c_void;
+pub type IActiveScriptProfilerControl2 = *mut ::core::ffi::c_void;
+pub type IActiveScriptProfilerControl3 = *mut ::core::ffi::c_void;
+pub type IActiveScriptProfilerControl4 = *mut ::core::ffi::c_void;
+pub type IActiveScriptProfilerControl5 = *mut ::core::ffi::c_void;
+pub type IActiveScriptProfilerHeapEnum = *mut ::core::ffi::c_void;
+pub type IActiveScriptProperty = *mut ::core::ffi::c_void;
+pub type IActiveScriptSIPInfo = *mut ::core::ffi::c_void;
+pub type IActiveScriptSite = *mut ::core::ffi::c_void;
+pub type IActiveScriptSiteDebug32 = *mut ::core::ffi::c_void;
+pub type IActiveScriptSiteDebug64 = *mut ::core::ffi::c_void;
+pub type IActiveScriptSiteDebugEx = *mut ::core::ffi::c_void;
+pub type IActiveScriptSiteInterruptPoll = *mut ::core::ffi::c_void;
+pub type IActiveScriptSiteTraceInfo = *mut ::core::ffi::c_void;
+pub type IActiveScriptSiteUIControl = *mut ::core::ffi::c_void;
+pub type IActiveScriptSiteWindow = *mut ::core::ffi::c_void;
+pub type IActiveScriptStats = *mut ::core::ffi::c_void;
+pub type IActiveScriptStringCompare = *mut ::core::ffi::c_void;
+pub type IActiveScriptTraceInfo = *mut ::core::ffi::c_void;
+pub type IActiveScriptWinRTErrorDebug = *mut ::core::ffi::c_void;
+pub type IApplicationDebugger = *mut ::core::ffi::c_void;
+pub type IApplicationDebuggerUI = *mut ::core::ffi::c_void;
+pub type IBindEventHandler = *mut ::core::ffi::c_void;
+pub type ICodeAddressConcept = *mut ::core::ffi::c_void;
+pub type IComparableConcept = *mut ::core::ffi::c_void;
+pub type IDataModelConcept = *mut ::core::ffi::c_void;
+pub type IDataModelManager = *mut ::core::ffi::c_void;
+pub type IDataModelManager2 = *mut ::core::ffi::c_void;
+pub type IDataModelNameBinder = *mut ::core::ffi::c_void;
+pub type IDataModelScript = *mut ::core::ffi::c_void;
+pub type IDataModelScriptClient = *mut ::core::ffi::c_void;
+pub type IDataModelScriptDebug = *mut ::core::ffi::c_void;
+pub type IDataModelScriptDebug2 = *mut ::core::ffi::c_void;
+pub type IDataModelScriptDebugBreakpoint = *mut ::core::ffi::c_void;
+pub type IDataModelScriptDebugBreakpointEnumerator = *mut ::core::ffi::c_void;
+pub type IDataModelScriptDebugClient = *mut ::core::ffi::c_void;
+pub type IDataModelScriptDebugStack = *mut ::core::ffi::c_void;
+pub type IDataModelScriptDebugStackFrame = *mut ::core::ffi::c_void;
+pub type IDataModelScriptDebugVariableSetEnumerator = *mut ::core::ffi::c_void;
+pub type IDataModelScriptHostContext = *mut ::core::ffi::c_void;
+pub type IDataModelScriptManager = *mut ::core::ffi::c_void;
+pub type IDataModelScriptProvider = *mut ::core::ffi::c_void;
+pub type IDataModelScriptProviderEnumerator = *mut ::core::ffi::c_void;
+pub type IDataModelScriptTemplate = *mut ::core::ffi::c_void;
+pub type IDataModelScriptTemplateEnumerator = *mut ::core::ffi::c_void;
+pub type IDebugAdvanced = *mut ::core::ffi::c_void;
+pub type IDebugAdvanced2 = *mut ::core::ffi::c_void;
+pub type IDebugAdvanced3 = *mut ::core::ffi::c_void;
+pub type IDebugAdvanced4 = *mut ::core::ffi::c_void;
+pub type IDebugApplication11032 = *mut ::core::ffi::c_void;
+pub type IDebugApplication11064 = *mut ::core::ffi::c_void;
+pub type IDebugApplication32 = *mut ::core::ffi::c_void;
+pub type IDebugApplication64 = *mut ::core::ffi::c_void;
+pub type IDebugApplicationNode = *mut ::core::ffi::c_void;
+pub type IDebugApplicationNode100 = *mut ::core::ffi::c_void;
+pub type IDebugApplicationNodeEvents = *mut ::core::ffi::c_void;
+pub type IDebugApplicationThread = *mut ::core::ffi::c_void;
+pub type IDebugApplicationThread11032 = *mut ::core::ffi::c_void;
+pub type IDebugApplicationThread11064 = *mut ::core::ffi::c_void;
+pub type IDebugApplicationThread64 = *mut ::core::ffi::c_void;
+pub type IDebugApplicationThreadEvents110 = *mut ::core::ffi::c_void;
+pub type IDebugAsyncOperation = *mut ::core::ffi::c_void;
+pub type IDebugAsyncOperationCallBack = *mut ::core::ffi::c_void;
+pub type IDebugBreakpoint = *mut ::core::ffi::c_void;
+pub type IDebugBreakpoint2 = *mut ::core::ffi::c_void;
+pub type IDebugBreakpoint3 = *mut ::core::ffi::c_void;
+pub type IDebugClient = *mut ::core::ffi::c_void;
+pub type IDebugClient2 = *mut ::core::ffi::c_void;
+pub type IDebugClient3 = *mut ::core::ffi::c_void;
+pub type IDebugClient4 = *mut ::core::ffi::c_void;
+pub type IDebugClient5 = *mut ::core::ffi::c_void;
+pub type IDebugClient6 = *mut ::core::ffi::c_void;
+pub type IDebugClient7 = *mut ::core::ffi::c_void;
+pub type IDebugClient8 = *mut ::core::ffi::c_void;
+pub type IDebugCodeContext = *mut ::core::ffi::c_void;
+pub type IDebugControl = *mut ::core::ffi::c_void;
+pub type IDebugControl2 = *mut ::core::ffi::c_void;
+pub type IDebugControl3 = *mut ::core::ffi::c_void;
+pub type IDebugControl4 = *mut ::core::ffi::c_void;
+pub type IDebugControl5 = *mut ::core::ffi::c_void;
+pub type IDebugControl6 = *mut ::core::ffi::c_void;
+pub type IDebugControl7 = *mut ::core::ffi::c_void;
+pub type IDebugCookie = *mut ::core::ffi::c_void;
+pub type IDebugDataSpaces = *mut ::core::ffi::c_void;
+pub type IDebugDataSpaces2 = *mut ::core::ffi::c_void;
+pub type IDebugDataSpaces3 = *mut ::core::ffi::c_void;
+pub type IDebugDataSpaces4 = *mut ::core::ffi::c_void;
+pub type IDebugDocument = *mut ::core::ffi::c_void;
+pub type IDebugDocumentContext = *mut ::core::ffi::c_void;
+pub type IDebugDocumentHelper32 = *mut ::core::ffi::c_void;
+pub type IDebugDocumentHelper64 = *mut ::core::ffi::c_void;
+pub type IDebugDocumentHost = *mut ::core::ffi::c_void;
+pub type IDebugDocumentInfo = *mut ::core::ffi::c_void;
+pub type IDebugDocumentProvider = *mut ::core::ffi::c_void;
+pub type IDebugDocumentText = *mut ::core::ffi::c_void;
+pub type IDebugDocumentTextAuthor = *mut ::core::ffi::c_void;
+pub type IDebugDocumentTextEvents = *mut ::core::ffi::c_void;
+pub type IDebugDocumentTextExternalAuthor = *mut ::core::ffi::c_void;
+pub type IDebugEventCallbacks = *mut ::core::ffi::c_void;
+pub type IDebugEventCallbacksWide = *mut ::core::ffi::c_void;
+pub type IDebugEventContextCallbacks = *mut ::core::ffi::c_void;
+pub type IDebugExpression = *mut ::core::ffi::c_void;
+pub type IDebugExpressionCallBack = *mut ::core::ffi::c_void;
+pub type IDebugExpressionContext = *mut ::core::ffi::c_void;
+pub type IDebugExtendedProperty = *mut ::core::ffi::c_void;
+pub type IDebugFormatter = *mut ::core::ffi::c_void;
+pub type IDebugHelper = *mut ::core::ffi::c_void;
+pub type IDebugHost = *mut ::core::ffi::c_void;
+pub type IDebugHostBaseClass = *mut ::core::ffi::c_void;
+pub type IDebugHostConstant = *mut ::core::ffi::c_void;
+pub type IDebugHostContext = *mut ::core::ffi::c_void;
+pub type IDebugHostData = *mut ::core::ffi::c_void;
+pub type IDebugHostErrorSink = *mut ::core::ffi::c_void;
+pub type IDebugHostEvaluator = *mut ::core::ffi::c_void;
+pub type IDebugHostEvaluator2 = *mut ::core::ffi::c_void;
+pub type IDebugHostExtensibility = *mut ::core::ffi::c_void;
+pub type IDebugHostField = *mut ::core::ffi::c_void;
+pub type IDebugHostMemory = *mut ::core::ffi::c_void;
+pub type IDebugHostMemory2 = *mut ::core::ffi::c_void;
+pub type IDebugHostModule = *mut ::core::ffi::c_void;
+pub type IDebugHostModule2 = *mut ::core::ffi::c_void;
+pub type IDebugHostModuleSignature = *mut ::core::ffi::c_void;
+pub type IDebugHostPublic = *mut ::core::ffi::c_void;
+pub type IDebugHostScriptHost = *mut ::core::ffi::c_void;
+pub type IDebugHostStatus = *mut ::core::ffi::c_void;
+pub type IDebugHostSymbol = *mut ::core::ffi::c_void;
+pub type IDebugHostSymbol2 = *mut ::core::ffi::c_void;
+pub type IDebugHostSymbolEnumerator = *mut ::core::ffi::c_void;
+pub type IDebugHostSymbols = *mut ::core::ffi::c_void;
+pub type IDebugHostType = *mut ::core::ffi::c_void;
+pub type IDebugHostType2 = *mut ::core::ffi::c_void;
+pub type IDebugHostTypeSignature = *mut ::core::ffi::c_void;
+pub type IDebugInputCallbacks = *mut ::core::ffi::c_void;
+pub type IDebugOutputCallbacks = *mut ::core::ffi::c_void;
+pub type IDebugOutputCallbacks2 = *mut ::core::ffi::c_void;
+pub type IDebugOutputCallbacksWide = *mut ::core::ffi::c_void;
+pub type IDebugOutputStream = *mut ::core::ffi::c_void;
+pub type IDebugPlmClient = *mut ::core::ffi::c_void;
+pub type IDebugPlmClient2 = *mut ::core::ffi::c_void;
+pub type IDebugPlmClient3 = *mut ::core::ffi::c_void;
+pub type IDebugProperty = *mut ::core::ffi::c_void;
+pub type IDebugPropertyEnumType_All = *mut ::core::ffi::c_void;
+pub type IDebugPropertyEnumType_Arguments = *mut ::core::ffi::c_void;
+pub type IDebugPropertyEnumType_Locals = *mut ::core::ffi::c_void;
+pub type IDebugPropertyEnumType_LocalsPlusArgs = *mut ::core::ffi::c_void;
+pub type IDebugPropertyEnumType_Registers = *mut ::core::ffi::c_void;
+pub type IDebugRegisters = *mut ::core::ffi::c_void;
+pub type IDebugRegisters2 = *mut ::core::ffi::c_void;
+pub type IDebugSessionProvider = *mut ::core::ffi::c_void;
+pub type IDebugStackFrame = *mut ::core::ffi::c_void;
+pub type IDebugStackFrame110 = *mut ::core::ffi::c_void;
+pub type IDebugStackFrameSniffer = *mut ::core::ffi::c_void;
+pub type IDebugStackFrameSnifferEx32 = *mut ::core::ffi::c_void;
+pub type IDebugStackFrameSnifferEx64 = *mut ::core::ffi::c_void;
+pub type IDebugSymbolGroup = *mut ::core::ffi::c_void;
+pub type IDebugSymbolGroup2 = *mut ::core::ffi::c_void;
+pub type IDebugSymbols = *mut ::core::ffi::c_void;
+pub type IDebugSymbols2 = *mut ::core::ffi::c_void;
+pub type IDebugSymbols3 = *mut ::core::ffi::c_void;
+pub type IDebugSymbols4 = *mut ::core::ffi::c_void;
+pub type IDebugSymbols5 = *mut ::core::ffi::c_void;
+pub type IDebugSyncOperation = *mut ::core::ffi::c_void;
+pub type IDebugSystemObjects = *mut ::core::ffi::c_void;
+pub type IDebugSystemObjects2 = *mut ::core::ffi::c_void;
+pub type IDebugSystemObjects3 = *mut ::core::ffi::c_void;
+pub type IDebugSystemObjects4 = *mut ::core::ffi::c_void;
+pub type IDebugThreadCall32 = *mut ::core::ffi::c_void;
+pub type IDebugThreadCall64 = *mut ::core::ffi::c_void;
+pub type IDynamicConceptProviderConcept = *mut ::core::ffi::c_void;
+pub type IDynamicKeyProviderConcept = *mut ::core::ffi::c_void;
+pub type IEnumDebugApplicationNodes = *mut ::core::ffi::c_void;
+pub type IEnumDebugCodeContexts = *mut ::core::ffi::c_void;
+pub type IEnumDebugExpressionContexts = *mut ::core::ffi::c_void;
+pub type IEnumDebugExtendedPropertyInfo = *mut ::core::ffi::c_void;
+pub type IEnumDebugPropertyInfo = *mut ::core::ffi::c_void;
+pub type IEnumDebugStackFrames = *mut ::core::ffi::c_void;
+pub type IEnumDebugStackFrames64 = *mut ::core::ffi::c_void;
+pub type IEnumJsStackFrames = *mut ::core::ffi::c_void;
+pub type IEnumRemoteDebugApplicationThreads = *mut ::core::ffi::c_void;
+pub type IEnumRemoteDebugApplications = *mut ::core::ffi::c_void;
+pub type IEquatableConcept = *mut ::core::ffi::c_void;
+pub type IHostDataModelAccess = *mut ::core::ffi::c_void;
+pub type IIndexableConcept = *mut ::core::ffi::c_void;
+pub type IIterableConcept = *mut ::core::ffi::c_void;
+pub type IJsDebug = *mut ::core::ffi::c_void;
+pub type IJsDebugBreakPoint = *mut ::core::ffi::c_void;
+pub type IJsDebugDataTarget = *mut ::core::ffi::c_void;
+pub type IJsDebugFrame = *mut ::core::ffi::c_void;
+pub type IJsDebugProcess = *mut ::core::ffi::c_void;
+pub type IJsDebugProperty = *mut ::core::ffi::c_void;
+pub type IJsDebugStackWalker = *mut ::core::ffi::c_void;
+pub type IJsEnumDebugProperty = *mut ::core::ffi::c_void;
+pub type IKeyEnumerator = *mut ::core::ffi::c_void;
+pub type IKeyStore = *mut ::core::ffi::c_void;
+pub type IMachineDebugManager = *mut ::core::ffi::c_void;
+pub type IMachineDebugManagerCookie = *mut ::core::ffi::c_void;
+pub type IMachineDebugManagerEvents = *mut ::core::ffi::c_void;
+pub type IModelIterator = *mut ::core::ffi::c_void;
+pub type IModelKeyReference = *mut ::core::ffi::c_void;
+pub type IModelKeyReference2 = *mut ::core::ffi::c_void;
+pub type IModelMethod = *mut ::core::ffi::c_void;
+pub type IModelObject = *mut ::core::ffi::c_void;
+pub type IModelPropertyAccessor = *mut ::core::ffi::c_void;
+pub type IObjectSafety = *mut ::core::ffi::c_void;
+pub type IPerPropertyBrowsing2 = *mut ::core::ffi::c_void;
+pub type IPreferredRuntimeTypeConcept = *mut ::core::ffi::c_void;
+pub type IProcessDebugManager32 = *mut ::core::ffi::c_void;
+pub type IProcessDebugManager64 = *mut ::core::ffi::c_void;
+pub type IProvideExpressionContexts = *mut ::core::ffi::c_void;
+pub type IRawEnumerator = *mut ::core::ffi::c_void;
+pub type IRemoteDebugApplication = *mut ::core::ffi::c_void;
+pub type IRemoteDebugApplication110 = *mut ::core::ffi::c_void;
+pub type IRemoteDebugApplicationEvents = *mut ::core::ffi::c_void;
+pub type IRemoteDebugApplicationThread = *mut ::core::ffi::c_void;
+pub type IRemoteDebugCriticalErrorEvent110 = *mut ::core::ffi::c_void;
+pub type IRemoteDebugInfoEvent110 = *mut ::core::ffi::c_void;
+pub type IScriptEntry = *mut ::core::ffi::c_void;
+pub type IScriptInvocationContext = *mut ::core::ffi::c_void;
+pub type IScriptNode = *mut ::core::ffi::c_void;
+pub type IScriptScriptlet = *mut ::core::ffi::c_void;
+pub type ISimpleConnectionPoint = *mut ::core::ffi::c_void;
+pub type IStringDisplayableConcept = *mut ::core::ffi::c_void;
+pub type ITridentEventSink = *mut ::core::ffi::c_void;
+pub type IWebAppDiagnosticsObjectInitialization = *mut ::core::ffi::c_void;
+pub type IWebAppDiagnosticsSetup = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const ACTIVPROF_E_PROFILER_ABSENT: ::windows_sys::core::HRESULT = -2147220991i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const ACTIVPROF_E_PROFILER_PRESENT: ::windows_sys::core::HRESULT = -2147220992i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const ACTIVPROF_E_UNABLE_TO_APPLY_ACTION: ::windows_sys::core::HRESULT = -2147220990i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct ADDRESS {
-    pub Offset: u32,
-    pub Segment: u16,
-    pub Mode: ADDRESS_MODE,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for ADDRESS {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for ADDRESS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub struct ADDRESS64 {
-    pub Offset: u64,
-    pub Segment: u16,
-    pub Mode: ADDRESS_MODE,
-}
-impl ::core::marker::Copy for ADDRESS64 {}
-impl ::core::clone::Clone for ADDRESS64 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type ADDRESS_MODE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const AddrMode1616: ADDRESS_MODE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const AddrMode1632: ADDRESS_MODE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const AddrModeReal: ADDRESS_MODE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const AddrModeFlat: ADDRESS_MODE = 3i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const ADDRESS_TYPE_INDEX_NOT_FOUND: u32 = 11u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub union AER_BRIDGE_DESCRIPTOR_FLAGS {
-    pub Anonymous: AER_BRIDGE_DESCRIPTOR_FLAGS_0,
-    pub AsUSHORT: u16,
-}
-impl ::core::marker::Copy for AER_BRIDGE_DESCRIPTOR_FLAGS {}
-impl ::core::clone::Clone for AER_BRIDGE_DESCRIPTOR_FLAGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub struct AER_BRIDGE_DESCRIPTOR_FLAGS_0 {
-    pub _bitfield: u16,
-}
-impl ::core::marker::Copy for AER_BRIDGE_DESCRIPTOR_FLAGS_0 {}
-impl ::core::clone::Clone for AER_BRIDGE_DESCRIPTOR_FLAGS_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub union AER_ENDPOINT_DESCRIPTOR_FLAGS {
-    pub Anonymous: AER_ENDPOINT_DESCRIPTOR_FLAGS_0,
-    pub AsUSHORT: u16,
-}
-impl ::core::marker::Copy for AER_ENDPOINT_DESCRIPTOR_FLAGS {}
-impl ::core::clone::Clone for AER_ENDPOINT_DESCRIPTOR_FLAGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub struct AER_ENDPOINT_DESCRIPTOR_FLAGS_0 {
-    pub _bitfield: u16,
-}
-impl ::core::marker::Copy for AER_ENDPOINT_DESCRIPTOR_FLAGS_0 {}
-impl ::core::clone::Clone for AER_ENDPOINT_DESCRIPTOR_FLAGS_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub union AER_ROOTPORT_DESCRIPTOR_FLAGS {
-    pub Anonymous: AER_ROOTPORT_DESCRIPTOR_FLAGS_0,
-    pub AsUSHORT: u16,
-}
-impl ::core::marker::Copy for AER_ROOTPORT_DESCRIPTOR_FLAGS {}
-impl ::core::clone::Clone for AER_ROOTPORT_DESCRIPTOR_FLAGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub struct AER_ROOTPORT_DESCRIPTOR_FLAGS_0 {
-    pub _bitfield: u16,
-}
-impl ::core::marker::Copy for AER_ROOTPORT_DESCRIPTOR_FLAGS_0 {}
-impl ::core::clone::Clone for AER_ROOTPORT_DESCRIPTOR_FLAGS_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub struct API_VERSION {
-    pub MajorVersion: u16,
-    pub MinorVersion: u16,
-    pub Revision: u16,
-    pub Reserved: u16,
-}
-impl ::core::marker::Copy for API_VERSION {}
-impl ::core::clone::Clone for API_VERSION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const API_VERSION_NUMBER: u32 = 12u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
@@ -1133,139 +1275,6 @@ pub const APPBREAKFLAG_STEPTYPE_MASK: u32 = 15728640u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const APPBREAKFLAG_STEPTYPE_SOURCE: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type APPLICATION_NODE_EVENT_FILTER = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FILTER_EXCLUDE_NOTHING: APPLICATION_NODE_EVENT_FILTER = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FILTER_EXCLUDE_ANONYMOUS_CODE: APPLICATION_NODE_EVENT_FILTER = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FILTER_EXCLUDE_EVAL_CODE: APPLICATION_NODE_EVENT_FILTER = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub struct ARM64_NT_CONTEXT {
-    pub ContextFlags: u32,
-    pub Cpsr: u32,
-    pub Anonymous: ARM64_NT_CONTEXT_0,
-    pub Sp: u64,
-    pub Pc: u64,
-    pub V: [ARM64_NT_NEON128; 32],
-    pub Fpcr: u32,
-    pub Fpsr: u32,
-    pub Bcr: [u32; 8],
-    pub Bvr: [u64; 8],
-    pub Wcr: [u32; 2],
-    pub Wvr: [u64; 2],
-}
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-impl ::core::marker::Copy for ARM64_NT_CONTEXT {}
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-impl ::core::clone::Clone for ARM64_NT_CONTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub union ARM64_NT_CONTEXT_0 {
-    pub Anonymous: ARM64_NT_CONTEXT_0_0,
-    pub X: [u64; 31],
-}
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-impl ::core::marker::Copy for ARM64_NT_CONTEXT_0 {}
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-impl ::core::clone::Clone for ARM64_NT_CONTEXT_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-pub struct ARM64_NT_CONTEXT_0_0 {
-    pub X0: u64,
-    pub X1: u64,
-    pub X2: u64,
-    pub X3: u64,
-    pub X4: u64,
-    pub X5: u64,
-    pub X6: u64,
-    pub X7: u64,
-    pub X8: u64,
-    pub X9: u64,
-    pub X10: u64,
-    pub X11: u64,
-    pub X12: u64,
-    pub X13: u64,
-    pub X14: u64,
-    pub X15: u64,
-    pub X16: u64,
-    pub X17: u64,
-    pub X18: u64,
-    pub X19: u64,
-    pub X20: u64,
-    pub X21: u64,
-    pub X22: u64,
-    pub X23: u64,
-    pub X24: u64,
-    pub X25: u64,
-    pub X26: u64,
-    pub X27: u64,
-    pub X28: u64,
-    pub Fp: u64,
-    pub Lr: u64,
-}
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-impl ::core::marker::Copy for ARM64_NT_CONTEXT_0_0 {}
-#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
-impl ::core::clone::Clone for ARM64_NT_CONTEXT_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub union ARM64_NT_NEON128 {
-    pub Anonymous: ARM64_NT_NEON128_0,
-    pub D: [f64; 2],
-    pub S: [f32; 4],
-    pub H: [u16; 8],
-    pub B: [u8; 16],
-}
-impl ::core::marker::Copy for ARM64_NT_NEON128 {}
-impl ::core::clone::Clone for ARM64_NT_NEON128 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub struct ARM64_NT_NEON128_0 {
-    pub Low: u64,
-    pub High: i64,
-}
-impl ::core::marker::Copy for ARM64_NT_NEON128_0 {}
-impl ::core::clone::Clone for ARM64_NT_NEON128_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub struct ArrayDimension {
-    pub LowerBound: i64,
-    pub Length: u64,
-    pub Stride: u64,
-}
-impl ::core::marker::Copy for ArrayDimension {}
-impl ::core::clone::Clone for ArrayDimension {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type AsyncIDebugApplicationNodeEvents = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const BIND_ALL_IMAGES: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const BIND_CACHE_IMPORT_DLLS: u32 = 8u32;
@@ -1275,6 +1284,2619 @@ pub const BIND_NO_BOUND_IMPORTS: u32 = 1u32;
 pub const BIND_NO_UPDATE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const BIND_REPORT_64BIT_VA: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CANNOT_ALLOCATE_MEMORY: u32 = 9u32;
+pub const CATID_ActiveScript: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4038566305, data2: 38983, data3: 4559, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
+pub const CATID_ActiveScriptAuthor: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 183380626, data2: 48315, data3: 4560, data4: [140, 114, 0, 192, 79, 194, 176, 133] };
+pub const CATID_ActiveScriptEncode: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4038566307, data2: 38983, data3: 4559, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
+pub const CATID_ActiveScriptParse: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4038566306, data2: 38983, data3: 4559, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_CHECK_ARM_MACHINE_THUMB_TYPE_OVERRIDE: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_CHECK_ENGOPT_DISALLOW_NETWORK_PATHS: u32 = 1879048192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_DEBUG_INFO: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_DEFERRED_SYMBOL_LOAD_CANCEL: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_DEFERRED_SYMBOL_LOAD_COMPLETE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_DEFERRED_SYMBOL_LOAD_FAILURE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_DEFERRED_SYMBOL_LOAD_PARTIAL: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_DEFERRED_SYMBOL_LOAD_START: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_DUPLICATE_SYMBOL: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_ENGINE_PRESENT: u32 = 1610612736u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_EVENT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_MAP_JIT_SYMBOL: u32 = 2684354560u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_READ_MEMORY: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_SET_OPTIONS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_SRCSRV_EVENT: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_SRCSRV_INFO: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_SYMBOLS_UNLOADED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_UPDATE_STATUS_BAR: u32 = 1342177280u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CBA_XML_LOG: u32 = 2415919104u32;
+pub const CDebugDocumentHelper: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2209922214, data2: 26748, data3: 4560, data4: [164, 5, 0, 170, 0, 96, 39, 92] };
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CERT_PE_IMAGE_DIGEST_DEBUG_INFO: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CERT_PE_IMAGE_DIGEST_NON_PE_INFO: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CERT_PE_IMAGE_DIGEST_RESOURCES: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CERT_SECTION_TYPE_ANY: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CHECKSUM_MAPVIEW_FAILURE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CHECKSUM_MAP_FAILURE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CHECKSUM_OPEN_FAILURE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CHECKSUM_SUCCESS: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CHECKSUM_UNICODE_FAILURE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CROSS_PLATFORM_MAXIMUM_PROCESSORS: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CURRENT_KD_SECONDARY_VERSION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGKD_SIMULATION_EXDI: i32 = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGKD_SIMULATION_NONE: i32 = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGKD_VERS_FLAG_DATA: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGKD_VERS_FLAG_HAL_IN_NTOS: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGKD_VERS_FLAG_HSS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGKD_VERS_FLAG_MP: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGKD_VERS_FLAG_NOMM: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGKD_VERS_FLAG_PARTITIONS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGKD_VERS_FLAG_PTR64: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_ADDRESS_AT_END: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_ADDRESS_OF_FIELD: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_ARRAY: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_BLOCK_RECURSE: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_CALL_FOR_EACH: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_COMPACT_OUT: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_COPY_TYPE_DATA: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_ARRAY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_CALL_BEFORE_PRINT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_COPY_FIELD_DATA: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_DEFAULT_STRING: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_FULL_NAME: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_GUID_STRING: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_MULTI_STRING: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_NO_CALLBACK_REQ: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_NO_PRINT: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_RECUR_ON_THIS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_RETURN_ADDRESS: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_SIZE_IN_BITS: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_UTF32_STRING: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FIELD_WCHAR_STRING: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_FUNCTION_FORMAT: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_GET_SIZE_ONLY: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_LIST: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_MATCH_SIZE: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_NO_INDENT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_NO_OFFSET: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_NO_PRINT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_READ_PHYSICAL: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_DUMP_VERBOSE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_FRAME_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_FRAME_IGNORE_INLINE: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_RETURN_SUBTYPES: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_RETURN_TYPE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBG_RETURN_TYPE_VALUES: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBHHEADER_PDBGUID: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ADDSYNTHMOD_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ADDSYNTHMOD_ZEROBASE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ADDSYNTHSYM_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ANY_ID: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ASMOPT_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ASMOPT_IGNORE_OUTPUT_WIDTH: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ASMOPT_NO_CODE_BYTES: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ASMOPT_SOURCE_LINE_NUMBER: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ASMOPT_VERBOSE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_EXDI_DRIVER: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_EXISTING: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_INSTALL_DRIVER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_INVASIVE_NO_INITIAL_BREAK: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_INVASIVE_RESUME_PROCESS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_KERNEL_CONNECTION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_LOCAL_KERNEL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_NONINVASIVE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_NONINVASIVE_ALLOW_PARTIAL: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ATTACH_NONINVASIVE_NO_SUSPEND: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAKPOINT_ADDER_ONLY: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAKPOINT_CODE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAKPOINT_DATA: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAKPOINT_DEFERRED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAKPOINT_ENABLED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAKPOINT_GO_ONLY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAKPOINT_INLINE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAKPOINT_ONE_SHOT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAKPOINT_TIME: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAK_EXECUTE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAK_IO: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAK_READ: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_BREAK_WRITE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_ALL: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_DATA: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_ADDBREAKPOINT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_EVALUATE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_EXECUTE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_EXECUTECOMMANDFILE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_INLINESTEP: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_INLINESTEP_PSEUDO: u32 = 17u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_REMOVEBREAKPOINT: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_SETSCOPE: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_SETSCOPEFRAMEBYINDEX: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_SETSCOPEFROMJITDEBUGINFO: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_SETSCOPEFROMSTOREDEVENT: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_SETVALUE: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_SETVALUE2: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_WRITEPHYSICAL: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_WRITEPHYSICAL2: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_WRITEVIRTUAL: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REFRESH_WRITEVIRTUALUNCACHED: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CDS_REGISTERS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_ALL: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_ASSEMBLY_OPTIONS: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_BREAKPOINTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_CODE_LEVEL: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_CURRENT_THREAD: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_EFFECTIVE_PROCESSOR: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_ENGINE_OPTIONS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_EVENT_FILTERS: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_EXECUTION_STATUS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_EXPRESSION_SYNTAX: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_EXTENSIONS: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_LOG_FILE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_PROCESS_OPTIONS: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_RADIX: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_SYSTEMS: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CES_TEXT_REPLACEMENTS: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLASS_IMAGE_FILE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLASS_KERNEL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLASS_UNINITIALIZED: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLASS_USER_WINDOWS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLIENT_CDB: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLIENT_KD: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLIENT_NTKD: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLIENT_NTSD: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLIENT_UNKNOWN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLIENT_VSINT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLIENT_WINDBG: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CLIENT_WINIDE: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CMDEX_ADD_EVENT_STRING: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CMDEX_INVALID: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CMDEX_RESET_EVENT_STRINGS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_COMMAND_EXCEPTION_ID: u32 = 3688893886u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CONNECT_SESSION_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CONNECT_SESSION_NO_ANNOUNCE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CONNECT_SESSION_NO_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CSS_ALL: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CSS_COLLAPSE_CHILDREN: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CSS_LOADS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CSS_PATHS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CSS_SCOPE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CSS_SYMBOL_OPTIONS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CSS_TYPE_OPTIONS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CSS_UNLOADS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CURRENT_DEFAULT: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CURRENT_DISASM: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CURRENT_REGISTERS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CURRENT_SOURCE_LINE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_CURRENT_SYMBOL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_BASE_TRANSLATION_VIRTUAL_OFFSET: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_BreakpointWithStatusAddr: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_CmNtCSDVersionAddr: u32 = 616u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_DumpAttributes: u32 = 100072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_DumpFormatVersion: u32 = 100040u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_DumpMmStorage: u32 = 100064u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_DumpPowerState: u32 = 100056u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_DumpWriterStatus: u32 = 100032u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_DumpWriterVersion: u32 = 100048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_EtwpDebuggerData: u32 = 816u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_ExpNumberOfPagedPoolsAddr: u32 = 112u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_ExpPagedPoolDescriptorAddr: u32 = 104u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_ExpSystemResourcesListAddr: u32 = 96u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_IopErrorLogListHeadAddr: u32 = 144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KPCR_OFFSET: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KPRCB_OFFSET: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KTHREAD_OFFSET: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KdPrintBufferSizeAddr: u32 = 720u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KdPrintCircularBufferAddr: u32 = 480u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KdPrintCircularBufferEndAddr: u32 = 488u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KdPrintCircularBufferPtrAddr: u32 = 712u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KdPrintRolloverCountAddr: u32 = 504u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KdPrintWritePointerAddr: u32 = 496u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KeBugCheckCallbackListHeadAddr: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KeTimeIncrementAddr: u32 = 120u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KeUserCallbackDispatcherAddr: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KernBase: u32 = 24u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KernelVerifierAddr: u32 = 576u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KiBugcheckDataAddr: u32 = 136u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KiCallUserModeAddr: u32 = 56u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KiNormalSystemCall: u32 = 528u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_KiProcessorBlockAddr: u32 = 536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmAllocatedNonPagedPoolAddr: u32 = 592u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmAvailablePagesAddr: u32 = 424u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmBadPagesDetected: u32 = 800u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmDriverCommitAddr: u32 = 352u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmExtendedCommitAddr: u32 = 376u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmFreePageListHeadAddr: u32 = 392u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmHighestPhysicalPageAddr: u32 = 240u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmHighestUserAddressAddr: u32 = 456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmLastUnloadedDriverAddr: u32 = 552u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmLoadedUserImageListAddr: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmLowestPhysicalPageAddr: u32 = 232u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmMaximumNonPagedPoolInBytesAddr: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmModifiedNoWritePageListHeadAddr: u32 = 416u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmModifiedPageListHeadAddr: u32 = 408u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmNonPagedPoolEndAddr: u32 = 280u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmNonPagedPoolStartAddr: u32 = 272u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmNonPagedSystemStartAddr: u32 = 264u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmNumberOfPagingFilesAddr: u32 = 224u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmNumberOfPhysicalPagesAddr: u32 = 248u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmPageSize: u32 = 312u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmPagedPoolCommitAddr: u32 = 368u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmPagedPoolEndAddr: u32 = 296u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmPagedPoolInformationAddr: u32 = 304u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmPagedPoolStartAddr: u32 = 288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmPeakCommitmentAddr: u32 = 600u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmPfnDatabaseAddr: u32 = 192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmPhysicalMemoryBlockAddr: u32 = 624u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmProcessCommitAddr: u32 = 360u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmResidentAvailablePagesAddr: u32 = 432u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSessionBase: u32 = 632u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSessionSize: u32 = 640u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSharedCommitAddr: u32 = 344u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSizeOfPagedPoolInBytesAddr: u32 = 320u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSpecialPoolTagAddr: u32 = 568u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmStandbyPageListHeadAddr: u32 = 400u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSubsectionBaseAddr: u32 = 216u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSystemCacheEndAddr: u32 = 176u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSystemCacheStartAddr: u32 = 168u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSystemCacheWsAddr: u32 = 184u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSystemParentTablePage: u32 = 648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSystemPtesEndAddr: u32 = 208u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSystemPtesStartAddr: u32 = 200u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmSystemRangeStartAddr: u32 = 464u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmTotalCommitLimitAddr: u32 = 328u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmTotalCommitLimitMaximumAddr: u32 = 608u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmTotalCommittedPagesAddr: u32 = 336u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmTriageActionTakenAddr: u32 = 560u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmUnloadedDriversAddr: u32 = 544u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmUserProbeAddressAddr: u32 = 472u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmVerifierDataAddr: u32 = 584u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmVirtualTranslationBase: u32 = 656u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_MmZeroedPageListHeadAddr: u32 = 384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_NonPagedPoolDescriptorAddr: u32 = 448u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_NtBuildLabAddr: u32 = 520u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_ObpRootDirectoryObjectAddr: u32 = 152u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_ObpTypeObjectTypeAddr: u32 = 160u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetEprocessDirectoryTableBase: u32 = 686u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetEprocessParentCID: u32 = 684u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetEprocessPeb: u32 = 682u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetKThreadApcProcess: u32 = 672u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetKThreadBStore: u32 = 676u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetKThreadBStoreLimit: u32 = 678u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetKThreadInitialStack: u32 = 670u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetKThreadKernelStack: u32 = 668u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetKThreadNextProcessor: u32 = 664u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetKThreadState: u32 = 674u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetKThreadTeb: u32 = 666u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetPrcbCpuType: u32 = 696u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetPrcbCurrentThread: u32 = 692u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetPrcbDpcRoutine: u32 = 690u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetPrcbMhz: u32 = 694u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetPrcbNumber: u32 = 702u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetPrcbProcessorState: u32 = 700u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_OffsetPrcbVendorString: u32 = 698u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_PROCESSOR_IDENTIFICATION: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_PROCESSOR_SPEED: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_PaeEnabled: u32 = 100000u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_PoolTrackTableAddr: u32 = 440u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_ProductType: u32 = 100016u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_PsActiveProcessHeadAddr: u32 = 80u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_PsLoadedModuleListAddr: u32 = 72u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_PspCidTableAddr: u32 = 88u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_PteBase: u32 = 864u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SPACE_BUS_DATA: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SPACE_CONTROL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SPACE_COUNT: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SPACE_DEBUGGER_DATA: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SPACE_IO: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SPACE_MSR: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SPACE_PHYSICAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SPACE_VIRTUAL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SavedContextAddr: u32 = 40u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SharedUserData: u32 = 100008u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SizeEProcess: u32 = 680u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SizeEThread: u32 = 704u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SizePrcb: u32 = 688u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DATA_SuiteMask: u32 = 100024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DISASM_EFFECTIVE_ADDRESS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DISASM_MATCHING_SYMBOLS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DISASM_SOURCE_FILE_NAME: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DISASM_SOURCE_LINE_NUMBER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_ACTIVE: u32 = 1030u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_DEFAULT: u32 = 1025u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_FILE_BASE: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_FILE_LOAD_FAILED_INDEX: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_FILE_ORIGINAL_CAB_INDEX: u32 = 4294967294u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_FILE_PAGE_FILE_DUMP: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_FULL: u32 = 1026u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_IMAGE_FILE: u32 = 1027u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_SMALL: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_TRACE_LOG: u32 = 1028u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_DUMP_WINDOWS_CE: u32 = 1029u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ECREATE_PROCESS_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ECREATE_PROCESS_INHERIT_HANDLES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ECREATE_PROCESS_USE_IMPLICIT_COMMAND_LINE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ECREATE_PROCESS_USE_VERIFIER_FLAGS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EINDEX_FROM_CURRENT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EINDEX_FROM_END: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EINDEX_FROM_START: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EINDEX_NAME: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_END_ACTIVE_DETACH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_END_ACTIVE_TERMINATE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_END_DISCONNECT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_END_PASSIVE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_END_REENTRANT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_ALL: u32 = 15728639u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_ALLOW_NETWORK_PATHS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_ALLOW_READ_ONLY_BREAKPOINTS: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_DEBUGGING_SENSITIVE_DATA: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_DISABLESQM: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_DISABLE_EXECUTION_COMMANDS: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_DISABLE_MANAGED_SUPPORT: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_DISABLE_MODULE_SYMBOL_LOAD: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_DISABLE_STEPLINES_OPTIONS: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_DISALLOW_IMAGE_FILE_MAPPING: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_DISALLOW_NETWORK_PATHS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_DISALLOW_SHELL_COMMANDS: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_FAIL_INCOMPLETE_INFORMATION: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_FINAL_BREAK: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_IGNORE_DBGHELP_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_IGNORE_EXTENSION_VERSIONS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_IGNORE_LOADER_EXCEPTIONS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_INITIAL_BREAK: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_INITIAL_MODULE_BREAK: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_KD_QUIET_MODE: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_NO_EXECUTE_REPEAT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_PREFER_DML: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_PREFER_TRACE_FILES: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_ENGOPT_SYNCHRONIZE_BREAKPOINTS: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_BREAKPOINT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_CHANGE_DEBUGGEE_STATE: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_CHANGE_ENGINE_STATE: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_CHANGE_SYMBOL_STATE: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_CREATE_PROCESS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_CREATE_THREAD: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_EXCEPTION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_EXIT_PROCESS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_EXIT_THREAD: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_LOAD_MODULE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_SERVICE_EXCEPTION: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_SESSION_STATUS: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_SYSTEM_ERROR: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EVENT_UNLOAD_MODULE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_ECHO: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_EVENT: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_EXTENSION: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_HOTKEY: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_INTERNAL: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_MENU: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_NOT_LOGGED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_NO_REPEAT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_SCRIPT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_TOOLBAR: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_USER_CLICKED: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXECUTE_USER_TYPED: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXEC_FLAGS_NONBLOCK: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXPR_CPLUSPLUS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXPR_MASM: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXTENSION_AT_ENGINE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXTINIT_HAS_COMMAND_HELP: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXT_PVALUE_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXT_PVTYPE_IS_POINTER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXT_PVTYPE_IS_VALUE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_EXT_QVALUE_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_BREAK: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_CREATE_PROCESS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_CREATE_THREAD: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_DEBUGGEE_OUTPUT: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_EXIT_PROCESS: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_EXIT_THREAD: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_GO_HANDLED: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_GO_NOT_HANDLED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_IGNORE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_INITIAL_BREAKPOINT: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_INITIAL_MODULE_LOAD: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_LOAD_MODULE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_OUTPUT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_REMOVE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_SECOND_CHANCE_BREAK: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_SYSTEM_ERROR: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FILTER_UNLOAD_MODULE: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FIND_SOURCE_BEST_MATCH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FIND_SOURCE_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FIND_SOURCE_FULL_PATH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FIND_SOURCE_NO_SRCSRV: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FIND_SOURCE_TOKEN_LOOKUP: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FIND_SOURCE_WITH_CHECKSUM: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FIND_SOURCE_WITH_CHECKSUM_STRICT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_CAB_SECONDARY_ALL_IMAGES: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_CAB_SECONDARY_FILES: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_NO_OVERWRITE: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_ADD_AVX_XSTATE_CONTEXT: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_CODE_SEGMENTS: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_DATA_SEGMENTS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_FILTER_MEMORY: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_FILTER_PATHS: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_FILTER_TRIAGE: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_FULL_AUXILIARY_STATE: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_FULL_MEMORY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_FULL_MEMORY_INFO: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_HANDLE_DATA: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_IGNORE_INACCESSIBLE_MEM: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_INDIRECT_MEMORY: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_IPT_TRACE: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_MODULE_HEADERS: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_NO_AUXILIARY_STATE: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_NO_OPTIONAL_DATA: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_PRIVATE_READ_WRITE_MEMORY: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_PROCESS_THREAD_DATA: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_SCAN_PARTIAL_PAGES: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_THREAD_INFO: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_USER_SMALL_UNLOADED_MODULES: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FORMAT_WRITE_CAB: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FRAME_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_FRAME_IGNORE_INLINE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GETFNENT_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GETFNENT_RAW_ENTRY_ONLY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GETMOD_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GETMOD_NO_LOADED_MODULES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GETMOD_NO_UNLOADED_MODULES: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GET_PROC_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GET_PROC_FULL_MATCH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GET_PROC_ONLY_MATCH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GET_PROC_SERVICE_NAME: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GET_TEXT_COMPLETIONS_IS_DOT_COMMAND: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GET_TEXT_COMPLETIONS_IS_EXTENSION_COMMAND: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GET_TEXT_COMPLETIONS_IS_SYMBOL: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GET_TEXT_COMPLETIONS_NO_DOT_COMMANDS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GET_TEXT_COMPLETIONS_NO_EXTENSION_COMMANDS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GET_TEXT_COMPLETIONS_NO_SYMBOLS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GSEL_ALLOW_HIGHER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GSEL_ALLOW_LOWER: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GSEL_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GSEL_INLINE_CALLSITE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GSEL_NEAREST_ONLY: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_GSEL_NO_SYMBOL_LOADS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_ALL_HANDLE_OPERATIONS: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_BASIC: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_HANDLE_COUNT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_MINI_EVENT_1: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_MINI_MUTANT_1: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_MINI_MUTANT_2: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_MINI_PROCESS_1: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_MINI_PROCESS_2: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_MINI_SECTION_1: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_MINI_SEMAPHORE_1: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_MINI_THREAD_1: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_OBJECT_NAME: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_OBJECT_NAME_WIDE: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_PER_HANDLE_OPERATIONS: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_TYPE_NAME: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_HANDLE_DATA_TYPE_TYPE_NAME_WIDE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_INTERRUPT_ACTIVE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_INTERRUPT_EXIT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_INTERRUPT_PASSIVE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_IOUTPUT_ADDR_TRANSLATE: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_IOUTPUT_BREAKPOINT: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_IOUTPUT_EVENT: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_IOUTPUT_KD_PROTOCOL: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_IOUTPUT_REMOTING: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_ACTIVE_DUMP: u32 = 1030u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_CONNECTION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_DUMP: u32 = 1025u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_EXDI_DRIVER: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_FULL_DUMP: u32 = 1026u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_IDNA: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_INSTALL_DRIVER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_LOCAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_REPT: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_SMALL_DUMP: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KERNEL_TRACE_LOG: u32 = 1028u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KNOWN_STRUCT_GET_NAMES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KNOWN_STRUCT_GET_SINGLE_LINE_OUTPUT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_KNOWN_STRUCT_SUPPRESS_TYPE_NAME: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_LEVEL_ASSEMBLY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_LEVEL_SOURCE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_LIVE_USER_NON_INVASIVE: u32 = 33u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_LOG_APPEND: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_LOG_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_LOG_DML: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_LOG_UNICODE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MANAGED_ALLOWED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MANAGED_DISABLED: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MANAGED_DLL_LOADED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MANRESET_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MANRESET_LOAD_DLL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MANSTR_LOADED_SUPPORT_DLL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MANSTR_LOAD_STATUS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MANSTR_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODNAME_IMAGE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODNAME_LOADED_IMAGE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODNAME_MAPPED_IMAGE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODNAME_MODULE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODNAME_SYMBOL_FILE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODULE_EXE_MODULE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODULE_EXPLICIT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODULE_LOADED: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODULE_SECONDARY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODULE_SYM_BAD_CHECKSUM: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODULE_SYNTHETIC: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODULE_UNLOADED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_MODULE_USER_MODE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_NOTIFY_SESSION_ACCESSIBLE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_NOTIFY_SESSION_ACTIVE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_NOTIFY_SESSION_INACCESSIBLE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_NOTIFY_SESSION_INACTIVE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OFFSINFO_VIRTUAL_SOURCE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCBF_COMBINED_EXPLICIT_FLUSH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCBF_DML_HAS_SPECIAL_CHARACTERS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCBF_DML_HAS_TAGS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCBI_ANY_FORMAT: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCBI_DML: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCBI_EXPLICIT_FLUSH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCBI_TEXT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCB_DML: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCB_EXPLICIT_FLUSH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCB_TEXT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_ALL_CLIENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_ALL_OTHER_CLIENTS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_AMBIENT: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_AMBIENT_DML: u32 = 4294967294u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_AMBIENT_TEXT: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_DML: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_IGNORE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_LOG_ONLY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_NOT_LOGGED: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_OVERRIDE_MASK: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_SEND_MASK: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTCTL_THIS_CLIENT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_DEBUGGEE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_DEBUGGEE_PROMPT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_ERROR: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_EXTENSION_WARNING: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_IDENTITY_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_NAME_END: &str = "**NAME**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_NAME_END_T: &str = "**NAME**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_NAME_END_WIDE: &str = "**NAME**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_NORMAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_OFFSET_END: &str = "**OFF**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_OFFSET_END_T: &str = "**OFF**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_OFFSET_END_WIDE: &str = "**OFF**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_PROMPT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_PROMPT_REGISTERS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_STATUS: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_SYMBOLS: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_SYMBOLS_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_SYMBOLS_NO_NAMES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_SYMBOLS_NO_OFFSETS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_SYMBOLS_NO_TYPES: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_SYMBOLS_NO_VALUES: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_TYPE_END: &str = "**TYPE**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_TYPE_END_T: &str = "**TYPE**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_TYPE_END_WIDE: &str = "**TYPE**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_VALUE_END: &str = "**VALUE**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_VALUE_END_T: &str = "**VALUE**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_VALUE_END_WIDE: &str = "**VALUE**";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_VERBOSE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_WARNING: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTPUT_XML: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTSYM_ALLOW_DISPLACEMENT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTSYM_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTSYM_FORCE_OFFSET: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTSYM_SOURCE_LINE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTTYPE_ADDRESS_AT_END: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTTYPE_ADDRESS_OF_FIELD: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTTYPE_BLOCK_RECURSE: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTTYPE_COMPACT_OUTPUT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTTYPE_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTTYPE_NO_INDENT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTTYPE_NO_OFFSET: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUTTYPE_VERBOSE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_OUT_TEXT_REPL_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PHYSICAL_CACHED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PHYSICAL_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PHYSICAL_UNCACHED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PHYSICAL_WRITE_COMBINED: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PROCESS_DETACH_ON_EXIT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PROCESS_ONLY_THIS_PROCESS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PROC_DESC_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PROC_DESC_NO_COMMAND_LINE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PROC_DESC_NO_MTS_PACKAGES: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PROC_DESC_NO_PATHS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PROC_DESC_NO_SERVICES: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PROC_DESC_NO_SESSION_ID: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PROC_DESC_NO_USER_NAME: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_PROC_DESC_WITH_PACKAGEFAMILY: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REGISTERS_ALL: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REGISTERS_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REGISTERS_FLOAT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REGISTERS_INT32: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REGISTERS_INT64: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REGISTER_SUB_REGISTER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REGSRC_DEBUGGEE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REGSRC_EXPLICIT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REGSRC_FRAME: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_ADD_CACHED_SYMBOL_INFO: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_CLOSE_TOKEN: u32 = 30u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_CURRENT_OUTPUT_CALLBACKS_ARE_DML_AWARE: u32 = 19u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_DUPLICATE_TOKEN: u32 = 28u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_EXT_TYPED_DATA_ANSI: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_ADDITIONAL_CREATE_OPTIONS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_CACHED_SYMBOL_INFO: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_CAPTURED_EVENT_CODE_OFFSET: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_DUMP_HEADER: u32 = 21u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_EXTENSION_SEARCH_PATH_WIDE: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_INSTRUMENTATION_VERSION: u32 = 37u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_MODULE_ARCHITECTURE: u32 = 38u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_OFFSET_UNWIND_INFORMATION: u32 = 20u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_TEXT_COMPLETIONS_ANSI: u32 = 18u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_TEXT_COMPLETIONS_WIDE: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_GET_WIN32_MAJOR_MINOR_VERSIONS: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_INLINE_QUERY: u32 = 35u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_MIDORI: u32 = 23u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_MISC_INFORMATION: u32 = 25u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_OPEN_PROCESS_TOKEN: u32 = 26u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_OPEN_THREAD_TOKEN: u32 = 27u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_PROCESS_DESCRIPTORS: u32 = 24u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_QUERY_INFO_TOKEN: u32 = 29u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_READ_CAPTURED_EVENT_CODE_STREAM: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_READ_USER_MINIDUMP_STREAM: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_REMOVE_CACHED_SYMBOL_INFO: u32 = 17u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_RESUME_THREAD: u32 = 34u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_SET_ADDITIONAL_CREATE_OPTIONS: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_SET_DUMP_HEADER: u32 = 22u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_SET_LOCAL_IMPLICIT_COMMAND_LINE: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_SOURCE_PATH_HAS_SOURCE_SERVER: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_TARGET_CAN_DETACH: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_TARGET_EXCEPTION_CONTEXT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_TARGET_EXCEPTION_RECORD: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_TARGET_EXCEPTION_THREAD: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_TL_INSTRUMENTATION_AWARE: u32 = 36u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_WOW_MODULE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_REQUEST_WOW_PROCESS: u32 = 31u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SCOPE_GROUP_ALL: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SCOPE_GROUP_ARGUMENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SCOPE_GROUP_BY_DATAMODEL: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SCOPE_GROUP_LOCALS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SERVERS_ALL: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SERVERS_DEBUGGER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SERVERS_PROCESS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SESSION_ACTIVE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SESSION_END: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SESSION_END_SESSION_ACTIVE_DETACH: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SESSION_END_SESSION_ACTIVE_TERMINATE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SESSION_END_SESSION_PASSIVE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SESSION_FAILURE: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SESSION_HIBERNATE: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SESSION_REBOOT: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SOURCE_IS_STATEMENT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SRCFILE_SYMBOL_CHECKSUMINFO: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SRCFILE_SYMBOL_TOKEN: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SRCFILE_SYMBOL_TOKEN_SOURCE_COMMAND_WIDE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_ARGUMENTS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_COLUMN_NAMES: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_DML: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_FRAME_ADDRESSES: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_FRAME_ADDRESSES_RA_ONLY: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_FRAME_ARCH: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_FRAME_MEMORY_USAGE: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_FRAME_NUMBERS: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_FRAME_OFFSETS: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_FUNCTION_INFO: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_NONVOLATILE_REGISTERS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_PARAMETERS: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_PARAMETERS_NEWLINE: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_PROVIDER: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STACK_SOURCE_LINE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_BREAK: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_GO: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_GO_HANDLED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_GO_NOT_HANDLED: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_IGNORE_EVENT: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_INSIDE_WAIT: u64 = 4294967296u64;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_MASK: u32 = 31u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_NO_CHANGE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_NO_DEBUGGEE: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_OUT_OF_SYNC: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_RESTART_REQUESTED: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_REVERSE_GO: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_REVERSE_STEP_BRANCH: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_REVERSE_STEP_INTO: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_REVERSE_STEP_OVER: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_STEP_BRANCH: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_STEP_INTO: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_STEP_OVER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_TIMEOUT: u32 = 17u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_WAIT_INPUT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_STATUS_WAIT_TIMEOUT: u64 = 8589934592u64;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMBOL_EXPANDED: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMBOL_EXPANSION_LEVEL_MASK: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMBOL_IS_ARGUMENT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMBOL_IS_ARRAY: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMBOL_IS_FLOAT: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMBOL_IS_LOCAL: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMBOL_READ_ONLY: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMENT_IS_CODE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMENT_IS_DATA: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMENT_IS_LOCAL: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMENT_IS_MANAGED: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMENT_IS_PARAMETER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMENT_IS_SYNTHETIC: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMINFO_BREAKPOINT_SOURCE_LINE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMINFO_GET_MODULE_SYMBOL_NAMES_AND_OFFSETS: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMINFO_GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMINFO_IMAGEHLP_MODULEW64: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMTYPE_CODEVIEW: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMTYPE_COFF: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMTYPE_DEFERRED: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMTYPE_DIA: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMTYPE_EXPORT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMTYPE_NONE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMTYPE_PDB: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYMTYPE_SYM: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYSOBJINFO_CURRENT_PROCESS_COOKIE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYSOBJINFO_THREAD_BASIC_INFORMATION: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYSOBJINFO_THREAD_NAME_WIDE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYSVERSTR_BUILD: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_SYSVERSTR_SERVICE_PACK: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TBINFO_AFFINITY: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TBINFO_ALL: u32 = 63u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TBINFO_EXIT_STATUS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TBINFO_PRIORITY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TBINFO_PRIORITY_CLASS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TBINFO_START_OFFSET: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TBINFO_TIMES: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TEXT_ALLOWBREAKPOINTS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TEXT_ALLOWERRORREPORT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TEXT_EVALUATETOCODECONTEXT: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TEXT_ISEXPRESSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TEXT_ISNONUSERCODE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TEXT_NOSIDEEFFECTS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TEXT_RETURNVALUE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TYPED_DATA_IS_IN_MEMORY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TYPED_DATA_PHYSICAL_CACHED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TYPED_DATA_PHYSICAL_DEFAULT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TYPED_DATA_PHYSICAL_MEMORY: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TYPED_DATA_PHYSICAL_UNCACHED: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TYPED_DATA_PHYSICAL_WRITE_COMBINED: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TYPEOPTS_FORCERADIX_OUTPUT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TYPEOPTS_LONGSTATUS_DISPLAY: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TYPEOPTS_MATCH_MAXSIZE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_TYPEOPTS_UNICODE_DISPLAY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_USER_WINDOWS_DUMP: u32 = 1025u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_USER_WINDOWS_DUMP_WINDOWS_CE: u32 = 1029u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_USER_WINDOWS_IDNA: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_USER_WINDOWS_PROCESS: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_USER_WINDOWS_PROCESS_SERVER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_USER_WINDOWS_REPT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_USER_WINDOWS_SMALL_DUMP: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_FLOAT128: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_FLOAT32: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_FLOAT64: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_FLOAT80: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_FLOAT82: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_INT16: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_INT32: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_INT64: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_INT8: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_INVALID: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_TYPES: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_VECTOR128: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VALUE_VECTOR64: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VSEARCH_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VSEARCH_WRITABLE_ONLY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VSOURCE_DEBUGGEE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VSOURCE_DUMP_WITHOUT_MEMINFO: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VSOURCE_INVALID: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_VSOURCE_MAPPED_IMAGE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEBUG_WAIT_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DMP_CONTEXT_RECORD_SIZE_32: u32 = 1200u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DMP_CONTEXT_RECORD_SIZE_64: u32 = 3000u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DMP_HEADER_COMMENT_SIZE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DMP_PHYSICAL_MEMORY_BLOCK_SIZE_32: u32 = 700u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DMP_PHYSICAL_MEMORY_BLOCK_SIZE_64: u32 = 700u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DMP_RESERVED_0_SIZE_32: u32 = 1760u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DMP_RESERVED_0_SIZE_64: u32 = 4008u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DMP_RESERVED_2_SIZE_32: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DMP_RESERVED_3_SIZE_32: u32 = 56u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DSLFLAG_MISMATCHED_DBG: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DSLFLAG_MISMATCHED_PDB: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_SUMMARY_VALID_CURRENT_USER_VA: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_SUMMARY_VALID_KERNEL_VA: u32 = 1u32;
+pub const DebugHelper: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 201113696, data2: 35869, data3: 4560, data4: [172, 205, 0, 170, 0, 96, 39, 92] };
+pub const DefaultDebugSessionProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2202085538, data2: 20980, data3: 4560, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ERROR_DBG_CANCELLED: u32 = 3221226695u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ERROR_DBG_TIMEOUT: u32 = 3221226932u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ERROR_IMAGE_NOT_STRIPPED: u32 = 34816u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ERROR_NO_DBG_POINTER: u32 = 34817u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ERROR_NO_PDB_POINTER: u32 = 34818u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ESLFLAG_FULLPATH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ESLFLAG_INLINE_SITE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ESLFLAG_NEAREST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ESLFLAG_NEXT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ESLFLAG_PREV: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EVENT_SRCSPEW: u32 = 100u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EVENT_SRCSPEW_END: u32 = 199u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EVENT_SRCSPEW_START: u32 = 100u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXIT_ON_CONTROLC: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_API_VERSION_NUMBER: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_API_VERSION_NUMBER32: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_API_VERSION_NUMBER64: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_FIND_FILE_ALLOW_GIVEN_PATH: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_OUTPUT_VER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDF_PHYSICAL_CACHED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDF_PHYSICAL_DEFAULT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDF_PHYSICAL_MEMORY: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDF_PHYSICAL_UNCACHED: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDF_PHYSICAL_WRITE_COMBINED: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const E_JsDEBUG_INVALID_MEMORY_ADDRESS: ::windows_sys::core::HRESULT = -1916338171i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const E_JsDEBUG_MISMATCHED_RUNTIME: ::windows_sys::core::HRESULT = -1916338175i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const E_JsDEBUG_OUTSIDE_OF_VM: ::windows_sys::core::HRESULT = -1916338172i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const E_JsDEBUG_RUNTIME_NOT_IN_DEBUG_MODE: ::windows_sys::core::HRESULT = -1916338169i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const E_JsDEBUG_SOURCE_LOCATION_NOT_FOUND: ::windows_sys::core::HRESULT = -1916338170i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const E_JsDEBUG_UNKNOWN_THREAD: ::windows_sys::core::HRESULT = -1916338174i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_JsDEBUG: u32 = 3527u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FIELDS_DID_NOT_MATCH: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FLAG_ENGINE_PRESENT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FLAG_ENGOPT_DISALLOW_NETWORK_PATHS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FLAG_OVERRIDE_ARM_MACHINE_TYPE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const GETATTRFLAG_HUMANTEXT: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const GETATTRFLAG_THIS: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const GETATTRTYPE_DEPSCAN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const GETATTRTYPE_NORMAL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_DISASSEMBLE_BUFFER: u32 = 44u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_DUMP_SYMBOL_INFO: u32 = 22u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_FIND_FILE: u32 = 40u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_ANY_MODULE_IN_RANGE: u32 = 45u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_BUS_DATA: u32 = 20u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_CACHE_SIZE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_CLR_DATA_INTERFACE: u32 = 38u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_CONTEXT_EX: u32 = 48u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_CURRENT_PROCESS: u32 = 26u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_CURRENT_PROCESS_HANDLE: u32 = 28u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_CURRENT_THREAD: u32 = 25u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_DEBUGGER_DATA: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_EXCEPTION_RECORD: u32 = 18u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_EXPRESSION_EX: u32 = 30u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_INPUT_LINE: u32 = 29u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_KERNEL_VERSION: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_PEB_ADDRESS: u32 = 129u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_SET_SYMPATH: u32 = 17u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_TEB_ADDRESS: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_THREAD_OS_INFO: u32 = 37u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_GET_TYPE_SIZE: u32 = 27u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_IS_PTR64: u32 = 19u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_KD_CONTEXT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_KSTACK_HELP: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_LOWMEM_CHECK: u32 = 23u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_MATCH_PATTERN_A: u32 = 39u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_OBSOLETE_PLACEHOLDER_36: u32 = 36u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_PHYSICAL_TO_VIRTUAL: u32 = 47u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_POINTER_SEARCH_PHYSICAL: u32 = 35u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_QUERY_TARGET_INTERFACE: u32 = 42u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_READ_CONTROL_SPACE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_READ_IO_SPACE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_READ_IO_SPACE_EX: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_READ_MSR: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_READ_PHYSICAL: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_READ_PHYSICAL_WITH_FLAGS: u32 = 33u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_RELOAD_SYMBOLS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_SEARCH_MEMORY: u32 = 24u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_SET_BUS_DATA: u32 = 21u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_SET_THREAD: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_TRANSLATE_VIRTUAL_TO_PHYSICAL: u32 = 31u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_TYPED_DATA: u32 = 43u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_TYPED_DATA_OBSOLETE: u32 = 41u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_VIRTUAL_TO_PHYSICAL: u32 = 46u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_WRITE_CONTROL_SPACE: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_WRITE_IO_SPACE: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_WRITE_IO_SPACE_EX: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_WRITE_MSR: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_WRITE_PHYSICAL: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IG_WRITE_PHYSICAL_WITH_FLAGS: u32 = 34u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_MODULE_REGION_ADDITIONAL: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_MODULE_REGION_ALL: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_MODULE_REGION_DLLBASE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_MODULE_REGION_DLLRANGE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_MODULE_REGION_JIT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_RMAP_BIG_ENDIAN: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_RMAP_FIXUP_ARM64X: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_RMAP_FIXUP_IMAGEBASE: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_RMAP_IGNORE_MISCOMPARE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_RMAP_LOAD_RW_DATA_SECTIONS: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_RMAP_MAPPED_FLAT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_RMAP_OMIT_SHARED_RW_DATA_SECTIONS: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_FUNCTION: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_INFO_CONSTANT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_INFO_FRAMERELATIVE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_INFO_LOCAL: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_INFO_PARAMETER: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_INFO_REGISTER: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_INFO_REGRELATIVE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_INFO_TLSRELATIVE: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_INFO_VALUEPRESENT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_THUNK: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_VIRTUAL: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const INCORRECT_VERSION_INFO: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const INLINE_FRAME_CONTEXT_IGNORE: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const INLINE_FRAME_CONTEXT_INIT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const INSUFFICIENT_SPACE_TO_COPY: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const INTERFACESAFE_FOR_UNTRUSTED_CALLER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const INTERFACESAFE_FOR_UNTRUSTED_DATA: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const INTERFACE_USES_DISPEX: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const INTERFACE_USES_SECURITY_MANAGER: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IOCTL_IPMI_INTERNAL_RECORD_SEL_EVENT: u32 = 2232320u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IPMI_IOCTL_INDEX: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IPMI_OS_SEL_RECORD_MASK: u32 = 65535u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IPMI_OS_SEL_RECORD_VERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IPMI_OS_SEL_RECORD_VERSION_1: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const KD_SECONDARY_VERSION_AMD64_CONTEXT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const KD_SECONDARY_VERSION_AMD64_OBSOLETE_CONTEXT_1: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const KD_SECONDARY_VERSION_AMD64_OBSOLETE_CONTEXT_2: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const KD_SECONDARY_VERSION_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MAX_SYM_NAME: u32 = 2000u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MEMORY_READ_ERROR: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_MISC1_PROCESSOR_POWER_INFO: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_MISC3_PROCESS_EXECUTE_FLAGS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_MISC3_PROCESS_INTEGRITY: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_MISC3_PROTECTED_PROCESS: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_MISC3_TIMEZONE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_MISC4_BUILDSTRING: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_MISC5_PROCESS_COOKIE: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_PROCESS_VM_COUNTERS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_PROCESS_VM_COUNTERS_EX: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_PROCESS_VM_COUNTERS_EX2: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_PROCESS_VM_COUNTERS_JOB: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_PROCESS_VM_COUNTERS_VIRTUALSIZE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_SYSMEMINFO1_BASICPERF: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_SYSMEMINFO1_FILECACHE_TRANSITIONREPURPOSECOUNT_FLAGS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_SYSMEMINFO1_PERF_CCTOTALDIRTYPAGES_CCDIRTYPAGETHRESHOLD: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_SYSMEMINFO1_PERF_RESIDENTAVAILABLEPAGES_SHAREDCOMMITPAGES: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_VERSION: u32 = 42899u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MODULE_ORDERS_LOADTIME: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MODULE_ORDERS_MASK: u32 = 4026531840u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MODULE_ORDERS_MODULENAME: u32 = 536870912u32;
+pub const MachineDebugManager_DEBUG: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1232510188, data2: 14933, data3: 19376, data4: [182, 151, 136, 254, 222, 119, 232, 234] };
+pub const MachineDebugManager_RETAIL: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 201995878, data2: 12489, data3: 4560, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const NULL_FIELD_NAME: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const NULL_SYM_DUMP_PARAM: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const NUM_SSRVOPTS: u32 = 32u32;
+pub const OID_JSSIP: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 113893392, data2: 14542, data3: 4564, data4: [162, 163, 0, 16, 75, 211, 80, 144] };
+pub const OID_VBSSIP: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 371847246, data2: 10137, data3: 19893, data4: [143, 229, 172, 225, 15, 23, 235, 171] };
+pub const OID_WSFSIP: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 442566000, data2: 14542, data3: 4564, data4: [162, 163, 0, 16, 75, 211, 80, 144] };
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PHYS_FLAG_CACHED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PHYS_FLAG_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PHYS_FLAG_UNCACHED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PHYS_FLAG_WRITE_COMBINED: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_NAME_ID_UNAVAILABLE: u32 = 4294967295u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PTR_SEARCH_NO_SYMBOL_CHECK: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PTR_SEARCH_PHYS_ALL_HITS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PTR_SEARCH_PHYS_PTE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PTR_SEARCH_PHYS_RANGE_CHECK_ONLY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PTR_SEARCH_PHYS_SIZE_SHIFT: u32 = 3u32;
+pub const ProcessDebugManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2024085538, data2: 20980, data3: 4560, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const RESTORE_LAST_ERROR_NAME: &str = "RestoreLastError";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const RESTORE_LAST_ERROR_NAME_A: &str = "RestoreLastError";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const RESTORE_LAST_ERROR_NAME_W: &str = "RestoreLastError";
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTINFO_ITYPEINFO: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTINFO_IUNKNOWN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTINTERRUPT_DEBUG: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTINTERRUPT_RAISEEXCEPTION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTITEM_CODEONLY: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTITEM_GLOBALMEMBERS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTITEM_ISPERSISTENT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTITEM_ISSOURCE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTITEM_ISVISIBLE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTITEM_NOCODE: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROC_HOSTMANAGESSOURCE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROC_IMPLICIT_PARENTS: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROC_IMPLICIT_THIS: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROC_ISEXPRESSION: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROC_ISXDOMAIN: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_ABBREVIATE_GLOBALNAME_RESOLUTION: u32 = 1879048194u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_BUILDNUMBER: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_CATCHEXCEPTION: u32 = 4097u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_CONVERSIONLCID: u32 = 4098u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_DEBUGGER: u32 = 4352u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_DELAYEDEVENTSINKING: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_GCCONTROLSOFTCLOSE: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_HACK_FIBERSUPPORT: u32 = 1879048192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_HACK_TRIDENTEVENTSINK: u32 = 1879048193u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_HOSTKEEPALIVE: u32 = 1879048196u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_HOSTSTACKREQUIRED: u32 = 4099u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_INTEGERMODE: u32 = 12288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_INVOKEVERSIONING: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_JITDEBUG: u32 = 4353u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_MAJORVERSION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_MINORVERSION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_NAME: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_SCRIPTSAREFULLYTRUSTED: u32 = 4100u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTPROP_STRINGCOMPAREINSTANCE: u32 = 12289u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTSTAT_INSTRUCTION_COUNT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTSTAT_INTSTRUCTION_TIME: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTSTAT_STATEMENT_COUNT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTSTAT_TOTAL_TIME: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTEXT_DELAYEXECUTION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTEXT_HOSTMANAGESSOURCE: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTEXT_ISEXPRESSION: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTEXT_ISNONUSERCODE: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTEXT_ISPERSISTENT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTEXT_ISVISIBLE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTEXT_ISXDOMAIN: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTYPELIB_ISCONTROL: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTYPELIB_ISPERSISTENT: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_CMPL_COMMIT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_CMPL_ENUMLIST: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_CMPL_ENUM_TRIGGER: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_CMPL_GLOBALLIST: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_CMPL_MEMBERLIST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_CMPL_MEMBER_TRIGGER: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_CMPL_NOLIST: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_CMPL_PARAMTIP: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_CMPL_PARAM_TRIGGER: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_ENCODE_DEFAULT_LANGUAGE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_ENCODE_NO_ASP_LANGUAGE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_ENCODE_SECTION: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_E_PROPAGATE: i32 = -2147352318i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_E_RECORDED: i32 = -2040119292i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPT_E_REPORTED: i32 = -2147352319i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_COMMENT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_FUNCTION_START: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_HUMANTEXT: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_IDENTIFIER: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_KEYWORD: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_MEMBERLOOKUP: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_NONSOURCE: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_NUMBER: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_OPERATOR: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_STRING: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SOURCETEXT_ATTR_THIS: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SPLITSYM_EXTRACT_ALL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SPLITSYM_REMOVE_PRIVATE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SPLITSYM_SYMBOLPATH_IS_SRC: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVACTION_CHECKSUMSTATUS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVACTION_EVENT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVACTION_EVENTW: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVACTION_HTTPSTATUS: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVACTION_QUERYCANCEL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVACTION_SIZE: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVACTION_TRACE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVACTION_XMLOUTPUT: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_CALLBACK: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_CALLBACKW: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_DISABLE_PING_HOST: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_DISABLE_TIMEOUT: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_DONT_UNCOMPRESS: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_DOWNSTREAM_STORE: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_ENABLE_COMM_MSG: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_FAVOR_COMPRESSED: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_FLAT_DEFAULT_STORE: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_GETPATH: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_MAX: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_MESSAGE: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_NOCOPY: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_OLDGUIDPTR: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_OVERWRITE: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_PARAMTYPE: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_PARENTWIN: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_PROXY: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_PROXYW: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_RESETTOU: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_RETRY_APP_HANG: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_SECURE: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_SERVICE: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_SETCONTEXT: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_STRING: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_TRACE: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_UNATTENDED: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_URI_FILTER: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_URI_TIERS: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_WINHTTP: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_WININET: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_ALL: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_COMPRESSED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_FILEPTR: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_HTTP_COMPRESSED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_HTTP_FILEPTR: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_HTTP_MASK: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_HTTP_NORMAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_NORMAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_UNC_COMPRESSED: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_UNC_FILEPTR: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_UNC_MASK: u32 = 240u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVURI_UNC_NORMAL: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const STACK_FRAME_TYPE_IGNORE: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const STACK_FRAME_TYPE_INIT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const STACK_FRAME_TYPE_INLINE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const STACK_FRAME_TYPE_RA: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const STACK_FRAME_TYPE_STACK: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMBOL_TYPE_INDEX_NOT_FOUND: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMBOL_TYPE_INFO_NOT_FOUND: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMENUM_OPTIONS_DEFAULT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMENUM_OPTIONS_INLINE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_FIXUP_ARM64X: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_FUNC_NO_RETURN: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_GLOBAL: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_NULL: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_PUBLIC_CODE: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_REGREL_ALIASINDIR: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_RESET: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_SYNTHETIC_ZEROBASE: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_CONSTANT: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_EXPORT: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_FORWARDER: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_FRAMEREL: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_FUNCTION: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_LOCAL: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_OMAP_GENERATED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_OMAP_MODIFIED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_PARAMETER: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_REGISTER: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_REGREL: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_THUNK: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_TLSREL: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMF_VIRTUAL: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_ALLOW_ABSOLUTE_SYMBOLS: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_ALLOW_ZERO_ADDRESS: u32 = 16777216u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_AUTO_PUBLICS: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_CASE_INSENSITIVE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_DEBUG: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_DEFERRED_LOADS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_DISABLE_FAST_SYMBOLS: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_DISABLE_SRVSTAR_ON_STARTUP: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_DISABLE_SYMSRV_AUTODETECT: u32 = 33554432u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_DISABLE_SYMSRV_TIMEOUT: u32 = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_EXACT_SYMBOLS: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_FAIL_CRITICAL_ERRORS: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_FAVOR_COMPRESSED: u32 = 8388608u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_FLAT_DIRECTORY: u32 = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_IGNORE_CVREC: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_IGNORE_IMAGEDIR: u32 = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_IGNORE_NT_SYMPATH: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_INCLUDE_32BIT_MODULES: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_LOAD_ANYTHING: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_LOAD_LINES: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_NO_CPP: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_NO_IMAGE_SEARCH: u32 = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_NO_PROMPTS: u32 = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_NO_PUBLICS: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_NO_UNQUALIFIED_LOADS: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_OMAP_FIND_NEAREST: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_OVERWRITE: u32 = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_PUBLICS_ONLY: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_READONLY_CACHE: u32 = 67108864u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_SECURE: u32 = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_SYMPATH_LAST: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_UNDNAME: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSEARCH_ALLITEMS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSEARCH_GLOBALSONLY: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSEARCH_MASKOBJS: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSEARCH_RECURSE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSRV_VERSION: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSTOREOPT_ALT_INDEX: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSTOREOPT_UNICODE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYM_INLINE_COMP_DIFFERENT: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYM_INLINE_COMP_ERROR: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYM_INLINE_COMP_IDENTICAL: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYM_INLINE_COMP_STEPIN: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYM_INLINE_COMP_STEPOUT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYM_INLINE_COMP_STEPOVER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYM_STKWALK_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYM_STKWALK_FORCE_FRAMEPTR: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYM_STKWALK_ZEROEXTEND_PTRS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TEXT_DOC_ATTR_READONLY: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TEXT_DOC_ATTR_TYPE_PRIMARY: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TEXT_DOC_ATTR_TYPE_SCRIPT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TEXT_DOC_ATTR_TYPE_WORKER: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const THREAD_BLOCKED: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const THREAD_OUT_OF_CONTEXT: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const THREAD_STATE_RUNNING: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const THREAD_STATE_SUSPENDED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNAVAILABLE_ERROR: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_32_BIT_DECODE: u32 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_COMPLETE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NAME_ONLY: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_ACCESS_SPECIFIERS: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_ALLOCATION_LANGUAGE: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_ALLOCATION_MODEL: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_ARGUMENTS: u32 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_CV_THISTYPE: u32 = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_FUNCTION_RETURNS: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_LEADING_UNDERSCORES: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_MEMBER_TYPE: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_MS_KEYWORDS: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_MS_THISTYPE: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_RETURN_UDT_MODEL: u32 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_SPECIAL_SYMS: u32 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_THISTYPE: u32 = 96u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNDNAME_NO_THROW_SIGNATURES: u32 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WCT_MAX_NODE_COUNT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WCT_NETWORK_IO_FLAG: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WCT_OBJNAME_LENGTH: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WDBGEXTS_ADDRESS_DEFAULT: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WDBGEXTS_ADDRESS_RESERVED0: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WDBGEXTS_ADDRESS_SEG16: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WDBGEXTS_ADDRESS_SEG32: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_BAD_PAGE_LIST_LOCATION: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_BAD_PAGE_LIST_MAX_SIZE: u32 = 14u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_CMCI_THRESHOLD_COUNT: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_CMCI_THRESHOLD_POLL_COUNT: u32 = 12u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_CMCI_THRESHOLD_TIME: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_DEVICE_DRIVER_BUFFER_SET_MAX: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_DEVICE_DRIVER_BUFFER_SET_MIN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_DEVICE_DRIVER_BUFFER_SET_V1: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_DEVICE_DRIVER_CONFIG_MAX: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_DEVICE_DRIVER_CONFIG_MIN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_DEVICE_DRIVER_CONFIG_V1: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_DEVICE_DRIVER_CONFIG_V2: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_DISABLE_DUMMY_WRITE: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_DISABLE_OFFLINE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_AERBRIDGE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_AERENDPOINT: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_AERROOTPORT: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_GENERIC: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_GENERIC_V2: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_IPFCMC: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_IPFCPE: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_IPFMCA: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_XPFCMC: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_XPFMCE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_XPFNMI: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_VERSION_10: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_DESCRIPTOR_VERSION_11: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_FLAG_DEFAULTSOURCE: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_FLAG_FIRMWAREFIRST: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_FLAG_GHES_ASSIST: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_FLAG_GLOBAL: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_ERROR_SOURCE_INVALID_RELATED_SOURCE: u32 = 65535u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_MAX_MC_BANKS: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_MEM_PERSISTOFFLINE: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_MEM_PFA_DISABLE: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_MEM_PFA_PAGECOUNT: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_MEM_PFA_THRESHOLD: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_MEM_PFA_TIMEOUT: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_ARMV8_SEA: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_ARMV8_SEI: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_CMCI: u32 = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_EXTERNALINTERRUPT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_EXTERNALINTERRUPT_GSIV: u32 = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_GPIO_SIGNAL: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_LOCALINTERRUPT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_MCE: u32 = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_NMI: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_POLLED: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_SCI: u32 = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFICATION_TYPE_SDEI: u32 = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_NOTIFY_ALL_OFFLINES: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_PENDING_PAGE_LIST_SZ: u32 = 13u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_RESTORE_CMCI_ATTEMPTS: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_RESTORE_CMCI_ENABLED: u32 = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_RESTORE_CMCI_ERR_LIMIT: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_XPF_MC_BANK_STATUSFORMAT_AMD64MCA: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_XPF_MC_BANK_STATUSFORMAT_IA32MCA: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WHEA_XPF_MC_BANK_STATUSFORMAT_Intel64MCA: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WOW64_CONTEXT_EXCEPTION_ACTIVE: u32 = 134217728u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WOW64_CONTEXT_EXCEPTION_REPORTING: u32 = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WOW64_CONTEXT_EXCEPTION_REQUEST: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WOW64_CONTEXT_SERVICE_ACTIVE: u32 = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WOW64_CONTEXT_i386: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WOW64_CONTEXT_i486: u32 = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WOW64_MAXIMUM_SUPPORTED_EXTENSION: u32 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WOW64_SIZE_OF_80387_REGISTERS: u32 = 80u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const fasaCaseSensitive: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const fasaPreferInternalHandler: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const fasaSupportInternalHandler: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const sevMax: i32 = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type ADDRESS_MODE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const AddrMode1616: ADDRESS_MODE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const AddrMode1632: ADDRESS_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const AddrModeReal: ADDRESS_MODE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const AddrModeFlat: ADDRESS_MODE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type APPLICATION_NODE_EVENT_FILTER = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FILTER_EXCLUDE_NOTHING: APPLICATION_NODE_EVENT_FILTER = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FILTER_EXCLUDE_ANONYMOUS_CODE: APPLICATION_NODE_EVENT_FILTER = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FILTER_EXCLUDE_EVAL_CODE: APPLICATION_NODE_EVENT_FILTER = 2i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub type BREAKPOINT_STATE = i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
@@ -1304,21 +3926,21 @@ pub const BREAKREASON_JIT: BREAKREASON = 7i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const BREAKREASON_MUTATION_BREAKPOINT: BREAKREASON = 8i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type BREAKRESUME_ACTION = i32;
+pub type BREAKRESUMEACTION = i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BREAKRESUMEACTION_ABORT: BREAKRESUME_ACTION = 0i32;
+pub const BREAKRESUMEACTION_ABORT: BREAKRESUMEACTION = 0i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BREAKRESUMEACTION_CONTINUE: BREAKRESUME_ACTION = 1i32;
+pub const BREAKRESUMEACTION_CONTINUE: BREAKRESUMEACTION = 1i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BREAKRESUMEACTION_STEP_INTO: BREAKRESUME_ACTION = 2i32;
+pub const BREAKRESUMEACTION_STEP_INTO: BREAKRESUMEACTION = 2i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BREAKRESUMEACTION_STEP_OVER: BREAKRESUME_ACTION = 3i32;
+pub const BREAKRESUMEACTION_STEP_OVER: BREAKRESUMEACTION = 3i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BREAKRESUMEACTION_STEP_OUT: BREAKRESUME_ACTION = 4i32;
+pub const BREAKRESUMEACTION_STEP_OUT: BREAKRESUMEACTION = 4i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BREAKRESUMEACTION_IGNORE: BREAKRESUME_ACTION = 5i32;
+pub const BREAKRESUMEACTION_IGNORE: BREAKRESUMEACTION = 5i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BREAKRESUMEACTION_STEP_DOCUMENT: BREAKRESUME_ACTION = 6i32;
+pub const BREAKRESUMEACTION_STEP_DOCUMENT: BREAKRESUMEACTION = 6i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub type BUGCHECK_ERROR = u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
@@ -2356,70 +4978,2394 @@ pub const MANUALLY_INITIATED_CRASH1: BUGCHECK_ERROR = 3735936685u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub const BUGCHECK_CONTEXT_MODIFIER: BUGCHECK_ERROR = 2147483648u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CANNOT_ALLOCATE_MEMORY: u32 = 9u32;
-pub const CATID_ActiveScript: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4038566305, data2: 38983, data3: 4559, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
-pub const CATID_ActiveScriptAuthor: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 183380626, data2: 48315, data3: 4560, data4: [140, 114, 0, 192, 79, 194, 176, 133] };
-pub const CATID_ActiveScriptEncode: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4038566307, data2: 38983, data3: 4559, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
-pub const CATID_ActiveScriptParse: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4038566306, data2: 38983, data3: 4559, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
+pub type CallingConventionKind = i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_CHECK_ARM_MACHINE_THUMB_TYPE_OVERRIDE: u32 = 2147483648u32;
+pub const CallingConventionUnknown: CallingConventionKind = 0i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_CHECK_ENGOPT_DISALLOW_NETWORK_PATHS: u32 = 1879048192u32;
+pub const CallingConventionCDecl: CallingConventionKind = 1i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_DEBUG_INFO: u32 = 268435456u32;
+pub const CallingConventionFastCall: CallingConventionKind = 2i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_DEFERRED_SYMBOL_LOAD_CANCEL: u32 = 7u32;
+pub const CallingConventionStdCall: CallingConventionKind = 3i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_DEFERRED_SYMBOL_LOAD_COMPLETE: u32 = 2u32;
+pub const CallingConventionSysCall: CallingConventionKind = 4i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_DEFERRED_SYMBOL_LOAD_FAILURE: u32 = 3u32;
+pub const CallingConventionThisCall: CallingConventionKind = 5i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_DEFERRED_SYMBOL_LOAD_PARTIAL: u32 = 32u32;
+pub type DBGKD_MAJOR_TYPES = i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_DEFERRED_SYMBOL_LOAD_START: u32 = 1u32;
+pub const DBGKD_MAJOR_NT: DBGKD_MAJOR_TYPES = 0i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_DUPLICATE_SYMBOL: u32 = 5u32;
+pub const DBGKD_MAJOR_XBOX: DBGKD_MAJOR_TYPES = 1i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_ENGINE_PRESENT: u32 = 1610612736u32;
+pub const DBGKD_MAJOR_BIG: DBGKD_MAJOR_TYPES = 2i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_EVENT: u32 = 16u32;
+pub const DBGKD_MAJOR_EXDI: DBGKD_MAJOR_TYPES = 3i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_MAP_JIT_SYMBOL: u32 = 2684354560u32;
+pub const DBGKD_MAJOR_NTBD: DBGKD_MAJOR_TYPES = 4i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_READ_MEMORY: u32 = 6u32;
+pub const DBGKD_MAJOR_EFI: DBGKD_MAJOR_TYPES = 5i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_SET_OPTIONS: u32 = 8u32;
+pub const DBGKD_MAJOR_TNT: DBGKD_MAJOR_TYPES = 6i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_SRCSRV_EVENT: u32 = 1073741824u32;
+pub const DBGKD_MAJOR_SINGULARITY: DBGKD_MAJOR_TYPES = 7i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_SRCSRV_INFO: u32 = 536870912u32;
+pub const DBGKD_MAJOR_HYPERVISOR: DBGKD_MAJOR_TYPES = 8i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_SYMBOLS_UNLOADED: u32 = 4u32;
+pub const DBGKD_MAJOR_MIDORI: DBGKD_MAJOR_TYPES = 9i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_UPDATE_STATUS_BAR: u32 = 1342177280u32;
+pub const DBGKD_MAJOR_CE: DBGKD_MAJOR_TYPES = 10i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CBA_XML_LOG: u32 = 2415919104u32;
-pub const CDebugDocumentHelper: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2209922214, data2: 26748, data3: 4560, data4: [164, 5, 0, 170, 0, 96, 39, 92] };
+pub const DBGKD_MAJOR_COUNT: DBGKD_MAJOR_TYPES = 11i32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CERT_PE_IMAGE_DIGEST_ALL_IMPORT_INFO: u32 = 4u32;
+pub type DBGPROP_ATTRIB_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CERT_PE_IMAGE_DIGEST_DEBUG_INFO: u32 = 1u32;
+pub const DBGPROP_ATTRIB_NO_ATTRIB: DBGPROP_ATTRIB_FLAGS = 0u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CERT_PE_IMAGE_DIGEST_NON_PE_INFO: u32 = 8u32;
+pub const DBGPROP_ATTRIB_VALUE_IS_INVALID: DBGPROP_ATTRIB_FLAGS = 8u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CERT_PE_IMAGE_DIGEST_RESOURCES: u32 = 2u32;
+pub const DBGPROP_ATTRIB_VALUE_IS_EXPANDABLE: DBGPROP_ATTRIB_FLAGS = 16u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CERT_SECTION_TYPE_ANY: u32 = 255u32;
+pub const DBGPROP_ATTRIB_VALUE_IS_FAKE: DBGPROP_ATTRIB_FLAGS = 32u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CHECKSUM_MAPVIEW_FAILURE: u32 = 3u32;
+pub const DBGPROP_ATTRIB_VALUE_IS_METHOD: DBGPROP_ATTRIB_FLAGS = 256u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CHECKSUM_MAP_FAILURE: u32 = 2u32;
+pub const DBGPROP_ATTRIB_VALUE_IS_EVENT: DBGPROP_ATTRIB_FLAGS = 512u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CHECKSUM_OPEN_FAILURE: u32 = 1u32;
+pub const DBGPROP_ATTRIB_VALUE_IS_RAW_STRING: DBGPROP_ATTRIB_FLAGS = 1024u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CHECKSUM_SUCCESS: u32 = 0u32;
+pub const DBGPROP_ATTRIB_VALUE_READONLY: DBGPROP_ATTRIB_FLAGS = 2048u32;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CHECKSUM_UNICODE_FAILURE: u32 = 4u32;
+pub const DBGPROP_ATTRIB_ACCESS_PUBLIC: DBGPROP_ATTRIB_FLAGS = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_ACCESS_PRIVATE: DBGPROP_ATTRIB_FLAGS = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_ACCESS_PROTECTED: DBGPROP_ATTRIB_FLAGS = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_ACCESS_FINAL: DBGPROP_ATTRIB_FLAGS = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_STORAGE_GLOBAL: DBGPROP_ATTRIB_FLAGS = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_STORAGE_STATIC: DBGPROP_ATTRIB_FLAGS = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_STORAGE_FIELD: DBGPROP_ATTRIB_FLAGS = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_STORAGE_VIRTUAL: DBGPROP_ATTRIB_FLAGS = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_TYPE_IS_CONSTANT: DBGPROP_ATTRIB_FLAGS = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_TYPE_IS_SYNCHRONIZED: DBGPROP_ATTRIB_FLAGS = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_TYPE_IS_VOLATILE: DBGPROP_ATTRIB_FLAGS = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_HAS_EXTENDED_ATTRIBS: DBGPROP_ATTRIB_FLAGS = 8388608u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_FRAME_INTRYBLOCK: DBGPROP_ATTRIB_FLAGS = 16777216u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_FRAME_INCATCHBLOCK: DBGPROP_ATTRIB_FLAGS = 33554432u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_FRAME_INFINALLYBLOCK: DBGPROP_ATTRIB_FLAGS = 67108864u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_VALUE_IS_RETURN_VALUE: DBGPROP_ATTRIB_FLAGS = 134217728u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_ATTRIB_VALUE_PENDING_MUTATION: DBGPROP_ATTRIB_FLAGS = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type DBGPROP_INFO = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_INFO_NAME: DBGPROP_INFO = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_INFO_TYPE: DBGPROP_INFO = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_INFO_VALUE: DBGPROP_INFO = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_INFO_FULLNAME: DBGPROP_INFO = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_INFO_ATTRIBUTES: DBGPROP_INFO = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_INFO_DEBUGPROP: DBGPROP_INFO = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_INFO_BEAUTIFY: DBGPROP_INFO = 33554432u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_INFO_CALLTOSTRING: DBGPROP_INFO = 67108864u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBGPROP_INFO_AUTOEXPAND: DBGPROP_INFO = 134217728u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type DEBUG_EVENT_CODE = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CREATE_PROCESS_DEBUG_EVENT: DEBUG_EVENT_CODE = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CREATE_THREAD_DEBUG_EVENT: DEBUG_EVENT_CODE = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXCEPTION_DEBUG_EVENT: DEBUG_EVENT_CODE = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXIT_PROCESS_DEBUG_EVENT: DEBUG_EVENT_CODE = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXIT_THREAD_DEBUG_EVENT: DEBUG_EVENT_CODE = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LOAD_DLL_DEBUG_EVENT: DEBUG_EVENT_CODE = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OUTPUT_DEBUG_STRING_EVENT: DEBUG_EVENT_CODE = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const RIP_EVENT: DEBUG_EVENT_CODE = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNLOAD_DLL_DEBUG_EVENT: DEBUG_EVENT_CODE = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type DEBUG_EVENT_INFO_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEIT_GENERAL: DEBUG_EVENT_INFO_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEIT_ASMJS_IN_DEBUGGING: DEBUG_EVENT_INFO_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEIT_ASMJS_SUCCEEDED: DEBUG_EVENT_INFO_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DEIT_ASMJS_FAILED: DEBUG_EVENT_INFO_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type DEBUG_STACKFRAME_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DST_SCRIPT_FRAME: DEBUG_STACKFRAME_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DST_INTERNAL_FRAME: DEBUG_STACKFRAME_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DST_INVOCATION_FRAME: DEBUG_STACKFRAME_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type DOCUMENTNAMETYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DOCUMENTNAMETYPE_APPNODE: DOCUMENTNAMETYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DOCUMENTNAMETYPE_TITLE: DOCUMENTNAMETYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DOCUMENTNAMETYPE_FILE_TAIL: DOCUMENTNAMETYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DOCUMENTNAMETYPE_URL: DOCUMENTNAMETYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DOCUMENTNAMETYPE_UNIQUE_TITLE: DOCUMENTNAMETYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DOCUMENTNAMETYPE_SOURCE_MAP_URL: DOCUMENTNAMETYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type DUMP_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_TYPE_INVALID: DUMP_TYPE = -1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_TYPE_UNKNOWN: DUMP_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_TYPE_FULL: DUMP_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_TYPE_SUMMARY: DUMP_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_TYPE_HEADER: DUMP_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_TYPE_TRIAGE: DUMP_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_TYPE_BITMAP_FULL: DUMP_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_TYPE_BITMAP_KERNEL: DUMP_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DUMP_TYPE_AUTOMATIC: DUMP_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type ERRORRESUMEACTION = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ERRORRESUMEACTION_ReexecuteErrorStatement: ERRORRESUMEACTION = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ERRORRESUMEACTION_AbortCallAndReturnErrorToCaller: ERRORRESUMEACTION = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ERRORRESUMEACTION_SkipErrorStatement: ERRORRESUMEACTION = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type EXT_TDOP = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_COPY: EXT_TDOP = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_RELEASE: EXT_TDOP = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_SET_FROM_EXPR: EXT_TDOP = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_SET_FROM_U64_EXPR: EXT_TDOP = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_GET_FIELD: EXT_TDOP = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_EVALUATE: EXT_TDOP = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_GET_TYPE_NAME: EXT_TDOP = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_OUTPUT_TYPE_NAME: EXT_TDOP = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_OUTPUT_SIMPLE_VALUE: EXT_TDOP = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_OUTPUT_FULL_VALUE: EXT_TDOP = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_HAS_FIELD: EXT_TDOP = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_GET_FIELD_OFFSET: EXT_TDOP = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_GET_ARRAY_ELEMENT: EXT_TDOP = 12i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_GET_DEREFERENCE: EXT_TDOP = 13i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_GET_TYPE_SIZE: EXT_TDOP = 14i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_OUTPUT_TYPE_DEFINITION: EXT_TDOP = 15i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_GET_POINTER_TO: EXT_TDOP = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_SET_FROM_TYPE_ID_AND_U64: EXT_TDOP = 17i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_SET_PTR_FROM_TYPE_ID_AND_U64: EXT_TDOP = 18i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EXT_TDOP_COUNT: EXT_TDOP = 19i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type EX_PROP_INFO_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EX_PROP_INFO_ID: EX_PROP_INFO_FLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EX_PROP_INFO_NTYPE: EX_PROP_INFO_FLAGS = 512i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EX_PROP_INFO_NVALUE: EX_PROP_INFO_FLAGS = 1024i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EX_PROP_INFO_LOCKBYTES: EX_PROP_INFO_FLAGS = 2048i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const EX_PROP_INFO_DEBUGEXTPROP: EX_PROP_INFO_FLAGS = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type ErrorClass = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ErrorClassWarning: ErrorClass = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ErrorClassError: ErrorClass = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type FACILITY_CODE = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_NULL: FACILITY_CODE = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_RPC: FACILITY_CODE = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DISPATCH: FACILITY_CODE = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_STORAGE: FACILITY_CODE = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_ITF: FACILITY_CODE = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WIN32: FACILITY_CODE = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WINDOWS: FACILITY_CODE = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SSPI: FACILITY_CODE = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SECURITY: FACILITY_CODE = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_CONTROL: FACILITY_CODE = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_CERT: FACILITY_CODE = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_INTERNET: FACILITY_CODE = 12u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_MEDIASERVER: FACILITY_CODE = 13u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_MSMQ: FACILITY_CODE = 14u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SETUPAPI: FACILITY_CODE = 15u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SCARD: FACILITY_CODE = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_COMPLUS: FACILITY_CODE = 17u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_AAF: FACILITY_CODE = 18u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_URT: FACILITY_CODE = 19u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_ACS: FACILITY_CODE = 20u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DPLAY: FACILITY_CODE = 21u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_UMI: FACILITY_CODE = 22u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SXS: FACILITY_CODE = 23u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WINDOWS_CE: FACILITY_CODE = 24u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_HTTP: FACILITY_CODE = 25u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_COMMONLOG: FACILITY_CODE = 26u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WER: FACILITY_CODE = 27u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_FILTER_MANAGER: FACILITY_CODE = 31u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_BACKGROUNDCOPY: FACILITY_CODE = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_CONFIGURATION: FACILITY_CODE = 33u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WIA: FACILITY_CODE = 33u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_STATE_MANAGEMENT: FACILITY_CODE = 34u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_METADIRECTORY: FACILITY_CODE = 35u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WINDOWSUPDATE: FACILITY_CODE = 36u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DIRECTORYSERVICE: FACILITY_CODE = 37u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_GRAPHICS: FACILITY_CODE = 38u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SHELL: FACILITY_CODE = 39u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_NAP: FACILITY_CODE = 39u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_TPM_SERVICES: FACILITY_CODE = 40u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_TPM_SOFTWARE: FACILITY_CODE = 41u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_UI: FACILITY_CODE = 42u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_XAML: FACILITY_CODE = 43u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_ACTION_QUEUE: FACILITY_CODE = 44u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_PLA: FACILITY_CODE = 48u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WINDOWS_SETUP: FACILITY_CODE = 48u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_FVE: FACILITY_CODE = 49u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_FWP: FACILITY_CODE = 50u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WINRM: FACILITY_CODE = 51u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_NDIS: FACILITY_CODE = 52u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_HYPERVISOR: FACILITY_CODE = 53u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_CMI: FACILITY_CODE = 54u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_VIRTUALIZATION: FACILITY_CODE = 55u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_VOLMGR: FACILITY_CODE = 56u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_BCD: FACILITY_CODE = 57u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_VHD: FACILITY_CODE = 58u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_HNS: FACILITY_CODE = 59u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SDIAG: FACILITY_CODE = 60u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WEBSERVICES: FACILITY_CODE = 61u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WINPE: FACILITY_CODE = 61u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WPN: FACILITY_CODE = 62u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WINDOWS_STORE: FACILITY_CODE = 63u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_INPUT: FACILITY_CODE = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_QUIC: FACILITY_CODE = 65u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_EAP: FACILITY_CODE = 66u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_IORING: FACILITY_CODE = 70u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WINDOWS_DEFENDER: FACILITY_CODE = 80u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_OPC: FACILITY_CODE = 81u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_XPS: FACILITY_CODE = 82u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_MBN: FACILITY_CODE = 84u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_POWERSHELL: FACILITY_CODE = 84u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_RAS: FACILITY_CODE = 83u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_P2P_INT: FACILITY_CODE = 98u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_P2P: FACILITY_CODE = 99u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DAF: FACILITY_CODE = 100u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_BLUETOOTH_ATT: FACILITY_CODE = 101u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_AUDIO: FACILITY_CODE = 102u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_STATEREPOSITORY: FACILITY_CODE = 103u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_VISUALCPP: FACILITY_CODE = 109u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SCRIPT: FACILITY_CODE = 112u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_PARSE: FACILITY_CODE = 113u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_BLB: FACILITY_CODE = 120u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_BLB_CLI: FACILITY_CODE = 121u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WSBAPP: FACILITY_CODE = 122u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_BLBUI: FACILITY_CODE = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USN: FACILITY_CODE = 129u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_VOLSNAP: FACILITY_CODE = 130u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_TIERING: FACILITY_CODE = 131u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WSB_ONLINE: FACILITY_CODE = 133u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_ONLINE_ID: FACILITY_CODE = 134u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEVICE_UPDATE_AGENT: FACILITY_CODE = 135u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DRVSERVICING: FACILITY_CODE = 136u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DLS: FACILITY_CODE = 153u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DELIVERY_OPTIMIZATION: FACILITY_CODE = 208u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_SPACES: FACILITY_CODE = 231u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USER_MODE_SECURITY_CORE: FACILITY_CODE = 232u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_LICENSING: FACILITY_CODE = 234u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SOS: FACILITY_CODE = 160u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_OCP_UPDATE_AGENT: FACILITY_CODE = 173u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEBUGGERS: FACILITY_CODE = 176u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SPP: FACILITY_CODE = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_RESTORE: FACILITY_CODE = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DMSERVER: FACILITY_CODE = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_SERVER: FACILITY_CODE = 257u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_IMAGING: FACILITY_CODE = 258u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_MANAGEMENT: FACILITY_CODE = 259u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_UTIL: FACILITY_CODE = 260u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_BINLSVC: FACILITY_CODE = 261u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_PXE: FACILITY_CODE = 263u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_TFTP: FACILITY_CODE = 264u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_TRANSPORT_MANAGEMENT: FACILITY_CODE = 272u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_DRIVER_PROVISIONING: FACILITY_CODE = 278u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_MULTICAST_SERVER: FACILITY_CODE = 289u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_MULTICAST_CLIENT: FACILITY_CODE = 290u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEPLOYMENT_SERVICES_CONTENT_PROVIDER: FACILITY_CODE = 293u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_HSP_SERVICES: FACILITY_CODE = 296u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_HSP_SOFTWARE: FACILITY_CODE = 297u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_LINGUISTIC_SERVICES: FACILITY_CODE = 305u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_AUDIOSTREAMING: FACILITY_CODE = 1094u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_TTD: FACILITY_CODE = 1490u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_ACCELERATOR: FACILITY_CODE = 1536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WMAAECMA: FACILITY_CODE = 1996u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DIRECTMUSIC: FACILITY_CODE = 2168u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DIRECT3D10: FACILITY_CODE = 2169u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DXGI: FACILITY_CODE = 2170u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DXGI_DDI: FACILITY_CODE = 2171u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DIRECT3D11: FACILITY_CODE = 2172u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DIRECT3D11_DEBUG: FACILITY_CODE = 2173u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DIRECT3D12: FACILITY_CODE = 2174u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DIRECT3D12_DEBUG: FACILITY_CODE = 2175u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DXCORE: FACILITY_CODE = 2176u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_PRESENTATION: FACILITY_CODE = 2177u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_LEAP: FACILITY_CODE = 2184u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_AUDCLNT: FACILITY_CODE = 2185u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WINCODEC_DWRITE_DWM: FACILITY_CODE = 2200u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WINML: FACILITY_CODE = 2192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DIRECT2D: FACILITY_CODE = 2201u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_DEFRAG: FACILITY_CODE = 2304u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_USERMODE_SDBUS: FACILITY_CODE = 2305u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_JSCRIPT: FACILITY_CODE = 2306u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_PIDGENX: FACILITY_CODE = 2561u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_EAS: FACILITY_CODE = 85u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WEB: FACILITY_CODE = 885u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WEB_SOCKET: FACILITY_CODE = 886u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_MOBILE: FACILITY_CODE = 1793u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SQLITE: FACILITY_CODE = 1967u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SERVICE_FABRIC: FACILITY_CODE = 1968u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_UTC: FACILITY_CODE = 1989u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_WEP: FACILITY_CODE = 2049u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_SYNCENGINE: FACILITY_CODE = 2050u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_XBOX: FACILITY_CODE = 2339u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_GAME: FACILITY_CODE = 2340u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_PIX: FACILITY_CODE = 2748u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FACILITY_NT_BIT: FACILITY_CODE = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type FORMAT_MESSAGE_OPTIONS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FORMAT_MESSAGE_ALLOCATE_BUFFER: FORMAT_MESSAGE_OPTIONS = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FORMAT_MESSAGE_ARGUMENT_ARRAY: FORMAT_MESSAGE_OPTIONS = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FORMAT_MESSAGE_FROM_HMODULE: FORMAT_MESSAGE_OPTIONS = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FORMAT_MESSAGE_FROM_STRING: FORMAT_MESSAGE_OPTIONS = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FORMAT_MESSAGE_FROM_SYSTEM: FORMAT_MESSAGE_OPTIONS = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FORMAT_MESSAGE_IGNORE_INSERTS: FORMAT_MESSAGE_OPTIONS = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGEHLP_CBA_EVENT_SEVERITY = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const sevInfo: IMAGEHLP_CBA_EVENT_SEVERITY = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const sevProblem: IMAGEHLP_CBA_EVENT_SEVERITY = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const sevAttn: IMAGEHLP_CBA_EVENT_SEVERITY = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const sevFatal: IMAGEHLP_CBA_EVENT_SEVERITY = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGEHLP_EXTENDED_OPTIONS = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_EX_DISABLEACCESSTIMEUPDATE: IMAGEHLP_EXTENDED_OPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_EX_LASTVALIDDEBUGDIRECTORY: IMAGEHLP_EXTENDED_OPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_EX_NOIMPLICITPATTERNSEARCH: IMAGEHLP_EXTENDED_OPTIONS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_EX_NEVERLOADSYMBOLS: IMAGEHLP_EXTENDED_OPTIONS = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMOPT_EX_MAX: IMAGEHLP_EXTENDED_OPTIONS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGEHLP_GET_TYPE_INFO_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_GET_TYPE_INFO_CHILDREN: IMAGEHLP_GET_TYPE_INFO_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_GET_TYPE_INFO_UNCACHED: IMAGEHLP_GET_TYPE_INFO_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGEHLP_HD_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const hdBase: IMAGEHLP_HD_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const hdSym: IMAGEHLP_HD_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const hdSrc: IMAGEHLP_HD_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const hdMax: IMAGEHLP_HD_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGEHLP_SF_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const sfImage: IMAGEHLP_SF_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const sfDbg: IMAGEHLP_SF_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const sfPdb: IMAGEHLP_SF_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const sfMpd: IMAGEHLP_SF_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const sfMax: IMAGEHLP_SF_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGEHLP_STATUS_REASON = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindOutOfMemory: IMAGEHLP_STATUS_REASON = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindRvaToVaFailed: IMAGEHLP_STATUS_REASON = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindNoRoomInImage: IMAGEHLP_STATUS_REASON = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindImportModuleFailed: IMAGEHLP_STATUS_REASON = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindImportProcedureFailed: IMAGEHLP_STATUS_REASON = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindImportModule: IMAGEHLP_STATUS_REASON = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindImportProcedure: IMAGEHLP_STATUS_REASON = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindForwarder: IMAGEHLP_STATUS_REASON = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindForwarderNOT: IMAGEHLP_STATUS_REASON = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindImageModified: IMAGEHLP_STATUS_REASON = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindExpandFileHeaders: IMAGEHLP_STATUS_REASON = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindImageComplete: IMAGEHLP_STATUS_REASON = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindMismatchedSymbols: IMAGEHLP_STATUS_REASON = 12i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindSymbolsNotUpdated: IMAGEHLP_STATUS_REASON = 13i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindImportProcedure32: IMAGEHLP_STATUS_REASON = 14i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindImportProcedure64: IMAGEHLP_STATUS_REASON = 15i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindForwarder32: IMAGEHLP_STATUS_REASON = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindForwarder64: IMAGEHLP_STATUS_REASON = 17i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindForwarderNOT32: IMAGEHLP_STATUS_REASON = 18i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const BindForwarderNOT64: IMAGEHLP_STATUS_REASON = 19i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGEHLP_SYMBOL_TYPE_INFO = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_SYMTAG: IMAGEHLP_SYMBOL_TYPE_INFO = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_SYMNAME: IMAGEHLP_SYMBOL_TYPE_INFO = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_LENGTH: IMAGEHLP_SYMBOL_TYPE_INFO = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_TYPE: IMAGEHLP_SYMBOL_TYPE_INFO = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_TYPEID: IMAGEHLP_SYMBOL_TYPE_INFO = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_BASETYPE: IMAGEHLP_SYMBOL_TYPE_INFO = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_ARRAYINDEXTYPEID: IMAGEHLP_SYMBOL_TYPE_INFO = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_FINDCHILDREN: IMAGEHLP_SYMBOL_TYPE_INFO = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_DATAKIND: IMAGEHLP_SYMBOL_TYPE_INFO = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_ADDRESSOFFSET: IMAGEHLP_SYMBOL_TYPE_INFO = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_OFFSET: IMAGEHLP_SYMBOL_TYPE_INFO = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_VALUE: IMAGEHLP_SYMBOL_TYPE_INFO = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_COUNT: IMAGEHLP_SYMBOL_TYPE_INFO = 12i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_CHILDRENCOUNT: IMAGEHLP_SYMBOL_TYPE_INFO = 13i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_BITPOSITION: IMAGEHLP_SYMBOL_TYPE_INFO = 14i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_VIRTUALBASECLASS: IMAGEHLP_SYMBOL_TYPE_INFO = 15i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_VIRTUALTABLESHAPEID: IMAGEHLP_SYMBOL_TYPE_INFO = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_VIRTUALBASEPOINTEROFFSET: IMAGEHLP_SYMBOL_TYPE_INFO = 17i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_CLASSPARENTID: IMAGEHLP_SYMBOL_TYPE_INFO = 18i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_NESTED: IMAGEHLP_SYMBOL_TYPE_INFO = 19i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_SYMINDEX: IMAGEHLP_SYMBOL_TYPE_INFO = 20i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_LEXICALPARENT: IMAGEHLP_SYMBOL_TYPE_INFO = 21i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_ADDRESS: IMAGEHLP_SYMBOL_TYPE_INFO = 22i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_THISADJUST: IMAGEHLP_SYMBOL_TYPE_INFO = 23i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_UDTKIND: IMAGEHLP_SYMBOL_TYPE_INFO = 24i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_IS_EQUIV_TO: IMAGEHLP_SYMBOL_TYPE_INFO = 25i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_CALLING_CONVENTION: IMAGEHLP_SYMBOL_TYPE_INFO = 26i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_IS_CLOSE_EQUIV_TO: IMAGEHLP_SYMBOL_TYPE_INFO = 27i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GTIEX_REQS_VALID: IMAGEHLP_SYMBOL_TYPE_INFO = 28i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_VIRTUALBASEOFFSET: IMAGEHLP_SYMBOL_TYPE_INFO = 29i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_VIRTUALBASEDISPINDEX: IMAGEHLP_SYMBOL_TYPE_INFO = 30i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_IS_REFERENCE: IMAGEHLP_SYMBOL_TYPE_INFO = 31i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_INDIRECTVIRTUALBASECLASS: IMAGEHLP_SYMBOL_TYPE_INFO = 32i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_VIRTUALBASETABLETYPE: IMAGEHLP_SYMBOL_TYPE_INFO = 33i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TI_GET_OBJECTPOINTERTYPE: IMAGEHLP_SYMBOL_TYPE_INFO = 34i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGEHLP_SYMBOL_TYPE_INFO_MAX: IMAGEHLP_SYMBOL_TYPE_INFO = 35i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGE_DEBUG_TYPE = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DEBUG_TYPE_UNKNOWN: IMAGE_DEBUG_TYPE = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DEBUG_TYPE_COFF: IMAGE_DEBUG_TYPE = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DEBUG_TYPE_CODEVIEW: IMAGE_DEBUG_TYPE = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DEBUG_TYPE_FPO: IMAGE_DEBUG_TYPE = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DEBUG_TYPE_MISC: IMAGE_DEBUG_TYPE = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DEBUG_TYPE_EXCEPTION: IMAGE_DEBUG_TYPE = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DEBUG_TYPE_FIXUP: IMAGE_DEBUG_TYPE = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DEBUG_TYPE_BORLAND: IMAGE_DEBUG_TYPE = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGE_DIRECTORY_ENTRY = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_ARCHITECTURE: IMAGE_DIRECTORY_ENTRY = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_BASERELOC: IMAGE_DIRECTORY_ENTRY = 5u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT: IMAGE_DIRECTORY_ENTRY = 11u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR: IMAGE_DIRECTORY_ENTRY = 14u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_DEBUG: IMAGE_DIRECTORY_ENTRY = 6u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT: IMAGE_DIRECTORY_ENTRY = 13u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_EXCEPTION: IMAGE_DIRECTORY_ENTRY = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_EXPORT: IMAGE_DIRECTORY_ENTRY = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_GLOBALPTR: IMAGE_DIRECTORY_ENTRY = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_IAT: IMAGE_DIRECTORY_ENTRY = 12u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_IMPORT: IMAGE_DIRECTORY_ENTRY = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG: IMAGE_DIRECTORY_ENTRY = 10u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_RESOURCE: IMAGE_DIRECTORY_ENTRY = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_SECURITY: IMAGE_DIRECTORY_ENTRY = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DIRECTORY_ENTRY_TLS: IMAGE_DIRECTORY_ENTRY = 9u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGE_DLL_CHARACTERISTICS = u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA: IMAGE_DLL_CHARACTERISTICS = 32u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE: IMAGE_DLL_CHARACTERISTICS = 64u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY: IMAGE_DLL_CHARACTERISTICS = 128u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_NX_COMPAT: IMAGE_DLL_CHARACTERISTICS = 256u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_NO_ISOLATION: IMAGE_DLL_CHARACTERISTICS = 512u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_NO_SEH: IMAGE_DLL_CHARACTERISTICS = 1024u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_NO_BIND: IMAGE_DLL_CHARACTERISTICS = 2048u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_APPCONTAINER: IMAGE_DLL_CHARACTERISTICS = 4096u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_WDM_DRIVER: IMAGE_DLL_CHARACTERISTICS = 8192u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_GUARD_CF: IMAGE_DLL_CHARACTERISTICS = 16384u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE: IMAGE_DLL_CHARACTERISTICS = 32768u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_EX_CET_COMPAT: IMAGE_DLL_CHARACTERISTICS = 1u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE: IMAGE_DLL_CHARACTERISTICS = 2u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE: IMAGE_DLL_CHARACTERISTICS = 4u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC: IMAGE_DLL_CHARACTERISTICS = 8u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_EX_CET_RESERVED_1: IMAGE_DLL_CHARACTERISTICS = 16u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_DLLCHARACTERISTICS_EX_CET_RESERVED_2: IMAGE_DLL_CHARACTERISTICS = 32u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGE_FILE_CHARACTERISTICS = u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_RELOCS_STRIPPED: IMAGE_FILE_CHARACTERISTICS = 1u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_EXECUTABLE_IMAGE: IMAGE_FILE_CHARACTERISTICS = 2u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_LINE_NUMS_STRIPPED: IMAGE_FILE_CHARACTERISTICS = 4u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_LOCAL_SYMS_STRIPPED: IMAGE_FILE_CHARACTERISTICS = 8u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_AGGRESIVE_WS_TRIM: IMAGE_FILE_CHARACTERISTICS = 16u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_LARGE_ADDRESS_AWARE: IMAGE_FILE_CHARACTERISTICS = 32u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_BYTES_REVERSED_LO: IMAGE_FILE_CHARACTERISTICS = 128u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_32BIT_MACHINE: IMAGE_FILE_CHARACTERISTICS = 256u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_DEBUG_STRIPPED: IMAGE_FILE_CHARACTERISTICS = 512u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP: IMAGE_FILE_CHARACTERISTICS = 1024u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_NET_RUN_FROM_SWAP: IMAGE_FILE_CHARACTERISTICS = 2048u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_SYSTEM: IMAGE_FILE_CHARACTERISTICS = 4096u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_DLL: IMAGE_FILE_CHARACTERISTICS = 8192u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_UP_SYSTEM_ONLY: IMAGE_FILE_CHARACTERISTICS = 16384u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_BYTES_REVERSED_HI: IMAGE_FILE_CHARACTERISTICS = 32768u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGE_FILE_CHARACTERISTICS2 = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_RELOCS_STRIPPED2: IMAGE_FILE_CHARACTERISTICS2 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_EXECUTABLE_IMAGE2: IMAGE_FILE_CHARACTERISTICS2 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_LINE_NUMS_STRIPPED2: IMAGE_FILE_CHARACTERISTICS2 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_LOCAL_SYMS_STRIPPED2: IMAGE_FILE_CHARACTERISTICS2 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_AGGRESIVE_WS_TRIM2: IMAGE_FILE_CHARACTERISTICS2 = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_LARGE_ADDRESS_AWARE2: IMAGE_FILE_CHARACTERISTICS2 = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_BYTES_REVERSED_LO2: IMAGE_FILE_CHARACTERISTICS2 = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_32BIT_MACHINE2: IMAGE_FILE_CHARACTERISTICS2 = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_DEBUG_STRIPPED2: IMAGE_FILE_CHARACTERISTICS2 = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP2: IMAGE_FILE_CHARACTERISTICS2 = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_NET_RUN_FROM_SWAP2: IMAGE_FILE_CHARACTERISTICS2 = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_SYSTEM_2: IMAGE_FILE_CHARACTERISTICS2 = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_DLL_2: IMAGE_FILE_CHARACTERISTICS2 = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_UP_SYSTEM_ONLY_2: IMAGE_FILE_CHARACTERISTICS2 = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_FILE_BYTES_REVERSED_HI_2: IMAGE_FILE_CHARACTERISTICS2 = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGE_OPTIONAL_HEADER_MAGIC = u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_NT_OPTIONAL_HDR_MAGIC: IMAGE_OPTIONAL_HEADER_MAGIC = 523u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_NT_OPTIONAL_HDR32_MAGIC: IMAGE_OPTIONAL_HEADER_MAGIC = 267u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_NT_OPTIONAL_HDR64_MAGIC: IMAGE_OPTIONAL_HEADER_MAGIC = 523u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_ROM_OPTIONAL_HDR_MAGIC: IMAGE_OPTIONAL_HEADER_MAGIC = 263u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGE_SECTION_CHARACTERISTICS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_TYPE_NO_PAD: IMAGE_SECTION_CHARACTERISTICS = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_CNT_CODE: IMAGE_SECTION_CHARACTERISTICS = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_CNT_INITIALIZED_DATA: IMAGE_SECTION_CHARACTERISTICS = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_CNT_UNINITIALIZED_DATA: IMAGE_SECTION_CHARACTERISTICS = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_LNK_OTHER: IMAGE_SECTION_CHARACTERISTICS = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_LNK_INFO: IMAGE_SECTION_CHARACTERISTICS = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_LNK_REMOVE: IMAGE_SECTION_CHARACTERISTICS = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_LNK_COMDAT: IMAGE_SECTION_CHARACTERISTICS = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_NO_DEFER_SPEC_EXC: IMAGE_SECTION_CHARACTERISTICS = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_GPREL: IMAGE_SECTION_CHARACTERISTICS = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_FARDATA: IMAGE_SECTION_CHARACTERISTICS = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_PURGEABLE: IMAGE_SECTION_CHARACTERISTICS = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_16BIT: IMAGE_SECTION_CHARACTERISTICS = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_LOCKED: IMAGE_SECTION_CHARACTERISTICS = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_PRELOAD: IMAGE_SECTION_CHARACTERISTICS = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_1BYTES: IMAGE_SECTION_CHARACTERISTICS = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_2BYTES: IMAGE_SECTION_CHARACTERISTICS = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_4BYTES: IMAGE_SECTION_CHARACTERISTICS = 3145728u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_8BYTES: IMAGE_SECTION_CHARACTERISTICS = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_16BYTES: IMAGE_SECTION_CHARACTERISTICS = 5242880u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_32BYTES: IMAGE_SECTION_CHARACTERISTICS = 6291456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_64BYTES: IMAGE_SECTION_CHARACTERISTICS = 7340032u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_128BYTES: IMAGE_SECTION_CHARACTERISTICS = 8388608u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_256BYTES: IMAGE_SECTION_CHARACTERISTICS = 9437184u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_512BYTES: IMAGE_SECTION_CHARACTERISTICS = 10485760u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_1024BYTES: IMAGE_SECTION_CHARACTERISTICS = 11534336u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_2048BYTES: IMAGE_SECTION_CHARACTERISTICS = 12582912u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_4096BYTES: IMAGE_SECTION_CHARACTERISTICS = 13631488u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_8192BYTES: IMAGE_SECTION_CHARACTERISTICS = 14680064u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_ALIGN_MASK: IMAGE_SECTION_CHARACTERISTICS = 15728640u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_LNK_NRELOC_OVFL: IMAGE_SECTION_CHARACTERISTICS = 16777216u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_DISCARDABLE: IMAGE_SECTION_CHARACTERISTICS = 33554432u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_NOT_CACHED: IMAGE_SECTION_CHARACTERISTICS = 67108864u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_NOT_PAGED: IMAGE_SECTION_CHARACTERISTICS = 134217728u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_SHARED: IMAGE_SECTION_CHARACTERISTICS = 268435456u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_EXECUTE: IMAGE_SECTION_CHARACTERISTICS = 536870912u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_READ: IMAGE_SECTION_CHARACTERISTICS = 1073741824u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_MEM_WRITE: IMAGE_SECTION_CHARACTERISTICS = 2147483648u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SCN_SCALE_INDEX: IMAGE_SECTION_CHARACTERISTICS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IMAGE_SUBSYSTEM = u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_UNKNOWN: IMAGE_SUBSYSTEM = 0u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_NATIVE: IMAGE_SUBSYSTEM = 1u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_WINDOWS_GUI: IMAGE_SUBSYSTEM = 2u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_WINDOWS_CUI: IMAGE_SUBSYSTEM = 3u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_OS2_CUI: IMAGE_SUBSYSTEM = 5u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_POSIX_CUI: IMAGE_SUBSYSTEM = 7u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_NATIVE_WINDOWS: IMAGE_SUBSYSTEM = 8u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_WINDOWS_CE_GUI: IMAGE_SUBSYSTEM = 9u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_EFI_APPLICATION: IMAGE_SUBSYSTEM = 10u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER: IMAGE_SUBSYSTEM = 11u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER: IMAGE_SUBSYSTEM = 12u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_EFI_ROM: IMAGE_SUBSYSTEM = 13u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_XBOX: IMAGE_SUBSYSTEM = 14u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION: IMAGE_SUBSYSTEM = 16u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG: IMAGE_SUBSYSTEM = 17u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IPMI_OS_SEL_RECORD_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeWhea: IPMI_OS_SEL_RECORD_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeOther: IPMI_OS_SEL_RECORD_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeWheaErrorXpfMca: IPMI_OS_SEL_RECORD_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeWheaErrorPci: IPMI_OS_SEL_RECORD_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeWheaErrorNmi: IPMI_OS_SEL_RECORD_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeWheaErrorOther: IPMI_OS_SEL_RECORD_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeRaw: IPMI_OS_SEL_RECORD_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeDriver: IPMI_OS_SEL_RECORD_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeBugcheckRecovery: IPMI_OS_SEL_RECORD_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeBugcheckData: IPMI_OS_SEL_RECORD_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IpmiOsSelRecordTypeMax: IPMI_OS_SEL_RECORD_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type IntrinsicKind = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicVoid: IntrinsicKind = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicBool: IntrinsicKind = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicChar: IntrinsicKind = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicWChar: IntrinsicKind = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicInt: IntrinsicKind = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicUInt: IntrinsicKind = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicLong: IntrinsicKind = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicULong: IntrinsicKind = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicFloat: IntrinsicKind = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicHRESULT: IntrinsicKind = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicChar16: IntrinsicKind = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IntrinsicChar32: IntrinsicKind = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type JS_PROPERTY_ATTRIBUTES = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_ATTRIBUTE_NONE: JS_PROPERTY_ATTRIBUTES = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_HAS_CHILDREN: JS_PROPERTY_ATTRIBUTES = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_FAKE: JS_PROPERTY_ATTRIBUTES = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_METHOD: JS_PROPERTY_ATTRIBUTES = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_READONLY: JS_PROPERTY_ATTRIBUTES = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_NATIVE_WINRT_POINTER: JS_PROPERTY_ATTRIBUTES = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_FRAME_INTRYBLOCK: JS_PROPERTY_ATTRIBUTES = 32i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_FRAME_INCATCHBLOCK: JS_PROPERTY_ATTRIBUTES = 64i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_FRAME_INFINALLYBLOCK: JS_PROPERTY_ATTRIBUTES = 128i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type JS_PROPERTY_MEMBERS = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_MEMBERS_ALL: JS_PROPERTY_MEMBERS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JS_PROPERTY_MEMBERS_ARGUMENTS: JS_PROPERTY_MEMBERS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+#[repr(transparent)]
+pub struct JsDebugReadMemoryFlags(pub i32);
+impl JsDebugReadMemoryFlags {
+    pub const None: Self = Self(0i32);
+    pub const JsDebugAllowPartialRead: Self = Self(1i32);
+}
+impl ::core::marker::Copy for JsDebugReadMemoryFlags {}
+impl ::core::clone::Clone for JsDebugReadMemoryFlags {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type LanguageKind = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LanguageUnknown: LanguageKind = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LanguageC: LanguageKind = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LanguageCPP: LanguageKind = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LanguageAssembly: LanguageKind = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type LocationKind = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LocationMember: LocationKind = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LocationStatic: LocationKind = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LocationConstant: LocationKind = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LocationNone: LocationKind = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type MINIDUMP_CALLBACK_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ModuleCallback: MINIDUMP_CALLBACK_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadCallback: MINIDUMP_CALLBACK_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadExCallback: MINIDUMP_CALLBACK_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IncludeThreadCallback: MINIDUMP_CALLBACK_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IncludeModuleCallback: MINIDUMP_CALLBACK_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MemoryCallback: MINIDUMP_CALLBACK_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CancelCallback: MINIDUMP_CALLBACK_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WriteKernelMinidumpCallback: MINIDUMP_CALLBACK_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const KernelMinidumpStatusCallback: MINIDUMP_CALLBACK_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const RemoveMemoryCallback: MINIDUMP_CALLBACK_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IncludeVmRegionCallback: MINIDUMP_CALLBACK_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IoStartCallback: MINIDUMP_CALLBACK_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IoWriteAllCallback: MINIDUMP_CALLBACK_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IoFinishCallback: MINIDUMP_CALLBACK_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ReadMemoryFailureCallback: MINIDUMP_CALLBACK_TYPE = 14i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SecondaryFlagsCallback: MINIDUMP_CALLBACK_TYPE = 15i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IsProcessSnapshotCallback: MINIDUMP_CALLBACK_TYPE = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const VmStartCallback: MINIDUMP_CALLBACK_TYPE = 17i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const VmQueryCallback: MINIDUMP_CALLBACK_TYPE = 18i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const VmPreReadCallback: MINIDUMP_CALLBACK_TYPE = 19i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const VmPostReadCallback: MINIDUMP_CALLBACK_TYPE = 20i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniHandleObjectInformationNone: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniThreadInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniMutantInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniMutantInformation2: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniProcessInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniProcessInformation2: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniEventInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniSectionInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniSemaphoreInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniHandleObjectInformationTypeMax: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type MINIDUMP_MISC_INFO_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_MISC1_PROCESS_ID: MINIDUMP_MISC_INFO_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_MISC1_PROCESS_TIMES: MINIDUMP_MISC_INFO_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type MINIDUMP_SECONDARY_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniSecondaryWithoutPowerInfo: MINIDUMP_SECONDARY_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniSecondaryValidFlags: MINIDUMP_SECONDARY_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type MINIDUMP_STREAM_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UnusedStream: MINIDUMP_STREAM_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ReservedStream0: MINIDUMP_STREAM_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ReservedStream1: MINIDUMP_STREAM_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadListStream: MINIDUMP_STREAM_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ModuleListStream: MINIDUMP_STREAM_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MemoryListStream: MINIDUMP_STREAM_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ExceptionStream: MINIDUMP_STREAM_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SystemInfoStream: MINIDUMP_STREAM_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadExListStream: MINIDUMP_STREAM_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const Memory64ListStream: MINIDUMP_STREAM_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CommentStreamA: MINIDUMP_STREAM_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const CommentStreamW: MINIDUMP_STREAM_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const HandleDataStream: MINIDUMP_STREAM_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FunctionTableStream: MINIDUMP_STREAM_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UnloadedModuleListStream: MINIDUMP_STREAM_TYPE = 14i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiscInfoStream: MINIDUMP_STREAM_TYPE = 15i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MemoryInfoListStream: MINIDUMP_STREAM_TYPE = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadInfoListStream: MINIDUMP_STREAM_TYPE = 17i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const HandleOperationListStream: MINIDUMP_STREAM_TYPE = 18i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TokenStream: MINIDUMP_STREAM_TYPE = 19i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const JavaScriptDataStream: MINIDUMP_STREAM_TYPE = 20i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SystemMemoryInfoStream: MINIDUMP_STREAM_TYPE = 21i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ProcessVmCountersStream: MINIDUMP_STREAM_TYPE = 22i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const IptTraceStream: MINIDUMP_STREAM_TYPE = 23i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadNamesStream: MINIDUMP_STREAM_TYPE = 24i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamNull: MINIDUMP_STREAM_TYPE = 32768i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamSystemInfo: MINIDUMP_STREAM_TYPE = 32769i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamException: MINIDUMP_STREAM_TYPE = 32770i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamModuleList: MINIDUMP_STREAM_TYPE = 32771i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamProcessList: MINIDUMP_STREAM_TYPE = 32772i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamThreadList: MINIDUMP_STREAM_TYPE = 32773i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamThreadContextList: MINIDUMP_STREAM_TYPE = 32774i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamThreadCallStackList: MINIDUMP_STREAM_TYPE = 32775i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamMemoryVirtualList: MINIDUMP_STREAM_TYPE = 32776i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamMemoryPhysicalList: MINIDUMP_STREAM_TYPE = 32777i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamBucketParameters: MINIDUMP_STREAM_TYPE = 32778i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamProcessModuleMap: MINIDUMP_STREAM_TYPE = 32779i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ceStreamDiagnosisList: MINIDUMP_STREAM_TYPE = 32780i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LastReservedStream: MINIDUMP_STREAM_TYPE = 65535i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type MINIDUMP_THREAD_INFO_DUMP_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_THREAD_INFO_ERROR_THREAD: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_THREAD_INFO_EXITED_THREAD: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_THREAD_INFO_INVALID_CONTEXT: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_THREAD_INFO_INVALID_INFO: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_THREAD_INFO_INVALID_TEB: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MINIDUMP_THREAD_INFO_WRITING_THREAD: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type MINIDUMP_TYPE = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpNormal: MINIDUMP_TYPE = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithDataSegs: MINIDUMP_TYPE = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithFullMemory: MINIDUMP_TYPE = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithHandleData: MINIDUMP_TYPE = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpFilterMemory: MINIDUMP_TYPE = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpScanMemory: MINIDUMP_TYPE = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithUnloadedModules: MINIDUMP_TYPE = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithIndirectlyReferencedMemory: MINIDUMP_TYPE = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpFilterModulePaths: MINIDUMP_TYPE = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithProcessThreadData: MINIDUMP_TYPE = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithPrivateReadWriteMemory: MINIDUMP_TYPE = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithoutOptionalData: MINIDUMP_TYPE = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithFullMemoryInfo: MINIDUMP_TYPE = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithThreadInfo: MINIDUMP_TYPE = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithCodeSegs: MINIDUMP_TYPE = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithoutAuxiliaryState: MINIDUMP_TYPE = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithFullAuxiliaryState: MINIDUMP_TYPE = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithPrivateWriteCopyMemory: MINIDUMP_TYPE = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpIgnoreInaccessibleMemory: MINIDUMP_TYPE = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithTokenInformation: MINIDUMP_TYPE = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithModuleHeaders: MINIDUMP_TYPE = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpFilterTriage: MINIDUMP_TYPE = 1048576u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithAvxXStateContext: MINIDUMP_TYPE = 2097152u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpWithIptTrace: MINIDUMP_TYPE = 4194304u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpScanInaccessiblePartialPages: MINIDUMP_TYPE = 8388608u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpFilterWriteCombinedMemory: MINIDUMP_TYPE = 16777216u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MiniDumpValidTypeFlags: MINIDUMP_TYPE = 33554431u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type MODLOAD_DATA_TYPE = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBHHEADER_DEBUGDIRS: MODLOAD_DATA_TYPE = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const DBHHEADER_CVMISC: MODLOAD_DATA_TYPE = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type MODULE_WRITE_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ModuleWriteModule: MODULE_WRITE_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ModuleWriteDataSeg: MODULE_WRITE_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ModuleWriteMiscRecord: MODULE_WRITE_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ModuleWriteCvRecord: MODULE_WRITE_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ModuleReferencedByMemory: MODULE_WRITE_FLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ModuleWriteTlsData: MODULE_WRITE_FLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ModuleWriteCodeSegs: MODULE_WRITE_FLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type ModelObjectKind = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ObjectPropertyAccessor: ModelObjectKind = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ObjectContext: ModelObjectKind = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ObjectTargetObject: ModelObjectKind = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ObjectTargetObjectReference: ModelObjectKind = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ObjectSynthetic: ModelObjectKind = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ObjectNoValue: ModelObjectKind = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ObjectError: ModelObjectKind = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ObjectIntrinsic: ModelObjectKind = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ObjectMethod: ModelObjectKind = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ObjectKeyReference: ModelObjectKind = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type OBJECT_ATTRIB_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_NO_ATTRIB: OBJECT_ATTRIB_FLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_NO_NAME: OBJECT_ATTRIB_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_NO_TYPE: OBJECT_ATTRIB_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_NO_VALUE: OBJECT_ATTRIB_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_VALUE_IS_INVALID: OBJECT_ATTRIB_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_VALUE_IS_OBJECT: OBJECT_ATTRIB_FLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_VALUE_IS_ENUM: OBJECT_ATTRIB_FLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_VALUE_IS_CUSTOM: OBJECT_ATTRIB_FLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_OBJECT_IS_EXPANDABLE: OBJECT_ATTRIB_FLAGS = 112i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_VALUE_HAS_CODE: OBJECT_ATTRIB_FLAGS = 128i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_TYPE_IS_OBJECT: OBJECT_ATTRIB_FLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_TYPE_HAS_CODE: OBJECT_ATTRIB_FLAGS = 512i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_TYPE_IS_EXPANDABLE: OBJECT_ATTRIB_FLAGS = 256i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_SLOT_IS_CATEGORY: OBJECT_ATTRIB_FLAGS = 1024i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_VALUE_READONLY: OBJECT_ATTRIB_FLAGS = 2048i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_ACCESS_PUBLIC: OBJECT_ATTRIB_FLAGS = 4096i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_ACCESS_PRIVATE: OBJECT_ATTRIB_FLAGS = 8192i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_ACCESS_PROTECTED: OBJECT_ATTRIB_FLAGS = 16384i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_ACCESS_FINAL: OBJECT_ATTRIB_FLAGS = 32768i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_STORAGE_GLOBAL: OBJECT_ATTRIB_FLAGS = 65536i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_STORAGE_STATIC: OBJECT_ATTRIB_FLAGS = 131072i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_STORAGE_FIELD: OBJECT_ATTRIB_FLAGS = 262144i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_STORAGE_VIRTUAL: OBJECT_ATTRIB_FLAGS = 524288i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_TYPE_IS_CONSTANT: OBJECT_ATTRIB_FLAGS = 1048576i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_TYPE_IS_SYNCHRONIZED: OBJECT_ATTRIB_FLAGS = 2097152i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_TYPE_IS_VOLATILE: OBJECT_ATTRIB_FLAGS = 4194304i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_HAS_EXTENDED_ATTRIBS: OBJECT_ATTRIB_FLAGS = 8388608i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_IS_CLASS: OBJECT_ATTRIB_FLAGS = 16777216i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_IS_FUNCTION: OBJECT_ATTRIB_FLAGS = 33554432i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_IS_VARIABLE: OBJECT_ATTRIB_FLAGS = 67108864i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_IS_PROPERTY: OBJECT_ATTRIB_FLAGS = 134217728i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_IS_MACRO: OBJECT_ATTRIB_FLAGS = 268435456i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_IS_TYPE: OBJECT_ATTRIB_FLAGS = 536870912i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_IS_INHERITED: OBJECT_ATTRIB_FLAGS = 1073741824i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const OBJECT_ATTRIB_IS_INTERFACE: OBJECT_ATTRIB_FLAGS = -2147483648i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type OPEN_THREAD_WAIT_CHAIN_SESSION_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WCT_ASYNC_OPEN_FLAG: OPEN_THREAD_WAIT_CHAIN_SESSION_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PROCESSOR_ARCHITECTURE = u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROCESSOR_ARCHITECTURE_AMD64: PROCESSOR_ARCHITECTURE = 9u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROCESSOR_ARCHITECTURE_IA64: PROCESSOR_ARCHITECTURE = 6u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROCESSOR_ARCHITECTURE_INTEL: PROCESSOR_ARCHITECTURE = 0u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROCESSOR_ARCHITECTURE_ARM: PROCESSOR_ARCHITECTURE = 5u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROCESSOR_ARCHITECTURE_UNKNOWN: PROCESSOR_ARCHITECTURE = 65535u16;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PROFILER_EVENT_MASK = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_EVENT_MASK_TRACE_SCRIPT_FUNCTION_CALL: PROFILER_EVENT_MASK = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_EVENT_MASK_TRACE_NATIVE_FUNCTION_CALL: PROFILER_EVENT_MASK = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_EVENT_MASK_TRACE_DOM_FUNCTION_CALL: PROFILER_EVENT_MASK = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_EVENT_MASK_TRACE_ALL: PROFILER_EVENT_MASK = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_EVENT_MASK_TRACE_ALL_WITH_DOM: PROFILER_EVENT_MASK = 7u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PROFILER_HEAP_ENUM_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_ENUM_FLAGS_NONE: PROFILER_HEAP_ENUM_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_ENUM_FLAGS_STORE_RELATIONSHIP_FLAGS: PROFILER_HEAP_ENUM_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_ENUM_FLAGS_SUBSTRINGS: PROFILER_HEAP_ENUM_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_ENUM_FLAGS_RELATIONSHIP_SUBSTRINGS: PROFILER_HEAP_ENUM_FLAGS = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PROFILER_HEAP_OBJECT_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_NEW_OBJECT: PROFILER_HEAP_OBJECT_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_IS_ROOT: PROFILER_HEAP_OBJECT_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_SITE_CLOSED: PROFILER_HEAP_OBJECT_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_EXTERNAL: PROFILER_HEAP_OBJECT_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_EXTERNAL_UNKNOWN: PROFILER_HEAP_OBJECT_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_EXTERNAL_DISPATCH: PROFILER_HEAP_OBJECT_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_SIZE_APPROXIMATE: PROFILER_HEAP_OBJECT_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_SIZE_UNAVAILABLE: PROFILER_HEAP_OBJECT_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_NEW_STATE_UNAVAILABLE: PROFILER_HEAP_OBJECT_FLAGS = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_WINRT_INSTANCE: PROFILER_HEAP_OBJECT_FLAGS = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_WINRT_RUNTIMECLASS: PROFILER_HEAP_OBJECT_FLAGS = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_WINRT_DELEGATE: PROFILER_HEAP_OBJECT_FLAGS = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_FLAGS_WINRT_NAMESPACE: PROFILER_HEAP_OBJECT_FLAGS = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_PROTOTYPE: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_FUNCTION_NAME: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_SCOPE_LIST: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_INTERNAL_PROPERTY: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_NAME_PROPERTIES: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_INDEX_PROPERTIES: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_ELEMENT_ATTRIBUTES_SIZE: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_ELEMENT_TEXT_CHILDREN_SIZE: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_RELATIONSHIPS: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_WINRTEVENTS: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_WEAKMAP_COLLECTION_LIST: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_MAP_COLLECTION_LIST: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_SET_COLLECTION_LIST: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_MAX_VALUE: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS_NONE: PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS_IS_GET_ACCESSOR: PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS_IS_SET_ACCESSOR: PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS_LET_VARIABLE: PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS_CONST_VARIABLE: PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = 524288u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PROFILER_HEAP_SUMMARY_VERSION = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_HEAP_SUMMARY_VERSION_1: PROFILER_HEAP_SUMMARY_VERSION = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PROFILER_RELATIONSHIP_INFO = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_PROPERTY_TYPE_NUMBER: PROFILER_RELATIONSHIP_INFO = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_PROPERTY_TYPE_STRING: PROFILER_RELATIONSHIP_INFO = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_PROPERTY_TYPE_HEAP_OBJECT: PROFILER_RELATIONSHIP_INFO = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_PROPERTY_TYPE_EXTERNAL_OBJECT: PROFILER_RELATIONSHIP_INFO = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_PROPERTY_TYPE_BSTR: PROFILER_RELATIONSHIP_INFO = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_PROPERTY_TYPE_SUBSTRING: PROFILER_RELATIONSHIP_INFO = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PROFILER_SCRIPT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_SCRIPT_TYPE_USER: PROFILER_SCRIPT_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_SCRIPT_TYPE_DYNAMIC: PROFILER_SCRIPT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_SCRIPT_TYPE_NATIVE: PROFILER_SCRIPT_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROFILER_SCRIPT_TYPE_DOM: PROFILER_SCRIPT_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PROP_INFO_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROP_INFO_NAME: PROP_INFO_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROP_INFO_TYPE: PROP_INFO_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROP_INFO_VALUE: PROP_INFO_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROP_INFO_FULLNAME: PROP_INFO_FLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROP_INFO_ATTRIBUTES: PROP_INFO_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROP_INFO_DEBUGPROP: PROP_INFO_FLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PROP_INFO_AUTOEXPAND: PROP_INFO_FLAGS = 134217728i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PointerKind = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PointerStandard: PointerKind = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PointerReference: PointerKind = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PointerRValueReference: PointerKind = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PointerCXHat: PointerKind = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const PointerManagedReference: PointerKind = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PreferredFormat = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatNone: PreferredFormat = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatSingleCharacter: PreferredFormat = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatQuotedString: PreferredFormat = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatString: PreferredFormat = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatQuotedUnicodeString: PreferredFormat = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatUnicodeString: PreferredFormat = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatQuotedUTF8String: PreferredFormat = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatUTF8String: PreferredFormat = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatBSTRString: PreferredFormat = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatQuotedHString: PreferredFormat = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatHString: PreferredFormat = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatRaw: PreferredFormat = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatEnumNameOnly: PreferredFormat = 12i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatEscapedStringWithQuote: PreferredFormat = 13i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatUTF32String: PreferredFormat = 14i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const FormatQuotedUTF32String: PreferredFormat = 15i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type RIP_INFO_TYPE = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SLE_ERROR: RIP_INFO_TYPE = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SLE_MINORERROR: RIP_INFO_TYPE = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SLE_WARNING: RIP_INFO_TYPE = 3u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type RTL_VIRTUAL_UNWIND_HANDLER_TYPE = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNW_FLAG_NHANDLER: RTL_VIRTUAL_UNWIND_HANDLER_TYPE = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNW_FLAG_EHANDLER: RTL_VIRTUAL_UNWIND_HANDLER_TYPE = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNW_FLAG_UHANDLER: RTL_VIRTUAL_UNWIND_HANDLER_TYPE = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const UNW_FLAG_CHAININFO: RTL_VIRTUAL_UNWIND_HANDLER_TYPE = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type RawSearchFlags = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const RawSearchNone: RawSearchFlags = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const RawSearchNoBases: RawSearchFlags = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SCRIPTGCTYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTGCTYPE_NORMAL: SCRIPTGCTYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTGCTYPE_EXHAUSTIVE: SCRIPTGCTYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SCRIPTLANGUAGEVERSION = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTLANGUAGEVERSION_DEFAULT: SCRIPTLANGUAGEVERSION = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTLANGUAGEVERSION_5_7: SCRIPTLANGUAGEVERSION = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTLANGUAGEVERSION_5_8: SCRIPTLANGUAGEVERSION = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTLANGUAGEVERSION_MAX: SCRIPTLANGUAGEVERSION = 255i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SCRIPTSTATE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTSTATE_UNINITIALIZED: SCRIPTSTATE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTSTATE_INITIALIZED: SCRIPTSTATE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTSTATE_STARTED: SCRIPTSTATE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTSTATE_CONNECTED: SCRIPTSTATE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTSTATE_DISCONNECTED: SCRIPTSTATE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTSTATE_CLOSED: SCRIPTSTATE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SCRIPTTHREADSTATE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTHREADSTATE_NOTINSCRIPT: SCRIPTTHREADSTATE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTHREADSTATE_RUNNING: SCRIPTTHREADSTATE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SCRIPTTRACEINFO = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTRACEINFO_SCRIPTSTART: SCRIPTTRACEINFO = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTRACEINFO_SCRIPTEND: SCRIPTTRACEINFO = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTRACEINFO_COMCALLSTART: SCRIPTTRACEINFO = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTRACEINFO_COMCALLEND: SCRIPTTRACEINFO = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTRACEINFO_CREATEOBJSTART: SCRIPTTRACEINFO = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTRACEINFO_CREATEOBJEND: SCRIPTTRACEINFO = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTRACEINFO_GETOBJSTART: SCRIPTTRACEINFO = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTTRACEINFO_GETOBJEND: SCRIPTTRACEINFO = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SCRIPTUICHANDLING = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTUICHANDLING_ALLOW: SCRIPTUICHANDLING = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTUICHANDLING_NOUIERROR: SCRIPTUICHANDLING = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTUICHANDLING_NOUIDEFAULT: SCRIPTUICHANDLING = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SCRIPTUICITEM = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTUICITEM_INPUTBOX: SCRIPTUICITEM = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SCRIPTUICITEM_MSGBOX: SCRIPTUICITEM = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SCRIPT_DEBUGGER_OPTIONS = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SDO_NONE: SCRIPT_DEBUGGER_OPTIONS = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SDO_ENABLE_FIRST_CHANCE_EXCEPTIONS: SCRIPT_DEBUGGER_OPTIONS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SDO_ENABLE_WEB_WORKER_SUPPORT: SCRIPT_DEBUGGER_OPTIONS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SDO_ENABLE_NONUSER_CODE_SUPPORT: SCRIPT_DEBUGGER_OPTIONS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SDO_ENABLE_LIBRARY_STACK_FRAME: SCRIPT_DEBUGGER_OPTIONS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SCRIPT_ERROR_DEBUG_EXCEPTION_THROWN_KIND = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ETK_FIRST_CHANCE: SCRIPT_ERROR_DEBUG_EXCEPTION_THROWN_KIND = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ETK_USER_UNHANDLED: SCRIPT_ERROR_DEBUG_EXCEPTION_THROWN_KIND = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ETK_UNHANDLED: SCRIPT_ERROR_DEBUG_EXCEPTION_THROWN_KIND = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SCRIPT_INVOCATION_CONTEXT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SICT_Event: SCRIPT_INVOCATION_CONTEXT_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SICT_SetTimeout: SCRIPT_INVOCATION_CONTEXT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SICT_SetInterval: SCRIPT_INVOCATION_CONTEXT_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SICT_SetImmediate: SCRIPT_INVOCATION_CONTEXT_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SICT_RequestAnimationFrame: SCRIPT_INVOCATION_CONTEXT_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SICT_ToString: SCRIPT_INVOCATION_CONTEXT_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SICT_MutationObserverCheckpoint: SCRIPT_INVOCATION_CONTEXT_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SICT_WWAExecUnsafeLocalFunction: SCRIPT_INVOCATION_CONTEXT_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SICT_WWAExecAtPriority: SCRIPT_INVOCATION_CONTEXT_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SYMBOL_INFO_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_CLR_TOKEN: SYMBOL_INFO_FLAGS = 262144u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_CONSTANT: SYMBOL_INFO_FLAGS = 256u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_EXPORT: SYMBOL_INFO_FLAGS = 512u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_FORWARDER: SYMBOL_INFO_FLAGS = 1024u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_FRAMEREL: SYMBOL_INFO_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_FUNCTION: SYMBOL_INFO_FLAGS = 2048u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_ILREL: SYMBOL_INFO_FLAGS = 65536u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_LOCAL: SYMBOL_INFO_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_METADATA: SYMBOL_INFO_FLAGS = 131072u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_PARAMETER: SYMBOL_INFO_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_REGISTER: SYMBOL_INFO_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_REGREL: SYMBOL_INFO_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_SLOT: SYMBOL_INFO_FLAGS = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_THUNK: SYMBOL_INFO_FLAGS = 8192u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_TLSREL: SYMBOL_INFO_FLAGS = 16384u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_VALUEPRESENT: SYMBOL_INFO_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMFLAG_VIRTUAL: SYMBOL_INFO_FLAGS = 4096u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SYM_FIND_ID_OPTION = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_DWORD: SYM_FIND_ID_OPTION = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_DWORDPTR: SYM_FIND_ID_OPTION = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SSRVOPT_GUIDPTR: SYM_FIND_ID_OPTION = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SYM_LOAD_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SLMFLAG_NONE: SYM_LOAD_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SLMFLAG_VIRTUAL: SYM_LOAD_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SLMFLAG_ALT_INDEX: SYM_LOAD_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SLMFLAG_NO_SYMBOLS: SYM_LOAD_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SYM_SRV_STORE_FILE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSTOREOPT_COMPRESS: SYM_SRV_STORE_FILE_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSTOREOPT_OVERWRITE: SYM_SRV_STORE_FILE_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSTOREOPT_PASS_IF_EXISTS: SYM_SRV_STORE_FILE_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSTOREOPT_POINTER: SYM_SRV_STORE_FILE_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SYMSTOREOPT_RETURNINDEX: SYM_SRV_STORE_FILE_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SYM_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymNone: SYM_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymCoff: SYM_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymCv: SYM_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymPdb: SYM_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymExport: SYM_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymDeferred: SYM_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymSym: SYM_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymDia: SYM_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymVirtual: SYM_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const NumSymTypes: SYM_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type ScriptChangeKind = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptRename: ScriptChangeKind = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type ScriptDebugEvent = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugBreakpoint: ScriptDebugEvent = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugStep: ScriptDebugEvent = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugException: ScriptDebugEvent = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugAsyncBreak: ScriptDebugEvent = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type ScriptDebugEventFilter = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugEventFilterEntry: ScriptDebugEventFilter = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugEventFilterException: ScriptDebugEventFilter = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugEventFilterUnhandledException: ScriptDebugEventFilter = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugEventFilterAbort: ScriptDebugEventFilter = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type ScriptDebugState = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugNoDebugger: ScriptDebugState = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugNotExecuting: ScriptDebugState = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugExecuting: ScriptDebugState = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptDebugBreak: ScriptDebugState = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type ScriptExecutionKind = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptExecutionNormal: ScriptExecutionKind = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptExecutionStepIn: ScriptExecutionKind = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptExecutionStepOut: ScriptExecutionKind = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ScriptExecutionStepOver: ScriptExecutionKind = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SignatureComparison = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const Unrelated: SignatureComparison = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const Ambiguous: SignatureComparison = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const LessSpecific: SignatureComparison = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const MoreSpecific: SignatureComparison = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const Identical: SignatureComparison = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SymbolKind = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const Symbol: SymbolKind = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolModule: SymbolKind = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolType: SymbolKind = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolField: SymbolKind = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolConstant: SymbolKind = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolData: SymbolKind = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolBaseClass: SymbolKind = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolPublic: SymbolKind = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolFunction: SymbolKind = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type SymbolSearchOptions = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolSearchNone: SymbolSearchOptions = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolSearchCompletion: SymbolSearchOptions = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SymbolSearchCaseInsensitive: SymbolSearchOptions = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type THREAD_ERROR_MODE = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SEM_ALL_ERRORS: THREAD_ERROR_MODE = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SEM_FAILCRITICALERRORS: THREAD_ERROR_MODE = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SEM_NOGPFAULTERRORBOX: THREAD_ERROR_MODE = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SEM_NOOPENFILEERRORBOX: THREAD_ERROR_MODE = 32768u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const SEM_NOALIGNMENTFAULTEXCEPT: THREAD_ERROR_MODE = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type THREAD_WRITE_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadWriteThread: THREAD_WRITE_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadWriteStack: THREAD_WRITE_FLAGS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadWriteContext: THREAD_WRITE_FLAGS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadWriteBackingStore: THREAD_WRITE_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadWriteInstructionWindow: THREAD_WRITE_FLAGS = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadWriteThreadData: THREAD_WRITE_FLAGS = 32i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const ThreadWriteThreadInfo: THREAD_WRITE_FLAGS = 64i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type TypeKind = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TypeUDT: TypeKind = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TypePointer: TypeKind = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TypeMemberPointer: TypeKind = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TypeArray: TypeKind = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TypeFunction: TypeKind = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TypeTypedef: TypeKind = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TypeEnum: TypeKind = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TypeIntrinsic: TypeKind = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const TypeExtendedArray: TypeKind = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type VER_PLATFORM = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const VER_PLATFORM_WIN32s: VER_PLATFORM = 0u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const VER_PLATFORM_WIN32_WINDOWS: VER_PLATFORM = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const VER_PLATFORM_WIN32_NT: VER_PLATFORM = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type VarArgsKind = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const VarArgsNone: VarArgsKind = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const VarArgsCStyle: VarArgsKind = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type WAIT_CHAIN_THREAD_OPTIONS = u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WCT_OUT_OF_PROC_COM_FLAG: WAIT_CHAIN_THREAD_OPTIONS = 2u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WCT_OUT_OF_PROC_CS_FLAG: WAIT_CHAIN_THREAD_OPTIONS = 4u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WCT_OUT_OF_PROC_FLAG: WAIT_CHAIN_THREAD_OPTIONS = 1u32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type WCT_OBJECT_STATUS = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusNoAccess: WCT_OBJECT_STATUS = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusRunning: WCT_OBJECT_STATUS = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusBlocked: WCT_OBJECT_STATUS = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusPidOnly: WCT_OBJECT_STATUS = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusPidOnlyRpcss: WCT_OBJECT_STATUS = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusOwned: WCT_OBJECT_STATUS = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusNotOwned: WCT_OBJECT_STATUS = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusAbandoned: WCT_OBJECT_STATUS = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusUnknown: WCT_OBJECT_STATUS = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusError: WCT_OBJECT_STATUS = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctStatusMax: WCT_OBJECT_STATUS = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type WCT_OBJECT_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctCriticalSectionType: WCT_OBJECT_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctSendMessageType: WCT_OBJECT_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctMutexType: WCT_OBJECT_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctAlpcType: WCT_OBJECT_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctComType: WCT_OBJECT_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctThreadWaitType: WCT_OBJECT_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctProcessWaitType: WCT_OBJECT_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctThreadType: WCT_OBJECT_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctComActivationType: WCT_OBJECT_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctUnknownType: WCT_OBJECT_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctSocketIoType: WCT_OBJECT_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctSmbIoType: WCT_OBJECT_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WctMaxType: WCT_OBJECT_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type WHEA_ERROR_SOURCE_STATE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcStateStopped: WHEA_ERROR_SOURCE_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcStateStarted: WHEA_ERROR_SOURCE_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcStateRemoved: WHEA_ERROR_SOURCE_STATE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcStateRemovePending: WHEA_ERROR_SOURCE_STATE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type WHEA_ERROR_SOURCE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeMCE: WHEA_ERROR_SOURCE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeCMC: WHEA_ERROR_SOURCE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeCPE: WHEA_ERROR_SOURCE_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeNMI: WHEA_ERROR_SOURCE_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypePCIe: WHEA_ERROR_SOURCE_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeGeneric: WHEA_ERROR_SOURCE_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeINIT: WHEA_ERROR_SOURCE_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeBOOT: WHEA_ERROR_SOURCE_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeSCIGeneric: WHEA_ERROR_SOURCE_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeIPFMCA: WHEA_ERROR_SOURCE_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeIPFCMC: WHEA_ERROR_SOURCE_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeIPFCPE: WHEA_ERROR_SOURCE_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeGenericV2: WHEA_ERROR_SOURCE_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeSCIGenericV2: WHEA_ERROR_SOURCE_TYPE = 13i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeBMC: WHEA_ERROR_SOURCE_TYPE = 14i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypePMEM: WHEA_ERROR_SOURCE_TYPE = 15i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeDeviceDriver: WHEA_ERROR_SOURCE_TYPE = 16i32;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub const WheaErrSrcTypeMax: WHEA_ERROR_SOURCE_TYPE = 17i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct ADDRESS {
+    pub Offset: u32,
+    pub Segment: u16,
+    pub Mode: ADDRESS_MODE,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for ADDRESS {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for ADDRESS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub struct ADDRESS64 {
+    pub Offset: u64,
+    pub Segment: u16,
+    pub Mode: ADDRESS_MODE,
+}
+impl ::core::marker::Copy for ADDRESS64 {}
+impl ::core::clone::Clone for ADDRESS64 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub union AER_BRIDGE_DESCRIPTOR_FLAGS {
+    pub Anonymous: AER_BRIDGE_DESCRIPTOR_FLAGS_0,
+    pub AsUSHORT: u16,
+}
+impl ::core::marker::Copy for AER_BRIDGE_DESCRIPTOR_FLAGS {}
+impl ::core::clone::Clone for AER_BRIDGE_DESCRIPTOR_FLAGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub struct AER_BRIDGE_DESCRIPTOR_FLAGS_0 {
+    pub _bitfield: u16,
+}
+impl ::core::marker::Copy for AER_BRIDGE_DESCRIPTOR_FLAGS_0 {}
+impl ::core::clone::Clone for AER_BRIDGE_DESCRIPTOR_FLAGS_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub union AER_ENDPOINT_DESCRIPTOR_FLAGS {
+    pub Anonymous: AER_ENDPOINT_DESCRIPTOR_FLAGS_0,
+    pub AsUSHORT: u16,
+}
+impl ::core::marker::Copy for AER_ENDPOINT_DESCRIPTOR_FLAGS {}
+impl ::core::clone::Clone for AER_ENDPOINT_DESCRIPTOR_FLAGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub struct AER_ENDPOINT_DESCRIPTOR_FLAGS_0 {
+    pub _bitfield: u16,
+}
+impl ::core::marker::Copy for AER_ENDPOINT_DESCRIPTOR_FLAGS_0 {}
+impl ::core::clone::Clone for AER_ENDPOINT_DESCRIPTOR_FLAGS_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub union AER_ROOTPORT_DESCRIPTOR_FLAGS {
+    pub Anonymous: AER_ROOTPORT_DESCRIPTOR_FLAGS_0,
+    pub AsUSHORT: u16,
+}
+impl ::core::marker::Copy for AER_ROOTPORT_DESCRIPTOR_FLAGS {}
+impl ::core::clone::Clone for AER_ROOTPORT_DESCRIPTOR_FLAGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub struct AER_ROOTPORT_DESCRIPTOR_FLAGS_0 {
+    pub _bitfield: u16,
+}
+impl ::core::marker::Copy for AER_ROOTPORT_DESCRIPTOR_FLAGS_0 {}
+impl ::core::clone::Clone for AER_ROOTPORT_DESCRIPTOR_FLAGS_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub struct API_VERSION {
+    pub MajorVersion: u16,
+    pub MinorVersion: u16,
+    pub Revision: u16,
+    pub Reserved: u16,
+}
+impl ::core::marker::Copy for API_VERSION {}
+impl ::core::clone::Clone for API_VERSION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+pub struct ARM64_NT_CONTEXT {
+    pub ContextFlags: u32,
+    pub Cpsr: u32,
+    pub Anonymous: ARM64_NT_CONTEXT_0,
+    pub Sp: u64,
+    pub Pc: u64,
+    pub V: [ARM64_NT_NEON128; 32],
+    pub Fpcr: u32,
+    pub Fpsr: u32,
+    pub Bcr: [u32; 8],
+    pub Bvr: [u64; 8],
+    pub Wcr: [u32; 2],
+    pub Wvr: [u64; 2],
+}
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+impl ::core::marker::Copy for ARM64_NT_CONTEXT {}
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+impl ::core::clone::Clone for ARM64_NT_CONTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+pub union ARM64_NT_CONTEXT_0 {
+    pub Anonymous: ARM64_NT_CONTEXT_0_0,
+    pub X: [u64; 31],
+}
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+impl ::core::marker::Copy for ARM64_NT_CONTEXT_0 {}
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+impl ::core::clone::Clone for ARM64_NT_CONTEXT_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+pub struct ARM64_NT_CONTEXT_0_0 {
+    pub X0: u64,
+    pub X1: u64,
+    pub X2: u64,
+    pub X3: u64,
+    pub X4: u64,
+    pub X5: u64,
+    pub X6: u64,
+    pub X7: u64,
+    pub X8: u64,
+    pub X9: u64,
+    pub X10: u64,
+    pub X11: u64,
+    pub X12: u64,
+    pub X13: u64,
+    pub X14: u64,
+    pub X15: u64,
+    pub X16: u64,
+    pub X17: u64,
+    pub X18: u64,
+    pub X19: u64,
+    pub X20: u64,
+    pub X21: u64,
+    pub X22: u64,
+    pub X23: u64,
+    pub X24: u64,
+    pub X25: u64,
+    pub X26: u64,
+    pub X27: u64,
+    pub X28: u64,
+    pub Fp: u64,
+    pub Lr: u64,
+}
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+impl ::core::marker::Copy for ARM64_NT_CONTEXT_0_0 {}
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
+impl ::core::clone::Clone for ARM64_NT_CONTEXT_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub union ARM64_NT_NEON128 {
+    pub Anonymous: ARM64_NT_NEON128_0,
+    pub D: [f64; 2],
+    pub S: [f32; 4],
+    pub H: [u16; 8],
+    pub B: [u8; 16],
+}
+impl ::core::marker::Copy for ARM64_NT_NEON128 {}
+impl ::core::clone::Clone for ARM64_NT_NEON128 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub struct ARM64_NT_NEON128_0 {
+    pub Low: u64,
+    pub High: i64,
+}
+impl ::core::marker::Copy for ARM64_NT_NEON128_0 {}
+impl ::core::clone::Clone for ARM64_NT_NEON128_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub struct ArrayDimension {
+    pub LowerBound: i64,
+    pub Length: u64,
+    pub Stride: u64,
+}
+impl ::core::marker::Copy for ArrayDimension {}
+impl ::core::clone::Clone for ArrayDimension {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub struct BUSDATA {
+    pub BusDataType: u32,
+    pub BusNumber: u32,
+    pub SlotNumber: u32,
+    pub Buffer: *mut ::core::ffi::c_void,
+    pub Offset: u32,
+    pub Length: u32,
+}
+impl ::core::marker::Copy for BUSDATA {}
+impl ::core::clone::Clone for BUSDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
 #[cfg(target_arch = "aarch64")]
@@ -2744,24 +7690,6 @@ impl ::core::clone::Clone for CREATE_THREAD_DEBUG_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CROSS_PLATFORM_MAXIMUM_PROCESSORS: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CURRENT_KD_SECONDARY_VERSION: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type CallingConventionKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CallingConventionUnknown: CallingConventionKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CallingConventionCDecl: CallingConventionKind = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CallingConventionFastCall: CallingConventionKind = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CallingConventionStdCall: CallingConventionKind = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CallingConventionSysCall: CallingConventionKind = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CallingConventionThisCall: CallingConventionKind = 5i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DBGHELP_DATA_REPORT_STRUCT {
@@ -2854,250 +7782,6 @@ impl ::core::clone::Clone for DBGKD_GET_VERSION64 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type DBGKD_MAJOR_TYPES = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_NT: DBGKD_MAJOR_TYPES = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_XBOX: DBGKD_MAJOR_TYPES = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_BIG: DBGKD_MAJOR_TYPES = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_EXDI: DBGKD_MAJOR_TYPES = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_NTBD: DBGKD_MAJOR_TYPES = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_EFI: DBGKD_MAJOR_TYPES = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_TNT: DBGKD_MAJOR_TYPES = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_SINGULARITY: DBGKD_MAJOR_TYPES = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_HYPERVISOR: DBGKD_MAJOR_TYPES = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_MIDORI: DBGKD_MAJOR_TYPES = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_CE: DBGKD_MAJOR_TYPES = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_MAJOR_COUNT: DBGKD_MAJOR_TYPES = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_SIMULATION_EXDI: i32 = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_SIMULATION_NONE: i32 = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_VERS_FLAG_DATA: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_VERS_FLAG_HAL_IN_NTOS: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_VERS_FLAG_HSS: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_VERS_FLAG_MP: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_VERS_FLAG_NOMM: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_VERS_FLAG_PARTITIONS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGKD_VERS_FLAG_PTR64: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type DBGPROP_ATTRIB_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_NO_ATTRIB: DBGPROP_ATTRIB_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_VALUE_IS_INVALID: DBGPROP_ATTRIB_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_VALUE_IS_EXPANDABLE: DBGPROP_ATTRIB_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_VALUE_IS_FAKE: DBGPROP_ATTRIB_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_VALUE_IS_METHOD: DBGPROP_ATTRIB_FLAGS = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_VALUE_IS_EVENT: DBGPROP_ATTRIB_FLAGS = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_VALUE_IS_RAW_STRING: DBGPROP_ATTRIB_FLAGS = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_VALUE_READONLY: DBGPROP_ATTRIB_FLAGS = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_ACCESS_PUBLIC: DBGPROP_ATTRIB_FLAGS = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_ACCESS_PRIVATE: DBGPROP_ATTRIB_FLAGS = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_ACCESS_PROTECTED: DBGPROP_ATTRIB_FLAGS = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_ACCESS_FINAL: DBGPROP_ATTRIB_FLAGS = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_STORAGE_GLOBAL: DBGPROP_ATTRIB_FLAGS = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_STORAGE_STATIC: DBGPROP_ATTRIB_FLAGS = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_STORAGE_FIELD: DBGPROP_ATTRIB_FLAGS = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_STORAGE_VIRTUAL: DBGPROP_ATTRIB_FLAGS = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_TYPE_IS_CONSTANT: DBGPROP_ATTRIB_FLAGS = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_TYPE_IS_SYNCHRONIZED: DBGPROP_ATTRIB_FLAGS = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_TYPE_IS_VOLATILE: DBGPROP_ATTRIB_FLAGS = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_HAS_EXTENDED_ATTRIBS: DBGPROP_ATTRIB_FLAGS = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_FRAME_INTRYBLOCK: DBGPROP_ATTRIB_FLAGS = 16777216u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_FRAME_INCATCHBLOCK: DBGPROP_ATTRIB_FLAGS = 33554432u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_FRAME_INFINALLYBLOCK: DBGPROP_ATTRIB_FLAGS = 67108864u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_VALUE_IS_RETURN_VALUE: DBGPROP_ATTRIB_FLAGS = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_ATTRIB_VALUE_PENDING_MUTATION: DBGPROP_ATTRIB_FLAGS = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type DBGPROP_INFO = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_INFO_NAME: DBGPROP_INFO = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_INFO_TYPE: DBGPROP_INFO = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_INFO_VALUE: DBGPROP_INFO = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_INFO_FULLNAME: DBGPROP_INFO = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_INFO_ATTRIBUTES: DBGPROP_INFO = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_INFO_DEBUGPROP: DBGPROP_INFO = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_INFO_BEAUTIFY: DBGPROP_INFO = 33554432u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_INFO_CALLTOSTRING: DBGPROP_INFO = 67108864u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBGPROP_INFO_AUTOEXPAND: DBGPROP_INFO = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_ADDRESS_AT_END: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_ADDRESS_OF_FIELD: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_ARRAY: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_BLOCK_RECURSE: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_CALL_FOR_EACH: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_COMPACT_OUT: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_COPY_TYPE_DATA: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_ARRAY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_CALL_BEFORE_PRINT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_COPY_FIELD_DATA: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_DEFAULT_STRING: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_FULL_NAME: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_GUID_STRING: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_MULTI_STRING: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_NO_CALLBACK_REQ: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_NO_PRINT: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_RECUR_ON_THIS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_RETURN_ADDRESS: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_SIZE_IN_BITS: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_UTF32_STRING: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FIELD_WCHAR_STRING: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_FUNCTION_FORMAT: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_GET_SIZE_ONLY: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_LIST: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_MATCH_SIZE: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_NO_INDENT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_NO_OFFSET: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_NO_PRINT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_READ_PHYSICAL: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_DUMP_VERBOSE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_FRAME_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_FRAME_IGNORE_INLINE: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_RETURN_SUBTYPES: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_RETURN_TYPE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBG_RETURN_TYPE_VALUES: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBHHEADER_PDBGUID: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ADDSYNTHMOD_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ADDSYNTHMOD_ZEROBASE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ADDSYNTHSYM_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ANY_ID: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ASMOPT_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ASMOPT_IGNORE_OUTPUT_WIDTH: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ASMOPT_NO_CODE_BYTES: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ASMOPT_SOURCE_LINE_NUMBER: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ASMOPT_VERBOSE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_EXDI_DRIVER: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_EXISTING: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_INSTALL_DRIVER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_INVASIVE_NO_INITIAL_BREAK: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_INVASIVE_RESUME_PROCESS: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_KERNEL_CONNECTION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_LOCAL_KERNEL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_NONINVASIVE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_NONINVASIVE_ALLOW_PARTIAL: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ATTACH_NONINVASIVE_NO_SUSPEND: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAKPOINT_ADDER_ONLY: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAKPOINT_CODE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAKPOINT_DATA: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAKPOINT_DEFERRED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAKPOINT_ENABLED: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAKPOINT_GO_ONLY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAKPOINT_INLINE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAKPOINT_ONE_SHOT: u32 = 16u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_BREAKPOINT_PARAMETERS {
@@ -3120,16 +7804,6 @@ impl ::core::clone::Clone for DEBUG_BREAKPOINT_PARAMETERS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAKPOINT_TIME: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAK_EXECUTE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAK_IO: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAK_READ: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_BREAK_WRITE: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_CACHED_SYMBOL_INFO {
@@ -3145,90 +7819,6 @@ impl ::core::clone::Clone for DEBUG_CACHED_SYMBOL_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_ALL: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_DATA: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_ADDBREAKPOINT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_EVALUATE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_EXECUTE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_EXECUTECOMMANDFILE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_INLINESTEP: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_INLINESTEP_PSEUDO: u32 = 17u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_REMOVEBREAKPOINT: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_SETSCOPE: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_SETSCOPEFRAMEBYINDEX: u32 = 13u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_SETSCOPEFROMJITDEBUGINFO: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_SETSCOPEFROMSTOREDEVENT: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_SETVALUE: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_SETVALUE2: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_WRITEPHYSICAL: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_WRITEPHYSICAL2: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_WRITEVIRTUAL: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REFRESH_WRITEVIRTUALUNCACHED: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CDS_REGISTERS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_ALL: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_ASSEMBLY_OPTIONS: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_BREAKPOINTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_CODE_LEVEL: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_CURRENT_THREAD: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_EFFECTIVE_PROCESSOR: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_ENGINE_OPTIONS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_EVENT_FILTERS: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_EXECUTION_STATUS: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_EXPRESSION_SYNTAX: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_EXTENSIONS: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_LOG_FILE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_PROCESS_OPTIONS: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_RADIX: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_SYSTEMS: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CES_TEXT_REPLACEMENTS: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLASS_IMAGE_FILE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLASS_KERNEL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLASS_UNINITIALIZED: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLASS_USER_WINDOWS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLIENT_CDB: u32 = 4u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_CLIENT_CONTEXT {
@@ -3241,34 +7831,6 @@ impl ::core::clone::Clone for DEBUG_CLIENT_CONTEXT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLIENT_KD: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLIENT_NTKD: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLIENT_NTSD: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLIENT_UNKNOWN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLIENT_VSINT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLIENT_WINDBG: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CLIENT_WINIDE: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CMDEX_ADD_EVENT_STRING: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CMDEX_INVALID: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CMDEX_RESET_EVENT_STRINGS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_COMMAND_EXCEPTION_ID: u32 = 3688893886u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CONNECT_SESSION_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CONNECT_SESSION_NO_ANNOUNCE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CONNECT_SESSION_NO_VERSION: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_CREATE_PROCESS_OPTIONS {
@@ -3283,394 +7845,6 @@ impl ::core::clone::Clone for DEBUG_CREATE_PROCESS_OPTIONS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CSS_ALL: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CSS_COLLAPSE_CHILDREN: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CSS_LOADS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CSS_PATHS: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CSS_SCOPE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CSS_SYMBOL_OPTIONS: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CSS_TYPE_OPTIONS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CSS_UNLOADS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CURRENT_DEFAULT: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CURRENT_DISASM: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CURRENT_REGISTERS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CURRENT_SOURCE_LINE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_CURRENT_SYMBOL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_BASE_TRANSLATION_VIRTUAL_OFFSET: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_BreakpointWithStatusAddr: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_CmNtCSDVersionAddr: u32 = 616u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_DumpAttributes: u32 = 100072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_DumpFormatVersion: u32 = 100040u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_DumpMmStorage: u32 = 100064u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_DumpPowerState: u32 = 100056u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_DumpWriterStatus: u32 = 100032u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_DumpWriterVersion: u32 = 100048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_EtwpDebuggerData: u32 = 816u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_ExpNumberOfPagedPoolsAddr: u32 = 112u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_ExpPagedPoolDescriptorAddr: u32 = 104u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_ExpSystemResourcesListAddr: u32 = 96u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_IopErrorLogListHeadAddr: u32 = 144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KPCR_OFFSET: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KPRCB_OFFSET: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KTHREAD_OFFSET: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KdPrintBufferSizeAddr: u32 = 720u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KdPrintCircularBufferAddr: u32 = 480u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KdPrintCircularBufferEndAddr: u32 = 488u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KdPrintCircularBufferPtrAddr: u32 = 712u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KdPrintRolloverCountAddr: u32 = 504u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KdPrintWritePointerAddr: u32 = 496u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KeBugCheckCallbackListHeadAddr: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KeTimeIncrementAddr: u32 = 120u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KeUserCallbackDispatcherAddr: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KernBase: u32 = 24u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KernelVerifierAddr: u32 = 576u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KiBugcheckDataAddr: u32 = 136u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KiCallUserModeAddr: u32 = 56u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KiNormalSystemCall: u32 = 528u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_KiProcessorBlockAddr: u32 = 536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmAllocatedNonPagedPoolAddr: u32 = 592u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmAvailablePagesAddr: u32 = 424u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmBadPagesDetected: u32 = 800u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmDriverCommitAddr: u32 = 352u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmExtendedCommitAddr: u32 = 376u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmFreePageListHeadAddr: u32 = 392u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmHighestPhysicalPageAddr: u32 = 240u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmHighestUserAddressAddr: u32 = 456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmLastUnloadedDriverAddr: u32 = 552u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmLoadedUserImageListAddr: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmLowestPhysicalPageAddr: u32 = 232u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmMaximumNonPagedPoolInBytesAddr: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmModifiedNoWritePageListHeadAddr: u32 = 416u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmModifiedPageListHeadAddr: u32 = 408u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmNonPagedPoolEndAddr: u32 = 280u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmNonPagedPoolStartAddr: u32 = 272u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmNonPagedSystemStartAddr: u32 = 264u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmNumberOfPagingFilesAddr: u32 = 224u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmNumberOfPhysicalPagesAddr: u32 = 248u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmPageSize: u32 = 312u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmPagedPoolCommitAddr: u32 = 368u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmPagedPoolEndAddr: u32 = 296u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmPagedPoolInformationAddr: u32 = 304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmPagedPoolStartAddr: u32 = 288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmPeakCommitmentAddr: u32 = 600u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmPfnDatabaseAddr: u32 = 192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmPhysicalMemoryBlockAddr: u32 = 624u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmProcessCommitAddr: u32 = 360u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmResidentAvailablePagesAddr: u32 = 432u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSessionBase: u32 = 632u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSessionSize: u32 = 640u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSharedCommitAddr: u32 = 344u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSizeOfPagedPoolInBytesAddr: u32 = 320u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSpecialPoolTagAddr: u32 = 568u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmStandbyPageListHeadAddr: u32 = 400u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSubsectionBaseAddr: u32 = 216u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSystemCacheEndAddr: u32 = 176u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSystemCacheStartAddr: u32 = 168u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSystemCacheWsAddr: u32 = 184u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSystemParentTablePage: u32 = 648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSystemPtesEndAddr: u32 = 208u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSystemPtesStartAddr: u32 = 200u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmSystemRangeStartAddr: u32 = 464u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmTotalCommitLimitAddr: u32 = 328u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmTotalCommitLimitMaximumAddr: u32 = 608u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmTotalCommittedPagesAddr: u32 = 336u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmTriageActionTakenAddr: u32 = 560u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmUnloadedDriversAddr: u32 = 544u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmUserProbeAddressAddr: u32 = 472u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmVerifierDataAddr: u32 = 584u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmVirtualTranslationBase: u32 = 656u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_MmZeroedPageListHeadAddr: u32 = 384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_NonPagedPoolDescriptorAddr: u32 = 448u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_NtBuildLabAddr: u32 = 520u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_ObpRootDirectoryObjectAddr: u32 = 152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_ObpTypeObjectTypeAddr: u32 = 160u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetEprocessDirectoryTableBase: u32 = 686u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetEprocessParentCID: u32 = 684u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetEprocessPeb: u32 = 682u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetKThreadApcProcess: u32 = 672u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetKThreadBStore: u32 = 676u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetKThreadBStoreLimit: u32 = 678u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetKThreadInitialStack: u32 = 670u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetKThreadKernelStack: u32 = 668u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetKThreadNextProcessor: u32 = 664u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetKThreadState: u32 = 674u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetKThreadTeb: u32 = 666u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetPrcbCpuType: u32 = 696u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetPrcbCurrentThread: u32 = 692u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetPrcbDpcRoutine: u32 = 690u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetPrcbMhz: u32 = 694u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetPrcbNumber: u32 = 702u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetPrcbProcessorState: u32 = 700u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_OffsetPrcbVendorString: u32 = 698u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_PROCESSOR_IDENTIFICATION: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_PROCESSOR_SPEED: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_PaeEnabled: u32 = 100000u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_PoolTrackTableAddr: u32 = 440u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_ProductType: u32 = 100016u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_PsActiveProcessHeadAddr: u32 = 80u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_PsLoadedModuleListAddr: u32 = 72u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_PspCidTableAddr: u32 = 88u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_PteBase: u32 = 864u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SPACE_BUS_DATA: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SPACE_CONTROL: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SPACE_COUNT: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SPACE_DEBUGGER_DATA: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SPACE_IO: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SPACE_MSR: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SPACE_PHYSICAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SPACE_VIRTUAL: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SavedContextAddr: u32 = 40u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SharedUserData: u32 = 100008u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SizeEProcess: u32 = 680u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SizeEThread: u32 = 704u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SizePrcb: u32 = 688u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DATA_SuiteMask: u32 = 100024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DISASM_EFFECTIVE_ADDRESS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DISASM_MATCHING_SYMBOLS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DISASM_SOURCE_FILE_NAME: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DISASM_SOURCE_LINE_NUMBER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_ACTIVE: u32 = 1030u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_DEFAULT: u32 = 1025u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_FILE_BASE: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_FILE_LOAD_FAILED_INDEX: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_FILE_ORIGINAL_CAB_INDEX: u32 = 4294967294u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_FILE_PAGE_FILE_DUMP: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_FULL: u32 = 1026u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_IMAGE_FILE: u32 = 1027u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_SMALL: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_TRACE_LOG: u32 = 1028u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_DUMP_WINDOWS_CE: u32 = 1029u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ECREATE_PROCESS_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ECREATE_PROCESS_INHERIT_HANDLES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ECREATE_PROCESS_USE_IMPLICIT_COMMAND_LINE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ECREATE_PROCESS_USE_VERIFIER_FLAGS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EINDEX_FROM_CURRENT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EINDEX_FROM_END: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EINDEX_FROM_START: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EINDEX_NAME: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_END_ACTIVE_DETACH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_END_ACTIVE_TERMINATE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_END_DISCONNECT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_END_PASSIVE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_END_REENTRANT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_ALL: u32 = 15728639u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_ALLOW_NETWORK_PATHS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_ALLOW_READ_ONLY_BREAKPOINTS: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_DEBUGGING_SENSITIVE_DATA: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_DISABLESQM: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_DISABLE_EXECUTION_COMMANDS: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_DISABLE_MANAGED_SUPPORT: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_DISABLE_MODULE_SYMBOL_LOAD: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_DISABLE_STEPLINES_OPTIONS: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_DISALLOW_IMAGE_FILE_MAPPING: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_DISALLOW_NETWORK_PATHS: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_DISALLOW_SHELL_COMMANDS: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_FAIL_INCOMPLETE_INFORMATION: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_FINAL_BREAK: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_IGNORE_DBGHELP_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_IGNORE_EXTENSION_VERSIONS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_IGNORE_LOADER_EXCEPTIONS: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_INITIAL_BREAK: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_INITIAL_MODULE_BREAK: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_KD_QUIET_MODE: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_NO_EXECUTE_REPEAT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_PREFER_DML: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_PREFER_TRACE_FILES: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_ENGOPT_SYNCHRONIZE_BREAKPOINTS: u32 = 2048u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Threading\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Threading"))]
@@ -3710,34 +7884,6 @@ impl ::core::clone::Clone for DEBUG_EVENT_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_BREAKPOINT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_CHANGE_DEBUGGEE_STATE: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_CHANGE_ENGINE_STATE: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_CHANGE_SYMBOL_STATE: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type DEBUG_EVENT_CODE = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CREATE_PROCESS_DEBUG_EVENT: DEBUG_EVENT_CODE = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CREATE_THREAD_DEBUG_EVENT: DEBUG_EVENT_CODE = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXCEPTION_DEBUG_EVENT: DEBUG_EVENT_CODE = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXIT_PROCESS_DEBUG_EVENT: DEBUG_EVENT_CODE = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXIT_THREAD_DEBUG_EVENT: DEBUG_EVENT_CODE = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LOAD_DLL_DEBUG_EVENT: DEBUG_EVENT_CODE = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OUTPUT_DEBUG_STRING_EVENT: DEBUG_EVENT_CODE = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const RIP_EVENT: DEBUG_EVENT_CODE = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNLOAD_DLL_DEBUG_EVENT: DEBUG_EVENT_CODE = 7u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_EVENT_CONTEXT {
@@ -3752,36 +7898,6 @@ impl ::core::clone::Clone for DEBUG_EVENT_CONTEXT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_CREATE_PROCESS: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_CREATE_THREAD: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_EXCEPTION: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_EXIT_PROCESS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_EXIT_THREAD: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type DEBUG_EVENT_INFO_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEIT_GENERAL: DEBUG_EVENT_INFO_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEIT_ASMJS_IN_DEBUGGING: DEBUG_EVENT_INFO_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEIT_ASMJS_SUCCEEDED: DEBUG_EVENT_INFO_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEIT_ASMJS_FAILED: DEBUG_EVENT_INFO_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_LOAD_MODULE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_SERVICE_EXCEPTION: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_SESSION_STATUS: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_SYSTEM_ERROR: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EVENT_UNLOAD_MODULE: u32 = 128u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_EXCEPTION_FILTER_PARAMETERS {
@@ -3798,172 +7914,6 @@ impl ::core::clone::Clone for DEBUG_EXCEPTION_FILTER_PARAMETERS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_ECHO: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_EVENT: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_EXTENSION: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_HOTKEY: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_INTERNAL: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_MENU: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_NOT_LOGGED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_NO_REPEAT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_SCRIPT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_TOOLBAR: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_USER_CLICKED: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXECUTE_USER_TYPED: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXEC_FLAGS_NONBLOCK: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXPR_CPLUSPLUS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXPR_MASM: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXTENSION_AT_ENGINE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXTINIT_HAS_COMMAND_HELP: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXT_PVALUE_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXT_PVTYPE_IS_POINTER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXT_PVTYPE_IS_VALUE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_EXT_QVALUE_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_BREAK: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_CREATE_PROCESS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_CREATE_THREAD: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_DEBUGGEE_OUTPUT: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_EXIT_PROCESS: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_EXIT_THREAD: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_GO_HANDLED: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_GO_NOT_HANDLED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_IGNORE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_INITIAL_BREAKPOINT: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_INITIAL_MODULE_LOAD: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_LOAD_MODULE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_OUTPUT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_REMOVE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_SECOND_CHANCE_BREAK: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_SYSTEM_ERROR: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FILTER_UNLOAD_MODULE: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FIND_SOURCE_BEST_MATCH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FIND_SOURCE_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FIND_SOURCE_FULL_PATH: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FIND_SOURCE_NO_SRCSRV: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FIND_SOURCE_TOKEN_LOOKUP: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FIND_SOURCE_WITH_CHECKSUM: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FIND_SOURCE_WITH_CHECKSUM_STRICT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_CAB_SECONDARY_ALL_IMAGES: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_CAB_SECONDARY_FILES: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_NO_OVERWRITE: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_ADD_AVX_XSTATE_CONTEXT: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_CODE_SEGMENTS: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_DATA_SEGMENTS: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_FILTER_MEMORY: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_FILTER_PATHS: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_FILTER_TRIAGE: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_FULL_AUXILIARY_STATE: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_FULL_MEMORY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_FULL_MEMORY_INFO: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_HANDLE_DATA: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_IGNORE_INACCESSIBLE_MEM: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_INDIRECT_MEMORY: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_IPT_TRACE: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_MODULE_HEADERS: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_NO_AUXILIARY_STATE: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_NO_OPTIONAL_DATA: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_PRIVATE_READ_WRITE_MEMORY: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_PROCESS_THREAD_DATA: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_SCAN_PARTIAL_PAGES: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_THREAD_INFO: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_USER_SMALL_UNLOADED_MODULES: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FORMAT_WRITE_CAB: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FRAME_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_FRAME_IGNORE_INLINE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GETFNENT_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GETFNENT_RAW_ENTRY_ONLY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GETMOD_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GETMOD_NO_LOADED_MODULES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GETMOD_NO_UNLOADED_MODULES: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GET_PROC_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GET_PROC_FULL_MATCH: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GET_PROC_ONLY_MATCH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GET_PROC_SERVICE_NAME: u32 = 4u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_GET_TEXT_COMPLETIONS_IN {
@@ -3977,18 +7927,6 @@ impl ::core::clone::Clone for DEBUG_GET_TEXT_COMPLETIONS_IN {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GET_TEXT_COMPLETIONS_IS_DOT_COMMAND: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GET_TEXT_COMPLETIONS_IS_EXTENSION_COMMAND: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GET_TEXT_COMPLETIONS_IS_SYMBOL: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GET_TEXT_COMPLETIONS_NO_DOT_COMMANDS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GET_TEXT_COMPLETIONS_NO_EXTENSION_COMMANDS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GET_TEXT_COMPLETIONS_NO_SYMBOLS: u32 = 4u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_GET_TEXT_COMPLETIONS_OUT {
@@ -4004,18 +7942,6 @@ impl ::core::clone::Clone for DEBUG_GET_TEXT_COMPLETIONS_OUT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GSEL_ALLOW_HIGHER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GSEL_ALLOW_LOWER: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GSEL_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GSEL_INLINE_CALLSITE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GSEL_NEAREST_ONLY: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_GSEL_NO_SYMBOL_LOADS: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_HANDLE_DATA_BASIC {
@@ -4032,82 +7958,6 @@ impl ::core::clone::Clone for DEBUG_HANDLE_DATA_BASIC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_ALL_HANDLE_OPERATIONS: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_BASIC: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_HANDLE_COUNT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_MINI_EVENT_1: u32 = 13u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_MINI_MUTANT_1: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_MINI_MUTANT_2: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_MINI_PROCESS_1: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_MINI_PROCESS_2: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_MINI_SECTION_1: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_MINI_SEMAPHORE_1: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_MINI_THREAD_1: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_OBJECT_NAME: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_OBJECT_NAME_WIDE: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_PER_HANDLE_OPERATIONS: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_TYPE_NAME: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_HANDLE_DATA_TYPE_TYPE_NAME_WIDE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_INTERRUPT_ACTIVE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_INTERRUPT_EXIT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_INTERRUPT_PASSIVE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_IOUTPUT_ADDR_TRANSLATE: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_IOUTPUT_BREAKPOINT: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_IOUTPUT_EVENT: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_IOUTPUT_KD_PROTOCOL: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_IOUTPUT_REMOTING: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_ACTIVE_DUMP: u32 = 1030u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_CONNECTION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_DUMP: u32 = 1025u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_EXDI_DRIVER: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_FULL_DUMP: u32 = 1026u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_IDNA: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_INSTALL_DRIVER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_LOCAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_REPT: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_SMALL_DUMP: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KERNEL_TRACE_LOG: u32 = 1028u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KNOWN_STRUCT_GET_NAMES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KNOWN_STRUCT_GET_SINGLE_LINE_OUTPUT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_KNOWN_STRUCT_SUPPRESS_TYPE_NAME: u32 = 3u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_LAST_EVENT_INFO_BREAKPOINT {
@@ -4203,46 +8053,6 @@ impl ::core::clone::Clone for DEBUG_LAST_EVENT_INFO_UNLOAD_MODULE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_LEVEL_ASSEMBLY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_LEVEL_SOURCE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_LIVE_USER_NON_INVASIVE: u32 = 33u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_LOG_APPEND: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_LOG_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_LOG_DML: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_LOG_UNICODE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MANAGED_ALLOWED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MANAGED_DISABLED: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MANAGED_DLL_LOADED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MANRESET_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MANRESET_LOAD_DLL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MANSTR_LOADED_SUPPORT_DLL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MANSTR_LOAD_STATUS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MANSTR_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODNAME_IMAGE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODNAME_LOADED_IMAGE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODNAME_MAPPED_IMAGE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODNAME_MODULE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODNAME_SYMBOL_FILE: u32 = 3u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_MODULE_AND_ID {
@@ -4255,12 +8065,6 @@ impl ::core::clone::Clone for DEBUG_MODULE_AND_ID {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODULE_EXE_MODULE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODULE_EXPLICIT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODULE_LOADED: u32 = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_MODULE_PARAMETERS {
@@ -4283,24 +8087,6 @@ impl ::core::clone::Clone for DEBUG_MODULE_PARAMETERS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODULE_SECONDARY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODULE_SYM_BAD_CHECKSUM: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODULE_SYNTHETIC: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODULE_UNLOADED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_MODULE_USER_MODE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_NOTIFY_SESSION_ACCESSIBLE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_NOTIFY_SESSION_ACTIVE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_NOTIFY_SESSION_INACCESSIBLE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_NOTIFY_SESSION_INACTIVE: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_OFFSET_REGION {
@@ -4313,146 +8099,6 @@ impl ::core::clone::Clone for DEBUG_OFFSET_REGION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OFFSINFO_VIRTUAL_SOURCE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCBF_COMBINED_EXPLICIT_FLUSH: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCBF_DML_HAS_SPECIAL_CHARACTERS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCBF_DML_HAS_TAGS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCBI_ANY_FORMAT: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCBI_DML: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCBI_EXPLICIT_FLUSH: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCBI_TEXT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCB_DML: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCB_EXPLICIT_FLUSH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCB_TEXT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_ALL_CLIENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_ALL_OTHER_CLIENTS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_AMBIENT: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_AMBIENT_DML: u32 = 4294967294u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_AMBIENT_TEXT: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_DML: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_IGNORE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_LOG_ONLY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_NOT_LOGGED: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_OVERRIDE_MASK: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_SEND_MASK: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTCTL_THIS_CLIENT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_DEBUGGEE: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_DEBUGGEE_PROMPT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_ERROR: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_EXTENSION_WARNING: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_IDENTITY_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_NAME_END: &str = "**NAME**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_NAME_END_T: &str = "**NAME**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_NAME_END_WIDE: &str = "**NAME**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_NORMAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_OFFSET_END: &str = "**OFF**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_OFFSET_END_T: &str = "**OFF**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_OFFSET_END_WIDE: &str = "**OFF**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_PROMPT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_PROMPT_REGISTERS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_STATUS: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_SYMBOLS: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_SYMBOLS_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_SYMBOLS_NO_NAMES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_SYMBOLS_NO_OFFSETS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_SYMBOLS_NO_TYPES: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_SYMBOLS_NO_VALUES: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_TYPE_END: &str = "**TYPE**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_TYPE_END_T: &str = "**TYPE**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_TYPE_END_WIDE: &str = "**TYPE**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_VALUE_END: &str = "**VALUE**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_VALUE_END_T: &str = "**VALUE**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_VALUE_END_WIDE: &str = "**VALUE**";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_VERBOSE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_WARNING: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTPUT_XML: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTSYM_ALLOW_DISPLACEMENT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTSYM_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTSYM_FORCE_OFFSET: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTSYM_SOURCE_LINE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTTYPE_ADDRESS_AT_END: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTTYPE_ADDRESS_OF_FIELD: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTTYPE_BLOCK_RECURSE: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTTYPE_COMPACT_OUTPUT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTTYPE_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTTYPE_NO_INDENT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTTYPE_NO_OFFSET: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUTTYPE_VERBOSE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_OUT_TEXT_REPL_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PHYSICAL_CACHED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PHYSICAL_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PHYSICAL_UNCACHED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PHYSICAL_WRITE_COMBINED: u32 = 3u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -4568,26 +8214,6 @@ impl ::core::clone::Clone for DEBUG_PROCESSOR_IDENTIFICATION_X86 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PROCESS_DETACH_ON_EXIT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PROCESS_ONLY_THIS_PROCESS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PROC_DESC_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PROC_DESC_NO_COMMAND_LINE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PROC_DESC_NO_MTS_PACKAGES: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PROC_DESC_NO_PATHS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PROC_DESC_NO_SERVICES: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PROC_DESC_NO_SESSION_ID: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PROC_DESC_NO_USER_NAME: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_PROC_DESC_WITH_PACKAGEFAMILY: u32 = 64u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_READ_USER_MINIDUMP_STREAM {
@@ -4604,16 +8230,6 @@ impl ::core::clone::Clone for DEBUG_READ_USER_MINIDUMP_STREAM {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REGISTERS_ALL: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REGISTERS_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REGISTERS_FLOAT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REGISTERS_INT32: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REGISTERS_INT64: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_REGISTER_DESCRIPTION {
@@ -4631,122 +8247,6 @@ impl ::core::clone::Clone for DEBUG_REGISTER_DESCRIPTION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REGISTER_SUB_REGISTER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REGSRC_DEBUGGEE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REGSRC_EXPLICIT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REGSRC_FRAME: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_ADD_CACHED_SYMBOL_INFO: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_CLOSE_TOKEN: u32 = 30u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_CURRENT_OUTPUT_CALLBACKS_ARE_DML_AWARE: u32 = 19u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_DUPLICATE_TOKEN: u32 = 28u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_EXT_TYPED_DATA_ANSI: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_ADDITIONAL_CREATE_OPTIONS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_CACHED_SYMBOL_INFO: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_CAPTURED_EVENT_CODE_OFFSET: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_DUMP_HEADER: u32 = 21u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_EXTENSION_SEARCH_PATH_WIDE: u32 = 13u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_INSTRUMENTATION_VERSION: u32 = 37u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_MODULE_ARCHITECTURE: u32 = 38u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_OFFSET_UNWIND_INFORMATION: u32 = 20u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_TEXT_COMPLETIONS_ANSI: u32 = 18u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_TEXT_COMPLETIONS_WIDE: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_GET_WIN32_MAJOR_MINOR_VERSIONS: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_INLINE_QUERY: u32 = 35u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_MIDORI: u32 = 23u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_MISC_INFORMATION: u32 = 25u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_OPEN_PROCESS_TOKEN: u32 = 26u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_OPEN_THREAD_TOKEN: u32 = 27u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_PROCESS_DESCRIPTORS: u32 = 24u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_QUERY_INFO_TOKEN: u32 = 29u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_READ_CAPTURED_EVENT_CODE_STREAM: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_READ_USER_MINIDUMP_STREAM: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_REMOVE_CACHED_SYMBOL_INFO: u32 = 17u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_RESUME_THREAD: u32 = 34u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_SET_ADDITIONAL_CREATE_OPTIONS: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_SET_DUMP_HEADER: u32 = 22u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_SET_LOCAL_IMPLICIT_COMMAND_LINE: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_SOURCE_PATH_HAS_SOURCE_SERVER: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_TARGET_CAN_DETACH: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_TARGET_EXCEPTION_CONTEXT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_TARGET_EXCEPTION_RECORD: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_TARGET_EXCEPTION_THREAD: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_TL_INSTRUMENTATION_AWARE: u32 = 36u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_WOW_MODULE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_REQUEST_WOW_PROCESS: u32 = 31u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SCOPE_GROUP_ALL: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SCOPE_GROUP_ARGUMENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SCOPE_GROUP_BY_DATAMODEL: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SCOPE_GROUP_LOCALS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SERVERS_ALL: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SERVERS_DEBUGGER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SERVERS_PROCESS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SESSION_ACTIVE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SESSION_END: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SESSION_END_SESSION_ACTIVE_DETACH: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SESSION_END_SESSION_ACTIVE_TERMINATE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SESSION_END_SESSION_PASSIVE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SESSION_FAILURE: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SESSION_HIBERNATE: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SESSION_REBOOT: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SOURCE_IS_STATEMENT: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_SPECIFIC_FILTER_PARAMETERS {
@@ -4762,26 +8262,6 @@ impl ::core::clone::Clone for DEBUG_SPECIFIC_FILTER_PARAMETERS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SRCFILE_SYMBOL_CHECKSUMINFO: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SRCFILE_SYMBOL_TOKEN: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SRCFILE_SYMBOL_TOKEN_SOURCE_COMMAND_WIDE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type DEBUG_STACKFRAME_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DST_SCRIPT_FRAME: DEBUG_STACKFRAME_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DST_INTERNAL_FRAME: DEBUG_STACKFRAME_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DST_INVOCATION_FRAME: DEBUG_STACKFRAME_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_ARGUMENTS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_COLUMN_NAMES: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_DML: u32 = 2048u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -4804,12 +8284,6 @@ impl ::core::clone::Clone for DEBUG_STACK_FRAME {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_FRAME_ADDRESSES: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_FRAME_ADDRESSES_RA_ONLY: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_FRAME_ARCH: u32 = 16384u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -4834,66 +8308,6 @@ impl ::core::clone::Clone for DEBUG_STACK_FRAME_EX {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_FRAME_MEMORY_USAGE: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_FRAME_NUMBERS: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_FRAME_OFFSETS: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_FUNCTION_INFO: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_NONVOLATILE_REGISTERS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_PARAMETERS: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_PARAMETERS_NEWLINE: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_PROVIDER: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STACK_SOURCE_LINE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_BREAK: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_GO: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_GO_HANDLED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_GO_NOT_HANDLED: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_IGNORE_EVENT: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_INSIDE_WAIT: u64 = 4294967296u64;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_MASK: u32 = 31u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_NO_CHANGE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_NO_DEBUGGEE: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_OUT_OF_SYNC: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_RESTART_REQUESTED: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_REVERSE_GO: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_REVERSE_STEP_BRANCH: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_REVERSE_STEP_INTO: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_REVERSE_STEP_OVER: u32 = 13u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_STEP_BRANCH: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_STEP_INTO: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_STEP_OVER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_TIMEOUT: u32 = 17u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_WAIT_INPUT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_STATUS_WAIT_TIMEOUT: u64 = 8589934592u64;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_SYMBOL_ENTRY {
@@ -4916,18 +8330,6 @@ impl ::core::clone::Clone for DEBUG_SYMBOL_ENTRY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMBOL_EXPANDED: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMBOL_EXPANSION_LEVEL_MASK: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMBOL_IS_ARGUMENT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMBOL_IS_ARRAY: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMBOL_IS_FLOAT: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMBOL_IS_LOCAL: u32 = 512u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_SYMBOL_PARAMETERS {
@@ -4944,8 +8346,6 @@ impl ::core::clone::Clone for DEBUG_SYMBOL_PARAMETERS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMBOL_READ_ONLY: u32 = 32u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_SYMBOL_SOURCE_ENTRY {
@@ -4968,80 +8368,6 @@ impl ::core::clone::Clone for DEBUG_SYMBOL_SOURCE_ENTRY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMENT_IS_CODE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMENT_IS_DATA: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMENT_IS_LOCAL: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMENT_IS_MANAGED: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMENT_IS_PARAMETER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMENT_IS_SYNTHETIC: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMINFO_BREAKPOINT_SOURCE_LINE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMINFO_GET_MODULE_SYMBOL_NAMES_AND_OFFSETS: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMINFO_GET_SYMBOL_NAME_BY_OFFSET_AND_TAG_WIDE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMINFO_IMAGEHLP_MODULEW64: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMTYPE_CODEVIEW: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMTYPE_COFF: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMTYPE_DEFERRED: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMTYPE_DIA: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMTYPE_EXPORT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMTYPE_NONE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMTYPE_PDB: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYMTYPE_SYM: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYSOBJINFO_CURRENT_PROCESS_COOKIE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYSOBJINFO_THREAD_BASIC_INFORMATION: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYSOBJINFO_THREAD_NAME_WIDE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYSVERSTR_BUILD: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_SYSVERSTR_SERVICE_PACK: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TBINFO_AFFINITY: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TBINFO_ALL: u32 = 63u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TBINFO_EXIT_STATUS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TBINFO_PRIORITY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TBINFO_PRIORITY_CLASS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TBINFO_START_OFFSET: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TBINFO_TIMES: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TEXT_ALLOWBREAKPOINTS: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TEXT_ALLOWERRORREPORT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TEXT_EVALUATETOCODECONTEXT: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TEXT_ISEXPRESSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TEXT_ISNONUSERCODE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TEXT_NOSIDEEFFECTS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TEXT_RETURNVALUE: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DEBUG_THREAD_BASIC_INFORMATION {
@@ -5083,40 +8409,6 @@ impl ::core::clone::Clone for DEBUG_TYPED_DATA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TYPED_DATA_IS_IN_MEMORY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TYPED_DATA_PHYSICAL_CACHED: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TYPED_DATA_PHYSICAL_DEFAULT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TYPED_DATA_PHYSICAL_MEMORY: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TYPED_DATA_PHYSICAL_UNCACHED: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TYPED_DATA_PHYSICAL_WRITE_COMBINED: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TYPEOPTS_FORCERADIX_OUTPUT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TYPEOPTS_LONGSTATUS_DISPLAY: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TYPEOPTS_MATCH_MAXSIZE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_TYPEOPTS_UNICODE_DISPLAY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_USER_WINDOWS_DUMP: u32 = 1025u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_USER_WINDOWS_DUMP_WINDOWS_CE: u32 = 1029u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_USER_WINDOWS_IDNA: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_USER_WINDOWS_PROCESS: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_USER_WINDOWS_PROCESS_SERVER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_USER_WINDOWS_REPT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_USER_WINDOWS_SMALL_DUMP: u32 = 1024u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -5209,49 +8501,6 @@ impl ::core::clone::Clone for DEBUG_VALUE_0_2 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_FLOAT128: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_FLOAT32: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_FLOAT64: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_FLOAT80: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_FLOAT82: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_INT16: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_INT32: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_INT64: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_INT8: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_INVALID: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_TYPES: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_VECTOR128: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VALUE_VECTOR64: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VSEARCH_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VSEARCH_WRITABLE_ONLY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VSOURCE_DEBUGGEE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VSOURCE_DUMP_WITHOUT_MEMINFO: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VSOURCE_INVALID: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_VSOURCE_MAPPED_IMAGE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DEBUG_WAIT_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type DIGEST_FUNCTION = ::core::option::Option<unsafe extern "system" fn(refdata: *mut ::core::ffi::c_void, pdata: *mut u8, dwlength: u32) -> super::super::super::Foundation::BOOL>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
 #[cfg(target_arch = "aarch64")]
@@ -5307,42 +8556,6 @@ impl ::core::clone::Clone for DISPATCHER_CONTEXT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DMP_CONTEXT_RECORD_SIZE_32: u32 = 1200u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DMP_CONTEXT_RECORD_SIZE_64: u32 = 3000u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DMP_HEADER_COMMENT_SIZE: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DMP_PHYSICAL_MEMORY_BLOCK_SIZE_32: u32 = 700u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DMP_PHYSICAL_MEMORY_BLOCK_SIZE_64: u32 = 700u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DMP_RESERVED_0_SIZE_32: u32 = 1760u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DMP_RESERVED_0_SIZE_64: u32 = 4008u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DMP_RESERVED_2_SIZE_32: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DMP_RESERVED_3_SIZE_32: u32 = 56u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type DOCUMENTNAMETYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DOCUMENTNAMETYPE_APPNODE: DOCUMENTNAMETYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DOCUMENTNAMETYPE_TITLE: DOCUMENTNAMETYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DOCUMENTNAMETYPE_FILE_TAIL: DOCUMENTNAMETYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DOCUMENTNAMETYPE_URL: DOCUMENTNAMETYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DOCUMENTNAMETYPE_UNIQUE_TITLE: DOCUMENTNAMETYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DOCUMENTNAMETYPE_SOURCE_MAP_URL: DOCUMENTNAMETYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DSLFLAG_MISMATCHED_DBG: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DSLFLAG_MISMATCHED_PDB: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub union DUMP_FILE_ATTRIBUTES {
@@ -5496,28 +8709,18 @@ impl ::core::clone::Clone for DUMP_HEADER64_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_SUMMARY_VALID_CURRENT_USER_VA: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_SUMMARY_VALID_KERNEL_VA: u32 = 1u32;
-pub type DebugBaseEventCallbacks = *mut ::core::ffi::c_void;
-pub type DebugBaseEventCallbacksWide = *mut ::core::ffi::c_void;
-pub const DebugHelper: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 201113696, data2: 35869, data3: 4560, data4: [172, 205, 0, 170, 0, 96, 39, 92] };
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct DebugPropertyInfo {
     pub m_dwValidFields: u32,
-    pub m_bstrName: super::super::super::Foundation::BSTR,
-    pub m_bstrType: super::super::super::Foundation::BSTR,
-    pub m_bstrValue: super::super::super::Foundation::BSTR,
-    pub m_bstrFullName: super::super::super::Foundation::BSTR,
+    pub m_bstrName: ::windows_sys::core::BSTR,
+    pub m_bstrType: ::windows_sys::core::BSTR,
+    pub m_bstrValue: ::windows_sys::core::BSTR,
+    pub m_bstrFullName: ::windows_sys::core::BSTR,
     pub m_dwAttrib: u32,
     pub m_pDebugProp: IDebugProperty,
 }
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::marker::Copy for DebugPropertyInfo {}
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::clone::Clone for DebugPropertyInfo {
     fn clone(&self) -> Self {
         *self
@@ -5559,41 +8762,6 @@ impl ::core::clone::Clone for DebugStackFrameDescriptor64 {
         *self
     }
 }
-pub const DefaultDebugSessionProvider: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2202085538, data2: 20980, data3: 4560, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type ERRORRESUMEACTION = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ERRORRESUMEACTION_ReexecuteErrorStatement: ERRORRESUMEACTION = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ERRORRESUMEACTION_AbortCallAndReturnErrorToCaller: ERRORRESUMEACTION = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ERRORRESUMEACTION_SkipErrorStatement: ERRORRESUMEACTION = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ERROR_DBG_CANCELLED: u32 = 3221226695u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ERROR_DBG_TIMEOUT: u32 = 3221226932u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ERROR_IMAGE_NOT_STRIPPED: u32 = 34816u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ERROR_NO_DBG_POINTER: u32 = 34817u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ERROR_NO_PDB_POINTER: u32 = 34818u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ESLFLAG_FULLPATH: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ESLFLAG_INLINE_SITE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ESLFLAG_NEAREST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ESLFLAG_NEXT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ESLFLAG_PREV: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EVENT_SRCSPEW: u32 = 100u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EVENT_SRCSPEW_END: u32 = 199u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EVENT_SRCSPEW_START: u32 = 100u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -5682,8 +8850,6 @@ impl ::core::clone::Clone for EXCEPTION_RECORD64 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXIT_ON_CONTROLC: u32 = 8u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct EXIT_PROCESS_DEBUG_INFO {
@@ -5762,12 +8928,6 @@ impl ::core::clone::Clone for EXT_API_VERSION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_API_VERSION_NUMBER: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_API_VERSION_NUMBER32: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_API_VERSION_NUMBER64: u32 = 6u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -5793,8 +8953,6 @@ impl ::core::clone::Clone for EXT_FIND_FILE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_FIND_FILE_ALLOW_GIVEN_PATH: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct EXT_MATCH_PATTERN_A {
@@ -5808,60 +8966,6 @@ impl ::core::clone::Clone for EXT_MATCH_PATTERN_A {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_OUTPUT_VER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDF_PHYSICAL_CACHED: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDF_PHYSICAL_DEFAULT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDF_PHYSICAL_MEMORY: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDF_PHYSICAL_UNCACHED: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDF_PHYSICAL_WRITE_COMBINED: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type EXT_TDOP = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_COPY: EXT_TDOP = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_RELEASE: EXT_TDOP = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_SET_FROM_EXPR: EXT_TDOP = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_SET_FROM_U64_EXPR: EXT_TDOP = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_GET_FIELD: EXT_TDOP = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_EVALUATE: EXT_TDOP = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_GET_TYPE_NAME: EXT_TDOP = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_OUTPUT_TYPE_NAME: EXT_TDOP = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_OUTPUT_SIMPLE_VALUE: EXT_TDOP = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_OUTPUT_FULL_VALUE: EXT_TDOP = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_HAS_FIELD: EXT_TDOP = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_GET_FIELD_OFFSET: EXT_TDOP = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_GET_ARRAY_ELEMENT: EXT_TDOP = 12i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_GET_DEREFERENCE: EXT_TDOP = 13i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_GET_TYPE_SIZE: EXT_TDOP = 14i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_OUTPUT_TYPE_DEFINITION: EXT_TDOP = 15i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_GET_POINTER_TO: EXT_TDOP = 16i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_SET_FROM_TYPE_ID_AND_U64: EXT_TDOP = 17i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_SET_PTR_FROM_TYPE_ID_AND_U64: EXT_TDOP = 18i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EXT_TDOP_COUNT: EXT_TDOP = 19i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct EXT_TYPED_DATA {
@@ -5889,36 +8993,6 @@ impl ::core::clone::Clone for EXT_TYPED_DATA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type EX_PROP_INFO_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EX_PROP_INFO_ID: EX_PROP_INFO_FLAGS = 256i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EX_PROP_INFO_NTYPE: EX_PROP_INFO_FLAGS = 512i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EX_PROP_INFO_NVALUE: EX_PROP_INFO_FLAGS = 1024i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EX_PROP_INFO_LOCKBYTES: EX_PROP_INFO_FLAGS = 2048i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const EX_PROP_INFO_DEBUGEXTPROP: EX_PROP_INFO_FLAGS = 4096i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const E_JsDEBUG_INVALID_MEMORY_ADDRESS: ::windows_sys::core::HRESULT = -1916338171i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const E_JsDEBUG_MISMATCHED_RUNTIME: ::windows_sys::core::HRESULT = -1916338175i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const E_JsDEBUG_OUTSIDE_OF_VM: ::windows_sys::core::HRESULT = -1916338172i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const E_JsDEBUG_RUNTIME_NOT_IN_DEBUG_MODE: ::windows_sys::core::HRESULT = -1916338169i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const E_JsDEBUG_SOURCE_LOCATION_NOT_FOUND: ::windows_sys::core::HRESULT = -1916338170i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const E_JsDEBUG_UNKNOWN_THREAD: ::windows_sys::core::HRESULT = -1916338174i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type ErrorClass = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ErrorClassWarning: ErrorClass = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ErrorClassError: ErrorClass = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_System_Ole\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_System_Ole"))]
@@ -5944,318 +9018,6 @@ impl ::core::clone::Clone for ExtendedDebugPropertyInfo {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type FACILITY_CODE = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_NULL: FACILITY_CODE = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_RPC: FACILITY_CODE = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DISPATCH: FACILITY_CODE = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_STORAGE: FACILITY_CODE = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_ITF: FACILITY_CODE = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WIN32: FACILITY_CODE = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WINDOWS: FACILITY_CODE = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SSPI: FACILITY_CODE = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SECURITY: FACILITY_CODE = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_CONTROL: FACILITY_CODE = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_CERT: FACILITY_CODE = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_INTERNET: FACILITY_CODE = 12u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_MEDIASERVER: FACILITY_CODE = 13u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_MSMQ: FACILITY_CODE = 14u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SETUPAPI: FACILITY_CODE = 15u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SCARD: FACILITY_CODE = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_COMPLUS: FACILITY_CODE = 17u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_AAF: FACILITY_CODE = 18u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_URT: FACILITY_CODE = 19u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_ACS: FACILITY_CODE = 20u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DPLAY: FACILITY_CODE = 21u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_UMI: FACILITY_CODE = 22u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SXS: FACILITY_CODE = 23u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WINDOWS_CE: FACILITY_CODE = 24u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_HTTP: FACILITY_CODE = 25u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_COMMONLOG: FACILITY_CODE = 26u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WER: FACILITY_CODE = 27u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_FILTER_MANAGER: FACILITY_CODE = 31u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_BACKGROUNDCOPY: FACILITY_CODE = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_CONFIGURATION: FACILITY_CODE = 33u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WIA: FACILITY_CODE = 33u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_STATE_MANAGEMENT: FACILITY_CODE = 34u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_METADIRECTORY: FACILITY_CODE = 35u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WINDOWSUPDATE: FACILITY_CODE = 36u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DIRECTORYSERVICE: FACILITY_CODE = 37u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_GRAPHICS: FACILITY_CODE = 38u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SHELL: FACILITY_CODE = 39u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_NAP: FACILITY_CODE = 39u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_TPM_SERVICES: FACILITY_CODE = 40u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_TPM_SOFTWARE: FACILITY_CODE = 41u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_UI: FACILITY_CODE = 42u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_XAML: FACILITY_CODE = 43u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_ACTION_QUEUE: FACILITY_CODE = 44u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_PLA: FACILITY_CODE = 48u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WINDOWS_SETUP: FACILITY_CODE = 48u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_FVE: FACILITY_CODE = 49u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_FWP: FACILITY_CODE = 50u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WINRM: FACILITY_CODE = 51u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_NDIS: FACILITY_CODE = 52u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_HYPERVISOR: FACILITY_CODE = 53u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_CMI: FACILITY_CODE = 54u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_VIRTUALIZATION: FACILITY_CODE = 55u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_VOLMGR: FACILITY_CODE = 56u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_BCD: FACILITY_CODE = 57u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_VHD: FACILITY_CODE = 58u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_HNS: FACILITY_CODE = 59u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SDIAG: FACILITY_CODE = 60u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WEBSERVICES: FACILITY_CODE = 61u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WINPE: FACILITY_CODE = 61u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WPN: FACILITY_CODE = 62u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WINDOWS_STORE: FACILITY_CODE = 63u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_INPUT: FACILITY_CODE = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_QUIC: FACILITY_CODE = 65u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_EAP: FACILITY_CODE = 66u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_IORING: FACILITY_CODE = 70u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WINDOWS_DEFENDER: FACILITY_CODE = 80u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_OPC: FACILITY_CODE = 81u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_XPS: FACILITY_CODE = 82u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_MBN: FACILITY_CODE = 84u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_POWERSHELL: FACILITY_CODE = 84u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_RAS: FACILITY_CODE = 83u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_P2P_INT: FACILITY_CODE = 98u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_P2P: FACILITY_CODE = 99u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DAF: FACILITY_CODE = 100u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_BLUETOOTH_ATT: FACILITY_CODE = 101u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_AUDIO: FACILITY_CODE = 102u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_STATEREPOSITORY: FACILITY_CODE = 103u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_VISUALCPP: FACILITY_CODE = 109u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SCRIPT: FACILITY_CODE = 112u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_PARSE: FACILITY_CODE = 113u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_BLB: FACILITY_CODE = 120u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_BLB_CLI: FACILITY_CODE = 121u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WSBAPP: FACILITY_CODE = 122u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_BLBUI: FACILITY_CODE = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USN: FACILITY_CODE = 129u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_VOLSNAP: FACILITY_CODE = 130u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_TIERING: FACILITY_CODE = 131u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WSB_ONLINE: FACILITY_CODE = 133u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_ONLINE_ID: FACILITY_CODE = 134u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEVICE_UPDATE_AGENT: FACILITY_CODE = 135u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DRVSERVICING: FACILITY_CODE = 136u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DLS: FACILITY_CODE = 153u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DELIVERY_OPTIMIZATION: FACILITY_CODE = 208u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_SPACES: FACILITY_CODE = 231u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USER_MODE_SECURITY_CORE: FACILITY_CODE = 232u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_LICENSING: FACILITY_CODE = 234u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SOS: FACILITY_CODE = 160u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_OCP_UPDATE_AGENT: FACILITY_CODE = 173u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEBUGGERS: FACILITY_CODE = 176u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SPP: FACILITY_CODE = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_RESTORE: FACILITY_CODE = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DMSERVER: FACILITY_CODE = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_SERVER: FACILITY_CODE = 257u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_IMAGING: FACILITY_CODE = 258u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_MANAGEMENT: FACILITY_CODE = 259u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_UTIL: FACILITY_CODE = 260u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_BINLSVC: FACILITY_CODE = 261u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_PXE: FACILITY_CODE = 263u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_TFTP: FACILITY_CODE = 264u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_TRANSPORT_MANAGEMENT: FACILITY_CODE = 272u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_DRIVER_PROVISIONING: FACILITY_CODE = 278u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_MULTICAST_SERVER: FACILITY_CODE = 289u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_MULTICAST_CLIENT: FACILITY_CODE = 290u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEPLOYMENT_SERVICES_CONTENT_PROVIDER: FACILITY_CODE = 293u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_HSP_SERVICES: FACILITY_CODE = 296u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_HSP_SOFTWARE: FACILITY_CODE = 297u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_LINGUISTIC_SERVICES: FACILITY_CODE = 305u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_AUDIOSTREAMING: FACILITY_CODE = 1094u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_TTD: FACILITY_CODE = 1490u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_ACCELERATOR: FACILITY_CODE = 1536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WMAAECMA: FACILITY_CODE = 1996u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DIRECTMUSIC: FACILITY_CODE = 2168u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DIRECT3D10: FACILITY_CODE = 2169u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DXGI: FACILITY_CODE = 2170u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DXGI_DDI: FACILITY_CODE = 2171u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DIRECT3D11: FACILITY_CODE = 2172u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DIRECT3D11_DEBUG: FACILITY_CODE = 2173u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DIRECT3D12: FACILITY_CODE = 2174u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DIRECT3D12_DEBUG: FACILITY_CODE = 2175u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DXCORE: FACILITY_CODE = 2176u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_PRESENTATION: FACILITY_CODE = 2177u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_LEAP: FACILITY_CODE = 2184u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_AUDCLNT: FACILITY_CODE = 2185u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WINCODEC_DWRITE_DWM: FACILITY_CODE = 2200u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WINML: FACILITY_CODE = 2192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DIRECT2D: FACILITY_CODE = 2201u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_DEFRAG: FACILITY_CODE = 2304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_USERMODE_SDBUS: FACILITY_CODE = 2305u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_JSCRIPT: FACILITY_CODE = 2306u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_PIDGENX: FACILITY_CODE = 2561u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_EAS: FACILITY_CODE = 85u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WEB: FACILITY_CODE = 885u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WEB_SOCKET: FACILITY_CODE = 886u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_MOBILE: FACILITY_CODE = 1793u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SQLITE: FACILITY_CODE = 1967u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SERVICE_FABRIC: FACILITY_CODE = 1968u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_UTC: FACILITY_CODE = 1989u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_WEP: FACILITY_CODE = 2049u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_SYNCENGINE: FACILITY_CODE = 2050u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_XBOX: FACILITY_CODE = 2339u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_GAME: FACILITY_CODE = 2340u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_PIX: FACILITY_CODE = 2748u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_NT_BIT: FACILITY_CODE = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FACILITY_JsDEBUG: u32 = 3527u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FIELDS_DID_NOT_MATCH: u32 = 4u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct FIELD_INFO {
@@ -6301,26 +9063,6 @@ impl ::core::clone::Clone for FIELD_INFO_1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FLAG_ENGINE_PRESENT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FLAG_ENGOPT_DISALLOW_NETWORK_PATHS: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FLAG_OVERRIDE_ARM_MACHINE_TYPE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type FORMAT_MESSAGE_OPTIONS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FORMAT_MESSAGE_ALLOCATE_BUFFER: FORMAT_MESSAGE_OPTIONS = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FORMAT_MESSAGE_ARGUMENT_ARRAY: FORMAT_MESSAGE_OPTIONS = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FORMAT_MESSAGE_FROM_HMODULE: FORMAT_MESSAGE_OPTIONS = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FORMAT_MESSAGE_FROM_STRING: FORMAT_MESSAGE_OPTIONS = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FORMAT_MESSAGE_FROM_SYSTEM: FORMAT_MESSAGE_OPTIONS = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FORMAT_MESSAGE_IGNORE_INSERTS: FORMAT_MESSAGE_OPTIONS = 512u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct FPO_DATA {
@@ -6336,14 +9078,6 @@ impl ::core::clone::Clone for FPO_DATA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const GETATTRFLAG_HUMANTEXT: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const GETATTRFLAG_THIS: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const GETATTRTYPE_DEPSCAN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const GETATTRTYPE_NORMAL: u32 = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct GET_CONTEXT_EX {
@@ -6445,323 +9179,6 @@ impl ::core::clone::Clone for GET_TEB_ADDRESS {
         *self
     }
 }
-pub type IActiveScript = *mut ::core::ffi::c_void;
-pub type IActiveScriptAuthor = *mut ::core::ffi::c_void;
-pub type IActiveScriptAuthorProcedure = *mut ::core::ffi::c_void;
-pub type IActiveScriptDebug32 = *mut ::core::ffi::c_void;
-pub type IActiveScriptDebug64 = *mut ::core::ffi::c_void;
-pub type IActiveScriptEncode = *mut ::core::ffi::c_void;
-pub type IActiveScriptError = *mut ::core::ffi::c_void;
-pub type IActiveScriptError64 = *mut ::core::ffi::c_void;
-pub type IActiveScriptErrorDebug = *mut ::core::ffi::c_void;
-pub type IActiveScriptErrorDebug110 = *mut ::core::ffi::c_void;
-pub type IActiveScriptGarbageCollector = *mut ::core::ffi::c_void;
-pub type IActiveScriptHostEncode = *mut ::core::ffi::c_void;
-pub type IActiveScriptParse32 = *mut ::core::ffi::c_void;
-pub type IActiveScriptParse64 = *mut ::core::ffi::c_void;
-pub type IActiveScriptParseProcedure2_32 = *mut ::core::ffi::c_void;
-pub type IActiveScriptParseProcedure2_64 = *mut ::core::ffi::c_void;
-pub type IActiveScriptParseProcedure32 = *mut ::core::ffi::c_void;
-pub type IActiveScriptParseProcedure64 = *mut ::core::ffi::c_void;
-pub type IActiveScriptParseProcedureOld32 = *mut ::core::ffi::c_void;
-pub type IActiveScriptParseProcedureOld64 = *mut ::core::ffi::c_void;
-pub type IActiveScriptProfilerCallback = *mut ::core::ffi::c_void;
-pub type IActiveScriptProfilerCallback2 = *mut ::core::ffi::c_void;
-pub type IActiveScriptProfilerCallback3 = *mut ::core::ffi::c_void;
-pub type IActiveScriptProfilerControl = *mut ::core::ffi::c_void;
-pub type IActiveScriptProfilerControl2 = *mut ::core::ffi::c_void;
-pub type IActiveScriptProfilerControl3 = *mut ::core::ffi::c_void;
-pub type IActiveScriptProfilerControl4 = *mut ::core::ffi::c_void;
-pub type IActiveScriptProfilerControl5 = *mut ::core::ffi::c_void;
-pub type IActiveScriptProfilerHeapEnum = *mut ::core::ffi::c_void;
-pub type IActiveScriptProperty = *mut ::core::ffi::c_void;
-pub type IActiveScriptSIPInfo = *mut ::core::ffi::c_void;
-pub type IActiveScriptSite = *mut ::core::ffi::c_void;
-pub type IActiveScriptSiteDebug32 = *mut ::core::ffi::c_void;
-pub type IActiveScriptSiteDebug64 = *mut ::core::ffi::c_void;
-pub type IActiveScriptSiteDebugEx = *mut ::core::ffi::c_void;
-pub type IActiveScriptSiteInterruptPoll = *mut ::core::ffi::c_void;
-pub type IActiveScriptSiteTraceInfo = *mut ::core::ffi::c_void;
-pub type IActiveScriptSiteUIControl = *mut ::core::ffi::c_void;
-pub type IActiveScriptSiteWindow = *mut ::core::ffi::c_void;
-pub type IActiveScriptStats = *mut ::core::ffi::c_void;
-pub type IActiveScriptStringCompare = *mut ::core::ffi::c_void;
-pub type IActiveScriptTraceInfo = *mut ::core::ffi::c_void;
-pub type IActiveScriptWinRTErrorDebug = *mut ::core::ffi::c_void;
-pub type IApplicationDebugger = *mut ::core::ffi::c_void;
-pub type IApplicationDebuggerUI = *mut ::core::ffi::c_void;
-pub type IBindEventHandler = *mut ::core::ffi::c_void;
-pub type ICodeAddressConcept = *mut ::core::ffi::c_void;
-pub type IComparableConcept = *mut ::core::ffi::c_void;
-pub type IDataModelConcept = *mut ::core::ffi::c_void;
-pub type IDataModelManager = *mut ::core::ffi::c_void;
-pub type IDataModelManager2 = *mut ::core::ffi::c_void;
-pub type IDataModelNameBinder = *mut ::core::ffi::c_void;
-pub type IDataModelScript = *mut ::core::ffi::c_void;
-pub type IDataModelScriptClient = *mut ::core::ffi::c_void;
-pub type IDataModelScriptDebug = *mut ::core::ffi::c_void;
-pub type IDataModelScriptDebug2 = *mut ::core::ffi::c_void;
-pub type IDataModelScriptDebugBreakpoint = *mut ::core::ffi::c_void;
-pub type IDataModelScriptDebugBreakpointEnumerator = *mut ::core::ffi::c_void;
-pub type IDataModelScriptDebugClient = *mut ::core::ffi::c_void;
-pub type IDataModelScriptDebugStack = *mut ::core::ffi::c_void;
-pub type IDataModelScriptDebugStackFrame = *mut ::core::ffi::c_void;
-pub type IDataModelScriptDebugVariableSetEnumerator = *mut ::core::ffi::c_void;
-pub type IDataModelScriptHostContext = *mut ::core::ffi::c_void;
-pub type IDataModelScriptManager = *mut ::core::ffi::c_void;
-pub type IDataModelScriptProvider = *mut ::core::ffi::c_void;
-pub type IDataModelScriptProviderEnumerator = *mut ::core::ffi::c_void;
-pub type IDataModelScriptTemplate = *mut ::core::ffi::c_void;
-pub type IDataModelScriptTemplateEnumerator = *mut ::core::ffi::c_void;
-pub type IDebugAdvanced = *mut ::core::ffi::c_void;
-pub type IDebugAdvanced2 = *mut ::core::ffi::c_void;
-pub type IDebugAdvanced3 = *mut ::core::ffi::c_void;
-pub type IDebugAdvanced4 = *mut ::core::ffi::c_void;
-pub type IDebugApplication11032 = *mut ::core::ffi::c_void;
-pub type IDebugApplication11064 = *mut ::core::ffi::c_void;
-pub type IDebugApplication32 = *mut ::core::ffi::c_void;
-pub type IDebugApplication64 = *mut ::core::ffi::c_void;
-pub type IDebugApplicationNode = *mut ::core::ffi::c_void;
-pub type IDebugApplicationNode100 = *mut ::core::ffi::c_void;
-pub type IDebugApplicationNodeEvents = *mut ::core::ffi::c_void;
-pub type IDebugApplicationThread = *mut ::core::ffi::c_void;
-pub type IDebugApplicationThread11032 = *mut ::core::ffi::c_void;
-pub type IDebugApplicationThread11064 = *mut ::core::ffi::c_void;
-pub type IDebugApplicationThread64 = *mut ::core::ffi::c_void;
-pub type IDebugApplicationThreadEvents110 = *mut ::core::ffi::c_void;
-pub type IDebugAsyncOperation = *mut ::core::ffi::c_void;
-pub type IDebugAsyncOperationCallBack = *mut ::core::ffi::c_void;
-pub type IDebugBreakpoint = *mut ::core::ffi::c_void;
-pub type IDebugBreakpoint2 = *mut ::core::ffi::c_void;
-pub type IDebugBreakpoint3 = *mut ::core::ffi::c_void;
-pub type IDebugClient = *mut ::core::ffi::c_void;
-pub type IDebugClient2 = *mut ::core::ffi::c_void;
-pub type IDebugClient3 = *mut ::core::ffi::c_void;
-pub type IDebugClient4 = *mut ::core::ffi::c_void;
-pub type IDebugClient5 = *mut ::core::ffi::c_void;
-pub type IDebugClient6 = *mut ::core::ffi::c_void;
-pub type IDebugClient7 = *mut ::core::ffi::c_void;
-pub type IDebugClient8 = *mut ::core::ffi::c_void;
-pub type IDebugCodeContext = *mut ::core::ffi::c_void;
-pub type IDebugControl = *mut ::core::ffi::c_void;
-pub type IDebugControl2 = *mut ::core::ffi::c_void;
-pub type IDebugControl3 = *mut ::core::ffi::c_void;
-pub type IDebugControl4 = *mut ::core::ffi::c_void;
-pub type IDebugControl5 = *mut ::core::ffi::c_void;
-pub type IDebugControl6 = *mut ::core::ffi::c_void;
-pub type IDebugControl7 = *mut ::core::ffi::c_void;
-pub type IDebugCookie = *mut ::core::ffi::c_void;
-pub type IDebugDataSpaces = *mut ::core::ffi::c_void;
-pub type IDebugDataSpaces2 = *mut ::core::ffi::c_void;
-pub type IDebugDataSpaces3 = *mut ::core::ffi::c_void;
-pub type IDebugDataSpaces4 = *mut ::core::ffi::c_void;
-pub type IDebugDocument = *mut ::core::ffi::c_void;
-pub type IDebugDocumentContext = *mut ::core::ffi::c_void;
-pub type IDebugDocumentHelper32 = *mut ::core::ffi::c_void;
-pub type IDebugDocumentHelper64 = *mut ::core::ffi::c_void;
-pub type IDebugDocumentHost = *mut ::core::ffi::c_void;
-pub type IDebugDocumentInfo = *mut ::core::ffi::c_void;
-pub type IDebugDocumentProvider = *mut ::core::ffi::c_void;
-pub type IDebugDocumentText = *mut ::core::ffi::c_void;
-pub type IDebugDocumentTextAuthor = *mut ::core::ffi::c_void;
-pub type IDebugDocumentTextEvents = *mut ::core::ffi::c_void;
-pub type IDebugDocumentTextExternalAuthor = *mut ::core::ffi::c_void;
-pub type IDebugEventCallbacks = *mut ::core::ffi::c_void;
-pub type IDebugEventCallbacksWide = *mut ::core::ffi::c_void;
-pub type IDebugEventContextCallbacks = *mut ::core::ffi::c_void;
-pub type IDebugExpression = *mut ::core::ffi::c_void;
-pub type IDebugExpressionCallBack = *mut ::core::ffi::c_void;
-pub type IDebugExpressionContext = *mut ::core::ffi::c_void;
-pub type IDebugExtendedProperty = *mut ::core::ffi::c_void;
-pub type IDebugFormatter = *mut ::core::ffi::c_void;
-pub type IDebugHelper = *mut ::core::ffi::c_void;
-pub type IDebugHost = *mut ::core::ffi::c_void;
-pub type IDebugHostBaseClass = *mut ::core::ffi::c_void;
-pub type IDebugHostConstant = *mut ::core::ffi::c_void;
-pub type IDebugHostContext = *mut ::core::ffi::c_void;
-pub type IDebugHostData = *mut ::core::ffi::c_void;
-pub type IDebugHostErrorSink = *mut ::core::ffi::c_void;
-pub type IDebugHostEvaluator = *mut ::core::ffi::c_void;
-pub type IDebugHostEvaluator2 = *mut ::core::ffi::c_void;
-pub type IDebugHostExtensibility = *mut ::core::ffi::c_void;
-pub type IDebugHostField = *mut ::core::ffi::c_void;
-pub type IDebugHostMemory = *mut ::core::ffi::c_void;
-pub type IDebugHostMemory2 = *mut ::core::ffi::c_void;
-pub type IDebugHostModule = *mut ::core::ffi::c_void;
-pub type IDebugHostModule2 = *mut ::core::ffi::c_void;
-pub type IDebugHostModuleSignature = *mut ::core::ffi::c_void;
-pub type IDebugHostPublic = *mut ::core::ffi::c_void;
-pub type IDebugHostScriptHost = *mut ::core::ffi::c_void;
-pub type IDebugHostStatus = *mut ::core::ffi::c_void;
-pub type IDebugHostSymbol = *mut ::core::ffi::c_void;
-pub type IDebugHostSymbol2 = *mut ::core::ffi::c_void;
-pub type IDebugHostSymbolEnumerator = *mut ::core::ffi::c_void;
-pub type IDebugHostSymbols = *mut ::core::ffi::c_void;
-pub type IDebugHostType = *mut ::core::ffi::c_void;
-pub type IDebugHostType2 = *mut ::core::ffi::c_void;
-pub type IDebugHostTypeSignature = *mut ::core::ffi::c_void;
-pub type IDebugInputCallbacks = *mut ::core::ffi::c_void;
-pub type IDebugOutputCallbacks = *mut ::core::ffi::c_void;
-pub type IDebugOutputCallbacks2 = *mut ::core::ffi::c_void;
-pub type IDebugOutputCallbacksWide = *mut ::core::ffi::c_void;
-pub type IDebugOutputStream = *mut ::core::ffi::c_void;
-pub type IDebugPlmClient = *mut ::core::ffi::c_void;
-pub type IDebugPlmClient2 = *mut ::core::ffi::c_void;
-pub type IDebugPlmClient3 = *mut ::core::ffi::c_void;
-pub type IDebugProperty = *mut ::core::ffi::c_void;
-pub type IDebugPropertyEnumType_All = *mut ::core::ffi::c_void;
-pub type IDebugPropertyEnumType_Arguments = *mut ::core::ffi::c_void;
-pub type IDebugPropertyEnumType_Locals = *mut ::core::ffi::c_void;
-pub type IDebugPropertyEnumType_LocalsPlusArgs = *mut ::core::ffi::c_void;
-pub type IDebugPropertyEnumType_Registers = *mut ::core::ffi::c_void;
-pub type IDebugRegisters = *mut ::core::ffi::c_void;
-pub type IDebugRegisters2 = *mut ::core::ffi::c_void;
-pub type IDebugSessionProvider = *mut ::core::ffi::c_void;
-pub type IDebugStackFrame = *mut ::core::ffi::c_void;
-pub type IDebugStackFrame110 = *mut ::core::ffi::c_void;
-pub type IDebugStackFrameSniffer = *mut ::core::ffi::c_void;
-pub type IDebugStackFrameSnifferEx32 = *mut ::core::ffi::c_void;
-pub type IDebugStackFrameSnifferEx64 = *mut ::core::ffi::c_void;
-pub type IDebugSymbolGroup = *mut ::core::ffi::c_void;
-pub type IDebugSymbolGroup2 = *mut ::core::ffi::c_void;
-pub type IDebugSymbols = *mut ::core::ffi::c_void;
-pub type IDebugSymbols2 = *mut ::core::ffi::c_void;
-pub type IDebugSymbols3 = *mut ::core::ffi::c_void;
-pub type IDebugSymbols4 = *mut ::core::ffi::c_void;
-pub type IDebugSymbols5 = *mut ::core::ffi::c_void;
-pub type IDebugSyncOperation = *mut ::core::ffi::c_void;
-pub type IDebugSystemObjects = *mut ::core::ffi::c_void;
-pub type IDebugSystemObjects2 = *mut ::core::ffi::c_void;
-pub type IDebugSystemObjects3 = *mut ::core::ffi::c_void;
-pub type IDebugSystemObjects4 = *mut ::core::ffi::c_void;
-pub type IDebugThreadCall32 = *mut ::core::ffi::c_void;
-pub type IDebugThreadCall64 = *mut ::core::ffi::c_void;
-pub type IDynamicConceptProviderConcept = *mut ::core::ffi::c_void;
-pub type IDynamicKeyProviderConcept = *mut ::core::ffi::c_void;
-pub type IEnumDebugApplicationNodes = *mut ::core::ffi::c_void;
-pub type IEnumDebugCodeContexts = *mut ::core::ffi::c_void;
-pub type IEnumDebugExpressionContexts = *mut ::core::ffi::c_void;
-pub type IEnumDebugExtendedPropertyInfo = *mut ::core::ffi::c_void;
-pub type IEnumDebugPropertyInfo = *mut ::core::ffi::c_void;
-pub type IEnumDebugStackFrames = *mut ::core::ffi::c_void;
-pub type IEnumDebugStackFrames64 = *mut ::core::ffi::c_void;
-pub type IEnumJsStackFrames = *mut ::core::ffi::c_void;
-pub type IEnumRemoteDebugApplicationThreads = *mut ::core::ffi::c_void;
-pub type IEnumRemoteDebugApplications = *mut ::core::ffi::c_void;
-pub type IEquatableConcept = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_DISASSEMBLE_BUFFER: u32 = 44u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_DUMP_SYMBOL_INFO: u32 = 22u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_FIND_FILE: u32 = 40u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_ANY_MODULE_IN_RANGE: u32 = 45u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_BUS_DATA: u32 = 20u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_CACHE_SIZE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_CLR_DATA_INTERFACE: u32 = 38u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_CONTEXT_EX: u32 = 48u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_CURRENT_PROCESS: u32 = 26u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_CURRENT_PROCESS_HANDLE: u32 = 28u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_CURRENT_THREAD: u32 = 25u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_DEBUGGER_DATA: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_EXCEPTION_RECORD: u32 = 18u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_EXPRESSION_EX: u32 = 30u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_INPUT_LINE: u32 = 29u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_KERNEL_VERSION: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_PEB_ADDRESS: u32 = 129u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_SET_SYMPATH: u32 = 17u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_TEB_ADDRESS: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_THREAD_OS_INFO: u32 = 37u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_GET_TYPE_SIZE: u32 = 27u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_IS_PTR64: u32 = 19u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_KD_CONTEXT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_KSTACK_HELP: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_LOWMEM_CHECK: u32 = 23u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_MATCH_PATTERN_A: u32 = 39u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_OBSOLETE_PLACEHOLDER_36: u32 = 36u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_PHYSICAL_TO_VIRTUAL: u32 = 47u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_POINTER_SEARCH_PHYSICAL: u32 = 35u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_QUERY_TARGET_INTERFACE: u32 = 42u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_READ_CONTROL_SPACE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_READ_IO_SPACE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_READ_IO_SPACE_EX: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_READ_MSR: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_READ_PHYSICAL: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_READ_PHYSICAL_WITH_FLAGS: u32 = 33u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_RELOAD_SYMBOLS: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_SEARCH_MEMORY: u32 = 24u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_SET_BUS_DATA: u32 = 21u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_SET_THREAD: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_TRANSLATE_VIRTUAL_TO_PHYSICAL: u32 = 31u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_TYPED_DATA: u32 = 43u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_TYPED_DATA_OBSOLETE: u32 = 41u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_VIRTUAL_TO_PHYSICAL: u32 = 46u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_WRITE_CONTROL_SPACE: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_WRITE_IO_SPACE: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_WRITE_IO_SPACE_EX: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_WRITE_MSR: u32 = 13u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_WRITE_PHYSICAL: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IG_WRITE_PHYSICAL_WITH_FLAGS: u32 = 34u32;
-pub type IHostDataModelAccess = *mut ::core::ffi::c_void;
-pub type IIndexableConcept = *mut ::core::ffi::c_void;
-pub type IIterableConcept = *mut ::core::ffi::c_void;
-pub type IJsDebug = *mut ::core::ffi::c_void;
-pub type IJsDebugBreakPoint = *mut ::core::ffi::c_void;
-pub type IJsDebugDataTarget = *mut ::core::ffi::c_void;
-pub type IJsDebugFrame = *mut ::core::ffi::c_void;
-pub type IJsDebugProcess = *mut ::core::ffi::c_void;
-pub type IJsDebugProperty = *mut ::core::ffi::c_void;
-pub type IJsDebugStackWalker = *mut ::core::ffi::c_void;
-pub type IJsEnumDebugProperty = *mut ::core::ffi::c_void;
-pub type IKeyEnumerator = *mut ::core::ffi::c_void;
-pub type IKeyStore = *mut ::core::ffi::c_void;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct IMAGEHLP_CBA_EVENT {
@@ -6790,16 +9207,6 @@ impl ::core::clone::Clone for IMAGEHLP_CBA_EVENTW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGEHLP_CBA_EVENT_SEVERITY = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const sevInfo: IMAGEHLP_CBA_EVENT_SEVERITY = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const sevProblem: IMAGEHLP_CBA_EVENT_SEVERITY = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const sevAttn: IMAGEHLP_CBA_EVENT_SEVERITY = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const sevFatal: IMAGEHLP_CBA_EVENT_SEVERITY = 3u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct IMAGEHLP_CBA_READ_MEMORY {
@@ -6916,24 +9323,6 @@ impl ::core::clone::Clone for IMAGEHLP_DUPLICATE_SYMBOL64 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGEHLP_EXTENDED_OPTIONS = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_EX_DISABLEACCESSTIMEUPDATE: IMAGEHLP_EXTENDED_OPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_EX_LASTVALIDDEBUGDIRECTORY: IMAGEHLP_EXTENDED_OPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_EX_NOIMPLICITPATTERNSEARCH: IMAGEHLP_EXTENDED_OPTIONS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_EX_NEVERLOADSYMBOLS: IMAGEHLP_EXTENDED_OPTIONS = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_EX_MAX: IMAGEHLP_EXTENDED_OPTIONS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGEHLP_GET_TYPE_INFO_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_GET_TYPE_INFO_CHILDREN: IMAGEHLP_GET_TYPE_INFO_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_GET_TYPE_INFO_UNCACHED: IMAGEHLP_GET_TYPE_INFO_FLAGS = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct IMAGEHLP_GET_TYPE_INFO_PARAMS {
@@ -6962,16 +9351,19 @@ impl ::core::clone::Clone for IMAGEHLP_GET_TYPE_INFO_PARAMS {
         *self
     }
 }
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGEHLP_HD_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const hdBase: IMAGEHLP_HD_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const hdSym: IMAGEHLP_HD_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const hdSrc: IMAGEHLP_HD_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const hdMax: IMAGEHLP_HD_TYPE = 3i32;
+pub struct IMAGEHLP_JIT_SYMBOLMAP {
+    pub SizeOfStruct: u32,
+    pub Address: u64,
+    pub BaseOfImage: u64,
+}
+impl ::core::marker::Copy for IMAGEHLP_JIT_SYMBOLMAP {}
+impl ::core::clone::Clone for IMAGEHLP_JIT_SYMBOLMAP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 #[cfg(target_arch = "x86")]
@@ -7193,42 +9585,6 @@ impl ::core::clone::Clone for IMAGEHLP_MODULEW64_EX {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_MODULE_REGION_ADDITIONAL: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_MODULE_REGION_ALL: u32 = 255u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_MODULE_REGION_DLLBASE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_MODULE_REGION_DLLRANGE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_MODULE_REGION_JIT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_RMAP_BIG_ENDIAN: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_RMAP_FIXUP_ARM64X: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_RMAP_FIXUP_IMAGEBASE: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_RMAP_IGNORE_MISCOMPARE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_RMAP_LOAD_RW_DATA_SECTIONS: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_RMAP_MAPPED_FLAT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_RMAP_OMIT_SHARED_RW_DATA_SECTIONS: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGEHLP_SF_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const sfImage: IMAGEHLP_SF_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const sfDbg: IMAGEHLP_SF_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const sfPdb: IMAGEHLP_SF_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const sfMpd: IMAGEHLP_SF_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const sfMax: IMAGEHLP_SF_TYPE = 4i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -7252,48 +9608,6 @@ impl ::core::clone::Clone for IMAGEHLP_STACK_FRAME {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGEHLP_STATUS_REASON = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindOutOfMemory: IMAGEHLP_STATUS_REASON = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindRvaToVaFailed: IMAGEHLP_STATUS_REASON = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindNoRoomInImage: IMAGEHLP_STATUS_REASON = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindImportModuleFailed: IMAGEHLP_STATUS_REASON = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindImportProcedureFailed: IMAGEHLP_STATUS_REASON = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindImportModule: IMAGEHLP_STATUS_REASON = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindImportProcedure: IMAGEHLP_STATUS_REASON = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindForwarder: IMAGEHLP_STATUS_REASON = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindForwarderNOT: IMAGEHLP_STATUS_REASON = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindImageModified: IMAGEHLP_STATUS_REASON = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindExpandFileHeaders: IMAGEHLP_STATUS_REASON = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindImageComplete: IMAGEHLP_STATUS_REASON = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindMismatchedSymbols: IMAGEHLP_STATUS_REASON = 12i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindSymbolsNotUpdated: IMAGEHLP_STATUS_REASON = 13i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindImportProcedure32: IMAGEHLP_STATUS_REASON = 14i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindImportProcedure64: IMAGEHLP_STATUS_REASON = 15i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindForwarder32: IMAGEHLP_STATUS_REASON = 16i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindForwarder64: IMAGEHLP_STATUS_REASON = 17i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindForwarderNOT32: IMAGEHLP_STATUS_REASON = 18i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const BindForwarderNOT64: IMAGEHLP_STATUS_REASON = 19i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(target_arch = "x86")]
@@ -7412,24 +9726,6 @@ impl ::core::clone::Clone for IMAGEHLP_SYMBOLW_PACKAGE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_FUNCTION: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_INFO_CONSTANT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_INFO_FRAMERELATIVE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_INFO_LOCAL: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_INFO_PARAMETER: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_INFO_REGISTER: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_INFO_REGRELATIVE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_INFO_TLSRELATIVE: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_INFO_VALUEPRESENT: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(target_arch = "x86")]
@@ -7464,84 +9760,6 @@ impl ::core::clone::Clone for IMAGEHLP_SYMBOL_SRC {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_THUNK: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGEHLP_SYMBOL_TYPE_INFO = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_SYMTAG: IMAGEHLP_SYMBOL_TYPE_INFO = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_SYMNAME: IMAGEHLP_SYMBOL_TYPE_INFO = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_LENGTH: IMAGEHLP_SYMBOL_TYPE_INFO = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_TYPE: IMAGEHLP_SYMBOL_TYPE_INFO = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_TYPEID: IMAGEHLP_SYMBOL_TYPE_INFO = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_BASETYPE: IMAGEHLP_SYMBOL_TYPE_INFO = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_ARRAYINDEXTYPEID: IMAGEHLP_SYMBOL_TYPE_INFO = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_FINDCHILDREN: IMAGEHLP_SYMBOL_TYPE_INFO = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_DATAKIND: IMAGEHLP_SYMBOL_TYPE_INFO = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_ADDRESSOFFSET: IMAGEHLP_SYMBOL_TYPE_INFO = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_OFFSET: IMAGEHLP_SYMBOL_TYPE_INFO = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_VALUE: IMAGEHLP_SYMBOL_TYPE_INFO = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_COUNT: IMAGEHLP_SYMBOL_TYPE_INFO = 12i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_CHILDRENCOUNT: IMAGEHLP_SYMBOL_TYPE_INFO = 13i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_BITPOSITION: IMAGEHLP_SYMBOL_TYPE_INFO = 14i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_VIRTUALBASECLASS: IMAGEHLP_SYMBOL_TYPE_INFO = 15i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_VIRTUALTABLESHAPEID: IMAGEHLP_SYMBOL_TYPE_INFO = 16i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_VIRTUALBASEPOINTEROFFSET: IMAGEHLP_SYMBOL_TYPE_INFO = 17i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_CLASSPARENTID: IMAGEHLP_SYMBOL_TYPE_INFO = 18i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_NESTED: IMAGEHLP_SYMBOL_TYPE_INFO = 19i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_SYMINDEX: IMAGEHLP_SYMBOL_TYPE_INFO = 20i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_LEXICALPARENT: IMAGEHLP_SYMBOL_TYPE_INFO = 21i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_ADDRESS: IMAGEHLP_SYMBOL_TYPE_INFO = 22i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_THISADJUST: IMAGEHLP_SYMBOL_TYPE_INFO = 23i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_UDTKIND: IMAGEHLP_SYMBOL_TYPE_INFO = 24i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_IS_EQUIV_TO: IMAGEHLP_SYMBOL_TYPE_INFO = 25i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_CALLING_CONVENTION: IMAGEHLP_SYMBOL_TYPE_INFO = 26i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_IS_CLOSE_EQUIV_TO: IMAGEHLP_SYMBOL_TYPE_INFO = 27i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GTIEX_REQS_VALID: IMAGEHLP_SYMBOL_TYPE_INFO = 28i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_VIRTUALBASEOFFSET: IMAGEHLP_SYMBOL_TYPE_INFO = 29i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_VIRTUALBASEDISPINDEX: IMAGEHLP_SYMBOL_TYPE_INFO = 30i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_IS_REFERENCE: IMAGEHLP_SYMBOL_TYPE_INFO = 31i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_INDIRECTVIRTUALBASECLASS: IMAGEHLP_SYMBOL_TYPE_INFO = 32i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_VIRTUALBASETABLETYPE: IMAGEHLP_SYMBOL_TYPE_INFO = 33i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TI_GET_OBJECTPOINTERTYPE: IMAGEHLP_SYMBOL_TYPE_INFO = 34i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_TYPE_INFO_MAX: IMAGEHLP_SYMBOL_TYPE_INFO = 35i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGEHLP_SYMBOL_VIRTUAL: u32 = 4096u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY {
@@ -7706,160 +9924,11 @@ impl ::core::clone::Clone for IMAGE_DEBUG_INFORMATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGE_DEBUG_TYPE = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DEBUG_TYPE_UNKNOWN: IMAGE_DEBUG_TYPE = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DEBUG_TYPE_COFF: IMAGE_DEBUG_TYPE = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DEBUG_TYPE_CODEVIEW: IMAGE_DEBUG_TYPE = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DEBUG_TYPE_FPO: IMAGE_DEBUG_TYPE = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DEBUG_TYPE_MISC: IMAGE_DEBUG_TYPE = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DEBUG_TYPE_EXCEPTION: IMAGE_DEBUG_TYPE = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DEBUG_TYPE_FIXUP: IMAGE_DEBUG_TYPE = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DEBUG_TYPE_BORLAND: IMAGE_DEBUG_TYPE = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGE_DIRECTORY_ENTRY = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_ARCHITECTURE: IMAGE_DIRECTORY_ENTRY = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_BASERELOC: IMAGE_DIRECTORY_ENTRY = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_BOUND_IMPORT: IMAGE_DIRECTORY_ENTRY = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_COM_DESCRIPTOR: IMAGE_DIRECTORY_ENTRY = 14u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_DEBUG: IMAGE_DIRECTORY_ENTRY = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT: IMAGE_DIRECTORY_ENTRY = 13u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_EXCEPTION: IMAGE_DIRECTORY_ENTRY = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_EXPORT: IMAGE_DIRECTORY_ENTRY = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_GLOBALPTR: IMAGE_DIRECTORY_ENTRY = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_IAT: IMAGE_DIRECTORY_ENTRY = 12u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_IMPORT: IMAGE_DIRECTORY_ENTRY = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG: IMAGE_DIRECTORY_ENTRY = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_RESOURCE: IMAGE_DIRECTORY_ENTRY = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_SECURITY: IMAGE_DIRECTORY_ENTRY = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DIRECTORY_ENTRY_TLS: IMAGE_DIRECTORY_ENTRY = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGE_DLL_CHARACTERISTICS = u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_HIGH_ENTROPY_VA: IMAGE_DLL_CHARACTERISTICS = 32u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE: IMAGE_DLL_CHARACTERISTICS = 64u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY: IMAGE_DLL_CHARACTERISTICS = 128u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_NX_COMPAT: IMAGE_DLL_CHARACTERISTICS = 256u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_NO_ISOLATION: IMAGE_DLL_CHARACTERISTICS = 512u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_NO_SEH: IMAGE_DLL_CHARACTERISTICS = 1024u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_NO_BIND: IMAGE_DLL_CHARACTERISTICS = 2048u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_APPCONTAINER: IMAGE_DLL_CHARACTERISTICS = 4096u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_WDM_DRIVER: IMAGE_DLL_CHARACTERISTICS = 8192u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_GUARD_CF: IMAGE_DLL_CHARACTERISTICS = 16384u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_TERMINAL_SERVER_AWARE: IMAGE_DLL_CHARACTERISTICS = 32768u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_EX_CET_COMPAT: IMAGE_DLL_CHARACTERISTICS = 1u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_EX_CET_COMPAT_STRICT_MODE: IMAGE_DLL_CHARACTERISTICS = 2u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_EX_CET_SET_CONTEXT_IP_VALIDATION_RELAXED_MODE: IMAGE_DLL_CHARACTERISTICS = 4u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_EX_CET_DYNAMIC_APIS_ALLOW_IN_PROC: IMAGE_DLL_CHARACTERISTICS = 8u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_EX_CET_RESERVED_1: IMAGE_DLL_CHARACTERISTICS = 16u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_DLLCHARACTERISTICS_EX_CET_RESERVED_2: IMAGE_DLL_CHARACTERISTICS = 32u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGE_FILE_CHARACTERISTICS = u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_RELOCS_STRIPPED: IMAGE_FILE_CHARACTERISTICS = 1u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_EXECUTABLE_IMAGE: IMAGE_FILE_CHARACTERISTICS = 2u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_LINE_NUMS_STRIPPED: IMAGE_FILE_CHARACTERISTICS = 4u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_LOCAL_SYMS_STRIPPED: IMAGE_FILE_CHARACTERISTICS = 8u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_AGGRESIVE_WS_TRIM: IMAGE_FILE_CHARACTERISTICS = 16u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_LARGE_ADDRESS_AWARE: IMAGE_FILE_CHARACTERISTICS = 32u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_BYTES_REVERSED_LO: IMAGE_FILE_CHARACTERISTICS = 128u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_32BIT_MACHINE: IMAGE_FILE_CHARACTERISTICS = 256u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_DEBUG_STRIPPED: IMAGE_FILE_CHARACTERISTICS = 512u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP: IMAGE_FILE_CHARACTERISTICS = 1024u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_NET_RUN_FROM_SWAP: IMAGE_FILE_CHARACTERISTICS = 2048u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_SYSTEM: IMAGE_FILE_CHARACTERISTICS = 4096u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_DLL: IMAGE_FILE_CHARACTERISTICS = 8192u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_UP_SYSTEM_ONLY: IMAGE_FILE_CHARACTERISTICS = 16384u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_BYTES_REVERSED_HI: IMAGE_FILE_CHARACTERISTICS = 32768u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGE_FILE_CHARACTERISTICS2 = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_RELOCS_STRIPPED2: IMAGE_FILE_CHARACTERISTICS2 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_EXECUTABLE_IMAGE2: IMAGE_FILE_CHARACTERISTICS2 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_LINE_NUMS_STRIPPED2: IMAGE_FILE_CHARACTERISTICS2 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_LOCAL_SYMS_STRIPPED2: IMAGE_FILE_CHARACTERISTICS2 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_AGGRESIVE_WS_TRIM2: IMAGE_FILE_CHARACTERISTICS2 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_LARGE_ADDRESS_AWARE2: IMAGE_FILE_CHARACTERISTICS2 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_BYTES_REVERSED_LO2: IMAGE_FILE_CHARACTERISTICS2 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_32BIT_MACHINE2: IMAGE_FILE_CHARACTERISTICS2 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_DEBUG_STRIPPED2: IMAGE_FILE_CHARACTERISTICS2 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_REMOVABLE_RUN_FROM_SWAP2: IMAGE_FILE_CHARACTERISTICS2 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_NET_RUN_FROM_SWAP2: IMAGE_FILE_CHARACTERISTICS2 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_SYSTEM_2: IMAGE_FILE_CHARACTERISTICS2 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_DLL_2: IMAGE_FILE_CHARACTERISTICS2 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_UP_SYSTEM_ONLY_2: IMAGE_FILE_CHARACTERISTICS2 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_BYTES_REVERSED_HI_2: IMAGE_FILE_CHARACTERISTICS2 = 32768u32;
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
+#[cfg(feature = "Win32_System_SystemInformation")]
 pub struct IMAGE_FILE_HEADER {
-    pub Machine: IMAGE_FILE_MACHINE,
+    pub Machine: super::super::SystemInformation::IMAGE_FILE_MACHINE,
     pub NumberOfSections: u16,
     pub TimeDateStamp: u32,
     pub PointerToSymbolTable: u32,
@@ -7867,78 +9936,14 @@ pub struct IMAGE_FILE_HEADER {
     pub SizeOfOptionalHeader: u16,
     pub Characteristics: IMAGE_FILE_CHARACTERISTICS,
 }
+#[cfg(feature = "Win32_System_SystemInformation")]
 impl ::core::marker::Copy for IMAGE_FILE_HEADER {}
+#[cfg(feature = "Win32_System_SystemInformation")]
 impl ::core::clone::Clone for IMAGE_FILE_HEADER {
     fn clone(&self) -> Self {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGE_FILE_MACHINE = u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_AXP64: IMAGE_FILE_MACHINE = 644u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_I386: IMAGE_FILE_MACHINE = 332u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_IA64: IMAGE_FILE_MACHINE = 512u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_AMD64: IMAGE_FILE_MACHINE = 34404u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_UNKNOWN: IMAGE_FILE_MACHINE = 0u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_TARGET_HOST: IMAGE_FILE_MACHINE = 1u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_R3000: IMAGE_FILE_MACHINE = 354u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_R4000: IMAGE_FILE_MACHINE = 358u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_R10000: IMAGE_FILE_MACHINE = 360u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_WCEMIPSV2: IMAGE_FILE_MACHINE = 361u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_ALPHA: IMAGE_FILE_MACHINE = 388u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_SH3: IMAGE_FILE_MACHINE = 418u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_SH3DSP: IMAGE_FILE_MACHINE = 419u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_SH3E: IMAGE_FILE_MACHINE = 420u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_SH4: IMAGE_FILE_MACHINE = 422u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_SH5: IMAGE_FILE_MACHINE = 424u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_ARM: IMAGE_FILE_MACHINE = 448u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_THUMB: IMAGE_FILE_MACHINE = 450u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_ARMNT: IMAGE_FILE_MACHINE = 452u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_AM33: IMAGE_FILE_MACHINE = 467u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_POWERPC: IMAGE_FILE_MACHINE = 496u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_POWERPCFP: IMAGE_FILE_MACHINE = 497u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_MIPS16: IMAGE_FILE_MACHINE = 614u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_ALPHA64: IMAGE_FILE_MACHINE = 644u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_MIPSFPU: IMAGE_FILE_MACHINE = 870u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_MIPSFPU16: IMAGE_FILE_MACHINE = 1126u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_TRICORE: IMAGE_FILE_MACHINE = 1312u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_CEF: IMAGE_FILE_MACHINE = 3311u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_EBC: IMAGE_FILE_MACHINE = 3772u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_M32R: IMAGE_FILE_MACHINE = 36929u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_ARM64: IMAGE_FILE_MACHINE = 43620u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_FILE_MACHINE_CEE: IMAGE_FILE_MACHINE = 49390u16;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct IMAGE_FUNCTION_ENTRY {
@@ -8108,26 +10113,32 @@ impl ::core::clone::Clone for IMAGE_LOAD_CONFIG_DIRECTORY64 {
     }
 }
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
+#[cfg(feature = "Win32_System_SystemInformation")]
 pub struct IMAGE_NT_HEADERS32 {
     pub Signature: u32,
     pub FileHeader: IMAGE_FILE_HEADER,
     pub OptionalHeader: IMAGE_OPTIONAL_HEADER32,
 }
+#[cfg(feature = "Win32_System_SystemInformation")]
 impl ::core::marker::Copy for IMAGE_NT_HEADERS32 {}
+#[cfg(feature = "Win32_System_SystemInformation")]
 impl ::core::clone::Clone for IMAGE_NT_HEADERS32 {
     fn clone(&self) -> Self {
         *self
     }
 }
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
+#[cfg(feature = "Win32_System_SystemInformation")]
 pub struct IMAGE_NT_HEADERS64 {
     pub Signature: u32,
     pub FileHeader: IMAGE_FILE_HEADER,
     pub OptionalHeader: IMAGE_OPTIONAL_HEADER64,
 }
+#[cfg(feature = "Win32_System_SystemInformation")]
 impl ::core::marker::Copy for IMAGE_NT_HEADERS64 {}
+#[cfg(feature = "Win32_System_SystemInformation")]
 impl ::core::clone::Clone for IMAGE_NT_HEADERS64 {
     fn clone(&self) -> Self {
         *self
@@ -8214,23 +10225,16 @@ impl ::core::clone::Clone for IMAGE_OPTIONAL_HEADER64 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGE_OPTIONAL_HEADER_MAGIC = u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_NT_OPTIONAL_HDR_MAGIC: IMAGE_OPTIONAL_HEADER_MAGIC = 523u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_NT_OPTIONAL_HDR32_MAGIC: IMAGE_OPTIONAL_HEADER_MAGIC = 267u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_NT_OPTIONAL_HDR64_MAGIC: IMAGE_OPTIONAL_HEADER_MAGIC = 523u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_ROM_OPTIONAL_HDR_MAGIC: IMAGE_OPTIONAL_HEADER_MAGIC = 263u16;
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_SystemInformation\"`*"]
+#[cfg(feature = "Win32_System_SystemInformation")]
 pub struct IMAGE_ROM_HEADERS {
     pub FileHeader: IMAGE_FILE_HEADER,
     pub OptionalHeader: IMAGE_ROM_OPTIONAL_HEADER,
 }
+#[cfg(feature = "Win32_System_SystemInformation")]
 impl ::core::marker::Copy for IMAGE_ROM_HEADERS {}
+#[cfg(feature = "Win32_System_SystemInformation")]
 impl ::core::clone::Clone for IMAGE_ROM_HEADERS {
     fn clone(&self) -> Self {
         *self
@@ -8284,86 +10288,6 @@ impl ::core::clone::Clone for IMAGE_RUNTIME_FUNCTION_ENTRY_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGE_SECTION_CHARACTERISTICS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_TYPE_NO_PAD: IMAGE_SECTION_CHARACTERISTICS = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_CNT_CODE: IMAGE_SECTION_CHARACTERISTICS = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_CNT_INITIALIZED_DATA: IMAGE_SECTION_CHARACTERISTICS = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_CNT_UNINITIALIZED_DATA: IMAGE_SECTION_CHARACTERISTICS = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_LNK_OTHER: IMAGE_SECTION_CHARACTERISTICS = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_LNK_INFO: IMAGE_SECTION_CHARACTERISTICS = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_LNK_REMOVE: IMAGE_SECTION_CHARACTERISTICS = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_LNK_COMDAT: IMAGE_SECTION_CHARACTERISTICS = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_NO_DEFER_SPEC_EXC: IMAGE_SECTION_CHARACTERISTICS = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_GPREL: IMAGE_SECTION_CHARACTERISTICS = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_FARDATA: IMAGE_SECTION_CHARACTERISTICS = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_PURGEABLE: IMAGE_SECTION_CHARACTERISTICS = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_16BIT: IMAGE_SECTION_CHARACTERISTICS = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_LOCKED: IMAGE_SECTION_CHARACTERISTICS = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_PRELOAD: IMAGE_SECTION_CHARACTERISTICS = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_1BYTES: IMAGE_SECTION_CHARACTERISTICS = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_2BYTES: IMAGE_SECTION_CHARACTERISTICS = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_4BYTES: IMAGE_SECTION_CHARACTERISTICS = 3145728u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_8BYTES: IMAGE_SECTION_CHARACTERISTICS = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_16BYTES: IMAGE_SECTION_CHARACTERISTICS = 5242880u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_32BYTES: IMAGE_SECTION_CHARACTERISTICS = 6291456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_64BYTES: IMAGE_SECTION_CHARACTERISTICS = 7340032u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_128BYTES: IMAGE_SECTION_CHARACTERISTICS = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_256BYTES: IMAGE_SECTION_CHARACTERISTICS = 9437184u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_512BYTES: IMAGE_SECTION_CHARACTERISTICS = 10485760u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_1024BYTES: IMAGE_SECTION_CHARACTERISTICS = 11534336u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_2048BYTES: IMAGE_SECTION_CHARACTERISTICS = 12582912u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_4096BYTES: IMAGE_SECTION_CHARACTERISTICS = 13631488u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_8192BYTES: IMAGE_SECTION_CHARACTERISTICS = 14680064u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_ALIGN_MASK: IMAGE_SECTION_CHARACTERISTICS = 15728640u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_LNK_NRELOC_OVFL: IMAGE_SECTION_CHARACTERISTICS = 16777216u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_DISCARDABLE: IMAGE_SECTION_CHARACTERISTICS = 33554432u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_NOT_CACHED: IMAGE_SECTION_CHARACTERISTICS = 67108864u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_NOT_PAGED: IMAGE_SECTION_CHARACTERISTICS = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_SHARED: IMAGE_SECTION_CHARACTERISTICS = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_EXECUTE: IMAGE_SECTION_CHARACTERISTICS = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_READ: IMAGE_SECTION_CHARACTERISTICS = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_MEM_WRITE: IMAGE_SECTION_CHARACTERISTICS = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SCN_SCALE_INDEX: IMAGE_SECTION_CHARACTERISTICS = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct IMAGE_SECTION_HEADER {
@@ -8396,49 +10320,6 @@ impl ::core::clone::Clone for IMAGE_SECTION_HEADER_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IMAGE_SUBSYSTEM = u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_UNKNOWN: IMAGE_SUBSYSTEM = 0u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_NATIVE: IMAGE_SUBSYSTEM = 1u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_WINDOWS_GUI: IMAGE_SUBSYSTEM = 2u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_WINDOWS_CUI: IMAGE_SUBSYSTEM = 3u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_OS2_CUI: IMAGE_SUBSYSTEM = 5u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_POSIX_CUI: IMAGE_SUBSYSTEM = 7u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_NATIVE_WINDOWS: IMAGE_SUBSYSTEM = 8u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_WINDOWS_CE_GUI: IMAGE_SUBSYSTEM = 9u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_EFI_APPLICATION: IMAGE_SUBSYSTEM = 10u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER: IMAGE_SUBSYSTEM = 11u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER: IMAGE_SUBSYSTEM = 12u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_EFI_ROM: IMAGE_SUBSYSTEM = 13u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_XBOX: IMAGE_SUBSYSTEM = 14u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION: IMAGE_SUBSYSTEM = 16u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IMAGE_SUBSYSTEM_XBOX_CODE_CATALOG: IMAGE_SUBSYSTEM = 17u16;
-pub type IMachineDebugManager = *mut ::core::ffi::c_void;
-pub type IMachineDebugManagerCookie = *mut ::core::ffi::c_void;
-pub type IMachineDebugManagerEvents = *mut ::core::ffi::c_void;
-pub type IModelIterator = *mut ::core::ffi::c_void;
-pub type IModelKeyReference = *mut ::core::ffi::c_void;
-pub type IModelKeyReference2 = *mut ::core::ffi::c_void;
-pub type IModelMethod = *mut ::core::ffi::c_void;
-pub type IModelObject = *mut ::core::ffi::c_void;
-pub type IModelPropertyAccessor = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const INCORRECT_VERSION_INFO: u32 = 7u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub union INLINE_FRAME_CONTEXT {
@@ -8464,22 +10345,6 @@ impl ::core::clone::Clone for INLINE_FRAME_CONTEXT_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const INLINE_FRAME_CONTEXT_IGNORE: u32 = 4294967295u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const INLINE_FRAME_CONTEXT_INIT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const INSUFFICIENT_SPACE_TO_COPY: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const INTERFACESAFE_FOR_UNTRUSTED_CALLER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const INTERFACESAFE_FOR_UNTRUSTED_DATA: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const INTERFACE_USES_DISPEX: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const INTERFACE_USES_SECURITY_MANAGER: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IOCTL_IPMI_INTERNAL_RECORD_SEL_EVENT: u32 = 2232320u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct IOSPACE {
@@ -8567,9 +10432,6 @@ impl ::core::clone::Clone for IOSPACE_EX64 {
         *self
     }
 }
-pub type IObjectSafety = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IPMI_IOCTL_INDEX: u32 = 1024u32;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct IPMI_OS_SEL_RECORD {
@@ -8586,136 +10448,31 @@ impl ::core::clone::Clone for IPMI_OS_SEL_RECORD {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IPMI_OS_SEL_RECORD_MASK: u32 = 65535u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IPMI_OS_SEL_RECORD_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeWhea: IPMI_OS_SEL_RECORD_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeOther: IPMI_OS_SEL_RECORD_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeWheaErrorXpfMca: IPMI_OS_SEL_RECORD_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeWheaErrorPci: IPMI_OS_SEL_RECORD_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeWheaErrorNmi: IPMI_OS_SEL_RECORD_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeWheaErrorOther: IPMI_OS_SEL_RECORD_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeRaw: IPMI_OS_SEL_RECORD_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeDriver: IPMI_OS_SEL_RECORD_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeBugcheckRecovery: IPMI_OS_SEL_RECORD_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeBugcheckData: IPMI_OS_SEL_RECORD_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IpmiOsSelRecordTypeMax: IPMI_OS_SEL_RECORD_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IPMI_OS_SEL_RECORD_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IPMI_OS_SEL_RECORD_VERSION_1: u32 = 1u32;
-pub type IPerPropertyBrowsing2 = *mut ::core::ffi::c_void;
-pub type IPreferredRuntimeTypeConcept = *mut ::core::ffi::c_void;
-pub type IProcessDebugManager32 = *mut ::core::ffi::c_void;
-pub type IProcessDebugManager64 = *mut ::core::ffi::c_void;
-pub type IProvideExpressionContexts = *mut ::core::ffi::c_void;
-pub type IRawEnumerator = *mut ::core::ffi::c_void;
-pub type IRemoteDebugApplication = *mut ::core::ffi::c_void;
-pub type IRemoteDebugApplication110 = *mut ::core::ffi::c_void;
-pub type IRemoteDebugApplicationEvents = *mut ::core::ffi::c_void;
-pub type IRemoteDebugApplicationThread = *mut ::core::ffi::c_void;
-pub type IRemoteDebugCriticalErrorEvent110 = *mut ::core::ffi::c_void;
-pub type IRemoteDebugInfoEvent110 = *mut ::core::ffi::c_void;
-pub type IScriptEntry = *mut ::core::ffi::c_void;
-pub type IScriptInvocationContext = *mut ::core::ffi::c_void;
-pub type IScriptNode = *mut ::core::ffi::c_void;
-pub type IScriptScriptlet = *mut ::core::ffi::c_void;
-pub type ISimpleConnectionPoint = *mut ::core::ffi::c_void;
-pub type IStringDisplayableConcept = *mut ::core::ffi::c_void;
-pub type ITridentEventSink = *mut ::core::ffi::c_void;
-pub type IWebAppDiagnosticsObjectInitialization = *mut ::core::ffi::c_void;
-pub type IWebAppDiagnosticsSetup = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type IntrinsicKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicVoid: IntrinsicKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicBool: IntrinsicKind = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicChar: IntrinsicKind = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicWChar: IntrinsicKind = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicInt: IntrinsicKind = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicUInt: IntrinsicKind = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicLong: IntrinsicKind = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicULong: IntrinsicKind = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicFloat: IntrinsicKind = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicHRESULT: IntrinsicKind = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicChar16: IntrinsicKind = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IntrinsicChar32: IntrinsicKind = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type JS_PROPERTY_ATTRIBUTES = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_ATTRIBUTE_NONE: JS_PROPERTY_ATTRIBUTES = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_HAS_CHILDREN: JS_PROPERTY_ATTRIBUTES = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_FAKE: JS_PROPERTY_ATTRIBUTES = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_METHOD: JS_PROPERTY_ATTRIBUTES = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_READONLY: JS_PROPERTY_ATTRIBUTES = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_NATIVE_WINRT_POINTER: JS_PROPERTY_ATTRIBUTES = 16i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_FRAME_INTRYBLOCK: JS_PROPERTY_ATTRIBUTES = 32i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_FRAME_INCATCHBLOCK: JS_PROPERTY_ATTRIBUTES = 64i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_FRAME_INFINALLYBLOCK: JS_PROPERTY_ATTRIBUTES = 128i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type JS_PROPERTY_MEMBERS = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_MEMBERS_ALL: JS_PROPERTY_MEMBERS = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JS_PROPERTY_MEMBERS_ARGUMENTS: JS_PROPERTY_MEMBERS = 1i32;
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JsDebugPropertyInfo {
-    pub name: super::super::super::Foundation::BSTR,
-    pub r#type: super::super::super::Foundation::BSTR,
-    pub value: super::super::super::Foundation::BSTR,
-    pub fullName: super::super::super::Foundation::BSTR,
-    pub attr: JS_PROPERTY_ATTRIBUTES,
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub struct JS_NATIVE_FRAME {
+    pub InstructionOffset: u64,
+    pub ReturnOffset: u64,
+    pub FrameOffset: u64,
+    pub StackOffset: u64,
 }
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JsDebugPropertyInfo {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JsDebugPropertyInfo {
+impl ::core::marker::Copy for JS_NATIVE_FRAME {}
+impl ::core::clone::Clone for JS_NATIVE_FRAME {
     fn clone(&self) -> Self {
         *self
     }
 }
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-#[repr(transparent)]
-pub struct JsDebugReadMemoryFlags(pub i32);
-impl JsDebugReadMemoryFlags {
-    pub const None: Self = Self(0i32);
-    pub const JsDebugAllowPartialRead: Self = Self(1i32);
+pub struct JsDebugPropertyInfo {
+    pub name: ::windows_sys::core::BSTR,
+    pub r#type: ::windows_sys::core::BSTR,
+    pub value: ::windows_sys::core::BSTR,
+    pub fullName: ::windows_sys::core::BSTR,
+    pub attr: JS_PROPERTY_ATTRIBUTES,
 }
-impl ::core::marker::Copy for JsDebugReadMemoryFlags {}
-impl ::core::clone::Clone for JsDebugReadMemoryFlags {
+impl ::core::marker::Copy for JsDebugPropertyInfo {}
+impl ::core::clone::Clone for JsDebugPropertyInfo {
     fn clone(&self) -> Self {
         *self
     }
@@ -9022,14 +10779,6 @@ impl ::core::clone::Clone for KDHELP64 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const KD_SECONDARY_VERSION_AMD64_CONTEXT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const KD_SECONDARY_VERSION_AMD64_OBSOLETE_CONTEXT_1: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const KD_SECONDARY_VERSION_AMD64_OBSOLETE_CONTEXT_2: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const KD_SECONDARY_VERSION_DEFAULT: u32 = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 #[cfg(target_arch = "x86_64")]
@@ -9231,9 +10980,9 @@ impl ::core::clone::Clone for LDT_ENTRY_0_1 {
     }
 }
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
 pub struct LOADED_IMAGE {
     pub ModuleName: ::windows_sys::core::PSTR,
     pub hFile: super::super::super::Foundation::HANDLE,
@@ -9251,19 +11000,19 @@ pub struct LOADED_IMAGE {
     pub SizeOfImage: u32,
 }
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
 impl ::core::marker::Copy for LOADED_IMAGE {}
 #[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
 impl ::core::clone::Clone for LOADED_IMAGE {
     fn clone(&self) -> Self {
         *self
     }
 }
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_SystemInformation\"`*"]
 #[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
 pub struct LOADED_IMAGE {
     pub ModuleName: ::windows_sys::core::PSTR,
     pub hFile: super::super::super::Foundation::HANDLE,
@@ -9281,10 +11030,10 @@ pub struct LOADED_IMAGE {
     pub SizeOfImage: u32,
 }
 #[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
 impl ::core::marker::Copy for LOADED_IMAGE {}
 #[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel", feature = "Win32_System_SystemInformation"))]
 impl ::core::clone::Clone for LOADED_IMAGE {
     fn clone(&self) -> Self {
         *self
@@ -9309,21 +11058,6 @@ impl ::core::clone::Clone for LOAD_DLL_DEBUG_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type LPCALL_BACK_USER_INTERRUPT_ROUTINE = ::core::option::Option<unsafe extern "system" fn() -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-pub type LPTOP_LEVEL_EXCEPTION_FILTER = ::core::option::Option<unsafe extern "system" fn(exceptioninfo: *const EXCEPTION_POINTERS) -> i32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type LanguageKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LanguageUnknown: LanguageKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LanguageC: LanguageKind = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LanguageCPP: LanguageKind = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LanguageAssembly: LanguageKind = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct Location {
@@ -9336,16 +11070,6 @@ impl ::core::clone::Clone for Location {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type LocationKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LocationMember: LocationKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LocationStatic: LocationKind = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LocationConstant: LocationKind = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LocationNone: LocationKind = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct M128A {
@@ -9358,10 +11082,6 @@ impl ::core::clone::Clone for M128A {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MAX_SYM_NAME: u32 = 2000u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MEMORY_READ_ERROR: u32 = 1u32;
 #[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_FileSystem\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_Memory\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_FileSystem", feature = "Win32_System_Kernel", feature = "Win32_System_Memory"))]
@@ -9377,7 +11097,7 @@ impl ::core::clone::Clone for MINIDUMP_CALLBACK_INFORMATION {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_FileSystem\"`, `\"Win32_System_Kernel\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_FileSystem", feature = "Win32_System_Kernel"))]
 pub struct MINIDUMP_CALLBACK_INPUT {
@@ -9419,7 +11139,7 @@ impl ::core::clone::Clone for MINIDUMP_CALLBACK_INPUT_0 {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Memory\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Memory"))]
 pub struct MINIDUMP_CALLBACK_OUTPUT {
@@ -9433,7 +11153,7 @@ impl ::core::clone::Clone for MINIDUMP_CALLBACK_OUTPUT {
         *self
     }
 }
-#[repr(C, packed(4))]
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Memory\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Memory"))]
 pub union MINIDUMP_CALLBACK_OUTPUT_0 {
@@ -9531,54 +11251,7 @@ impl ::core::clone::Clone for MINIDUMP_CALLBACK_OUTPUT_0_4 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_FileSystem\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_Memory\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_FileSystem", feature = "Win32_System_Kernel", feature = "Win32_System_Memory"))]
-pub type MINIDUMP_CALLBACK_ROUTINE = ::core::option::Option<unsafe extern "system" fn(callbackparam: *mut ::core::ffi::c_void, callbackinput: *const MINIDUMP_CALLBACK_INPUT, callbackoutput: *mut MINIDUMP_CALLBACK_OUTPUT) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type MINIDUMP_CALLBACK_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ModuleCallback: MINIDUMP_CALLBACK_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadCallback: MINIDUMP_CALLBACK_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadExCallback: MINIDUMP_CALLBACK_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IncludeThreadCallback: MINIDUMP_CALLBACK_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IncludeModuleCallback: MINIDUMP_CALLBACK_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MemoryCallback: MINIDUMP_CALLBACK_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CancelCallback: MINIDUMP_CALLBACK_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WriteKernelMinidumpCallback: MINIDUMP_CALLBACK_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const KernelMinidumpStatusCallback: MINIDUMP_CALLBACK_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const RemoveMemoryCallback: MINIDUMP_CALLBACK_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IncludeVmRegionCallback: MINIDUMP_CALLBACK_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IoStartCallback: MINIDUMP_CALLBACK_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IoWriteAllCallback: MINIDUMP_CALLBACK_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IoFinishCallback: MINIDUMP_CALLBACK_TYPE = 13i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ReadMemoryFailureCallback: MINIDUMP_CALLBACK_TYPE = 14i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SecondaryFlagsCallback: MINIDUMP_CALLBACK_TYPE = 15i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IsProcessSnapshotCallback: MINIDUMP_CALLBACK_TYPE = 16i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const VmStartCallback: MINIDUMP_CALLBACK_TYPE = 17i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const VmQueryCallback: MINIDUMP_CALLBACK_TYPE = 18i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const VmPreReadCallback: MINIDUMP_CALLBACK_TYPE = 19i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const VmPostReadCallback: MINIDUMP_CALLBACK_TYPE = 20i32;
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_DIRECTORY {
     pub StreamType: u32,
@@ -9640,7 +11313,7 @@ impl ::core::clone::Clone for MINIDUMP_EXCEPTION_INFORMATION64 {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_EXCEPTION_STREAM {
     pub ThreadId: u32,
@@ -9669,7 +11342,7 @@ impl ::core::clone::Clone for MINIDUMP_FUNCTION_TABLE_DESCRIPTOR {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_FUNCTION_TABLE_STREAM {
     pub SizeOfHeader: u32,
@@ -9685,7 +11358,7 @@ impl ::core::clone::Clone for MINIDUMP_FUNCTION_TABLE_STREAM {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_HANDLE_DATA_STREAM {
     pub SizeOfHeader: u32,
@@ -9735,7 +11408,7 @@ impl ::core::clone::Clone for MINIDUMP_HANDLE_DESCRIPTOR_2 {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_HANDLE_OBJECT_INFORMATION {
     pub NextInfoRva: u32,
@@ -9748,29 +11421,7 @@ impl ::core::clone::Clone for MINIDUMP_HANDLE_OBJECT_INFORMATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniHandleObjectInformationNone: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniThreadInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniMutantInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniMutantInformation2: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniProcessInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniProcessInformation2: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniEventInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniSectionInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniSemaphoreInformation1: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniHandleObjectInformationTypeMax: MINIDUMP_HANDLE_OBJECT_INFORMATION_TYPE = 9i32;
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_HANDLE_OPERATION_LIST {
     pub SizeOfHeader: u32,
@@ -9824,7 +11475,7 @@ impl ::core::clone::Clone for MINIDUMP_INCLUDE_MODULE_CALLBACK {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_INCLUDE_THREAD_CALLBACK {
     pub ThreadId: u32,
@@ -9852,7 +11503,7 @@ impl ::core::clone::Clone for MINIDUMP_IO_CALLBACK {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_LOCATION_DESCRIPTOR {
     pub DataSize: u32,
@@ -9948,7 +11599,7 @@ impl ::core::clone::Clone for MINIDUMP_MEMORY_INFO_LIST {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_MEMORY_LIST {
     pub NumberOfMemoryRanges: u32,
@@ -9960,21 +11611,7 @@ impl ::core::clone::Clone for MINIDUMP_MEMORY_LIST {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_MISC1_PROCESSOR_POWER_INFO: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_MISC3_PROCESS_EXECUTE_FLAGS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_MISC3_PROCESS_INTEGRITY: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_MISC3_PROTECTED_PROCESS: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_MISC3_TIMEZONE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_MISC4_BUILDSTRING: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_MISC5_PROCESS_COOKIE: u32 = 512u32;
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_MISC_INFO {
     pub SizeOfInfo: u32,
@@ -9990,7 +11627,7 @@ impl ::core::clone::Clone for MINIDUMP_MISC_INFO {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_MISC_INFO_2 {
     pub SizeOfInfo: u32,
@@ -10011,7 +11648,7 @@ impl ::core::clone::Clone for MINIDUMP_MISC_INFO_2 {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Time\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Time"))]
 pub struct MINIDUMP_MISC_INFO_3 {
@@ -10040,7 +11677,7 @@ impl ::core::clone::Clone for MINIDUMP_MISC_INFO_3 {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Time\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Time"))]
 pub struct MINIDUMP_MISC_INFO_4 {
@@ -10071,7 +11708,7 @@ impl ::core::clone::Clone for MINIDUMP_MISC_INFO_4 {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Time\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Time"))]
 pub struct MINIDUMP_MISC_INFO_5 {
@@ -10104,12 +11741,6 @@ impl ::core::clone::Clone for MINIDUMP_MISC_INFO_5 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type MINIDUMP_MISC_INFO_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_MISC1_PROCESS_ID: MINIDUMP_MISC_INFO_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_MISC1_PROCESS_TIMES: MINIDUMP_MISC_INFO_FLAGS = 2u32;
 #[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Storage_FileSystem\"`*"]
 #[cfg(feature = "Win32_Storage_FileSystem")]
@@ -10156,7 +11787,7 @@ impl ::core::clone::Clone for MINIDUMP_MODULE_CALLBACK {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Storage_FileSystem\"`*"]
 #[cfg(feature = "Win32_Storage_FileSystem")]
 pub struct MINIDUMP_MODULE_LIST {
@@ -10171,8 +11802,6 @@ impl ::core::clone::Clone for MINIDUMP_MODULE_LIST {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_PROCESS_VM_COUNTERS: u32 = 1u32;
 #[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_PROCESS_VM_COUNTERS_1 {
@@ -10225,14 +11854,6 @@ impl ::core::clone::Clone for MINIDUMP_PROCESS_VM_COUNTERS_2 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_PROCESS_VM_COUNTERS_EX: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_PROCESS_VM_COUNTERS_EX2: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_PROCESS_VM_COUNTERS_JOB: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_PROCESS_VM_COUNTERS_VIRTUALSIZE: u32 = 2u32;
 #[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_READ_MEMORY_FAILURE_CALLBACK {
@@ -10246,93 +11867,7 @@ impl ::core::clone::Clone for MINIDUMP_READ_MEMORY_FAILURE_CALLBACK {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type MINIDUMP_SECONDARY_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniSecondaryWithoutPowerInfo: MINIDUMP_SECONDARY_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniSecondaryValidFlags: MINIDUMP_SECONDARY_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type MINIDUMP_STREAM_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UnusedStream: MINIDUMP_STREAM_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ReservedStream0: MINIDUMP_STREAM_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ReservedStream1: MINIDUMP_STREAM_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadListStream: MINIDUMP_STREAM_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ModuleListStream: MINIDUMP_STREAM_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MemoryListStream: MINIDUMP_STREAM_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ExceptionStream: MINIDUMP_STREAM_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SystemInfoStream: MINIDUMP_STREAM_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadExListStream: MINIDUMP_STREAM_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const Memory64ListStream: MINIDUMP_STREAM_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CommentStreamA: MINIDUMP_STREAM_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const CommentStreamW: MINIDUMP_STREAM_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const HandleDataStream: MINIDUMP_STREAM_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FunctionTableStream: MINIDUMP_STREAM_TYPE = 13i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UnloadedModuleListStream: MINIDUMP_STREAM_TYPE = 14i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiscInfoStream: MINIDUMP_STREAM_TYPE = 15i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MemoryInfoListStream: MINIDUMP_STREAM_TYPE = 16i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadInfoListStream: MINIDUMP_STREAM_TYPE = 17i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const HandleOperationListStream: MINIDUMP_STREAM_TYPE = 18i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TokenStream: MINIDUMP_STREAM_TYPE = 19i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const JavaScriptDataStream: MINIDUMP_STREAM_TYPE = 20i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SystemMemoryInfoStream: MINIDUMP_STREAM_TYPE = 21i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ProcessVmCountersStream: MINIDUMP_STREAM_TYPE = 22i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const IptTraceStream: MINIDUMP_STREAM_TYPE = 23i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadNamesStream: MINIDUMP_STREAM_TYPE = 24i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamNull: MINIDUMP_STREAM_TYPE = 32768i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamSystemInfo: MINIDUMP_STREAM_TYPE = 32769i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamException: MINIDUMP_STREAM_TYPE = 32770i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamModuleList: MINIDUMP_STREAM_TYPE = 32771i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamProcessList: MINIDUMP_STREAM_TYPE = 32772i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamThreadList: MINIDUMP_STREAM_TYPE = 32773i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamThreadContextList: MINIDUMP_STREAM_TYPE = 32774i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamThreadCallStackList: MINIDUMP_STREAM_TYPE = 32775i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamMemoryVirtualList: MINIDUMP_STREAM_TYPE = 32776i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamMemoryPhysicalList: MINIDUMP_STREAM_TYPE = 32777i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamBucketParameters: MINIDUMP_STREAM_TYPE = 32778i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamProcessModuleMap: MINIDUMP_STREAM_TYPE = 32779i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ceStreamDiagnosisList: MINIDUMP_STREAM_TYPE = 32780i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LastReservedStream: MINIDUMP_STREAM_TYPE = 65535i32;
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_STRING {
     pub Length: u32,
@@ -10344,14 +11879,6 @@ impl ::core::clone::Clone for MINIDUMP_STRING {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_SYSMEMINFO1_BASICPERF: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_SYSMEMINFO1_FILECACHE_TRANSITIONREPURPOSECOUNT_FLAGS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_SYSMEMINFO1_PERF_CCTOTALDIRTYPAGES_CCDIRTYPAGETHRESHOLD: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_SYSMEMINFO1_PERF_RESIDENTAVAILABLEPAGES_SHAREDCOMMITPAGES: u32 = 8u32;
 #[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_SYSTEM_BASIC_INFORMATION {
@@ -10405,7 +11932,7 @@ impl ::core::clone::Clone for MINIDUMP_SYSTEM_FILECACHE_INFORMATION {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_SYSTEM_INFO {
     pub ProcessorArchitecture: PROCESSOR_ARCHITECTURE,
@@ -10474,7 +12001,7 @@ impl ::core::clone::Clone for MINIDUMP_SYSTEM_INFO_1_0 {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_SYSTEM_MEMORY_INFO_1 {
     pub Revision: u16,
@@ -10595,7 +12122,7 @@ impl ::core::clone::Clone for MINIDUMP_THREAD {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
 #[cfg(target_arch = "aarch64")]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
@@ -10618,31 +12145,9 @@ impl ::core::clone::Clone for MINIDUMP_THREAD_CALLBACK {
         *self
     }
 }
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(target_arch = "x86_64")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-pub struct MINIDUMP_THREAD_CALLBACK {
-    pub ThreadId: u32,
-    pub ThreadHandle: super::super::super::Foundation::HANDLE,
-    pub Context: CONTEXT,
-    pub SizeOfContext: u32,
-    pub StackBase: u64,
-    pub StackEnd: u64,
-}
-#[cfg(target_arch = "x86_64")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-impl ::core::marker::Copy for MINIDUMP_THREAD_CALLBACK {}
-#[cfg(target_arch = "x86_64")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-impl ::core::clone::Clone for MINIDUMP_THREAD_CALLBACK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(target_arch = "x86")]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
 pub struct MINIDUMP_THREAD_CALLBACK {
     pub ThreadId: u32,
@@ -10652,10 +12157,10 @@ pub struct MINIDUMP_THREAD_CALLBACK {
     pub StackBase: u64,
     pub StackEnd: u64,
 }
-#[cfg(target_arch = "x86")]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
 impl ::core::marker::Copy for MINIDUMP_THREAD_CALLBACK {}
-#[cfg(target_arch = "x86")]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
 impl ::core::clone::Clone for MINIDUMP_THREAD_CALLBACK {
     fn clone(&self) -> Self {
@@ -10680,7 +12185,7 @@ impl ::core::clone::Clone for MINIDUMP_THREAD_EX {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
 #[cfg(target_arch = "aarch64")]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
@@ -10705,9 +12210,9 @@ impl ::core::clone::Clone for MINIDUMP_THREAD_EX_CALLBACK {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(target_arch = "x86_64")]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
 pub struct MINIDUMP_THREAD_EX_CALLBACK {
     pub ThreadId: u32,
@@ -10719,10 +12224,10 @@ pub struct MINIDUMP_THREAD_EX_CALLBACK {
     pub BackingStoreBase: u64,
     pub BackingStoreEnd: u64,
 }
-#[cfg(target_arch = "x86_64")]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
 impl ::core::marker::Copy for MINIDUMP_THREAD_EX_CALLBACK {}
-#[cfg(target_arch = "x86_64")]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
 impl ::core::clone::Clone for MINIDUMP_THREAD_EX_CALLBACK {
     fn clone(&self) -> Self {
@@ -10730,30 +12235,6 @@ impl ::core::clone::Clone for MINIDUMP_THREAD_EX_CALLBACK {
     }
 }
 #[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-pub struct MINIDUMP_THREAD_EX_CALLBACK {
-    pub ThreadId: u32,
-    pub ThreadHandle: super::super::super::Foundation::HANDLE,
-    pub Context: CONTEXT,
-    pub SizeOfContext: u32,
-    pub StackBase: u64,
-    pub StackEnd: u64,
-    pub BackingStoreBase: u64,
-    pub BackingStoreEnd: u64,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-impl ::core::marker::Copy for MINIDUMP_THREAD_EX_CALLBACK {}
-#[cfg(target_arch = "x86")]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-impl ::core::clone::Clone for MINIDUMP_THREAD_EX_CALLBACK {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_THREAD_EX_LIST {
     pub NumberOfThreads: u32,
@@ -10785,21 +12266,7 @@ impl ::core::clone::Clone for MINIDUMP_THREAD_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type MINIDUMP_THREAD_INFO_DUMP_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_THREAD_INFO_ERROR_THREAD: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_THREAD_INFO_EXITED_THREAD: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_THREAD_INFO_INVALID_CONTEXT: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_THREAD_INFO_INVALID_INFO: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_THREAD_INFO_INVALID_TEB: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_THREAD_INFO_WRITING_THREAD: MINIDUMP_THREAD_INFO_DUMP_FLAGS = 2u32;
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_THREAD_INFO_LIST {
     pub SizeOfHeader: u32,
@@ -10812,7 +12279,7 @@ impl ::core::clone::Clone for MINIDUMP_THREAD_INFO_LIST {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_THREAD_LIST {
     pub NumberOfThreads: u32,
@@ -10836,7 +12303,7 @@ impl ::core::clone::Clone for MINIDUMP_THREAD_NAME {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_THREAD_NAME_LIST {
     pub NumberOfThreadNames: u32,
@@ -10861,7 +12328,7 @@ impl ::core::clone::Clone for MINIDUMP_TOKEN_INFO_HEADER {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_TOKEN_INFO_LIST {
     pub TokenListSize: u32,
@@ -10875,62 +12342,6 @@ impl ::core::clone::Clone for MINIDUMP_TOKEN_INFO_LIST {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type MINIDUMP_TYPE = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpNormal: MINIDUMP_TYPE = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithDataSegs: MINIDUMP_TYPE = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithFullMemory: MINIDUMP_TYPE = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithHandleData: MINIDUMP_TYPE = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpFilterMemory: MINIDUMP_TYPE = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpScanMemory: MINIDUMP_TYPE = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithUnloadedModules: MINIDUMP_TYPE = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithIndirectlyReferencedMemory: MINIDUMP_TYPE = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpFilterModulePaths: MINIDUMP_TYPE = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithProcessThreadData: MINIDUMP_TYPE = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithPrivateReadWriteMemory: MINIDUMP_TYPE = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithoutOptionalData: MINIDUMP_TYPE = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithFullMemoryInfo: MINIDUMP_TYPE = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithThreadInfo: MINIDUMP_TYPE = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithCodeSegs: MINIDUMP_TYPE = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithoutAuxiliaryState: MINIDUMP_TYPE = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithFullAuxiliaryState: MINIDUMP_TYPE = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithPrivateWriteCopyMemory: MINIDUMP_TYPE = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpIgnoreInaccessibleMemory: MINIDUMP_TYPE = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithTokenInformation: MINIDUMP_TYPE = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithModuleHeaders: MINIDUMP_TYPE = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpFilterTriage: MINIDUMP_TYPE = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithAvxXStateContext: MINIDUMP_TYPE = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpWithIptTrace: MINIDUMP_TYPE = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpScanInaccessiblePartialPages: MINIDUMP_TYPE = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpFilterWriteCombinedMemory: MINIDUMP_TYPE = 16777216u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MiniDumpValidTypeFlags: MINIDUMP_TYPE = 33554431u32;
 #[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_UNLOADED_MODULE {
@@ -10946,7 +12357,7 @@ impl ::core::clone::Clone for MINIDUMP_UNLOADED_MODULE {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_UNLOADED_MODULE_LIST {
     pub SizeOfHeader: u32,
@@ -10959,7 +12370,7 @@ impl ::core::clone::Clone for MINIDUMP_UNLOADED_MODULE_LIST {
         *self
     }
 }
-#[repr(C)]
+#[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_USER_RECORD {
     pub Type: u32,
@@ -10996,8 +12407,6 @@ impl ::core::clone::Clone for MINIDUMP_USER_STREAM_INFORMATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MINIDUMP_VERSION: u32 = 42899u32;
 #[repr(C, packed(4))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MINIDUMP_VM_POST_READ_CALLBACK {
@@ -11068,12 +12477,6 @@ impl ::core::clone::Clone for MODLOAD_DATA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type MODLOAD_DATA_TYPE = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBHHEADER_DEBUGDIRS: MODLOAD_DATA_TYPE = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DBHHEADER_CVMISC: MODLOAD_DATA_TYPE = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MODLOAD_PDBGUID_PDBAGE {
@@ -11086,12 +12489,6 @@ impl ::core::clone::Clone for MODLOAD_PDBGUID_PDBAGE {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MODULE_ORDERS_LOADTIME: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MODULE_ORDERS_MASK: u32 = 4026531840u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MODULE_ORDERS_MODULENAME: u32 = 536870912u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct MODULE_TYPE_INFO {
@@ -11105,127 +12502,6 @@ impl ::core::clone::Clone for MODULE_TYPE_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type MODULE_WRITE_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ModuleWriteModule: MODULE_WRITE_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ModuleWriteDataSeg: MODULE_WRITE_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ModuleWriteMiscRecord: MODULE_WRITE_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ModuleWriteCvRecord: MODULE_WRITE_FLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ModuleReferencedByMemory: MODULE_WRITE_FLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ModuleWriteTlsData: MODULE_WRITE_FLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ModuleWriteCodeSegs: MODULE_WRITE_FLAGS = 64i32;
-pub const MachineDebugManager_DEBUG: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1232510188, data2: 14933, data3: 19376, data4: [182, 151, 136, 254, 222, 119, 232, 234] };
-pub const MachineDebugManager_RETAIL: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 201995878, data2: 12489, data3: 4560, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type ModelObjectKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ObjectPropertyAccessor: ModelObjectKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ObjectContext: ModelObjectKind = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ObjectTargetObject: ModelObjectKind = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ObjectTargetObjectReference: ModelObjectKind = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ObjectSynthetic: ModelObjectKind = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ObjectNoValue: ModelObjectKind = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ObjectError: ModelObjectKind = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ObjectIntrinsic: ModelObjectKind = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ObjectMethod: ModelObjectKind = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ObjectKeyReference: ModelObjectKind = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const NULL_FIELD_NAME: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const NULL_SYM_DUMP_PARAM: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const NUM_SSRVOPTS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type OBJECT_ATTRIB_FLAG = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_NO_ATTRIB: OBJECT_ATTRIB_FLAG = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_NO_NAME: OBJECT_ATTRIB_FLAG = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_NO_TYPE: OBJECT_ATTRIB_FLAG = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_NO_VALUE: OBJECT_ATTRIB_FLAG = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_VALUE_IS_INVALID: OBJECT_ATTRIB_FLAG = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_VALUE_IS_OBJECT: OBJECT_ATTRIB_FLAG = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_VALUE_IS_ENUM: OBJECT_ATTRIB_FLAG = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_VALUE_IS_CUSTOM: OBJECT_ATTRIB_FLAG = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_OBJECT_IS_EXPANDABLE: OBJECT_ATTRIB_FLAG = 112u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_VALUE_HAS_CODE: OBJECT_ATTRIB_FLAG = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_TYPE_IS_OBJECT: OBJECT_ATTRIB_FLAG = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_TYPE_HAS_CODE: OBJECT_ATTRIB_FLAG = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_TYPE_IS_EXPANDABLE: OBJECT_ATTRIB_FLAG = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_SLOT_IS_CATEGORY: OBJECT_ATTRIB_FLAG = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_VALUE_READONLY: OBJECT_ATTRIB_FLAG = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_ACCESS_PUBLIC: OBJECT_ATTRIB_FLAG = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_ACCESS_PRIVATE: OBJECT_ATTRIB_FLAG = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_ACCESS_PROTECTED: OBJECT_ATTRIB_FLAG = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_ACCESS_FINAL: OBJECT_ATTRIB_FLAG = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_STORAGE_GLOBAL: OBJECT_ATTRIB_FLAG = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_STORAGE_STATIC: OBJECT_ATTRIB_FLAG = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_STORAGE_FIELD: OBJECT_ATTRIB_FLAG = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_STORAGE_VIRTUAL: OBJECT_ATTRIB_FLAG = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_TYPE_IS_CONSTANT: OBJECT_ATTRIB_FLAG = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_TYPE_IS_SYNCHRONIZED: OBJECT_ATTRIB_FLAG = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_TYPE_IS_VOLATILE: OBJECT_ATTRIB_FLAG = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_HAS_EXTENDED_ATTRIBS: OBJECT_ATTRIB_FLAG = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_IS_CLASS: OBJECT_ATTRIB_FLAG = 16777216u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_IS_FUNCTION: OBJECT_ATTRIB_FLAG = 33554432u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_IS_VARIABLE: OBJECT_ATTRIB_FLAG = 67108864u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_IS_PROPERTY: OBJECT_ATTRIB_FLAG = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_IS_MACRO: OBJECT_ATTRIB_FLAG = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_IS_TYPE: OBJECT_ATTRIB_FLAG = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_IS_INHERITED: OBJECT_ATTRIB_FLAG = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const OBJECT_ATTRIB_IS_INTERFACE: OBJECT_ATTRIB_FLAG = 2147483648u32;
-pub const OID_JSSIP: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 113893392, data2: 14542, data3: 4564, data4: [162, 163, 0, 16, 75, 211, 80, 144] };
-pub const OID_VBSSIP: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 371847246, data2: 10137, data3: 19893, data4: [143, 229, 172, 225, 15, 23, 235, 171] };
-pub const OID_WSFSIP: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 442566000, data2: 14542, data3: 4564, data4: [162, 163, 0, 16, 75, 211, 80, 144] };
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct OMAP {
@@ -11238,10 +12514,6 @@ impl ::core::clone::Clone for OMAP {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type OPEN_THREAD_WAIT_CHAIN_SESSION_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WCT_ASYNC_OPEN_FLAG: OPEN_THREAD_WAIT_CHAIN_SESSION_FLAGS = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct OUTPUT_DEBUG_STRING_INFO {
@@ -11255,100 +12527,6 @@ impl ::core::clone::Clone for OUTPUT_DEBUG_STRING_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PCOGETACTIVATIONSTATE = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::GUID, param1: u32, param2: *mut u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PCOGETCALLSTATE = ::core::option::Option<unsafe extern "system" fn(param0: i32, param1: *mut u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PDBGHELP_CREATE_USER_DUMP_CALLBACK = ::core::option::Option<unsafe extern "system" fn(datatype: u32, data: *const *const ::core::ffi::c_void, datalength: *mut u32, userdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_EXTENSION_CALL = ::core::option::Option<unsafe extern "system" fn(client: IDebugClient, args: ::windows_sys::core::PCSTR) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_EXTENSION_CANUNLOAD = ::core::option::Option<unsafe extern "system" fn() -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_EXTENSION_INITIALIZE = ::core::option::Option<unsafe extern "system" fn(version: *mut u32, flags: *mut u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_EXTENSION_KNOWN_STRUCT = ::core::option::Option<unsafe extern "system" fn(flags: u32, offset: u64, typename: ::windows_sys::core::PCSTR, buffer: ::windows_sys::core::PSTR, bufferchars: *mut u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_EXTENSION_KNOWN_STRUCT_EX = ::core::option::Option<unsafe extern "system" fn(client: IDebugClient, flags: u32, offset: u64, typename: ::windows_sys::core::PCSTR, buffer: ::windows_sys::core::PSTR, bufferchars: *mut u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_EXTENSION_NOTIFY = ::core::option::Option<unsafe extern "system" fn(notify: u32, argument: u64)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_EXTENSION_PROVIDE_VALUE = ::core::option::Option<unsafe extern "system" fn(client: IDebugClient, flags: u32, name: ::windows_sys::core::PCWSTR, value: *mut u64, typemodbase: *mut u64, typeid: *mut u32, typeflags: *mut u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_EXTENSION_QUERY_VALUE_NAMES = ::core::option::Option<unsafe extern "system" fn(client: IDebugClient, flags: u32, buffer: ::windows_sys::core::PWSTR, bufferchars: u32, bufferneeded: *mut u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_EXTENSION_UNINITIALIZE = ::core::option::Option<unsafe extern "system" fn()>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_EXTENSION_UNLOAD = ::core::option::Option<unsafe extern "system" fn()>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_STACK_PROVIDER_BEGINTHREADSTACKRECONSTRUCTION = ::core::option::Option<unsafe extern "system" fn(streamtype: u32, minidumpstreambuffer: *const ::core::ffi::c_void, buffersize: u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PDEBUG_STACK_PROVIDER_ENDTHREADSTACKRECONSTRUCTION = ::core::option::Option<unsafe extern "system" fn() -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PDEBUG_STACK_PROVIDER_FREESTACKSYMFRAMES = ::core::option::Option<unsafe extern "system" fn(stacksymframes: *const STACK_SYM_FRAME_INFO) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PDEBUG_STACK_PROVIDER_RECONSTRUCTSTACK = ::core::option::Option<unsafe extern "system" fn(systemthreadid: u32, nativeframes: *const DEBUG_STACK_FRAME_EX, countnativeframes: u32, stacksymframes: *mut *mut STACK_SYM_FRAME_INFO, stacksymframesfilled: *mut u32) -> ::windows_sys::core::HRESULT>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PENUMDIRTREE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(filepath: ::windows_sys::core::PCSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PENUMDIRTREE_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(filepath: ::windows_sys::core::PCWSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub type PENUMLOADED_MODULES_CALLBACK = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCSTR, modulebase: u32, modulesize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PENUMLOADED_MODULES_CALLBACK64 = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCSTR, modulebase: u64, modulesize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PENUMLOADED_MODULES_CALLBACKW64 = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCWSTR, modulebase: u64, modulesize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PENUMSOURCEFILETOKENSCALLBACK = ::core::option::Option<unsafe extern "system" fn(token: *const ::core::ffi::c_void, size: usize) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFINDFILEINPATHCALLBACK = ::core::option::Option<unsafe extern "system" fn(filename: ::windows_sys::core::PCSTR, context: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFINDFILEINPATHCALLBACKW = ::core::option::Option<unsafe extern "system" fn(filename: ::windows_sys::core::PCWSTR, context: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFIND_DEBUG_FILE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(filehandle: super::super::super::Foundation::HANDLE, filename: ::windows_sys::core::PCSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFIND_DEBUG_FILE_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(filehandle: super::super::super::Foundation::HANDLE, filename: ::windows_sys::core::PCWSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFIND_EXE_FILE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(filehandle: super::super::super::Foundation::HANDLE, filename: ::windows_sys::core::PCSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFIND_EXE_FILE_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(filehandle: super::super::super::Foundation::HANDLE, filename: ::windows_sys::core::PCWSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFUNCTION_TABLE_ACCESS_ROUTINE = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, addrbase: u32) -> *mut ::core::ffi::c_void>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PFUNCTION_TABLE_ACCESS_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(ahprocess: super::super::super::Foundation::HANDLE, addrbase: u64) -> *mut ::core::ffi::c_void>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub type PGET_MODULE_BASE_ROUTINE = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, address: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PGET_MODULE_BASE_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, address: u64) -> u64>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(target_arch = "aarch64")]
-pub type PGET_RUNTIME_FUNCTION_CALLBACK = ::core::option::Option<unsafe extern "system" fn(controlpc: u64, context: *const ::core::ffi::c_void) -> *mut IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-#[cfg(target_arch = "x86_64")]
-pub type PGET_RUNTIME_FUNCTION_CALLBACK = ::core::option::Option<unsafe extern "system" fn(controlpc: u64, context: *const ::core::ffi::c_void) -> *mut IMAGE_RUNTIME_FUNCTION_ENTRY>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct PHYSICAL {
@@ -11439,23 +12617,6 @@ impl ::core::clone::Clone for PHYSICAL_WITH_FLAGS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PHYS_FLAG_CACHED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PHYS_FLAG_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PHYS_FLAG_UNCACHED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PHYS_FLAG_WRITE_COMBINED: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PIMAGEHLP_STATUS_ROUTINE = ::core::option::Option<unsafe extern "system" fn(reason: IMAGEHLP_STATUS_REASON, imagename: ::windows_sys::core::PCSTR, dllname: ::windows_sys::core::PCSTR, va: usize, parameter: usize) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PIMAGEHLP_STATUS_ROUTINE32 = ::core::option::Option<unsafe extern "system" fn(reason: IMAGEHLP_STATUS_REASON, imagename: ::windows_sys::core::PCSTR, dllname: ::windows_sys::core::PCSTR, va: u32, parameter: usize) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PIMAGEHLP_STATUS_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(reason: IMAGEHLP_STATUS_REASON, imagename: ::windows_sys::core::PCSTR, dllname: ::windows_sys::core::PCSTR, va: u64, parameter: usize) -> super::super::super::Foundation::BOOL>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct POINTER_SEARCH_PHYSICAL {
@@ -11474,13 +12635,6 @@ impl ::core::clone::Clone for POINTER_SEARCH_PHYSICAL {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub type PREAD_PROCESS_MEMORY_ROUTINE = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, lpbaseaddress: u32, lpbuffer: *mut ::core::ffi::c_void, nsize: u32, lpnumberofbytesread: *mut u32) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PREAD_PROCESS_MEMORY_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, qwbaseaddress: u64, lpbuffer: *mut ::core::ffi::c_void, nsize: u32, lpnumberofbytesread: *mut u32) -> super::super::super::Foundation::BOOL>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct PROCESSORINFO {
@@ -11493,18 +12647,6 @@ impl ::core::clone::Clone for PROCESSORINFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PROCESSOR_ARCHITECTURE = u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROCESSOR_ARCHITECTURE_AMD64: PROCESSOR_ARCHITECTURE = 9u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROCESSOR_ARCHITECTURE_IA64: PROCESSOR_ARCHITECTURE = 6u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROCESSOR_ARCHITECTURE_INTEL: PROCESSOR_ARCHITECTURE = 0u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROCESSOR_ARCHITECTURE_ARM: PROCESSOR_ARCHITECTURE = 5u16;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROCESSOR_ARCHITECTURE_UNKNOWN: PROCESSOR_ARCHITECTURE = 65535u16;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct PROCESS_NAME_ENTRY {
@@ -11519,28 +12661,6 @@ impl ::core::clone::Clone for PROCESS_NAME_ENTRY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PROFILER_EVENT_MASK = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_EVENT_MASK_TRACE_SCRIPT_FUNCTION_CALL: PROFILER_EVENT_MASK = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_EVENT_MASK_TRACE_NATIVE_FUNCTION_CALL: PROFILER_EVENT_MASK = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_EVENT_MASK_TRACE_DOM_FUNCTION_CALL: PROFILER_EVENT_MASK = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_EVENT_MASK_TRACE_ALL: PROFILER_EVENT_MASK = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_EVENT_MASK_TRACE_ALL_WITH_DOM: PROFILER_EVENT_MASK = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PROFILER_HEAP_ENUM_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_ENUM_FLAGS_NONE: PROFILER_HEAP_ENUM_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_ENUM_FLAGS_STORE_RELATIONSHIP_FLAGS: PROFILER_HEAP_ENUM_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_ENUM_FLAGS_SUBSTRINGS: PROFILER_HEAP_ENUM_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_ENUM_FLAGS_RELATIONSHIP_SUBSTRINGS: PROFILER_HEAP_ENUM_FLAGS = 3u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct PROFILER_HEAP_OBJECT {
@@ -11569,54 +12689,20 @@ impl ::core::clone::Clone for PROFILER_HEAP_OBJECT_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PROFILER_HEAP_OBJECT_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_NEW_OBJECT: PROFILER_HEAP_OBJECT_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_IS_ROOT: PROFILER_HEAP_OBJECT_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_SITE_CLOSED: PROFILER_HEAP_OBJECT_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_EXTERNAL: PROFILER_HEAP_OBJECT_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_EXTERNAL_UNKNOWN: PROFILER_HEAP_OBJECT_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_EXTERNAL_DISPATCH: PROFILER_HEAP_OBJECT_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_SIZE_APPROXIMATE: PROFILER_HEAP_OBJECT_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_SIZE_UNAVAILABLE: PROFILER_HEAP_OBJECT_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_NEW_STATE_UNAVAILABLE: PROFILER_HEAP_OBJECT_FLAGS = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_WINRT_INSTANCE: PROFILER_HEAP_OBJECT_FLAGS = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_WINRT_RUNTIMECLASS: PROFILER_HEAP_OBJECT_FLAGS = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_WINRT_DELEGATE: PROFILER_HEAP_OBJECT_FLAGS = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_FLAGS_WINRT_NAMESPACE: PROFILER_HEAP_OBJECT_FLAGS = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_NAME_ID_UNAVAILABLE: u32 = 4294967295u32;
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct PROFILER_HEAP_OBJECT_OPTIONAL_INFO {
     pub infoType: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE,
     pub Anonymous: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_0,
 }
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::marker::Copy for PROFILER_HEAP_OBJECT_OPTIONAL_INFO {}
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::clone::Clone for PROFILER_HEAP_OBJECT_OPTIONAL_INFO {
     fn clone(&self) -> Self {
         *self
     }
 }
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub union PROFILER_HEAP_OBJECT_OPTIONAL_INFO_0 {
     pub prototype: usize,
     pub functionName: ::windows_sys::core::PCWSTR,
@@ -11632,101 +12718,48 @@ pub union PROFILER_HEAP_OBJECT_OPTIONAL_INFO_0 {
     pub mapCollectionList: *mut PROFILER_HEAP_OBJECT_RELATIONSHIP_LIST,
     pub setCollectionList: *mut PROFILER_HEAP_OBJECT_RELATIONSHIP_LIST,
 }
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::marker::Copy for PROFILER_HEAP_OBJECT_OPTIONAL_INFO_0 {}
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::clone::Clone for PROFILER_HEAP_OBJECT_OPTIONAL_INFO_0 {
     fn clone(&self) -> Self {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_PROTOTYPE: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_FUNCTION_NAME: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_SCOPE_LIST: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_INTERNAL_PROPERTY: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_NAME_PROPERTIES: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_INDEX_PROPERTIES: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_ELEMENT_ATTRIBUTES_SIZE: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_ELEMENT_TEXT_CHILDREN_SIZE: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_RELATIONSHIPS: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_WINRTEVENTS: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_WEAKMAP_COLLECTION_LIST: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_MAP_COLLECTION_LIST: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_SET_COLLECTION_LIST: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 13i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_OPTIONAL_INFO_MAX_VALUE: PROFILER_HEAP_OBJECT_OPTIONAL_INFO_TYPE = 13i32;
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct PROFILER_HEAP_OBJECT_RELATIONSHIP {
     pub relationshipId: u32,
     pub relationshipInfo: PROFILER_RELATIONSHIP_INFO,
     pub Anonymous: PROFILER_HEAP_OBJECT_RELATIONSHIP_0,
 }
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::marker::Copy for PROFILER_HEAP_OBJECT_RELATIONSHIP {}
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::clone::Clone for PROFILER_HEAP_OBJECT_RELATIONSHIP {
     fn clone(&self) -> Self {
         *self
     }
 }
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub union PROFILER_HEAP_OBJECT_RELATIONSHIP_0 {
     pub numberValue: f64,
     pub stringValue: ::windows_sys::core::PCWSTR,
-    pub bstrValue: super::super::super::Foundation::BSTR,
+    pub bstrValue: ::windows_sys::core::BSTR,
     pub objectId: usize,
     pub externalObjectAddress: *mut ::core::ffi::c_void,
     pub subString: *mut PROFILER_PROPERTY_TYPE_SUBSTRING_INFO,
 }
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::marker::Copy for PROFILER_HEAP_OBJECT_RELATIONSHIP_0 {}
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::clone::Clone for PROFILER_HEAP_OBJECT_RELATIONSHIP_0 {
     fn clone(&self) -> Self {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS_NONE: PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS_IS_GET_ACCESSOR: PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS_IS_SET_ACCESSOR: PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS_LET_VARIABLE: PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS_CONST_VARIABLE: PROFILER_HEAP_OBJECT_RELATIONSHIP_FLAGS = 524288u32;
 #[repr(C)]
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct PROFILER_HEAP_OBJECT_RELATIONSHIP_LIST {
     pub count: u32,
     pub elements: [PROFILER_HEAP_OBJECT_RELATIONSHIP; 1],
 }
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::marker::Copy for PROFILER_HEAP_OBJECT_RELATIONSHIP_LIST {}
-#[cfg(feature = "Win32_Foundation")]
 impl ::core::clone::Clone for PROFILER_HEAP_OBJECT_RELATIONSHIP_LIST {
     fn clone(&self) -> Self {
         *self
@@ -11756,10 +12789,6 @@ impl ::core::clone::Clone for PROFILER_HEAP_SUMMARY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PROFILER_HEAP_SUMMARY_VERSION = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_HEAP_SUMMARY_VERSION_1: PROFILER_HEAP_SUMMARY_VERSION = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct PROFILER_PROPERTY_TYPE_SUBSTRING_INFO {
@@ -11772,355 +12801,6 @@ impl ::core::clone::Clone for PROFILER_PROPERTY_TYPE_SUBSTRING_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PROFILER_RELATIONSHIP_INFO = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_PROPERTY_TYPE_NUMBER: PROFILER_RELATIONSHIP_INFO = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_PROPERTY_TYPE_STRING: PROFILER_RELATIONSHIP_INFO = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_PROPERTY_TYPE_HEAP_OBJECT: PROFILER_RELATIONSHIP_INFO = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_PROPERTY_TYPE_EXTERNAL_OBJECT: PROFILER_RELATIONSHIP_INFO = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_PROPERTY_TYPE_BSTR: PROFILER_RELATIONSHIP_INFO = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_PROPERTY_TYPE_SUBSTRING: PROFILER_RELATIONSHIP_INFO = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PROFILER_SCRIPT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_SCRIPT_TYPE_USER: PROFILER_SCRIPT_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_SCRIPT_TYPE_DYNAMIC: PROFILER_SCRIPT_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_SCRIPT_TYPE_NATIVE: PROFILER_SCRIPT_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROFILER_SCRIPT_TYPE_DOM: PROFILER_SCRIPT_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PROP_INFO_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROP_INFO_NAME: PROP_INFO_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROP_INFO_TYPE: PROP_INFO_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROP_INFO_VALUE: PROP_INFO_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROP_INFO_FULLNAME: PROP_INFO_FLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROP_INFO_ATTRIBUTES: PROP_INFO_FLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROP_INFO_DEBUGPROP: PROP_INFO_FLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PROP_INFO_AUTOEXPAND: PROP_INFO_FLAGS = 134217728i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERBYINDEXPROC = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: ::windows_sys::core::PCSTR, param3: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERBYINDEXPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: ::windows_sys::core::PCSTR, param3: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERBYINDEXPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: ::windows_sys::core::PCWSTR, param3: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERCALLBACKPROC = ::core::option::Option<unsafe extern "system" fn(action: usize, data: u64, context: u64) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERCLOSEPROC = ::core::option::Option<unsafe extern "system" fn() -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERDELTANAME = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: *mut ::core::ffi::c_void, param2: u32, param3: u32, param4: *mut ::core::ffi::c_void, param5: u32, param6: u32, param7: ::windows_sys::core::PCSTR, param8: usize) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERDELTANAMEW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: *mut ::core::ffi::c_void, param2: u32, param3: u32, param4: *mut ::core::ffi::c_void, param5: u32, param6: u32, param7: ::windows_sys::core::PCWSTR, param8: usize) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERGETINDEXSTRING = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void, param1: u32, param2: u32, param3: ::windows_sys::core::PCSTR, param4: usize) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERGETINDEXSTRINGW = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void, param1: u32, param2: u32, param3: ::windows_sys::core::PCWSTR, param4: usize) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERGETOPTIONDATAPROC = ::core::option::Option<unsafe extern "system" fn(param0: usize, param1: *mut u64) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PSYMBOLSERVERGETOPTIONSPROC = ::core::option::Option<unsafe extern "system" fn() -> usize>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERGETSUPPLEMENT = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: ::windows_sys::core::PCSTR, param3: ::windows_sys::core::PCSTR, param4: usize) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERGETSUPPLEMENTW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: ::windows_sys::core::PCWSTR, param3: ::windows_sys::core::PCWSTR, param4: usize) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERGETVERSION = ::core::option::Option<unsafe extern "system" fn(param0: *mut API_VERSION) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERISSTORE = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERISSTOREW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERMESSAGEPROC = ::core::option::Option<unsafe extern "system" fn(action: usize, data: u64, context: u64) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVEROPENPROC = ::core::option::Option<unsafe extern "system" fn() -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERPINGPROC = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERPINGPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERPINGPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERPINGPROCWEX = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERPROC = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERSETHTTPAUTHHEADER = ::core::option::Option<unsafe extern "system" fn(pszauthheader: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERSETOPTIONSPROC = ::core::option::Option<unsafe extern "system" fn(param0: usize, param1: u64) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERSETOPTIONSWPROC = ::core::option::Option<unsafe extern "system" fn(param0: usize, param1: u64) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERSTOREFILE = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCSTR, param6: usize, param7: u32) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERSTOREFILEW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCWSTR, param6: usize, param7: u32) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERSTORESUPPLEMENT = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: ::windows_sys::core::PCSTR, param3: ::windows_sys::core::PCSTR, param4: usize, param5: u32) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERSTORESUPPLEMENTW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: ::windows_sys::core::PCWSTR, param3: ::windows_sys::core::PCWSTR, param4: usize, param5: u32) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PSYMBOLSERVERVERSION = ::core::option::Option<unsafe extern "system" fn() -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOLSERVERWEXPROC = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCWSTR, param6: *mut SYMSRV_EXTENDED_OUTPUT_DATA) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOL_FUNCENTRY_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, addrbase: u32, usercontext: *const ::core::ffi::c_void) -> *mut ::core::ffi::c_void>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOL_FUNCENTRY_CALLBACK64 = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, addrbase: u64, usercontext: u64) -> *mut ::core::ffi::c_void>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOL_REGISTERED_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, actioncode: u32, callbackdata: *const ::core::ffi::c_void, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYMBOL_REGISTERED_CALLBACK64 = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, actioncode: u32, callbackdata: u64, usercontext: u64) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PSYM_DUMP_FIELD_CALLBACK = ::core::option::Option<unsafe extern "system" fn(pfield: *mut FIELD_INFO, usercontext: *mut ::core::ffi::c_void) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMERATESYMBOLS_CALLBACK = ::core::option::Option<unsafe extern "system" fn(psyminfo: *const SYMBOL_INFO, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMERATESYMBOLS_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(psyminfo: *const SYMBOL_INFOW, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMLINES_CALLBACK = ::core::option::Option<unsafe extern "system" fn(lineinfo: *const SRCCODEINFO, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMLINES_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(lineinfo: *const SRCCODEINFOW, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMMODULES_CALLBACK = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCSTR, baseofdll: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMMODULES_CALLBACK64 = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCSTR, baseofdll: u64, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMMODULES_CALLBACKW64 = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCWSTR, baseofdll: u64, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMPROCESSES_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMSOURCEFILES_CALLBACK = ::core::option::Option<unsafe extern "system" fn(psourcefile: *const SOURCEFILE, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMSOURCEFILES_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(psourcefile: *const SOURCEFILEW, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMSYMBOLS_CALLBACK = ::core::option::Option<unsafe extern "system" fn(symbolname: ::windows_sys::core::PCSTR, symboladdress: u32, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMSYMBOLS_CALLBACK64 = ::core::option::Option<unsafe extern "system" fn(symbolname: ::windows_sys::core::PCSTR, symboladdress: u64, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMSYMBOLS_CALLBACK64W = ::core::option::Option<unsafe extern "system" fn(symbolname: ::windows_sys::core::PCWSTR, symboladdress: u64, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub type PSYM_ENUMSYMBOLS_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(symbolname: ::windows_sys::core::PCWSTR, symboladdress: u32, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub type PTRANSLATE_ADDRESS_ROUTINE = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, hthread: super::super::super::Foundation::HANDLE, lpaddr: *mut ADDRESS) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PTRANSLATE_ADDRESS_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, hthread: super::super::super::Foundation::HANDLE, lpaddr: *const ADDRESS64) -> u64>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PTR_SEARCH_NO_SYMBOL_CHECK: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PTR_SEARCH_PHYS_ALL_HITS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PTR_SEARCH_PHYS_PTE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PTR_SEARCH_PHYS_RANGE_CHECK_ONLY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PTR_SEARCH_PHYS_SIZE_SHIFT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
-pub type PVECTORED_EXCEPTION_HANDLER = ::core::option::Option<unsafe extern "system" fn(exceptioninfo: *mut EXCEPTION_POINTERS) -> i32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PWAITCHAINCALLBACK = ::core::option::Option<unsafe extern "system" fn(wcthandle: *mut ::core::ffi::c_void, context: usize, callbackstatus: u32, nodecount: *mut u32, nodeinfoarray: *mut WAITCHAIN_NODE_INFO, iscycle: *mut i32)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_CHECK_CONTROL_C = ::core::option::Option<unsafe extern "system" fn() -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_CHECK_VERSION = ::core::option::Option<unsafe extern "system" fn() -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_DISASM = ::core::option::Option<unsafe extern "system" fn(lpoffset: *mut usize, lpbuffer: ::windows_sys::core::PCSTR, fshoweffectiveaddress: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_DISASM32 = ::core::option::Option<unsafe extern "system" fn(lpoffset: *mut u32, lpbuffer: ::windows_sys::core::PCSTR, fshoweffectiveaddress: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_DISASM64 = ::core::option::Option<unsafe extern "system" fn(lpoffset: *mut u64, lpbuffer: ::windows_sys::core::PCSTR, fshoweffectiveaddress: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_EXTENSION_API_VERSION = ::core::option::Option<unsafe extern "system" fn() -> *mut EXT_API_VERSION>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(feature = "Win32_System_Kernel")]
-pub type PWINDBG_EXTENSION_DLL_INIT = ::core::option::Option<unsafe extern "system" fn(lpextensionapis: *mut WINDBG_EXTENSION_APIS, majorversion: u16, minorversion: u16)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(feature = "Win32_System_Kernel")]
-pub type PWINDBG_EXTENSION_DLL_INIT32 = ::core::option::Option<unsafe extern "system" fn(lpextensionapis: *mut WINDBG_EXTENSION_APIS32, majorversion: u16, minorversion: u16)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(feature = "Win32_System_Kernel")]
-pub type PWINDBG_EXTENSION_DLL_INIT64 = ::core::option::Option<unsafe extern "system" fn(lpextensionapis: *mut WINDBG_EXTENSION_APIS64, majorversion: u16, minorversion: u16)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PWINDBG_EXTENSION_ROUTINE = ::core::option::Option<unsafe extern "system" fn(hcurrentprocess: super::super::super::Foundation::HANDLE, hcurrentthread: super::super::super::Foundation::HANDLE, dwcurrentpc: u32, dwprocessor: u32, lpargumentstring: ::windows_sys::core::PCSTR)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PWINDBG_EXTENSION_ROUTINE32 = ::core::option::Option<unsafe extern "system" fn(hcurrentprocess: super::super::super::Foundation::HANDLE, hcurrentthread: super::super::super::Foundation::HANDLE, dwcurrentpc: u32, dwprocessor: u32, lpargumentstring: ::windows_sys::core::PCSTR)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PWINDBG_EXTENSION_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(hcurrentprocess: super::super::super::Foundation::HANDLE, hcurrentthread: super::super::super::Foundation::HANDLE, dwcurrentpc: u64, dwprocessor: u32, lpargumentstring: ::windows_sys::core::PCSTR)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_GET_EXPRESSION = ::core::option::Option<unsafe extern "system" fn(lpexpression: ::windows_sys::core::PCSTR) -> usize>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_GET_EXPRESSION32 = ::core::option::Option<unsafe extern "system" fn(lpexpression: ::windows_sys::core::PCSTR) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_GET_EXPRESSION64 = ::core::option::Option<unsafe extern "system" fn(lpexpression: ::windows_sys::core::PCSTR) -> u64>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_GET_SYMBOL = ::core::option::Option<unsafe extern "system" fn(offset: *mut ::core::ffi::c_void, pchbuffer: ::windows_sys::core::PCSTR, pdisplacement: *mut usize)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_GET_SYMBOL32 = ::core::option::Option<unsafe extern "system" fn(offset: u32, pchbuffer: ::windows_sys::core::PCSTR, pdisplacement: *mut u32)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_GET_SYMBOL64 = ::core::option::Option<unsafe extern "system" fn(offset: u64, pchbuffer: ::windows_sys::core::PCSTR, pdisplacement: *mut u64)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(feature = "Win32_System_Kernel")]
-pub type PWINDBG_GET_THREAD_CONTEXT_ROUTINE = ::core::option::Option<unsafe extern "system" fn(processor: u32, lpcontext: *mut CONTEXT, cbsizeofcontext: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_IOCTL_ROUTINE = ::core::option::Option<unsafe extern "system" fn(ioctltype: u16, lpvdata: *mut ::core::ffi::c_void, cbsize: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_OLDKD_EXTENSION_ROUTINE = ::core::option::Option<unsafe extern "system" fn(dwcurrentpc: u32, lpextensionapis: *mut WINDBG_OLDKD_EXTENSION_APIS, lpargumentstring: ::windows_sys::core::PCSTR)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_OLDKD_READ_PHYSICAL_MEMORY = ::core::option::Option<unsafe extern "system" fn(address: u64, buffer: *mut ::core::ffi::c_void, count: u32, bytesread: *mut u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_OLDKD_WRITE_PHYSICAL_MEMORY = ::core::option::Option<unsafe extern "system" fn(address: u64, buffer: *mut ::core::ffi::c_void, length: u32, byteswritten: *mut u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(feature = "Win32_System_Kernel")]
-pub type PWINDBG_OLD_EXTENSION_ROUTINE = ::core::option::Option<unsafe extern "system" fn(dwcurrentpc: u32, lpextensionapis: *mut WINDBG_EXTENSION_APIS, lpargumentstring: ::windows_sys::core::PCSTR)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_OUTPUT_ROUTINE = ::core::option::Option<unsafe extern "system" fn(lpformat: ::windows_sys::core::PCSTR)>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_READ_PROCESS_MEMORY_ROUTINE = ::core::option::Option<unsafe extern "system" fn(offset: usize, lpbuffer: *mut ::core::ffi::c_void, cb: u32, lpcbbytesread: *mut u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_READ_PROCESS_MEMORY_ROUTINE32 = ::core::option::Option<unsafe extern "system" fn(offset: u32, lpbuffer: *mut ::core::ffi::c_void, cb: u32, lpcbbytesread: *mut u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_READ_PROCESS_MEMORY_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(offset: u64, lpbuffer: *mut ::core::ffi::c_void, cb: u32, lpcbbytesread: *mut u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
-#[cfg(feature = "Win32_System_Kernel")]
-pub type PWINDBG_SET_THREAD_CONTEXT_ROUTINE = ::core::option::Option<unsafe extern "system" fn(processor: u32, lpcontext: *mut CONTEXT, cbsizeofcontext: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_STACKTRACE_ROUTINE = ::core::option::Option<unsafe extern "system" fn(framepointer: u32, stackpointer: u32, programcounter: u32, stackframes: *mut EXTSTACKTRACE, frames: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_STACKTRACE_ROUTINE32 = ::core::option::Option<unsafe extern "system" fn(framepointer: u32, stackpointer: u32, programcounter: u32, stackframes: *mut EXTSTACKTRACE32, frames: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_STACKTRACE_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(framepointer: u64, stackpointer: u64, programcounter: u64, stackframes: *mut EXTSTACKTRACE64, frames: u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_WRITE_PROCESS_MEMORY_ROUTINE = ::core::option::Option<unsafe extern "system" fn(offset: usize, lpbuffer: *const ::core::ffi::c_void, cb: u32, lpcbbyteswritten: *mut u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_WRITE_PROCESS_MEMORY_ROUTINE32 = ::core::option::Option<unsafe extern "system" fn(offset: u32, lpbuffer: *const ::core::ffi::c_void, cb: u32, lpcbbyteswritten: *mut u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PWINDBG_WRITE_PROCESS_MEMORY_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(offset: u64, lpbuffer: *const ::core::ffi::c_void, cb: u32, lpcbbyteswritten: *mut u32) -> u32>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PointerKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PointerStandard: PointerKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PointerReference: PointerKind = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PointerRValueReference: PointerKind = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PointerCXHat: PointerKind = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const PointerManagedReference: PointerKind = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type PreferredFormat = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatNone: PreferredFormat = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatSingleCharacter: PreferredFormat = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatQuotedString: PreferredFormat = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatString: PreferredFormat = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatQuotedUnicodeString: PreferredFormat = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatUnicodeString: PreferredFormat = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatQuotedUTF8String: PreferredFormat = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatUTF8String: PreferredFormat = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatBSTRString: PreferredFormat = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatQuotedHString: PreferredFormat = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatHString: PreferredFormat = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatRaw: PreferredFormat = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatEnumNameOnly: PreferredFormat = 12i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatEscapedStringWithQuote: PreferredFormat = 13i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatUTF32String: PreferredFormat = 14i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const FormatQuotedUTF32String: PreferredFormat = 15i32;
-pub const ProcessDebugManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2024085538, data2: 20980, data3: 4560, data4: [143, 32, 0, 128, 95, 44, 208, 100] };
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct READCONTROLSPACE {
@@ -12175,12 +12855,6 @@ impl ::core::clone::Clone for READ_WRITE_MSR {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const RESTORE_LAST_ERROR_NAME: &str = "RestoreLastError";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const RESTORE_LAST_ERROR_NAME_A: &str = "RestoreLastError";
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const RESTORE_LAST_ERROR_NAME_W: &str = "RestoreLastError";
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct RIP_INFO {
@@ -12193,262 +12867,6 @@ impl ::core::clone::Clone for RIP_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type RIP_INFO_TYPE = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SLE_ERROR: RIP_INFO_TYPE = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SLE_MINORERROR: RIP_INFO_TYPE = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SLE_WARNING: RIP_INFO_TYPE = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type RTL_VIRTUAL_UNWIND_HANDLER_TYPE = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNW_FLAG_NHANDLER: RTL_VIRTUAL_UNWIND_HANDLER_TYPE = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNW_FLAG_EHANDLER: RTL_VIRTUAL_UNWIND_HANDLER_TYPE = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNW_FLAG_UHANDLER: RTL_VIRTUAL_UNWIND_HANDLER_TYPE = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNW_FLAG_CHAININFO: RTL_VIRTUAL_UNWIND_HANDLER_TYPE = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type RawSearchFlags = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const RawSearchNone: RawSearchFlags = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const RawSearchNoBases: RawSearchFlags = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SCRIPTGCTYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTGCTYPE_NORMAL: SCRIPTGCTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTGCTYPE_EXHAUSTIVE: SCRIPTGCTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTINFO_ITYPEINFO: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTINFO_IUNKNOWN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTINTERRUPT_DEBUG: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTINTERRUPT_RAISEEXCEPTION: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTITEM_CODEONLY: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTITEM_GLOBALMEMBERS: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTITEM_ISPERSISTENT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTITEM_ISSOURCE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTITEM_ISVISIBLE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTITEM_NOCODE: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SCRIPTLANGUAGEVERSION = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTLANGUAGEVERSION_DEFAULT: SCRIPTLANGUAGEVERSION = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTLANGUAGEVERSION_5_7: SCRIPTLANGUAGEVERSION = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTLANGUAGEVERSION_5_8: SCRIPTLANGUAGEVERSION = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTLANGUAGEVERSION_MAX: SCRIPTLANGUAGEVERSION = 255i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROC_HOSTMANAGESSOURCE: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROC_IMPLICIT_PARENTS: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROC_IMPLICIT_THIS: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROC_ISEXPRESSION: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROC_ISXDOMAIN: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_ABBREVIATE_GLOBALNAME_RESOLUTION: u32 = 1879048194u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_BUILDNUMBER: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_CATCHEXCEPTION: u32 = 4097u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_CONVERSIONLCID: u32 = 4098u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_DEBUGGER: u32 = 4352u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_DELAYEDEVENTSINKING: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_GCCONTROLSOFTCLOSE: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_HACK_FIBERSUPPORT: u32 = 1879048192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_HACK_TRIDENTEVENTSINK: u32 = 1879048193u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_HOSTKEEPALIVE: u32 = 1879048196u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_HOSTSTACKREQUIRED: u32 = 4099u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_INTEGERMODE: u32 = 12288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_INVOKEVERSIONING: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_JITDEBUG: u32 = 4353u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_MAJORVERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_MINORVERSION: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_NAME: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_SCRIPTSAREFULLYTRUSTED: u32 = 4100u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTPROP_STRINGCOMPAREINSTANCE: u32 = 12289u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SCRIPTSTATE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTSTATE_UNINITIALIZED: SCRIPTSTATE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTSTATE_INITIALIZED: SCRIPTSTATE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTSTATE_STARTED: SCRIPTSTATE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTSTATE_CONNECTED: SCRIPTSTATE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTSTATE_DISCONNECTED: SCRIPTSTATE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTSTATE_CLOSED: SCRIPTSTATE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTSTAT_INSTRUCTION_COUNT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTSTAT_INTSTRUCTION_TIME: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTSTAT_STATEMENT_COUNT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTSTAT_TOTAL_TIME: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTEXT_DELAYEXECUTION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTEXT_HOSTMANAGESSOURCE: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTEXT_ISEXPRESSION: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTEXT_ISNONUSERCODE: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTEXT_ISPERSISTENT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTEXT_ISVISIBLE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTEXT_ISXDOMAIN: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SCRIPTTHREADSTATE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTHREADSTATE_NOTINSCRIPT: SCRIPTTHREADSTATE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTHREADSTATE_RUNNING: SCRIPTTHREADSTATE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SCRIPTTRACEINFO = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTRACEINFO_SCRIPTSTART: SCRIPTTRACEINFO = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTRACEINFO_SCRIPTEND: SCRIPTTRACEINFO = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTRACEINFO_COMCALLSTART: SCRIPTTRACEINFO = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTRACEINFO_COMCALLEND: SCRIPTTRACEINFO = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTRACEINFO_CREATEOBJSTART: SCRIPTTRACEINFO = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTRACEINFO_CREATEOBJEND: SCRIPTTRACEINFO = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTRACEINFO_GETOBJSTART: SCRIPTTRACEINFO = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTRACEINFO_GETOBJEND: SCRIPTTRACEINFO = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTYPELIB_ISCONTROL: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTTYPELIB_ISPERSISTENT: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SCRIPTUICHANDLING = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTUICHANDLING_ALLOW: SCRIPTUICHANDLING = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTUICHANDLING_NOUIERROR: SCRIPTUICHANDLING = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTUICHANDLING_NOUIDEFAULT: SCRIPTUICHANDLING = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SCRIPTUICITEM = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTUICITEM_INPUTBOX: SCRIPTUICITEM = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPTUICITEM_MSGBOX: SCRIPTUICITEM = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_CMPL_COMMIT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_CMPL_ENUMLIST: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_CMPL_ENUM_TRIGGER: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_CMPL_GLOBALLIST: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_CMPL_MEMBERLIST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_CMPL_MEMBER_TRIGGER: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_CMPL_NOLIST: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_CMPL_PARAMTIP: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_CMPL_PARAM_TRIGGER: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SCRIPT_DEBUGGER_OPTIONS = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SDO_NONE: SCRIPT_DEBUGGER_OPTIONS = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SDO_ENABLE_FIRST_CHANCE_EXCEPTIONS: SCRIPT_DEBUGGER_OPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SDO_ENABLE_WEB_WORKER_SUPPORT: SCRIPT_DEBUGGER_OPTIONS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SDO_ENABLE_NONUSER_CODE_SUPPORT: SCRIPT_DEBUGGER_OPTIONS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SDO_ENABLE_LIBRARY_STACK_FRAME: SCRIPT_DEBUGGER_OPTIONS = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_ENCODE_DEFAULT_LANGUAGE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_ENCODE_NO_ASP_LANGUAGE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_ENCODE_SECTION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SCRIPT_ERROR_DEBUG_EXCEPTION_THROWN_KIND = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ETK_FIRST_CHANCE: SCRIPT_ERROR_DEBUG_EXCEPTION_THROWN_KIND = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ETK_USER_UNHANDLED: SCRIPT_ERROR_DEBUG_EXCEPTION_THROWN_KIND = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ETK_UNHANDLED: SCRIPT_ERROR_DEBUG_EXCEPTION_THROWN_KIND = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_E_PROPAGATE: i32 = -2147352318i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_E_RECORDED: i32 = -2040119292i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SCRIPT_E_REPORTED: i32 = -2147352319i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SCRIPT_INVOCATION_CONTEXT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SICT_Event: SCRIPT_INVOCATION_CONTEXT_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SICT_SetTimeout: SCRIPT_INVOCATION_CONTEXT_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SICT_SetInterval: SCRIPT_INVOCATION_CONTEXT_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SICT_SetImmediate: SCRIPT_INVOCATION_CONTEXT_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SICT_RequestAnimationFrame: SCRIPT_INVOCATION_CONTEXT_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SICT_ToString: SCRIPT_INVOCATION_CONTEXT_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SICT_MutationObserverCheckpoint: SCRIPT_INVOCATION_CONTEXT_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SICT_WWAExecUnsafeLocalFunction: SCRIPT_INVOCATION_CONTEXT_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SICT_WWAExecAtPriority: SCRIPT_INVOCATION_CONTEXT_TYPE = 8i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct SEARCHMEMORY {
@@ -12488,34 +12906,6 @@ impl ::core::clone::Clone for SOURCEFILEW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_COMMENT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_FUNCTION_START: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_HUMANTEXT: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_IDENTIFIER: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_KEYWORD: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_MEMBERLOOKUP: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_NONSOURCE: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_NUMBER: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_OPERATOR: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_STRING: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SOURCETEXT_ATTR_THIS: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SPLITSYM_EXTRACT_ALL: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SPLITSYM_REMOVE_PRIVATE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SPLITSYM_SYMBOLPATH_IS_SRC: u32 = 4u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -12553,108 +12943,6 @@ impl ::core::clone::Clone for SRCCODEINFOW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVACTION_CHECKSUMSTATUS: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVACTION_EVENT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVACTION_EVENTW: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVACTION_HTTPSTATUS: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVACTION_QUERYCANCEL: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVACTION_SIZE: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVACTION_TRACE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVACTION_XMLOUTPUT: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_CALLBACK: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_CALLBACKW: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_DISABLE_PING_HOST: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_DISABLE_TIMEOUT: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_DONT_UNCOMPRESS: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_DOWNSTREAM_STORE: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_ENABLE_COMM_MSG: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_FAVOR_COMPRESSED: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_FLAT_DEFAULT_STORE: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_GETPATH: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_MAX: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_MESSAGE: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_NOCOPY: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_OLDGUIDPTR: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_OVERWRITE: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_PARAMTYPE: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_PARENTWIN: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_PROXY: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_PROXYW: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_RESETTOU: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_RETRY_APP_HANG: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_SECURE: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_SERVICE: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_SETCONTEXT: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_STRING: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_TRACE: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_UNATTENDED: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_URI_FILTER: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_URI_TIERS: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_WINHTTP: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_WININET: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_ALL: u32 = 255u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_COMPRESSED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_FILEPTR: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_HTTP_COMPRESSED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_HTTP_FILEPTR: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_HTTP_MASK: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_HTTP_NORMAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_NORMAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_UNC_COMPRESSED: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_UNC_FILEPTR: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_UNC_MASK: u32 = 240u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVURI_UNC_NORMAL: u32 = 16u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(target_arch = "x86")]
@@ -12732,16 +13020,6 @@ impl ::core::clone::Clone for STACKFRAME_EX {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const STACK_FRAME_TYPE_IGNORE: u32 = 255u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const STACK_FRAME_TYPE_INIT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const STACK_FRAME_TYPE_INLINE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const STACK_FRAME_TYPE_RA: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const STACK_FRAME_TYPE_STACK: u32 = 1u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct STACK_SRC_INFO {
@@ -12773,12 +13051,6 @@ impl ::core::clone::Clone for STACK_SYM_FRAME_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type SYMADDSOURCESTREAM = ::core::option::Option<unsafe extern "system" fn(param0: super::super::super::Foundation::HANDLE, param1: u64, param2: ::windows_sys::core::PCSTR, param3: *mut u8, param4: usize) -> super::super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type SYMADDSOURCESTREAMA = ::core::option::Option<unsafe extern "system" fn(param0: super::super::super::Foundation::HANDLE, param1: u64, param2: ::windows_sys::core::PCSTR, param3: *mut u8, param4: usize) -> super::super::super::Foundation::BOOL>;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -12848,42 +13120,6 @@ impl ::core::clone::Clone for SYMBOL_INFO_EX {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SYMBOL_INFO_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_CLR_TOKEN: SYMBOL_INFO_FLAGS = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_CONSTANT: SYMBOL_INFO_FLAGS = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_EXPORT: SYMBOL_INFO_FLAGS = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_FORWARDER: SYMBOL_INFO_FLAGS = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_FRAMEREL: SYMBOL_INFO_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_FUNCTION: SYMBOL_INFO_FLAGS = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_ILREL: SYMBOL_INFO_FLAGS = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_LOCAL: SYMBOL_INFO_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_METADATA: SYMBOL_INFO_FLAGS = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_PARAMETER: SYMBOL_INFO_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_REGISTER: SYMBOL_INFO_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_REGREL: SYMBOL_INFO_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_SLOT: SYMBOL_INFO_FLAGS = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_THUNK: SYMBOL_INFO_FLAGS = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_TLSREL: SYMBOL_INFO_FLAGS = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_VALUEPRESENT: SYMBOL_INFO_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_VIRTUAL: SYMBOL_INFO_FLAGS = 4096u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -12911,130 +13147,6 @@ impl ::core::clone::Clone for SYMBOL_INFO_PACKAGEW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMBOL_TYPE_INDEX_NOT_FOUND: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMBOL_TYPE_INFO_NOT_FOUND: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMENUM_OPTIONS_DEFAULT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMENUM_OPTIONS_INLINE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_FIXUP_ARM64X: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_FUNC_NO_RETURN: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_GLOBAL: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_NULL: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_PUBLIC_CODE: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_REGREL_ALIASINDIR: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_RESET: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMFLAG_SYNTHETIC_ZEROBASE: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_CONSTANT: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_EXPORT: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_FORWARDER: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_FRAMEREL: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_FUNCTION: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_LOCAL: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_OMAP_GENERATED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_OMAP_MODIFIED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_PARAMETER: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_REGISTER: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_REGREL: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_THUNK: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_TLSREL: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMF_VIRTUAL: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_ALLOW_ABSOLUTE_SYMBOLS: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_ALLOW_ZERO_ADDRESS: u32 = 16777216u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_AUTO_PUBLICS: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_CASE_INSENSITIVE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_DEBUG: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_DEFERRED_LOADS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_DISABLE_FAST_SYMBOLS: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_DISABLE_SRVSTAR_ON_STARTUP: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_DISABLE_SYMSRV_AUTODETECT: u32 = 33554432u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_DISABLE_SYMSRV_TIMEOUT: u32 = 536870912u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_EXACT_SYMBOLS: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_FAIL_CRITICAL_ERRORS: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_FAVOR_COMPRESSED: u32 = 8388608u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_FLAT_DIRECTORY: u32 = 4194304u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_IGNORE_CVREC: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_IGNORE_IMAGEDIR: u32 = 2097152u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_IGNORE_NT_SYMPATH: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_INCLUDE_32BIT_MODULES: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_LOAD_ANYTHING: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_LOAD_LINES: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_NO_CPP: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_NO_IMAGE_SEARCH: u32 = 131072u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_NO_PROMPTS: u32 = 524288u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_NO_PUBLICS: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_NO_UNQUALIFIED_LOADS: u32 = 256u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_OMAP_FIND_NEAREST: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_OVERWRITE: u32 = 1048576u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_PUBLICS_ONLY: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_READONLY_CACHE: u32 = 67108864u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_SECURE: u32 = 262144u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_SYMPATH_LAST: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMOPT_UNDNAME: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSEARCH_ALLITEMS: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSEARCH_GLOBALSONLY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSEARCH_MASKOBJS: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSEARCH_RECURSE: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct SYMSRV_EXTENDED_OUTPUT_DATA {
@@ -13094,12 +13206,6 @@ impl ::core::clone::Clone for SYMSRV_INDEX_INFOW {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSRV_VERSION: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSTOREOPT_ALT_INDEX: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSTOREOPT_UNICODE: u32 = 32u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct SYM_DUMP_PARAM {
@@ -13136,100 +13242,6 @@ impl ::core::clone::Clone for SYM_DUMP_PARAM_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SYM_FIND_ID_OPTION = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_DWORD: SYM_FIND_ID_OPTION = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_DWORDPTR: SYM_FIND_ID_OPTION = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SSRVOPT_GUIDPTR: SYM_FIND_ID_OPTION = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYM_INLINE_COMP_DIFFERENT: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYM_INLINE_COMP_ERROR: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYM_INLINE_COMP_IDENTICAL: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYM_INLINE_COMP_STEPIN: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYM_INLINE_COMP_STEPOUT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYM_INLINE_COMP_STEPOVER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SYM_LOAD_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SLMFLAG_NONE: SYM_LOAD_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SLMFLAG_VIRTUAL: SYM_LOAD_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SLMFLAG_ALT_INDEX: SYM_LOAD_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SLMFLAG_NO_SYMBOLS: SYM_LOAD_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SYM_SRV_STORE_FILE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSTOREOPT_COMPRESS: SYM_SRV_STORE_FILE_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSTOREOPT_OVERWRITE: SYM_SRV_STORE_FILE_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSTOREOPT_PASS_IF_EXISTS: SYM_SRV_STORE_FILE_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSTOREOPT_POINTER: SYM_SRV_STORE_FILE_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYMSTOREOPT_RETURNINDEX: SYM_SRV_STORE_FILE_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYM_STKWALK_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYM_STKWALK_FORCE_FRAMEPTR: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SYM_STKWALK_ZEROEXTEND_PTRS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SYM_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymNone: SYM_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymCoff: SYM_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymCv: SYM_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymPdb: SYM_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymExport: SYM_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymDeferred: SYM_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymSym: SYM_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymDia: SYM_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymVirtual: SYM_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const NumSymTypes: SYM_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type ScriptChangeKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptRename: ScriptChangeKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type ScriptDebugEvent = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugBreakpoint: ScriptDebugEvent = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugStep: ScriptDebugEvent = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugException: ScriptDebugEvent = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugAsyncBreak: ScriptDebugEvent = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type ScriptDebugEventFilter = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugEventFilterEntry: ScriptDebugEventFilter = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugEventFilterException: ScriptDebugEventFilter = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugEventFilterUnhandledException: ScriptDebugEventFilter = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugEventFilterAbort: ScriptDebugEventFilter = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct ScriptDebugEventInformation {
@@ -13270,7 +13282,7 @@ impl ::core::clone::Clone for ScriptDebugEventInformation_0_0 {
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct ScriptDebugEventInformation_0_1 {
-    pub IsUncaught: bool,
+    pub IsUncaught: u8,
 }
 impl ::core::marker::Copy for ScriptDebugEventInformation_0_1 {}
 impl ::core::clone::Clone for ScriptDebugEventInformation_0_1 {
@@ -13290,66 +13302,6 @@ impl ::core::clone::Clone for ScriptDebugPosition {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type ScriptDebugState = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugNoDebugger: ScriptDebugState = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugNotExecuting: ScriptDebugState = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugExecuting: ScriptDebugState = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptDebugBreak: ScriptDebugState = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type ScriptExecutionKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptExecutionNormal: ScriptExecutionKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptExecutionStepIn: ScriptExecutionKind = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptExecutionStepOut: ScriptExecutionKind = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ScriptExecutionStepOver: ScriptExecutionKind = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SignatureComparison = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const Unrelated: SignatureComparison = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const Ambiguous: SignatureComparison = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const LessSpecific: SignatureComparison = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const MoreSpecific: SignatureComparison = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const Identical: SignatureComparison = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SymbolKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const Symbol: SymbolKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolModule: SymbolKind = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolType: SymbolKind = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolField: SymbolKind = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolConstant: SymbolKind = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolData: SymbolKind = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolBaseClass: SymbolKind = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolPublic: SymbolKind = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolFunction: SymbolKind = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type SymbolSearchOptions = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolSearchNone: SymbolSearchOptions = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolSearchCompletion: SymbolSearchOptions = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SymbolSearchCaseInsensitive: SymbolSearchOptions = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct TEXT_DOCUMENT_ARRAY {
@@ -13362,50 +13314,6 @@ impl ::core::clone::Clone for TEXT_DOCUMENT_ARRAY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TEXT_DOC_ATTR_READONLY: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TEXT_DOC_ATTR_TYPE_PRIMARY: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TEXT_DOC_ATTR_TYPE_SCRIPT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TEXT_DOC_ATTR_TYPE_WORKER: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const THREAD_BLOCKED: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type THREAD_ERROR_MODE = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SEM_ALL_ERRORS: THREAD_ERROR_MODE = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SEM_FAILCRITICALERRORS: THREAD_ERROR_MODE = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SEM_NOGPFAULTERRORBOX: THREAD_ERROR_MODE = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SEM_NOOPENFILEERRORBOX: THREAD_ERROR_MODE = 32768u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const SEM_NOALIGNMENTFAULTEXCEPT: THREAD_ERROR_MODE = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const THREAD_OUT_OF_CONTEXT: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const THREAD_STATE_RUNNING: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const THREAD_STATE_SUSPENDED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type THREAD_WRITE_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadWriteThread: THREAD_WRITE_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadWriteStack: THREAD_WRITE_FLAGS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadWriteContext: THREAD_WRITE_FLAGS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadWriteBackingStore: THREAD_WRITE_FLAGS = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadWriteInstructionWindow: THREAD_WRITE_FLAGS = 16i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadWriteThreadData: THREAD_WRITE_FLAGS = 32i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const ThreadWriteThreadInfo: THREAD_WRITE_FLAGS = 64i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct TI_FINDCHILDREN_PARAMS {
@@ -13431,62 +13339,6 @@ impl ::core::clone::Clone for TRANSLATE_VIRTUAL_TO_PHYSICAL {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type TypeKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TypeUDT: TypeKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TypePointer: TypeKind = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TypeMemberPointer: TypeKind = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TypeArray: TypeKind = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TypeFunction: TypeKind = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TypeTypedef: TypeKind = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TypeEnum: TypeKind = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TypeIntrinsic: TypeKind = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const TypeExtendedArray: TypeKind = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNAVAILABLE_ERROR: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_32_BIT_DECODE: u32 = 2048u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_COMPLETE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NAME_ONLY: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_ACCESS_SPECIFIERS: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_ALLOCATION_LANGUAGE: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_ALLOCATION_MODEL: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_ARGUMENTS: u32 = 8192u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_CV_THISTYPE: u32 = 64u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_FUNCTION_RETURNS: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_LEADING_UNDERSCORES: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_MEMBER_TYPE: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_MS_KEYWORDS: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_MS_THISTYPE: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_RETURN_UDT_MODEL: u32 = 1024u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_SPECIAL_SYMS: u32 = 16384u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_THISTYPE: u32 = 96u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const UNDNAME_NO_THROW_SIGNATURES: u32 = 256u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct UNLOAD_DLL_DEBUG_INFO {
@@ -13549,14 +13401,6 @@ impl ::core::clone::Clone for UNWIND_HISTORY_TABLE_ENTRY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type VER_PLATFORM = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const VER_PLATFORM_WIN32s: VER_PLATFORM = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const VER_PLATFORM_WIN32_WINDOWS: VER_PLATFORM = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const VER_PLATFORM_WIN32_NT: VER_PLATFORM = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct VIRTUAL_TO_PHYSICAL {
@@ -13572,12 +13416,6 @@ impl ::core::clone::Clone for VIRTUAL_TO_PHYSICAL {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type VarArgsKind = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const VarArgsNone: VarArgsKind = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const VarArgsCStyle: VarArgsKind = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -13642,80 +13480,6 @@ impl ::core::clone::Clone for WAITCHAIN_NODE_INFO_0_1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type WAIT_CHAIN_THREAD_OPTIONS = u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WCT_OUT_OF_PROC_COM_FLAG: WAIT_CHAIN_THREAD_OPTIONS = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WCT_OUT_OF_PROC_CS_FLAG: WAIT_CHAIN_THREAD_OPTIONS = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WCT_OUT_OF_PROC_FLAG: WAIT_CHAIN_THREAD_OPTIONS = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WCT_MAX_NODE_COUNT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WCT_NETWORK_IO_FLAG: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type WCT_OBJECT_STATUS = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusNoAccess: WCT_OBJECT_STATUS = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusRunning: WCT_OBJECT_STATUS = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusBlocked: WCT_OBJECT_STATUS = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusPidOnly: WCT_OBJECT_STATUS = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusPidOnlyRpcss: WCT_OBJECT_STATUS = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusOwned: WCT_OBJECT_STATUS = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusNotOwned: WCT_OBJECT_STATUS = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusAbandoned: WCT_OBJECT_STATUS = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusUnknown: WCT_OBJECT_STATUS = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusError: WCT_OBJECT_STATUS = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctStatusMax: WCT_OBJECT_STATUS = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type WCT_OBJECT_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctCriticalSectionType: WCT_OBJECT_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctSendMessageType: WCT_OBJECT_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctMutexType: WCT_OBJECT_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctAlpcType: WCT_OBJECT_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctComType: WCT_OBJECT_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctThreadWaitType: WCT_OBJECT_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctProcessWaitType: WCT_OBJECT_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctThreadType: WCT_OBJECT_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctComActivationType: WCT_OBJECT_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctUnknownType: WCT_OBJECT_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctSocketIoType: WCT_OBJECT_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctSmbIoType: WCT_OBJECT_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WctMaxType: WCT_OBJECT_TYPE = 13i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WCT_OBJNAME_LENGTH: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WDBGEXTS_ADDRESS_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WDBGEXTS_ADDRESS_RESERVED0: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WDBGEXTS_ADDRESS_SEG16: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WDBGEXTS_ADDRESS_SEG32: u32 = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct WDBGEXTS_CLR_DATA_INTERFACE {
@@ -13869,30 +13633,6 @@ impl ::core::clone::Clone for WHEA_AER_ROOTPORT_DESCRIPTOR {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_BAD_PAGE_LIST_LOCATION: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_BAD_PAGE_LIST_MAX_SIZE: u32 = 14u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_CMCI_THRESHOLD_COUNT: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_CMCI_THRESHOLD_POLL_COUNT: u32 = 12u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_CMCI_THRESHOLD_TIME: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_DEVICE_DRIVER_BUFFER_SET_MAX: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_DEVICE_DRIVER_BUFFER_SET_MIN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_DEVICE_DRIVER_BUFFER_SET_V1: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_DEVICE_DRIVER_CONFIG_MAX: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_DEVICE_DRIVER_CONFIG_MIN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_DEVICE_DRIVER_CONFIG_V1: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_DEVICE_DRIVER_CONFIG_V2: u32 = 2u32;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -13922,10 +13662,6 @@ impl ::core::clone::Clone for WHEA_DEVICE_DRIVER_DESCRIPTOR {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_DISABLE_DUMMY_WRITE: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_DISABLE_OFFLINE: u32 = 0u32;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct WHEA_DRIVER_BUFFER_SET {
@@ -14000,9 +13736,6 @@ impl ::core::clone::Clone for WHEA_ERROR_SOURCE_CONFIGURATION_DEVICE_DRIVER_V1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type WHEA_ERROR_SOURCE_CORRECT_DEVICE_DRIVER = ::core::option::Option<unsafe extern "system" fn(errorsourcedesc: *mut ::core::ffi::c_void, maximumsectionlength: *mut u32) -> super::super::super::Foundation::NTSTATUS>;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -14052,95 +13785,6 @@ impl ::core::clone::Clone for WHEA_ERROR_SOURCE_DESCRIPTOR_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_AERBRIDGE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_AERENDPOINT: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_AERROOTPORT: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_GENERIC: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_GENERIC_V2: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_IPFCMC: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_IPFCPE: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_IPFMCA: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_XPFCMC: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_XPFMCE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_TYPE_XPFNMI: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_VERSION_10: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_DESCRIPTOR_VERSION_11: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_FLAG_DEFAULTSOURCE: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_FLAG_FIRMWAREFIRST: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_FLAG_GHES_ASSIST: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_FLAG_GLOBAL: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type WHEA_ERROR_SOURCE_INITIALIZE_DEVICE_DRIVER = ::core::option::Option<unsafe extern "system" fn(context: *mut ::core::ffi::c_void, errorsourceid: u32) -> super::super::super::Foundation::NTSTATUS>;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_ERROR_SOURCE_INVALID_RELATED_SOURCE: u32 = 65535u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type WHEA_ERROR_SOURCE_STATE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcStateStopped: WHEA_ERROR_SOURCE_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcStateStarted: WHEA_ERROR_SOURCE_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcStateRemoved: WHEA_ERROR_SOURCE_STATE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcStateRemovePending: WHEA_ERROR_SOURCE_STATE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type WHEA_ERROR_SOURCE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeMCE: WHEA_ERROR_SOURCE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeCMC: WHEA_ERROR_SOURCE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeCPE: WHEA_ERROR_SOURCE_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeNMI: WHEA_ERROR_SOURCE_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypePCIe: WHEA_ERROR_SOURCE_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeGeneric: WHEA_ERROR_SOURCE_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeINIT: WHEA_ERROR_SOURCE_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeBOOT: WHEA_ERROR_SOURCE_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeSCIGeneric: WHEA_ERROR_SOURCE_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeIPFMCA: WHEA_ERROR_SOURCE_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeIPFCMC: WHEA_ERROR_SOURCE_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeIPFCPE: WHEA_ERROR_SOURCE_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeGenericV2: WHEA_ERROR_SOURCE_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeSCIGenericV2: WHEA_ERROR_SOURCE_TYPE = 13i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeBMC: WHEA_ERROR_SOURCE_TYPE = 14i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypePMEM: WHEA_ERROR_SOURCE_TYPE = 15i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeDeviceDriver: WHEA_ERROR_SOURCE_TYPE = 16i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WheaErrSrcTypeMax: WHEA_ERROR_SOURCE_TYPE = 17i32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type WHEA_ERROR_SOURCE_UNINITIALIZE_DEVICE_DRIVER = ::core::option::Option<unsafe extern "system" fn(context: *mut ::core::ffi::c_void)>;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct WHEA_GENERIC_ERROR_DESCRIPTOR {
@@ -14229,18 +13873,6 @@ impl ::core::clone::Clone for WHEA_IPF_MCA_DESCRIPTOR {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_MAX_MC_BANKS: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_MEM_PERSISTOFFLINE: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_MEM_PFA_DISABLE: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_MEM_PFA_PAGECOUNT: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_MEM_PFA_THRESHOLD: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_MEM_PFA_TIMEOUT: u32 = 5u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct WHEA_NOTIFICATION_DESCRIPTOR {
@@ -14419,32 +14051,6 @@ impl ::core::clone::Clone for WHEA_NOTIFICATION_FLAGS_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_ARMV8_SEA: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_ARMV8_SEI: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_CMCI: u32 = 5u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_EXTERNALINTERRUPT: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_EXTERNALINTERRUPT_GSIV: u32 = 10u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_GPIO_SIGNAL: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_LOCALINTERRUPT: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_MCE: u32 = 6u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_NMI: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_POLLED: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_SCI: u32 = 3u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFICATION_TYPE_SDEI: u32 = 11u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_NOTIFY_ALL_OFFLINES: u32 = 16u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct WHEA_PCI_SLOT_NUMBER {
@@ -14479,14 +14085,6 @@ impl ::core::clone::Clone for WHEA_PCI_SLOT_NUMBER_0_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_PENDING_PAGE_LIST_SZ: u32 = 13u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_RESTORE_CMCI_ATTEMPTS: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_RESTORE_CMCI_ENABLED: u32 = 7u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_RESTORE_CMCI_ERR_LIMIT: u32 = 9u32;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -14548,12 +14146,6 @@ impl ::core::clone::Clone for WHEA_XPF_MC_BANK_DESCRIPTOR {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_XPF_MC_BANK_STATUSFORMAT_AMD64MCA: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_XPF_MC_BANK_STATUSFORMAT_IA32MCA: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WHEA_XPF_MC_BANK_STATUSFORMAT_Intel64MCA: u32 = 1u32;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -14715,18 +14307,6 @@ impl ::core::clone::Clone for WOW64_CONTEXT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WOW64_CONTEXT_EXCEPTION_ACTIVE: u32 = 134217728u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WOW64_CONTEXT_EXCEPTION_REPORTING: u32 = 2147483648u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WOW64_CONTEXT_EXCEPTION_REQUEST: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WOW64_CONTEXT_SERVICE_ACTIVE: u32 = 268435456u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WOW64_CONTEXT_i386: u32 = 65536u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WOW64_CONTEXT_i486: u32 = 65536u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub struct WOW64_DESCRIPTOR_TABLE_ENTRY {
@@ -14808,10 +14388,6 @@ impl ::core::clone::Clone for WOW64_LDT_ENTRY_0_1 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WOW64_MAXIMUM_SUPPORTED_EXTENSION: u32 = 512u32;
-#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const WOW64_SIZE_OF_80387_REGISTERS: u32 = 80u32;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
 pub union XPF_MCE_FLAGS {
@@ -15051,74 +14627,390 @@ impl ::core::clone::Clone for XSTATE_FEATURE {
         *self
     }
 }
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type DIGEST_FUNCTION = ::core::option::Option<unsafe extern "system" fn(refdata: *mut ::core::ffi::c_void, pdata: *mut u8, dwlength: u32) -> super::super::super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub type _DUMP_TYPES = i32;
+pub type LPCALL_BACK_USER_INTERRUPT_ROUTINE = ::core::option::Option<unsafe extern "system" fn() -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+pub type LPTOP_LEVEL_EXCEPTION_FILTER = ::core::option::Option<unsafe extern "system" fn(exceptioninfo: *const EXCEPTION_POINTERS) -> i32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_FileSystem\"`, `\"Win32_System_Kernel\"`, `\"Win32_System_Memory\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_FileSystem", feature = "Win32_System_Kernel", feature = "Win32_System_Memory"))]
+pub type MINIDUMP_CALLBACK_ROUTINE = ::core::option::Option<unsafe extern "system" fn(callbackparam: *mut ::core::ffi::c_void, callbackinput: *const MINIDUMP_CALLBACK_INPUT, callbackoutput: *mut MINIDUMP_CALLBACK_OUTPUT) -> super::super::super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_TYPE_INVALID: _DUMP_TYPES = -1i32;
+pub type PCOGETACTIVATIONSTATE = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::GUID, param1: u32, param2: *mut u32) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_TYPE_UNKNOWN: _DUMP_TYPES = 0i32;
+pub type PCOGETCALLSTATE = ::core::option::Option<unsafe extern "system" fn(param0: i32, param1: *mut u32) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PDBGHELP_CREATE_USER_DUMP_CALLBACK = ::core::option::Option<unsafe extern "system" fn(datatype: u32, data: *const *const ::core::ffi::c_void, datalength: *mut u32, userdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_TYPE_FULL: _DUMP_TYPES = 1i32;
+pub type PDEBUG_EXTENSION_CALL = ::core::option::Option<unsafe extern "system" fn(client: IDebugClient, args: ::windows_sys::core::PCSTR) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_TYPE_SUMMARY: _DUMP_TYPES = 2i32;
+pub type PDEBUG_EXTENSION_CANUNLOAD = ::core::option::Option<unsafe extern "system" fn() -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_TYPE_HEADER: _DUMP_TYPES = 3i32;
+pub type PDEBUG_EXTENSION_INITIALIZE = ::core::option::Option<unsafe extern "system" fn(version: *mut u32, flags: *mut u32) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_TYPE_TRIAGE: _DUMP_TYPES = 4i32;
+pub type PDEBUG_EXTENSION_KNOWN_STRUCT = ::core::option::Option<unsafe extern "system" fn(flags: u32, offset: u64, typename: ::windows_sys::core::PCSTR, buffer: ::windows_sys::core::PSTR, bufferchars: *mut u32) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_TYPE_BITMAP_FULL: _DUMP_TYPES = 5i32;
+pub type PDEBUG_EXTENSION_KNOWN_STRUCT_EX = ::core::option::Option<unsafe extern "system" fn(client: IDebugClient, flags: u32, offset: u64, typename: ::windows_sys::core::PCSTR, buffer: ::windows_sys::core::PSTR, bufferchars: *mut u32) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_TYPE_BITMAP_KERNEL: _DUMP_TYPES = 6i32;
+pub type PDEBUG_EXTENSION_NOTIFY = ::core::option::Option<unsafe extern "system" fn(notify: u32, argument: u64)>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const DUMP_TYPE_AUTOMATIC: _DUMP_TYPES = 7i32;
-#[repr(C)]
+pub type PDEBUG_EXTENSION_PROVIDE_VALUE = ::core::option::Option<unsafe extern "system" fn(client: IDebugClient, flags: u32, name: ::windows_sys::core::PCWSTR, value: *mut u64, typemodbase: *mut u64, typeid: *mut u32, typeflags: *mut u32) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub struct _GETSETBUSDATA {
-    pub BusDataType: u32,
-    pub BusNumber: u32,
-    pub SlotNumber: u32,
-    pub Buffer: *mut ::core::ffi::c_void,
-    pub Offset: u32,
-    pub Length: u32,
-}
-impl ::core::marker::Copy for _GETSETBUSDATA {}
-impl ::core::clone::Clone for _GETSETBUSDATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub type PDEBUG_EXTENSION_QUERY_VALUE_NAMES = ::core::option::Option<unsafe extern "system" fn(client: IDebugClient, flags: u32, buffer: ::windows_sys::core::PWSTR, bufferchars: u32, bufferneeded: *mut u32) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub struct _IMAGEHLP_JIT_SYMBOL_MAP {
-    pub SizeOfStruct: u32,
-    pub Address: u64,
-    pub BaseOfImage: u64,
-}
-impl ::core::marker::Copy for _IMAGEHLP_JIT_SYMBOL_MAP {}
-impl ::core::clone::Clone for _IMAGEHLP_JIT_SYMBOL_MAP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub type PDEBUG_EXTENSION_UNINITIALIZE = ::core::option::Option<unsafe extern "system" fn()>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub struct __MIDL___MIDL_itf_jscript9diag_0000_0007_0001 {
-    pub InstructionOffset: u64,
-    pub ReturnOffset: u64,
-    pub FrameOffset: u64,
-    pub StackOffset: u64,
-}
-impl ::core::marker::Copy for __MIDL___MIDL_itf_jscript9diag_0000_0007_0001 {}
-impl ::core::clone::Clone for __MIDL___MIDL_itf_jscript9diag_0000_0007_0001 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub type PDEBUG_EXTENSION_UNLOAD = ::core::option::Option<unsafe extern "system" fn()>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const fasaCaseSensitive: u32 = 4u32;
+pub type PDEBUG_STACK_PROVIDER_BEGINTHREADSTACKRECONSTRUCTION = ::core::option::Option<unsafe extern "system" fn(streamtype: u32, minidumpstreambuffer: *const ::core::ffi::c_void, buffersize: u32) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const fasaPreferInternalHandler: u32 = 1u32;
+pub type PDEBUG_STACK_PROVIDER_ENDTHREADSTACKRECONSTRUCTION = ::core::option::Option<unsafe extern "system" fn() -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PDEBUG_STACK_PROVIDER_FREESTACKSYMFRAMES = ::core::option::Option<unsafe extern "system" fn(stacksymframes: *const STACK_SYM_FRAME_INFO) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PDEBUG_STACK_PROVIDER_RECONSTRUCTSTACK = ::core::option::Option<unsafe extern "system" fn(systemthreadid: u32, nativeframes: *const DEBUG_STACK_FRAME_EX, countnativeframes: u32, stacksymframes: *mut *mut STACK_SYM_FRAME_INFO, stacksymframesfilled: *mut u32) -> ::windows_sys::core::HRESULT>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PENUMDIRTREE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(filepath: ::windows_sys::core::PCSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PENUMDIRTREE_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(filepath: ::windows_sys::core::PCWSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub type PENUMLOADED_MODULES_CALLBACK = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCSTR, modulebase: u32, modulesize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PENUMLOADED_MODULES_CALLBACK64 = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCSTR, modulebase: u64, modulesize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PENUMLOADED_MODULES_CALLBACKW64 = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCWSTR, modulebase: u64, modulesize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PENUMSOURCEFILETOKENSCALLBACK = ::core::option::Option<unsafe extern "system" fn(token: *const ::core::ffi::c_void, size: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFINDFILEINPATHCALLBACK = ::core::option::Option<unsafe extern "system" fn(filename: ::windows_sys::core::PCSTR, context: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFINDFILEINPATHCALLBACKW = ::core::option::Option<unsafe extern "system" fn(filename: ::windows_sys::core::PCWSTR, context: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFIND_DEBUG_FILE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(filehandle: super::super::super::Foundation::HANDLE, filename: ::windows_sys::core::PCSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFIND_DEBUG_FILE_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(filehandle: super::super::super::Foundation::HANDLE, filename: ::windows_sys::core::PCWSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFIND_EXE_FILE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(filehandle: super::super::super::Foundation::HANDLE, filename: ::windows_sys::core::PCSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFIND_EXE_FILE_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(filehandle: super::super::super::Foundation::HANDLE, filename: ::windows_sys::core::PCWSTR, callerdata: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFUNCTION_TABLE_ACCESS_ROUTINE = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, addrbase: u32) -> *mut ::core::ffi::c_void>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PFUNCTION_TABLE_ACCESS_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(ahprocess: super::super::super::Foundation::HANDLE, addrbase: u64) -> *mut ::core::ffi::c_void>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub type PGET_MODULE_BASE_ROUTINE = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, address: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PGET_MODULE_BASE_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, address: u64) -> u64>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const fasaSupportInternalHandler: u32 = 2u32;
+#[cfg(target_arch = "aarch64")]
+pub type PGET_RUNTIME_FUNCTION_CALLBACK = ::core::option::Option<unsafe extern "system" fn(controlpc: u64, context: *const ::core::ffi::c_void) -> *mut IMAGE_ARM64_RUNTIME_FUNCTION_ENTRY>;
 #[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
-pub const sevMax: i32 = 4i32;
+#[cfg(target_arch = "x86_64")]
+pub type PGET_RUNTIME_FUNCTION_CALLBACK = ::core::option::Option<unsafe extern "system" fn(controlpc: u64, context: *const ::core::ffi::c_void) -> *mut IMAGE_RUNTIME_FUNCTION_ENTRY>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PIMAGEHLP_STATUS_ROUTINE = ::core::option::Option<unsafe extern "system" fn(reason: IMAGEHLP_STATUS_REASON, imagename: ::windows_sys::core::PCSTR, dllname: ::windows_sys::core::PCSTR, va: usize, parameter: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PIMAGEHLP_STATUS_ROUTINE32 = ::core::option::Option<unsafe extern "system" fn(reason: IMAGEHLP_STATUS_REASON, imagename: ::windows_sys::core::PCSTR, dllname: ::windows_sys::core::PCSTR, va: u32, parameter: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PIMAGEHLP_STATUS_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(reason: IMAGEHLP_STATUS_REASON, imagename: ::windows_sys::core::PCSTR, dllname: ::windows_sys::core::PCSTR, va: u64, parameter: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub type PREAD_PROCESS_MEMORY_ROUTINE = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, lpbaseaddress: u32, lpbuffer: *mut ::core::ffi::c_void, nsize: u32, lpnumberofbytesread: *mut u32) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PREAD_PROCESS_MEMORY_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, qwbaseaddress: u64, lpbuffer: *mut ::core::ffi::c_void, nsize: u32, lpnumberofbytesread: *mut u32) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERBYINDEXPROC = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: ::windows_sys::core::PCSTR, param3: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERBYINDEXPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: ::windows_sys::core::PCSTR, param3: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERBYINDEXPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: ::windows_sys::core::PCWSTR, param3: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERCALLBACKPROC = ::core::option::Option<unsafe extern "system" fn(action: usize, data: u64, context: u64) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERCLOSEPROC = ::core::option::Option<unsafe extern "system" fn() -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERDELTANAME = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: *mut ::core::ffi::c_void, param2: u32, param3: u32, param4: *mut ::core::ffi::c_void, param5: u32, param6: u32, param7: ::windows_sys::core::PCSTR, param8: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERDELTANAMEW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: *mut ::core::ffi::c_void, param2: u32, param3: u32, param4: *mut ::core::ffi::c_void, param5: u32, param6: u32, param7: ::windows_sys::core::PCWSTR, param8: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERGETINDEXSTRING = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void, param1: u32, param2: u32, param3: ::windows_sys::core::PCSTR, param4: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERGETINDEXSTRINGW = ::core::option::Option<unsafe extern "system" fn(param0: *mut ::core::ffi::c_void, param1: u32, param2: u32, param3: ::windows_sys::core::PCWSTR, param4: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERGETOPTIONDATAPROC = ::core::option::Option<unsafe extern "system" fn(param0: usize, param1: *mut u64) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PSYMBOLSERVERGETOPTIONSPROC = ::core::option::Option<unsafe extern "system" fn() -> usize>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERGETSUPPLEMENT = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: ::windows_sys::core::PCSTR, param3: ::windows_sys::core::PCSTR, param4: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERGETSUPPLEMENTW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: ::windows_sys::core::PCWSTR, param3: ::windows_sys::core::PCWSTR, param4: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERGETVERSION = ::core::option::Option<unsafe extern "system" fn(param0: *mut API_VERSION) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERISSTORE = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERISSTOREW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERMESSAGEPROC = ::core::option::Option<unsafe extern "system" fn(action: usize, data: u64, context: u64) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVEROPENPROC = ::core::option::Option<unsafe extern "system" fn() -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERPINGPROC = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERPINGPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERPINGPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERPINGPROCWEX = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERPROC = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERPROCA = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERPROCW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERSETHTTPAUTHHEADER = ::core::option::Option<unsafe extern "system" fn(pszauthheader: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERSETOPTIONSPROC = ::core::option::Option<unsafe extern "system" fn(param0: usize, param1: u64) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERSETOPTIONSWPROC = ::core::option::Option<unsafe extern "system" fn(param0: usize, param1: u64) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERSTOREFILE = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCSTR, param6: usize, param7: u32) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERSTOREFILEW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCWSTR, param6: usize, param7: u32) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERSTORESUPPLEMENT = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCSTR, param1: ::windows_sys::core::PCSTR, param2: ::windows_sys::core::PCSTR, param3: ::windows_sys::core::PCSTR, param4: usize, param5: u32) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERSTORESUPPLEMENTW = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: ::windows_sys::core::PCWSTR, param3: ::windows_sys::core::PCWSTR, param4: usize, param5: u32) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PSYMBOLSERVERVERSION = ::core::option::Option<unsafe extern "system" fn() -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOLSERVERWEXPROC = ::core::option::Option<unsafe extern "system" fn(param0: ::windows_sys::core::PCWSTR, param1: ::windows_sys::core::PCWSTR, param2: *mut ::core::ffi::c_void, param3: u32, param4: u32, param5: ::windows_sys::core::PCWSTR, param6: *mut SYMSRV_EXTENDED_OUTPUT_DATA) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOL_FUNCENTRY_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, addrbase: u32, usercontext: *const ::core::ffi::c_void) -> *mut ::core::ffi::c_void>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOL_FUNCENTRY_CALLBACK64 = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, addrbase: u64, usercontext: u64) -> *mut ::core::ffi::c_void>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOL_REGISTERED_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, actioncode: u32, callbackdata: *const ::core::ffi::c_void, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYMBOL_REGISTERED_CALLBACK64 = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, actioncode: u32, callbackdata: u64, usercontext: u64) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PSYM_DUMP_FIELD_CALLBACK = ::core::option::Option<unsafe extern "system" fn(pfield: *mut FIELD_INFO, usercontext: *mut ::core::ffi::c_void) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMERATESYMBOLS_CALLBACK = ::core::option::Option<unsafe extern "system" fn(psyminfo: *const SYMBOL_INFO, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMERATESYMBOLS_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(psyminfo: *const SYMBOL_INFOW, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMLINES_CALLBACK = ::core::option::Option<unsafe extern "system" fn(lineinfo: *const SRCCODEINFO, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMLINES_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(lineinfo: *const SRCCODEINFOW, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMMODULES_CALLBACK = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCSTR, baseofdll: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMMODULES_CALLBACK64 = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCSTR, baseofdll: u64, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMMODULES_CALLBACKW64 = ::core::option::Option<unsafe extern "system" fn(modulename: ::windows_sys::core::PCWSTR, baseofdll: u64, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMPROCESSES_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMSOURCEFILES_CALLBACK = ::core::option::Option<unsafe extern "system" fn(psourcefile: *const SOURCEFILE, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMSOURCEFILES_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(psourcefile: *const SOURCEFILEW, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMSYMBOLS_CALLBACK = ::core::option::Option<unsafe extern "system" fn(symbolname: ::windows_sys::core::PCSTR, symboladdress: u32, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMSYMBOLS_CALLBACK64 = ::core::option::Option<unsafe extern "system" fn(symbolname: ::windows_sys::core::PCSTR, symboladdress: u64, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMSYMBOLS_CALLBACK64W = ::core::option::Option<unsafe extern "system" fn(symbolname: ::windows_sys::core::PCWSTR, symboladdress: u64, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub type PSYM_ENUMSYMBOLS_CALLBACKW = ::core::option::Option<unsafe extern "system" fn(symbolname: ::windows_sys::core::PCWSTR, symboladdress: u32, symbolsize: u32, usercontext: *const ::core::ffi::c_void) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub type PTRANSLATE_ADDRESS_ROUTINE = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, hthread: super::super::super::Foundation::HANDLE, lpaddr: *mut ADDRESS) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PTRANSLATE_ADDRESS_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(hprocess: super::super::super::Foundation::HANDLE, hthread: super::super::super::Foundation::HANDLE, lpaddr: *const ADDRESS64) -> u64>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Kernel"))]
+pub type PVECTORED_EXCEPTION_HANDLER = ::core::option::Option<unsafe extern "system" fn(exceptioninfo: *mut EXCEPTION_POINTERS) -> i32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PWAITCHAINCALLBACK = ::core::option::Option<unsafe extern "system" fn(wcthandle: *mut ::core::ffi::c_void, context: usize, callbackstatus: u32, nodecount: *mut u32, nodeinfoarray: *mut WAITCHAIN_NODE_INFO, iscycle: *mut i32)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_CHECK_CONTROL_C = ::core::option::Option<unsafe extern "system" fn() -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_CHECK_VERSION = ::core::option::Option<unsafe extern "system" fn() -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_DISASM = ::core::option::Option<unsafe extern "system" fn(lpoffset: *mut usize, lpbuffer: ::windows_sys::core::PCSTR, fshoweffectiveaddress: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_DISASM32 = ::core::option::Option<unsafe extern "system" fn(lpoffset: *mut u32, lpbuffer: ::windows_sys::core::PCSTR, fshoweffectiveaddress: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_DISASM64 = ::core::option::Option<unsafe extern "system" fn(lpoffset: *mut u64, lpbuffer: ::windows_sys::core::PCSTR, fshoweffectiveaddress: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_EXTENSION_API_VERSION = ::core::option::Option<unsafe extern "system" fn() -> *mut EXT_API_VERSION>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(feature = "Win32_System_Kernel")]
+pub type PWINDBG_EXTENSION_DLL_INIT = ::core::option::Option<unsafe extern "system" fn(lpextensionapis: *mut WINDBG_EXTENSION_APIS, majorversion: u16, minorversion: u16)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(feature = "Win32_System_Kernel")]
+pub type PWINDBG_EXTENSION_DLL_INIT32 = ::core::option::Option<unsafe extern "system" fn(lpextensionapis: *mut WINDBG_EXTENSION_APIS32, majorversion: u16, minorversion: u16)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(feature = "Win32_System_Kernel")]
+pub type PWINDBG_EXTENSION_DLL_INIT64 = ::core::option::Option<unsafe extern "system" fn(lpextensionapis: *mut WINDBG_EXTENSION_APIS64, majorversion: u16, minorversion: u16)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PWINDBG_EXTENSION_ROUTINE = ::core::option::Option<unsafe extern "system" fn(hcurrentprocess: super::super::super::Foundation::HANDLE, hcurrentthread: super::super::super::Foundation::HANDLE, dwcurrentpc: u32, dwprocessor: u32, lpargumentstring: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PWINDBG_EXTENSION_ROUTINE32 = ::core::option::Option<unsafe extern "system" fn(hcurrentprocess: super::super::super::Foundation::HANDLE, hcurrentthread: super::super::super::Foundation::HANDLE, dwcurrentpc: u32, dwprocessor: u32, lpargumentstring: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PWINDBG_EXTENSION_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(hcurrentprocess: super::super::super::Foundation::HANDLE, hcurrentthread: super::super::super::Foundation::HANDLE, dwcurrentpc: u64, dwprocessor: u32, lpargumentstring: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_GET_EXPRESSION = ::core::option::Option<unsafe extern "system" fn(lpexpression: ::windows_sys::core::PCSTR) -> usize>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_GET_EXPRESSION32 = ::core::option::Option<unsafe extern "system" fn(lpexpression: ::windows_sys::core::PCSTR) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_GET_EXPRESSION64 = ::core::option::Option<unsafe extern "system" fn(lpexpression: ::windows_sys::core::PCSTR) -> u64>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_GET_SYMBOL = ::core::option::Option<unsafe extern "system" fn(offset: *mut ::core::ffi::c_void, pchbuffer: ::windows_sys::core::PCSTR, pdisplacement: *mut usize)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_GET_SYMBOL32 = ::core::option::Option<unsafe extern "system" fn(offset: u32, pchbuffer: ::windows_sys::core::PCSTR, pdisplacement: *mut u32)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_GET_SYMBOL64 = ::core::option::Option<unsafe extern "system" fn(offset: u64, pchbuffer: ::windows_sys::core::PCSTR, pdisplacement: *mut u64)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(feature = "Win32_System_Kernel")]
+pub type PWINDBG_GET_THREAD_CONTEXT_ROUTINE = ::core::option::Option<unsafe extern "system" fn(processor: u32, lpcontext: *mut CONTEXT, cbsizeofcontext: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_IOCTL_ROUTINE = ::core::option::Option<unsafe extern "system" fn(ioctltype: u16, lpvdata: *mut ::core::ffi::c_void, cbsize: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_OLDKD_EXTENSION_ROUTINE = ::core::option::Option<unsafe extern "system" fn(dwcurrentpc: u32, lpextensionapis: *mut WINDBG_OLDKD_EXTENSION_APIS, lpargumentstring: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_OLDKD_READ_PHYSICAL_MEMORY = ::core::option::Option<unsafe extern "system" fn(address: u64, buffer: *mut ::core::ffi::c_void, count: u32, bytesread: *mut u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_OLDKD_WRITE_PHYSICAL_MEMORY = ::core::option::Option<unsafe extern "system" fn(address: u64, buffer: *mut ::core::ffi::c_void, length: u32, byteswritten: *mut u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(feature = "Win32_System_Kernel")]
+pub type PWINDBG_OLD_EXTENSION_ROUTINE = ::core::option::Option<unsafe extern "system" fn(dwcurrentpc: u32, lpextensionapis: *mut WINDBG_EXTENSION_APIS, lpargumentstring: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_OUTPUT_ROUTINE = ::core::option::Option<unsafe extern "system" fn(lpformat: ::windows_sys::core::PCSTR)>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_READ_PROCESS_MEMORY_ROUTINE = ::core::option::Option<unsafe extern "system" fn(offset: usize, lpbuffer: *mut ::core::ffi::c_void, cb: u32, lpcbbytesread: *mut u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_READ_PROCESS_MEMORY_ROUTINE32 = ::core::option::Option<unsafe extern "system" fn(offset: u32, lpbuffer: *mut ::core::ffi::c_void, cb: u32, lpcbbytesread: *mut u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_READ_PROCESS_MEMORY_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(offset: u64, lpbuffer: *mut ::core::ffi::c_void, cb: u32, lpcbbytesread: *mut u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_System_Kernel\"`*"]
+#[cfg(feature = "Win32_System_Kernel")]
+pub type PWINDBG_SET_THREAD_CONTEXT_ROUTINE = ::core::option::Option<unsafe extern "system" fn(processor: u32, lpcontext: *mut CONTEXT, cbsizeofcontext: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_STACKTRACE_ROUTINE = ::core::option::Option<unsafe extern "system" fn(framepointer: u32, stackpointer: u32, programcounter: u32, stackframes: *mut EXTSTACKTRACE, frames: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_STACKTRACE_ROUTINE32 = ::core::option::Option<unsafe extern "system" fn(framepointer: u32, stackpointer: u32, programcounter: u32, stackframes: *mut EXTSTACKTRACE32, frames: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_STACKTRACE_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(framepointer: u64, stackpointer: u64, programcounter: u64, stackframes: *mut EXTSTACKTRACE64, frames: u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_WRITE_PROCESS_MEMORY_ROUTINE = ::core::option::Option<unsafe extern "system" fn(offset: usize, lpbuffer: *const ::core::ffi::c_void, cb: u32, lpcbbyteswritten: *mut u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_WRITE_PROCESS_MEMORY_ROUTINE32 = ::core::option::Option<unsafe extern "system" fn(offset: u32, lpbuffer: *const ::core::ffi::c_void, cb: u32, lpcbbyteswritten: *mut u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type PWINDBG_WRITE_PROCESS_MEMORY_ROUTINE64 = ::core::option::Option<unsafe extern "system" fn(offset: u64, lpbuffer: *const ::core::ffi::c_void, cb: u32, lpcbbyteswritten: *mut u32) -> u32>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type SYMADDSOURCESTREAM = ::core::option::Option<unsafe extern "system" fn(param0: super::super::super::Foundation::HANDLE, param1: u64, param2: ::windows_sys::core::PCSTR, param3: *mut u8, param4: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type SYMADDSOURCESTREAMA = ::core::option::Option<unsafe extern "system" fn(param0: super::super::super::Foundation::HANDLE, param1: u64, param2: ::windows_sys::core::PCSTR, param3: *mut u8, param4: usize) -> super::super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type WHEA_ERROR_SOURCE_CORRECT_DEVICE_DRIVER = ::core::option::Option<unsafe extern "system" fn(errorsourcedesc: *mut ::core::ffi::c_void, maximumsectionlength: *mut u32) -> super::super::super::Foundation::NTSTATUS>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type WHEA_ERROR_SOURCE_INITIALIZE_DEVICE_DRIVER = ::core::option::Option<unsafe extern "system" fn(context: *mut ::core::ffi::c_void, errorsourceid: u32) -> super::super::super::Foundation::NTSTATUS>;
+#[doc = "*Required features: `\"Win32_System_Diagnostics_Debug\"`*"]
+pub type WHEA_ERROR_SOURCE_UNINITIALIZE_DEVICE_DRIVER = ::core::option::Option<unsafe extern "system" fn(context: *mut ::core::ffi::c_void)>;

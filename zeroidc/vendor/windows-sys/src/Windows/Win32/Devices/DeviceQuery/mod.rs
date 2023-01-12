@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
     pub fn DevCloseObjectQuery(hdevquery: *const HDEVQUERY__);
@@ -41,21 +41,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`, `\"Win32_Devices_Properties\"`*"]
     #[cfg(feature = "Win32_Devices_Properties")]
     pub fn DevGetObjectsEx(objecttype: DEV_OBJECT_TYPE, queryflags: u32, crequestedproperties: u32, prequestedproperties: *const super::Properties::DEVPROPCOMPKEY, cfilterexpressioncount: u32, pfilter: *const DEVPROP_FILTER_EXPRESSION, cextendedparametercount: u32, pextendedparameters: *const DEV_QUERY_PARAMETER, pcobjectcount: *mut u32, ppobjects: *mut *mut DEV_OBJECT) -> ::windows_sys::core::HRESULT;
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`, `\"Win32_Devices_Properties\"`*"]
-#[cfg(feature = "Win32_Devices_Properties")]
-pub struct DEVPROP_FILTER_EXPRESSION {
-    pub Operator: DEVPROP_OPERATOR,
-    pub Property: super::Properties::DEVPROPERTY,
-}
-#[cfg(feature = "Win32_Devices_Properties")]
-impl ::core::marker::Copy for DEVPROP_FILTER_EXPRESSION {}
-#[cfg(feature = "Win32_Devices_Properties")]
-impl ::core::clone::Clone for DEVPROP_FILTER_EXPRESSION {
-    fn clone(&self) -> Self {
-        *self
-    }
 }
 #[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
 pub type DEVPROP_OPERATOR = u32;
@@ -143,23 +128,6 @@ pub const DEVPROP_OPERATOR_MASK_NOT_LOGICAL: DEVPROP_OPERATOR = 4027580415u32;
 pub const DEVPROP_OPERATOR_MASK_LOGICAL: DEVPROP_OPERATOR = 267386880u32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
 pub const DEVPROP_OPERATOR_MASK_ARRAY: DEVPROP_OPERATOR = 4026531840u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`, `\"Win32_Devices_Properties\"`*"]
-#[cfg(feature = "Win32_Devices_Properties")]
-pub struct DEV_OBJECT {
-    pub ObjectType: DEV_OBJECT_TYPE,
-    pub pszObjectId: ::windows_sys::core::PCWSTR,
-    pub cPropertyCount: u32,
-    pub pProperties: *const super::Properties::DEVPROPERTY,
-}
-#[cfg(feature = "Win32_Devices_Properties")]
-impl ::core::marker::Copy for DEV_OBJECT {}
-#[cfg(feature = "Win32_Devices_Properties")]
-impl ::core::clone::Clone for DEV_OBJECT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
 pub type DEV_OBJECT_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
@@ -198,6 +166,58 @@ pub const DevQueryFlagAllProperties: DEV_QUERY_FLAGS = 2i32;
 pub const DevQueryFlagLocalize: DEV_QUERY_FLAGS = 4i32;
 #[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
 pub const DevQueryFlagAsyncClose: DEV_QUERY_FLAGS = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
+pub type DEV_QUERY_RESULT_ACTION = i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
+pub const DevQueryResultStateChange: DEV_QUERY_RESULT_ACTION = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
+pub const DevQueryResultAdd: DEV_QUERY_RESULT_ACTION = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
+pub const DevQueryResultUpdate: DEV_QUERY_RESULT_ACTION = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
+pub const DevQueryResultRemove: DEV_QUERY_RESULT_ACTION = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
+pub type DEV_QUERY_STATE = i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
+pub const DevQueryStateInitialized: DEV_QUERY_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
+pub const DevQueryStateEnumCompleted: DEV_QUERY_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
+pub const DevQueryStateAborted: DEV_QUERY_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
+pub const DevQueryStateClosed: DEV_QUERY_STATE = 3i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`, `\"Win32_Devices_Properties\"`*"]
+#[cfg(feature = "Win32_Devices_Properties")]
+pub struct DEVPROP_FILTER_EXPRESSION {
+    pub Operator: DEVPROP_OPERATOR,
+    pub Property: super::Properties::DEVPROPERTY,
+}
+#[cfg(feature = "Win32_Devices_Properties")]
+impl ::core::marker::Copy for DEVPROP_FILTER_EXPRESSION {}
+#[cfg(feature = "Win32_Devices_Properties")]
+impl ::core::clone::Clone for DEVPROP_FILTER_EXPRESSION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`, `\"Win32_Devices_Properties\"`*"]
+#[cfg(feature = "Win32_Devices_Properties")]
+pub struct DEV_OBJECT {
+    pub ObjectType: DEV_OBJECT_TYPE,
+    pub pszObjectId: ::windows_sys::core::PCWSTR,
+    pub cPropertyCount: u32,
+    pub pProperties: *const super::Properties::DEVPROPERTY,
+}
+#[cfg(feature = "Win32_Devices_Properties")]
+impl ::core::marker::Copy for DEV_OBJECT {}
+#[cfg(feature = "Win32_Devices_Properties")]
+impl ::core::clone::Clone for DEV_OBJECT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`, `\"Win32_Devices_Properties\"`*"]
 #[cfg(feature = "Win32_Devices_Properties")]
@@ -215,16 +235,6 @@ impl ::core::clone::Clone for DEV_QUERY_PARAMETER {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
-pub type DEV_QUERY_RESULT_ACTION = i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
-pub const DevQueryResultStateChange: DEV_QUERY_RESULT_ACTION = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
-pub const DevQueryResultAdd: DEV_QUERY_RESULT_ACTION = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
-pub const DevQueryResultUpdate: DEV_QUERY_RESULT_ACTION = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
-pub const DevQueryResultRemove: DEV_QUERY_RESULT_ACTION = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`, `\"Win32_Devices_Properties\"`*"]
 #[cfg(feature = "Win32_Devices_Properties")]
@@ -255,16 +265,6 @@ impl ::core::clone::Clone for DEV_QUERY_RESULT_ACTION_DATA_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
-pub type DEV_QUERY_STATE = i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
-pub const DevQueryStateInitialized: DEV_QUERY_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
-pub const DevQueryStateEnumCompleted: DEV_QUERY_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
-pub const DevQueryStateAborted: DEV_QUERY_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
-pub const DevQueryStateClosed: DEV_QUERY_STATE = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_DeviceQuery\"`*"]
 pub struct HDEVQUERY__ {

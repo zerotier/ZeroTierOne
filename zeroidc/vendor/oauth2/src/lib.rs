@@ -8,7 +8,7 @@
 //! * [Importing `oauth2`: selecting an HTTP client interface](#importing-oauth2-selecting-an-http-client-interface)
 //! * [Getting started: Authorization Code Grant w/ PKCE](#getting-started-authorization-code-grant-w-pkce)
 //!   * [Example: Synchronous (blocking) API](#example-synchronous-blocking-api)
-//!   * [Example: Async/Await API](#example-asyncawait-api)
+//!   * [Example: Asynchronous API](#example-asynchronous-api)
 //! * [Implicit Grant](#implicit-grant)
 //! * [Resource Owner Password Credentials Grant](#resource-owner-password-credentials-grant)
 //! * [Client Credentials Grant](#client-credentials-grant)
@@ -20,24 +20,18 @@
 //!
 //! This library offers a flexible HTTP client interface with two modes:
 //!  * **Synchronous (blocking)**
-//!
-//!    The synchronous interface is available for any combination of feature flags.
-//!
-//!    Example import in `Cargo.toml`:
-//!    ```toml
-//!    oauth2 = "4.1"
-//!    ```
+//!  * **Asynchronous**
 //!
 //! For the HTTP client modes described above, the following HTTP client implementations can be
 //! used:
 //!  * **[`reqwest`]**
 //!
-//!    The `reqwest` HTTP client supports both modes. By default, `reqwest` 0.11 is enabled,
-//!    which supports the synchronous and asynchronous `futures` 0.3 APIs.
+//!    The `reqwest` HTTP client supports both the synchronous and asynchronous modes and is enabled
+//!    by default.
 //!
 //!    Synchronous client: [`reqwest::http_client`]
 //!
-//!    Async/await `futures` 0.3 client: [`reqwest::async_http_client`]
+//!    Asynchronous client: [`reqwest::async_http_client`]
 //!
 //!  * **[`curl`]**
 //!
@@ -49,16 +43,18 @@
 //! * **[`ureq`]**
 //!
 //!    The `ureq` HTTP client is a simple HTTP client with minimal dependencies. It only supports
-//!    the synchronous HTTP client mode and can be enabled in `Cargo.toml` via the `ureq` feature flag.
+//!    the synchronous HTTP client mode and can be enabled in `Cargo.toml` via the `ureq` feature
+//!     flag.
 //!
 //!  * **Custom**
 //!
 //!    In addition to the clients above, users may define their own HTTP clients, which must accept
 //!    an [`HttpRequest`] and return an [`HttpResponse`] or error. Users writing their own clients
-//!    may wish to disable the default `reqwest` 0.10 dependency by specifying
-//!    `default-features = false` in `Cargo.toml`:
+//!    may wish to disable the default `reqwest` dependency by specifying
+//!    `default-features = false` in `Cargo.toml` (replacing `...` with the desired version of this
+//!    crate):
 //!    ```toml
-//!    oauth2 = { version = "4.1", default-features = false }
+//!    oauth2 = { version = "...", default-features = false }
 //!    ```
 //!
 //!    Synchronous HTTP clients should implement the following trait:
@@ -67,7 +63,7 @@
 //!    where RE: std::error::Error + 'static
 //!    ```
 //!
-//!    Async/await HTTP clients should implement the following trait:
+//!    Asynchronous HTTP clients should implement the following trait:
 //!    ```rust,ignore
 //!    FnOnce(HttpRequest) -> F
 //!    where
@@ -83,7 +79,7 @@
 //!
 //! ## Example: Synchronous (blocking) API
 //!
-//! This example works with `oauth2`'s default feature flags, which include `reqwest` 0.10.
+//! This example works with `oauth2`'s default feature flags, which include `reqwest`.
 //!
 //! ```rust,no_run
 //! use anyhow;
@@ -150,9 +146,9 @@
 //! # }
 //! ```
 //!
-//! ## Example: Async/Await API
+//! ## Example: Asynchronous API
 //!
-//! One can use async/await as follows:
+//! The example below uses async/await:
 //!
 //! ```rust,no_run
 //! use anyhow;
@@ -414,6 +410,7 @@
 //!
 //! - [Google](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/google.rs) (includes token revocation)
 //! - [Github](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/github.rs)
+//! - [Microsoft Device Code Flow (async)](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/microsoft_devicecode.rs)
 //! - [Microsoft Graph](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/msgraph.rs)
 //! - [Wunderlist](https://github.com/ramosbugs/oauth2-rs/blob/main/examples/wunderlist.rs)
 //!
@@ -541,7 +538,7 @@ pub enum ConfigurationError {
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub enum AuthType {
-    /// The client_id and client_secret will be included as part of the request body.
+    /// The client_id and client_secret (if set) will be included as part of the request body.
     RequestBody,
     /// The client_id and client_secret will be included using the basic auth authentication scheme.
     BasicAuth,
@@ -682,7 +679,10 @@ where
     /// server.
     ///
     /// The default is to use HTTP Basic authentication, as recommended in
-    /// [Section 2.3.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-2.3.1).
+    /// [Section 2.3.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-2.3.1). Note that
+    /// if a client secret is omitted (i.e., `client_secret` is set to `None` when calling
+    /// [`Client::new`]), [`AuthType::RequestBody`] is used regardless of the `auth_type` passed to
+    /// this function.
     ///
     pub fn set_auth_type(mut self, auth_type: AuthType) -> Self {
         self.auth_type = auth_type;
@@ -773,7 +773,7 @@ where
     /// Acquires ownership of the `code` because authorization codes may only be used once to
     /// retrieve an access token from the authorization server.
     ///
-    /// See https://tools.ietf.org/html/rfc6749#section-4.1.3
+    /// See <https://tools.ietf.org/html/rfc6749#section-4.1.3>.
     ///
     pub fn exchange_code(&self, code: AuthorizationCode) -> CodeTokenRequest<TE, TR, TT> {
         CodeTokenRequest {
@@ -792,7 +792,7 @@ where
     ///
     /// Requests an access token for the *password* grant type.
     ///
-    /// See https://tools.ietf.org/html/rfc6749#section-4.3.2
+    /// See <https://tools.ietf.org/html/rfc6749#section-4.3.2>.
     ///
     pub fn exchange_password<'a, 'b>(
         &'a self,
@@ -818,7 +818,7 @@ where
     ///
     /// Requests an access token for the *client credentials* grant type.
     ///
-    /// See https://tools.ietf.org/html/rfc6749#section-4.4.2
+    /// See <https://tools.ietf.org/html/rfc6749#section-4.4.2>.
     ///
     pub fn exchange_client_credentials(&self) -> ClientCredentialsTokenRequest<TE, TR, TT> {
         ClientCredentialsTokenRequest {
@@ -835,7 +835,7 @@ where
     ///
     /// Exchanges a refresh token for an access token
     ///
-    /// See https://tools.ietf.org/html/rfc6749#section-6
+    /// See <https://tools.ietf.org/html/rfc6749#section-6>.
     ///
     pub fn exchange_refresh_token<'a, 'b>(
         &'a self,
@@ -858,7 +858,7 @@ where
 
     ///
     /// Perform a device authorization request as per
-    /// https://tools.ietf.org/html/rfc8628#section-3.1
+    /// <https://tools.ietf.org/html/rfc8628#section-3.1>.
     ///
     pub fn exchange_device_code(
         &self,
@@ -879,7 +879,7 @@ where
 
     ///
     /// Perform a device access token request as per
-    /// https://tools.ietf.org/html/rfc8628#section-3.4
+    /// <https://tools.ietf.org/html/rfc8628#section-3.4>.
     ///
     pub fn exchange_device_access_token<'a, 'b, 'c, EF>(
         &'a self,
@@ -1201,7 +1201,7 @@ pub struct HttpResponse {
 ///
 /// A request to exchange an authorization code for an access token.
 ///
-/// See https://tools.ietf.org/html/rfc6749#section-4.1.3.
+/// See <https://tools.ietf.org/html/rfc6749#section-4.1.3>.
 ///
 #[derive(Debug)]
 pub struct CodeTokenRequest<'a, TE, TR, TT>
@@ -1332,7 +1332,7 @@ where
 ///
 /// A request to exchange a refresh token for an access token.
 ///
-/// See https://tools.ietf.org/html/rfc6749#section-6.
+/// See <https://tools.ietf.org/html/rfc6749#section-6>.
 ///
 #[derive(Debug)]
 pub struct RefreshTokenRequest<'a, TE, TR, TT>
@@ -1455,7 +1455,7 @@ where
 ///
 /// A request to exchange resource owner credentials for an access token.
 ///
-/// See https://tools.ietf.org/html/rfc6749#section-4.3.
+/// See <https://tools.ietf.org/html/rfc6749#section-4.3>.
 ///
 #[derive(Debug)]
 pub struct PasswordTokenRequest<'a, TE, TR, TT>
@@ -1581,7 +1581,7 @@ where
 ///
 /// A request to exchange client credentials for an access token.
 ///
-/// See https://tools.ietf.org/html/rfc6749#section-4.4.
+/// See <https://tools.ietf.org/html/rfc6749#section-4.4>.
 ///
 #[derive(Debug)]
 pub struct ClientCredentialsTokenRequest<'a, TE, TR, TT>
@@ -1701,7 +1701,7 @@ where
 ///
 /// A request to introspect an access token.
 ///
-/// See https://tools.ietf.org/html/rfc7662#section-2.1
+/// See <https://tools.ietf.org/html/rfc7662#section-2.1>.
 ///
 #[derive(Debug)]
 pub struct IntrospectionRequest<'a, TE, TIR, TT>
@@ -1731,7 +1731,7 @@ where
     ///
     /// Sets the optional token_type_hint parameter.
     ///
-    /// See: https://tools.ietf.org/html/rfc7662#section-2.1
+    /// See <https://tools.ietf.org/html/rfc7662#section-2.1>.
     ///
     /// OPTIONAL.  A hint about the type of the token submitted for
     ///       introspection.  The protected resource MAY pass this parameter to
@@ -1981,32 +1981,29 @@ fn endpoint_request<'a>(
     }
 
     // FIXME: add support for auth extensions? e.g., client_secret_jwt and private_key_jwt
-    match auth_type {
-        AuthType::RequestBody => {
-            params.push(("client_id", client_id));
-            if let Some(ref client_secret) = client_secret {
-                params.push(("client_secret", client_secret.secret()));
-            }
-        }
-        AuthType::BasicAuth => {
+    match (auth_type, client_secret) {
+        // Basic auth only makes sense when a client secret is provided. Otherwise, always pass the
+        // client ID in the request body.
+        (AuthType::BasicAuth, Some(secret)) => {
             // Section 2.3.1 of RFC 6749 requires separately url-encoding the id and secret
             // before using them as HTTP Basic auth username and password. Note that this is
             // not standard for ordinary Basic auth, so curl won't do it for us.
             let urlencoded_id: String =
                 form_urlencoded::byte_serialize(&client_id.as_bytes()).collect();
-
-            let urlencoded_secret = client_secret.map(|secret| {
-                form_urlencoded::byte_serialize(secret.secret().as_bytes()).collect::<String>()
-            });
-            let b64_credential = base64::encode(&format!(
-                "{}:{}",
-                &urlencoded_id,
-                urlencoded_secret.as_deref().unwrap_or("")
-            ));
+            let urlencoded_secret: String =
+                form_urlencoded::byte_serialize(secret.secret().as_bytes()).collect();
+            let b64_credential =
+                base64::encode(&format!("{}:{}", &urlencoded_id, urlencoded_secret));
             headers.append(
                 AUTHORIZATION,
                 HeaderValue::from_str(&format!("Basic {}", &b64_credential)).unwrap(),
             );
+        }
+        (AuthType::RequestBody, _) | (AuthType::BasicAuth, None) => {
+            params.push(("client_id", client_id));
+            if let Some(ref client_secret) = client_secret {
+                params.push(("client_secret", client_secret.secret()));
+            }
         }
     }
 
@@ -2131,7 +2128,7 @@ where
 ///
 /// The request for a set of verification codes from the authorization server.
 ///
-/// See https://tools.ietf.org/html/rfc8628#section-3.1.
+/// See <https://tools.ietf.org/html/rfc8628#section-3.1>.
 ///
 #[derive(Debug)]
 pub struct DeviceAuthorizationRequest<'a, TE>
@@ -2251,7 +2248,7 @@ where
 ///
 /// The request for an device access token from the authorization server.
 ///
-/// See https://tools.ietf.org/html/rfc8628#section-3.4.
+/// See <https://tools.ietf.org/html/rfc8628#section-3.4>.
 ///
 #[derive(Clone)]
 pub struct DeviceAccessTokenRequest<'a, 'b, TR, TT, EF>
@@ -2336,7 +2333,13 @@ where
         loop {
             let now = (*self.time_fn)();
             if now > timeout_dt {
-                break Err(RequestTokenError::Other("Device code expired".to_string()));
+                break Err(RequestTokenError::ServerResponse(
+                    DeviceCodeErrorResponse::new(
+                        DeviceCodeErrorResponseType::ExpiredToken,
+                        Some(String::from("This device code has expired.")),
+                        None,
+                    ),
+                ));
             }
 
             match self.process_response(http_client(self.prepare_request()?), interval) {
@@ -2375,7 +2378,13 @@ where
         loop {
             let now = (*self.time_fn)();
             if now > timeout_dt {
-                break Err(RequestTokenError::Other("Device code expired".to_string()));
+                break Err(RequestTokenError::ServerResponse(
+                    DeviceCodeErrorResponse::new(
+                        DeviceCodeErrorResponseType::ExpiredToken,
+                        Some(String::from("This device code has expired.")),
+                        None,
+                    ),
+                ));
             }
 
             match self.process_response(http_client(self.prepare_request()?).await, interval) {
@@ -2722,7 +2731,7 @@ where
     ///
     /// OPTIONAL.  A JSON string containing a space-separated list of
     /// scopes associated with this token, in the format described in
-    /// [Section 3.3 of OAuth 2.0](https://tools.ietf.org/html/rfc7662#section-3.3).
+    /// [Section 3.3 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-3.3).
     /// If included in the response,
     /// this space-delimited field is parsed into a `Vec` of individual scopes. If omitted from
     /// the response, this field is `None`.
@@ -2739,8 +2748,8 @@ where
     ///
     fn username(&self) -> Option<&str>;
     ///
-    /// OPTIONAL.  Type of the token as defined in [Section 5.1](https://tools.ietf.org/html/rfc7662#section-5.1) of OAuth
-    /// 2.0 [RFC6749].
+    /// OPTIONAL.  Type of the token as defined in
+    /// [Section 5.1 of RFC 7662](https://tools.ietf.org/html/rfc7662#section-5.1).
     /// Value is case insensitive and deserialized to the generic `TokenType` parameter.
     ///
     fn token_type(&self) -> Option<&TT>;

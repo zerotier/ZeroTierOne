@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
     #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
@@ -118,54 +118,13 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
     pub fn SerializationBufferFree(buffer: *const u8);
 }
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type ACTIVITY_STATE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityState_Unknown: ACTIVITY_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityState_Stationary: ACTIVITY_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityState_Fidgeting: ACTIVITY_STATE = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityState_Walking: ACTIVITY_STATE = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityState_Running: ACTIVITY_STATE = 16i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityState_InVehicle: ACTIVITY_STATE = 32i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityState_Biking: ACTIVITY_STATE = 64i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityState_Idle: ACTIVITY_STATE = 128i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityState_Max: ACTIVITY_STATE = 256i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityState_Force_Dword: ACTIVITY_STATE = -1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type ACTIVITY_STATE_COUNT = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ActivityStateCount: ACTIVITY_STATE_COUNT = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type AXIS = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const AXIS_X: AXIS = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const AXIS_Y: AXIS = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const AXIS_Z: AXIS = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const AXIS_MAX: AXIS = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type ELEVATION_CHANGE_MODE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ElevationChangeMode_Unknown: ELEVATION_CHANGE_MODE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ElevationChangeMode_Elevator: ELEVATION_CHANGE_MODE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ElevationChangeMode_Stepping: ELEVATION_CHANGE_MODE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ElevationChangeMode_Max: ELEVATION_CHANGE_MODE = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ElevationChangeMode_Force_Dword: ELEVATION_CHANGE_MODE = -1i32;
+pub type ILocationPermissions = *mut ::core::ffi::c_void;
+pub type ISensor = *mut ::core::ffi::c_void;
+pub type ISensorCollection = *mut ::core::ffi::c_void;
+pub type ISensorDataReport = *mut ::core::ffi::c_void;
+pub type ISensorEvents = *mut ::core::ffi::c_void;
+pub type ISensorManager = *mut ::core::ffi::c_void;
+pub type ISensorManagerEvents = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
 pub const GNSS_CLEAR_ALL_ASSISTANCE_DATA: u32 = 1u32;
 pub const GUID_DEVINTERFACE_SENSOR: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3122378386, data2: 39802, data3: 18483, data4: [154, 30, 82, 94, 209, 52, 231, 226] };
@@ -201,161 +160,6 @@ pub const GUID_SensorType_Proximity: ::windows_sys::core::GUID = ::windows_sys::
 pub const GUID_SensorType_RelativeOrientation: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1083784017, data2: 18182, data3: 17628, data4: [152, 213, 201, 32, 192, 55, 255, 171] };
 pub const GUID_SensorType_SimpleDeviceOrientation: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2258735761, data2: 1154, data3: 16428, data4: [191, 76, 173, 218, 197, 43, 28, 57] };
 pub const GUID_SensorType_Temperature: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 83693252, data2: 54746, data3: 17914, data4: [149, 169, 93, 179, 142, 225, 147, 6] };
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type HUMAN_PRESENCE_DETECTION_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const HumanPresenceDetectionType_VendorDefinedNonBiometric: HUMAN_PRESENCE_DETECTION_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const HumanPresenceDetectionType_VendorDefinedBiometric: HUMAN_PRESENCE_DETECTION_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const HumanPresenceDetectionType_FacialBiometric: HUMAN_PRESENCE_DETECTION_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const HumanPresenceDetectionType_AudioBiometric: HUMAN_PRESENCE_DETECTION_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const HumanPresenceDetectionType_Force_Dword: HUMAN_PRESENCE_DETECTION_TYPE = -1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type HUMAN_PRESENCE_DETECTION_TYPE_COUNT = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const HumanPresenceDetectionTypeCount: HUMAN_PRESENCE_DETECTION_TYPE_COUNT = 4i32;
-pub type ILocationPermissions = *mut ::core::ffi::c_void;
-pub type ISensor = *mut ::core::ffi::c_void;
-pub type ISensorCollection = *mut ::core::ffi::c_void;
-pub type ISensorDataReport = *mut ::core::ffi::c_void;
-pub type ISensorEvents = *mut ::core::ffi::c_void;
-pub type ISensorManager = *mut ::core::ffi::c_void;
-pub type ISensorManagerEvents = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type LOCATION_DESIRED_ACCURACY = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const LOCATION_DESIRED_ACCURACY_DEFAULT: LOCATION_DESIRED_ACCURACY = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const LOCATION_DESIRED_ACCURACY_HIGH: LOCATION_DESIRED_ACCURACY = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type LOCATION_POSITION_SOURCE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const LOCATION_POSITION_SOURCE_CELLULAR: LOCATION_POSITION_SOURCE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const LOCATION_POSITION_SOURCE_SATELLITE: LOCATION_POSITION_SOURCE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const LOCATION_POSITION_SOURCE_WIFI: LOCATION_POSITION_SOURCE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const LOCATION_POSITION_SOURCE_IPADDRESS: LOCATION_POSITION_SOURCE = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const LOCATION_POSITION_SOURCE_UNKNOWN: LOCATION_POSITION_SOURCE = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type MAGNETOMETER_ACCURACY = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const MagnetometerAccuracy_Unknown: MAGNETOMETER_ACCURACY = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const MagnetometerAccuracy_Unreliable: MAGNETOMETER_ACCURACY = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const MagnetometerAccuracy_Approximate: MAGNETOMETER_ACCURACY = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const MagnetometerAccuracy_High: MAGNETOMETER_ACCURACY = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub struct MATRIX3X3 {
-    pub Anonymous: MATRIX3X3_0,
-}
-impl ::core::marker::Copy for MATRIX3X3 {}
-impl ::core::clone::Clone for MATRIX3X3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub union MATRIX3X3_0 {
-    pub Anonymous1: MATRIX3X3_0_0,
-    pub Anonymous2: MATRIX3X3_0_1,
-    pub M: [f32; 9],
-}
-impl ::core::marker::Copy for MATRIX3X3_0 {}
-impl ::core::clone::Clone for MATRIX3X3_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub struct MATRIX3X3_0_0 {
-    pub A11: f32,
-    pub A12: f32,
-    pub A13: f32,
-    pub A21: f32,
-    pub A22: f32,
-    pub A23: f32,
-    pub A31: f32,
-    pub A32: f32,
-    pub A33: f32,
-}
-impl ::core::marker::Copy for MATRIX3X3_0_0 {}
-impl ::core::clone::Clone for MATRIX3X3_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub struct MATRIX3X3_0_1 {
-    pub V1: VEC3D,
-    pub V2: VEC3D,
-    pub V3: VEC3D,
-}
-impl ::core::marker::Copy for MATRIX3X3_0_1 {}
-impl ::core::clone::Clone for MATRIX3X3_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type MagnetometerAccuracy = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const MAGNETOMETER_ACCURACY_UNKNOWN: MagnetometerAccuracy = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const MAGNETOMETER_ACCURACY_UNRELIABLE: MagnetometerAccuracy = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const MAGNETOMETER_ACCURACY_APPROXIMATE: MagnetometerAccuracy = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const MAGNETOMETER_ACCURACY_HIGH: MagnetometerAccuracy = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type PEDOMETER_STEP_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const PedometerStepType_Unknown: PEDOMETER_STEP_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const PedometerStepType_Walking: PEDOMETER_STEP_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const PedometerStepType_Running: PEDOMETER_STEP_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const PedometerStepType_Max: PEDOMETER_STEP_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const PedometerStepType_Force_Dword: PEDOMETER_STEP_TYPE = -1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type PEDOMETER_STEP_TYPE_COUNT = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const PedometerStepTypeCount: PEDOMETER_STEP_TYPE_COUNT = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type PROXIMITY_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ProximityType_ObjectProximity: PROXIMITY_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ProximityType_HumanProximity: PROXIMITY_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const ProximityType_Force_Dword: PROXIMITY_TYPE = -1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub struct QUATERNION {
-    pub X: f32,
-    pub Y: f32,
-    pub Z: f32,
-    pub W: f32,
-}
-impl ::core::marker::Copy for QUATERNION {}
-impl ::core::clone::Clone for QUATERNION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 pub const SENSOR_CATEGORY_ALL: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3273114246, data2: 50280, data3: 17032, data4: [153, 117, 212, 196, 88, 124, 68, 44] };
 pub const SENSOR_CATEGORY_BIOMETRIC: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3390662927, data2: 41671, data3: 18301, data4: [169, 158, 153, 236, 110, 43, 86, 72] };
 pub const SENSOR_CATEGORY_ELECTRICAL: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4218682584, data2: 64586, data3: 18492, data4: [172, 88, 39, 182, 145, 198, 190, 255] };
@@ -368,30 +172,6 @@ pub const SENSOR_CATEGORY_ORIENTATION: ::windows_sys::core::GUID = ::windows_sys
 pub const SENSOR_CATEGORY_OTHER: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 747693993, data2: 62665, data3: 20386, data4: [175, 55, 86, 212, 113, 254, 90, 61] };
 pub const SENSOR_CATEGORY_SCANNER: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2952849278, data2: 62901, data3: 16911, data4: [129, 93, 2, 112, 167, 38, 242, 112] };
 pub const SENSOR_CATEGORY_UNSUPPORTED: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 736815098, data2: 6576, data3: 18629, data4: [161, 246, 181, 72, 13, 194, 6, 176] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
-pub struct SENSOR_COLLECTION_LIST {
-    pub AllocatedSizeInBytes: u32,
-    pub Count: u32,
-    pub List: [SENSOR_VALUE_PAIR; 1],
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
-impl ::core::marker::Copy for SENSOR_COLLECTION_LIST {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
-impl ::core::clone::Clone for SENSOR_COLLECTION_LIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type SENSOR_CONNECTION_TYPES = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const SensorConnectionType_Integrated: SENSOR_CONNECTION_TYPES = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const SensorConnectionType_Attached: SENSOR_CONNECTION_TYPES = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const SensorConnectionType_External: SENSOR_CONNECTION_TYPES = 2i32;
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 #[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
 pub const SENSOR_DATA_TYPE_ABSOLUTE_PRESSURE_PASCAL: super::super::UI::Shell::PropertiesSystem::PROPERTYKEY = super::super::UI::Shell::PropertiesSystem::PROPERTYKEY { fmtid: ::windows_sys::core::GUID { data1: 945179260, data2: 62194, data3: 18875, data4: [155, 43, 186, 96, 246, 106, 88, 223] }, pid: 5u32 };
@@ -839,22 +619,6 @@ pub const SENSOR_PROPERTY_HID_USAGE: super::super::UI::Shell::PropertiesSystem::
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 #[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
 pub const SENSOR_PROPERTY_LIGHT_RESPONSE_CURVE: super::super::UI::Shell::PropertiesSystem::PROPERTYKEY = super::super::UI::Shell::PropertiesSystem::PROPERTYKEY { fmtid: ::windows_sys::core::GUID { data1: 2139325420, data2: 54252, data3: 18780, data4: [168, 207, 184, 187, 232, 92, 41, 32] }, pid: 16u32 };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
-#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
-pub struct SENSOR_PROPERTY_LIST {
-    pub AllocatedSizeInBytes: u32,
-    pub Count: u32,
-    pub List: [super::super::UI::Shell::PropertiesSystem::PROPERTYKEY; 1],
-}
-#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
-impl ::core::marker::Copy for SENSOR_PROPERTY_LIST {}
-#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
-impl ::core::clone::Clone for SENSOR_PROPERTY_LIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
 pub const SENSOR_PROPERTY_LIST_HEADER_SIZE: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
@@ -900,16 +664,6 @@ pub const SENSOR_PROPERTY_TURN_ON_OFF_NMEA: super::super::UI::Shell::PropertiesS
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
 #[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
 pub const SENSOR_PROPERTY_TYPE: super::super::UI::Shell::PropertiesSystem::PROPERTYKEY = super::super::UI::Shell::PropertiesSystem::PROPERTYKEY { fmtid: ::windows_sys::core::GUID { data1: 2139325420, data2: 54252, data3: 18780, data4: [168, 207, 184, 187, 232, 92, 41, 32] }, pid: 2u32 };
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub type SENSOR_STATE = i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const SensorState_Initializing: SENSOR_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const SensorState_Idle: SENSOR_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const SensorState_Active: SENSOR_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
-pub const SensorState_Error: SENSOR_STATE = 3i32;
 pub const SENSOR_TYPE_ACCELEROMETER_1D: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3226280839, data2: 29504, data3: 19650, data4: [153, 30, 59, 24, 203, 142, 242, 244] };
 pub const SENSOR_TYPE_ACCELEROMETER_2D: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2999261096, data2: 63157, data3: 19366, data4: [164, 35, 93, 245, 96, 180, 204, 7] };
 pub const SENSOR_TYPE_ACCELEROMETER_3D: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3271233375, data2: 58066, data3: 19576, data4: [188, 208, 53, 42, 149, 130, 129, 157] };
@@ -965,21 +719,154 @@ pub const SENSOR_TYPE_STRAIN: ::windows_sys::core::GUID = ::windows_sys::core::G
 pub const SENSOR_TYPE_TOUCH: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 400240664, data2: 1732, data3: 20349, data4: [129, 175, 146, 116, 183, 89, 156, 39] };
 pub const SENSOR_TYPE_UNKNOWN: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 280658915, data2: 61263, data3: 16877, data4: [152, 133, 168, 125, 100, 53, 168, 225] };
 pub const SENSOR_TYPE_VOLTAGE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3309848119, data2: 20407, data3: 18771, data4: [152, 184, 165, 109, 138, 161, 251, 30] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
-pub struct SENSOR_VALUE_PAIR {
-    pub Key: super::super::UI::Shell::PropertiesSystem::PROPERTYKEY,
-    pub Value: super::super::System::Com::StructuredStorage::PROPVARIANT,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
-impl ::core::marker::Copy for SENSOR_VALUE_PAIR {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
-impl ::core::clone::Clone for SENSOR_VALUE_PAIR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const Sensor: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3917278464, data2: 21050, data3: 16691, data4: [191, 111, 211, 162, 218, 231, 246, 186] };
+pub const SensorCollection: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2042903259, data2: 42025, data3: 18079, data4: [170, 57, 47, 43, 116, 183, 89, 55] };
+pub const SensorDataReport: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1319753455, data2: 26955, data3: 16920, data4: [136, 22, 204, 218, 141, 167, 75, 186] };
+pub const SensorManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2007091239, data2: 64722, data3: 18057, data4: [137, 21, 157, 97, 60, 197, 250, 62] };
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type ACTIVITY_STATE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityState_Unknown: ACTIVITY_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityState_Stationary: ACTIVITY_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityState_Fidgeting: ACTIVITY_STATE = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityState_Walking: ACTIVITY_STATE = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityState_Running: ACTIVITY_STATE = 16i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityState_InVehicle: ACTIVITY_STATE = 32i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityState_Biking: ACTIVITY_STATE = 64i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityState_Idle: ACTIVITY_STATE = 128i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityState_Max: ACTIVITY_STATE = 256i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityState_Force_Dword: ACTIVITY_STATE = -1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type ACTIVITY_STATE_COUNT = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ActivityStateCount: ACTIVITY_STATE_COUNT = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type AXIS = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const AXIS_X: AXIS = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const AXIS_Y: AXIS = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const AXIS_Z: AXIS = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const AXIS_MAX: AXIS = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type ELEVATION_CHANGE_MODE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ElevationChangeMode_Unknown: ELEVATION_CHANGE_MODE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ElevationChangeMode_Elevator: ELEVATION_CHANGE_MODE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ElevationChangeMode_Stepping: ELEVATION_CHANGE_MODE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ElevationChangeMode_Max: ELEVATION_CHANGE_MODE = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ElevationChangeMode_Force_Dword: ELEVATION_CHANGE_MODE = -1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type HUMAN_PRESENCE_DETECTION_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const HumanPresenceDetectionType_VendorDefinedNonBiometric: HUMAN_PRESENCE_DETECTION_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const HumanPresenceDetectionType_VendorDefinedBiometric: HUMAN_PRESENCE_DETECTION_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const HumanPresenceDetectionType_FacialBiometric: HUMAN_PRESENCE_DETECTION_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const HumanPresenceDetectionType_AudioBiometric: HUMAN_PRESENCE_DETECTION_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const HumanPresenceDetectionType_Force_Dword: HUMAN_PRESENCE_DETECTION_TYPE = -1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type HUMAN_PRESENCE_DETECTION_TYPE_COUNT = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const HumanPresenceDetectionTypeCount: HUMAN_PRESENCE_DETECTION_TYPE_COUNT = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type LOCATION_DESIRED_ACCURACY = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const LOCATION_DESIRED_ACCURACY_DEFAULT: LOCATION_DESIRED_ACCURACY = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const LOCATION_DESIRED_ACCURACY_HIGH: LOCATION_DESIRED_ACCURACY = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type LOCATION_POSITION_SOURCE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const LOCATION_POSITION_SOURCE_CELLULAR: LOCATION_POSITION_SOURCE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const LOCATION_POSITION_SOURCE_SATELLITE: LOCATION_POSITION_SOURCE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const LOCATION_POSITION_SOURCE_WIFI: LOCATION_POSITION_SOURCE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const LOCATION_POSITION_SOURCE_IPADDRESS: LOCATION_POSITION_SOURCE = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const LOCATION_POSITION_SOURCE_UNKNOWN: LOCATION_POSITION_SOURCE = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type MAGNETOMETER_ACCURACY = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const MagnetometerAccuracy_Unknown: MAGNETOMETER_ACCURACY = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const MagnetometerAccuracy_Unreliable: MAGNETOMETER_ACCURACY = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const MagnetometerAccuracy_Approximate: MAGNETOMETER_ACCURACY = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const MagnetometerAccuracy_High: MAGNETOMETER_ACCURACY = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type MagnetometerAccuracy = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const MAGNETOMETER_ACCURACY_UNKNOWN: MagnetometerAccuracy = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const MAGNETOMETER_ACCURACY_UNRELIABLE: MagnetometerAccuracy = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const MAGNETOMETER_ACCURACY_APPROXIMATE: MagnetometerAccuracy = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const MAGNETOMETER_ACCURACY_HIGH: MagnetometerAccuracy = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type PEDOMETER_STEP_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const PedometerStepType_Unknown: PEDOMETER_STEP_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const PedometerStepType_Walking: PEDOMETER_STEP_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const PedometerStepType_Running: PEDOMETER_STEP_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const PedometerStepType_Max: PEDOMETER_STEP_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const PedometerStepType_Force_Dword: PEDOMETER_STEP_TYPE = -1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type PEDOMETER_STEP_TYPE_COUNT = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const PedometerStepTypeCount: PEDOMETER_STEP_TYPE_COUNT = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type PROXIMITY_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ProximityType_ObjectProximity: PROXIMITY_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ProximityType_HumanProximity: PROXIMITY_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const ProximityType_Force_Dword: PROXIMITY_TYPE = -1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type SENSOR_CONNECTION_TYPES = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const SensorConnectionType_Integrated: SENSOR_CONNECTION_TYPES = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const SensorConnectionType_Attached: SENSOR_CONNECTION_TYPES = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const SensorConnectionType_External: SENSOR_CONNECTION_TYPES = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub type SENSOR_STATE = i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const SensorState_Initializing: SENSOR_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const SensorState_Idle: SENSOR_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const SensorState_Active: SENSOR_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub const SensorState_Error: SENSOR_STATE = 3i32;
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
 pub type SIMPLE_DEVICE_ORIENTATION = i32;
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
@@ -994,8 +881,6 @@ pub const SimpleDeviceOrientation_Rotated270DegreesCounterclockwise: SIMPLE_DEVI
 pub const SimpleDeviceOrientation_Faceup: SIMPLE_DEVICE_ORIENTATION = 4i32;
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
 pub const SimpleDeviceOrientation_Facedown: SIMPLE_DEVICE_ORIENTATION = 5i32;
-pub const Sensor: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3917278464, data2: 21050, data3: 16691, data4: [191, 111, 211, 162, 218, 231, 246, 186] };
-pub const SensorCollection: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2042903259, data2: 42025, data3: 18079, data4: [170, 57, 47, 43, 116, 183, 89, 55] };
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
 pub type SensorConnectionType = i32;
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
@@ -1004,8 +889,6 @@ pub const SENSOR_CONNECTION_TYPE_PC_INTEGRATED: SensorConnectionType = 0i32;
 pub const SENSOR_CONNECTION_TYPE_PC_ATTACHED: SensorConnectionType = 1i32;
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
 pub const SENSOR_CONNECTION_TYPE_PC_EXTERNAL: SensorConnectionType = 2i32;
-pub const SensorDataReport: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1319753455, data2: 26955, data3: 16920, data4: [136, 22, 204, 218, 141, 167, 75, 186] };
-pub const SensorManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2007091239, data2: 64722, data3: 18057, data4: [137, 21, 157, 97, 60, 197, 250, 62] };
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
 pub type SensorState = i32;
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
@@ -1038,6 +921,123 @@ pub const SIMPLE_DEVICE_ORIENTATION_ROTATED_270: SimpleDeviceOrientation = 3i32;
 pub const SIMPLE_DEVICE_ORIENTATION_ROTATED_FACE_UP: SimpleDeviceOrientation = 4i32;
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
 pub const SIMPLE_DEVICE_ORIENTATION_ROTATED_FACE_DOWN: SimpleDeviceOrientation = 5i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub struct MATRIX3X3 {
+    pub Anonymous: MATRIX3X3_0,
+}
+impl ::core::marker::Copy for MATRIX3X3 {}
+impl ::core::clone::Clone for MATRIX3X3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub union MATRIX3X3_0 {
+    pub Anonymous1: MATRIX3X3_0_0,
+    pub Anonymous2: MATRIX3X3_0_1,
+    pub M: [f32; 9],
+}
+impl ::core::marker::Copy for MATRIX3X3_0 {}
+impl ::core::clone::Clone for MATRIX3X3_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub struct MATRIX3X3_0_0 {
+    pub A11: f32,
+    pub A12: f32,
+    pub A13: f32,
+    pub A21: f32,
+    pub A22: f32,
+    pub A23: f32,
+    pub A31: f32,
+    pub A32: f32,
+    pub A33: f32,
+}
+impl ::core::marker::Copy for MATRIX3X3_0_0 {}
+impl ::core::clone::Clone for MATRIX3X3_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub struct MATRIX3X3_0_1 {
+    pub V1: VEC3D,
+    pub V2: VEC3D,
+    pub V3: VEC3D,
+}
+impl ::core::marker::Copy for MATRIX3X3_0_1 {}
+impl ::core::clone::Clone for MATRIX3X3_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
+pub struct QUATERNION {
+    pub X: f32,
+    pub Y: f32,
+    pub Z: f32,
+    pub W: f32,
+}
+impl ::core::marker::Copy for QUATERNION {}
+impl ::core::clone::Clone for QUATERNION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
+pub struct SENSOR_COLLECTION_LIST {
+    pub AllocatedSizeInBytes: u32,
+    pub Count: u32,
+    pub List: [SENSOR_VALUE_PAIR; 1],
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
+impl ::core::marker::Copy for SENSOR_COLLECTION_LIST {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
+impl ::core::clone::Clone for SENSOR_COLLECTION_LIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
+#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
+pub struct SENSOR_PROPERTY_LIST {
+    pub AllocatedSizeInBytes: u32,
+    pub Count: u32,
+    pub List: [super::super::UI::Shell::PropertiesSystem::PROPERTYKEY; 1],
+}
+#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
+impl ::core::marker::Copy for SENSOR_PROPERTY_LIST {}
+#[cfg(feature = "Win32_UI_Shell_PropertiesSystem")]
+impl ::core::clone::Clone for SENSOR_PROPERTY_LIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Sensors\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com_StructuredStorage\"`, `\"Win32_UI_Shell_PropertiesSystem\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
+pub struct SENSOR_VALUE_PAIR {
+    pub Key: super::super::UI::Shell::PropertiesSystem::PROPERTYKEY,
+    pub Value: super::super::System::Com::StructuredStorage::PROPVARIANT,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
+impl ::core::marker::Copy for SENSOR_VALUE_PAIR {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com_StructuredStorage", feature = "Win32_UI_Shell_PropertiesSystem"))]
+impl ::core::clone::Clone for SENSOR_VALUE_PAIR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_Sensors\"`*"]
 pub struct VEC3D {

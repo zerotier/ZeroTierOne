@@ -1,3 +1,17 @@
+#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
+pub type MF_MEDIASOURCE_STATUS_INFO = i32;
+#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
+pub const MF_MEDIASOURCE_STATUS_INFO_FULLYSUPPORTED: MF_MEDIASOURCE_STATUS_INFO = 0i32;
+#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
+pub const MF_MEDIASOURCE_STATUS_INFO_UNKNOWN: MF_MEDIASOURCE_STATUS_INFO = 1i32;
+#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
+pub type MF_TRANSFER_VIDEO_FRAME_FLAGS = i32;
+#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
+pub const MF_TRANSFER_VIDEO_FRAME_DEFAULT: MF_TRANSFER_VIDEO_FRAME_FLAGS = 0i32;
+#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
+pub const MF_TRANSFER_VIDEO_FRAME_STRETCH: MF_TRANSFER_VIDEO_FRAME_FLAGS = 1i32;
+#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
+pub const MF_TRANSFER_VIDEO_FRAME_IGNORE_PAR: MF_TRANSFER_VIDEO_FRAME_FLAGS = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
 pub struct CapturedMetadataExposureCompensation {
@@ -147,22 +161,6 @@ impl ::core::clone::Clone for HistogramHeader {
         *self
     }
 }
-pub type IMFDeviceTransform = *mut ::core::ffi::c_void;
-pub type IMFDeviceTransformCallback = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
-pub type MF_MEDIASOURCE_STATUS_INFO = i32;
-#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
-pub const MF_MEDIASOURCE_STATUS_INFO_FULLYSUPPORTED: MF_MEDIASOURCE_STATUS_INFO = 0i32;
-#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
-pub const MF_MEDIASOURCE_STATUS_INFO_UNKNOWN: MF_MEDIASOURCE_STATUS_INFO = 1i32;
-#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
-pub type MF_TRANSFER_VIDEO_FRAME_FLAGS = i32;
-#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
-pub const MF_TRANSFER_VIDEO_FRAME_DEFAULT: MF_TRANSFER_VIDEO_FRAME_FLAGS = 0i32;
-#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
-pub const MF_TRANSFER_VIDEO_FRAME_STRETCH: MF_TRANSFER_VIDEO_FRAME_FLAGS = 1i32;
-#[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
-pub const MF_TRANSFER_VIDEO_FRAME_IGNORE_PAR: MF_TRANSFER_VIDEO_FRAME_FLAGS = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Media_Streaming\"`*"]
 pub struct MetadataTimeStamps {

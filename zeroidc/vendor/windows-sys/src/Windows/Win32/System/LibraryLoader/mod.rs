@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
     pub fn AddDllDirectory(newdirectory: ::windows_sys::core::PCWSTR) -> *mut ::core::ffi::c_void;
@@ -145,37 +145,6 @@ extern "system" {
 }
 #[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
 pub const CURRENT_IMPORT_REDIRECTION_VERSION: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type ENUMRESLANGPROCA = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCSTR, lpname: ::windows_sys::core::PCSTR, wlanguage: u16, lparam: isize) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type ENUMRESLANGPROCW = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCWSTR, lpname: ::windows_sys::core::PCWSTR, wlanguage: u16, lparam: isize) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type ENUMRESNAMEPROCA = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCSTR, lpname: ::windows_sys::core::PCSTR, lparam: isize) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type ENUMRESNAMEPROCW = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCWSTR, lpname: ::windows_sys::core::PCWSTR, lparam: isize) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type ENUMRESTYPEPROCA = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCSTR, lparam: isize) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type ENUMRESTYPEPROCW = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCWSTR, lparam: isize) -> super::super::Foundation::BOOL>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
-pub struct ENUMUILANG {
-    pub NumOfEnumUILang: u32,
-    pub SizeOfEnumUIBuffer: u32,
-    pub pEnumUIBuffer: *mut u16,
-}
-impl ::core::marker::Copy for ENUMUILANG {}
-impl ::core::clone::Clone for ENUMUILANG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
 pub const FIND_RESOURCE_DIRECTORY_LANGUAGES: u32 = 1024u32;
 #[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
@@ -188,6 +157,20 @@ pub const GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS: u32 = 4u32;
 pub const GET_MODULE_HANDLE_EX_FLAG_PIN: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
 pub const GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
+pub const LOAD_LIBRARY_OS_INTEGRITY_CONTINUITY: u32 = 32768u32;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
+pub const RESOURCE_ENUM_LN: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
+pub const RESOURCE_ENUM_MODULE_EXACT: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
+pub const RESOURCE_ENUM_MUI: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
+pub const RESOURCE_ENUM_MUI_SYSTEM: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
+pub const RESOURCE_ENUM_VALIDATE: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
+pub const SUPPORT_LANG_NUMBER: u32 = 32u32;
 #[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
 pub type LOAD_LIBRARY_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
@@ -218,14 +201,19 @@ pub const LOAD_LIBRARY_SEARCH_DEFAULT_DIRS: LOAD_LIBRARY_FLAGS = 4096u32;
 pub const LOAD_LIBRARY_SAFE_CURRENT_DIRS: LOAD_LIBRARY_FLAGS = 8192u32;
 #[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
 pub const LOAD_LIBRARY_SEARCH_SYSTEM32_NO_FORWARDER: LOAD_LIBRARY_FLAGS = 16384u32;
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
-pub const LOAD_LIBRARY_OS_INTEGRITY_CONTINUITY: u32 = 32768u32;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PGET_MODULE_HANDLE_EXA = ::core::option::Option<unsafe extern "system" fn(dwflags: u32, lpmodulename: ::windows_sys::core::PCSTR, phmodule: *mut super::super::Foundation::HINSTANCE) -> super::super::Foundation::BOOL>;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type PGET_MODULE_HANDLE_EXW = ::core::option::Option<unsafe extern "system" fn(dwflags: u32, lpmodulename: ::windows_sys::core::PCWSTR, phmodule: *mut super::super::Foundation::HINSTANCE) -> super::super::Foundation::BOOL>;
+pub struct ENUMUILANG {
+    pub NumOfEnumUILang: u32,
+    pub SizeOfEnumUIBuffer: u32,
+    pub pEnumUIBuffer: *mut u16,
+}
+impl ::core::marker::Copy for ENUMUILANG {}
+impl ::core::clone::Clone for ENUMUILANG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
 pub struct REDIRECTION_DESCRIPTOR {
@@ -252,15 +240,27 @@ impl ::core::clone::Clone for REDIRECTION_FUNCTION_DESCRIPTOR {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
-pub const RESOURCE_ENUM_LN: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
-pub const RESOURCE_ENUM_MODULE_EXACT: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
-pub const RESOURCE_ENUM_MUI: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
-pub const RESOURCE_ENUM_MUI_SYSTEM: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
-pub const RESOURCE_ENUM_VALIDATE: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`*"]
-pub const SUPPORT_LANG_NUMBER: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type ENUMRESLANGPROCA = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCSTR, lpname: ::windows_sys::core::PCSTR, wlanguage: u16, lparam: isize) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type ENUMRESLANGPROCW = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCWSTR, lpname: ::windows_sys::core::PCWSTR, wlanguage: u16, lparam: isize) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type ENUMRESNAMEPROCA = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCSTR, lpname: ::windows_sys::core::PCSTR, lparam: isize) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type ENUMRESNAMEPROCW = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCWSTR, lpname: ::windows_sys::core::PCWSTR, lparam: isize) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type ENUMRESTYPEPROCA = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCSTR, lparam: isize) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type ENUMRESTYPEPROCW = ::core::option::Option<unsafe extern "system" fn(hmodule: super::super::Foundation::HINSTANCE, lptype: ::windows_sys::core::PCWSTR, lparam: isize) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PGET_MODULE_HANDLE_EXA = ::core::option::Option<unsafe extern "system" fn(dwflags: u32, lpmodulename: ::windows_sys::core::PCSTR, phmodule: *mut super::super::Foundation::HINSTANCE) -> super::super::Foundation::BOOL>;
+#[doc = "*Required features: `\"Win32_System_LibraryLoader\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type PGET_MODULE_HANDLE_EXW = ::core::option::Option<unsafe extern "system" fn(dwflags: u32, lpmodulename: ::windows_sys::core::PCWSTR, phmodule: *mut super::super::Foundation::HINSTANCE) -> super::super::Foundation::BOOL>;

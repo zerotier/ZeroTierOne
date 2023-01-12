@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
     pub fn ActivatePackageVirtualizationContext(context: *const PACKAGE_VIRTUALIZATION_CONTEXT_HANDLE__, cookie: *mut usize) -> ::windows_sys::core::HRESULT;
@@ -179,323 +179,6 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn VerifyPackageRelativeApplicationId(packagerelativeapplicationid: ::windows_sys::core::PCWSTR) -> super::super::super::Foundation::WIN32_ERROR;
 }
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_BUNDLE_FOOTPRINT_FILE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_BUNDLE_FOOTPRINT_FILE_TYPE_FIRST: APPX_BUNDLE_FOOTPRINT_FILE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_BUNDLE_FOOTPRINT_FILE_TYPE_MANIFEST: APPX_BUNDLE_FOOTPRINT_FILE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_BUNDLE_FOOTPRINT_FILE_TYPE_BLOCKMAP: APPX_BUNDLE_FOOTPRINT_FILE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_BUNDLE_FOOTPRINT_FILE_TYPE_SIGNATURE: APPX_BUNDLE_FOOTPRINT_FILE_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_BUNDLE_FOOTPRINT_FILE_TYPE_LAST: APPX_BUNDLE_FOOTPRINT_FILE_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_BUNDLE_PAYLOAD_PACKAGE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_BUNDLE_PAYLOAD_PACKAGE_TYPE_APPLICATION: APPX_BUNDLE_PAYLOAD_PACKAGE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_BUNDLE_PAYLOAD_PACKAGE_TYPE_RESOURCE: APPX_BUNDLE_PAYLOAD_PACKAGE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_CAPABILITIES = u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_INTERNET_CLIENT: APPX_CAPABILITIES = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_INTERNET_CLIENT_SERVER: APPX_CAPABILITIES = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_PRIVATE_NETWORK_CLIENT_SERVER: APPX_CAPABILITIES = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_DOCUMENTS_LIBRARY: APPX_CAPABILITIES = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_PICTURES_LIBRARY: APPX_CAPABILITIES = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_VIDEOS_LIBRARY: APPX_CAPABILITIES = 32u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_MUSIC_LIBRARY: APPX_CAPABILITIES = 64u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_ENTERPRISE_AUTHENTICATION: APPX_CAPABILITIES = 128u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_SHARED_USER_CERTIFICATES: APPX_CAPABILITIES = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_REMOVABLE_STORAGE: APPX_CAPABILITIES = 512u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_APPOINTMENTS: APPX_CAPABILITIES = 1024u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_CONTACTS: APPX_CAPABILITIES = 2048u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_CAPABILITY_CLASS_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_CLASS_DEFAULT: APPX_CAPABILITY_CLASS_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_CLASS_GENERAL: APPX_CAPABILITY_CLASS_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_CLASS_RESTRICTED: APPX_CAPABILITY_CLASS_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_CLASS_WINDOWS: APPX_CAPABILITY_CLASS_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_CLASS_ALL: APPX_CAPABILITY_CLASS_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_CAPABILITY_CLASS_CUSTOM: APPX_CAPABILITY_CLASS_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_COMPRESSION_OPTION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_COMPRESSION_OPTION_NONE: APPX_COMPRESSION_OPTION = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_COMPRESSION_OPTION_NORMAL: APPX_COMPRESSION_OPTION = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_COMPRESSION_OPTION_MAXIMUM: APPX_COMPRESSION_OPTION = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_COMPRESSION_OPTION_FAST: APPX_COMPRESSION_OPTION = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_COMPRESSION_OPTION_SUPERFAST: APPX_COMPRESSION_OPTION = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub struct APPX_ENCRYPTED_EXEMPTIONS {
-    pub count: u32,
-    pub plainTextFiles: *mut ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for APPX_ENCRYPTED_EXEMPTIONS {}
-impl ::core::clone::Clone for APPX_ENCRYPTED_EXEMPTIONS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_ENCRYPTED_PACKAGE_OPTIONS = u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_ENCRYPTED_PACKAGE_OPTION_NONE: APPX_ENCRYPTED_PACKAGE_OPTIONS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_ENCRYPTED_PACKAGE_OPTION_DIFFUSION: APPX_ENCRYPTED_PACKAGE_OPTIONS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_ENCRYPTED_PACKAGE_OPTION_PAGE_HASHING: APPX_ENCRYPTED_PACKAGE_OPTIONS = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-pub struct APPX_ENCRYPTED_PACKAGE_SETTINGS {
-    pub keyLength: u32,
-    pub encryptionAlgorithm: ::windows_sys::core::PCWSTR,
-    pub useDiffusion: super::super::super::Foundation::BOOL,
-    pub blockMapHashAlgorithm: super::super::super::System::Com::IUri,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-impl ::core::marker::Copy for APPX_ENCRYPTED_PACKAGE_SETTINGS {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-impl ::core::clone::Clone for APPX_ENCRYPTED_PACKAGE_SETTINGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`, `\"Win32_System_Com\"`*"]
-#[cfg(feature = "Win32_System_Com")]
-pub struct APPX_ENCRYPTED_PACKAGE_SETTINGS2 {
-    pub keyLength: u32,
-    pub encryptionAlgorithm: ::windows_sys::core::PCWSTR,
-    pub blockMapHashAlgorithm: super::super::super::System::Com::IUri,
-    pub options: u32,
-}
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::marker::Copy for APPX_ENCRYPTED_PACKAGE_SETTINGS2 {}
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::clone::Clone for APPX_ENCRYPTED_PACKAGE_SETTINGS2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_FOOTPRINT_FILE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_FOOTPRINT_FILE_TYPE_MANIFEST: APPX_FOOTPRINT_FILE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_FOOTPRINT_FILE_TYPE_BLOCKMAP: APPX_FOOTPRINT_FILE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_FOOTPRINT_FILE_TYPE_SIGNATURE: APPX_FOOTPRINT_FILE_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_FOOTPRINT_FILE_TYPE_CODEINTEGRITY: APPX_FOOTPRINT_FILE_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_FOOTPRINT_FILE_TYPE_CONTENTGROUPMAP: APPX_FOOTPRINT_FILE_TYPE = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub struct APPX_KEY_INFO {
-    pub keyLength: u32,
-    pub keyIdLength: u32,
-    pub key: *mut u8,
-    pub keyId: *mut u8,
-}
-impl ::core::marker::Copy for APPX_KEY_INFO {}
-impl ::core::clone::Clone for APPX_KEY_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_PACKAGE_ARCHITECTURE = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE_X86: APPX_PACKAGE_ARCHITECTURE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE_ARM: APPX_PACKAGE_ARCHITECTURE = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE_X64: APPX_PACKAGE_ARCHITECTURE = 9i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE_NEUTRAL: APPX_PACKAGE_ARCHITECTURE = 11i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE_ARM64: APPX_PACKAGE_ARCHITECTURE = 12i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_PACKAGE_ARCHITECTURE2 = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE2_X86: APPX_PACKAGE_ARCHITECTURE2 = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE2_ARM: APPX_PACKAGE_ARCHITECTURE2 = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE2_X64: APPX_PACKAGE_ARCHITECTURE2 = 9i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE2_NEUTRAL: APPX_PACKAGE_ARCHITECTURE2 = 11i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE2_ARM64: APPX_PACKAGE_ARCHITECTURE2 = 12i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE2_X86_ON_ARM64: APPX_PACKAGE_ARCHITECTURE2 = 14i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_ARCHITECTURE2_UNKNOWN: APPX_PACKAGE_ARCHITECTURE2 = 65535i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTIONS = u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTION_NONE: APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTIONS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTION_SKIP_VALIDATION: APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTIONS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTION_LOCALIZED: APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTIONS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_OPTION = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_OPTION_APPEND_DELTA: APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_OPTION = 0i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-pub struct APPX_PACKAGE_SETTINGS {
-    pub forceZip32: super::super::super::Foundation::BOOL,
-    pub hashMethod: super::super::super::System::Com::IUri,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-impl ::core::marker::Copy for APPX_PACKAGE_SETTINGS {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
-impl ::core::clone::Clone for APPX_PACKAGE_SETTINGS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`, `\"Win32_System_Com\"`*"]
-#[cfg(feature = "Win32_System_Com")]
-pub struct APPX_PACKAGE_WRITER_PAYLOAD_STREAM {
-    pub inputStream: super::super::super::System::Com::IStream,
-    pub fileName: ::windows_sys::core::PCWSTR,
-    pub contentType: ::windows_sys::core::PCWSTR,
-    pub compressionOption: APPX_COMPRESSION_OPTION,
-}
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::marker::Copy for APPX_PACKAGE_WRITER_PAYLOAD_STREAM {}
-#[cfg(feature = "Win32_System_Com")]
-impl ::core::clone::Clone for APPX_PACKAGE_WRITER_PAYLOAD_STREAM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type APPX_PACKAGING_CONTEXT_CHANGE_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGING_CONTEXT_CHANGE_TYPE_START: APPX_PACKAGING_CONTEXT_CHANGE_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGING_CONTEXT_CHANGE_TYPE_CHANGE: APPX_PACKAGING_CONTEXT_CHANGE_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGING_CONTEXT_CHANGE_TYPE_DETAILS: APPX_PACKAGING_CONTEXT_CHANGE_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const APPX_PACKAGING_CONTEXT_CHANGE_TYPE_END: APPX_PACKAGING_CONTEXT_CHANGE_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type AddPackageDependencyOptions = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AddPackageDependencyOptions_None: AddPackageDependencyOptions = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AddPackageDependencyOptions_PrependIfRankCollision: AddPackageDependencyOptions = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type AppPolicyClrCompat = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyClrCompat_Other: AppPolicyClrCompat = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyClrCompat_ClassicDesktop: AppPolicyClrCompat = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyClrCompat_Universal: AppPolicyClrCompat = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyClrCompat_PackagedDesktop: AppPolicyClrCompat = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type AppPolicyCreateFileAccess = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyCreateFileAccess_Full: AppPolicyCreateFileAccess = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyCreateFileAccess_Limited: AppPolicyCreateFileAccess = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type AppPolicyLifecycleManagement = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyLifecycleManagement_Unmanaged: AppPolicyLifecycleManagement = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyLifecycleManagement_Managed: AppPolicyLifecycleManagement = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type AppPolicyMediaFoundationCodecLoading = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyMediaFoundationCodecLoading_All: AppPolicyMediaFoundationCodecLoading = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyMediaFoundationCodecLoading_InboxOnly: AppPolicyMediaFoundationCodecLoading = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type AppPolicyProcessTerminationMethod = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyProcessTerminationMethod_ExitProcess: AppPolicyProcessTerminationMethod = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyProcessTerminationMethod_TerminateProcess: AppPolicyProcessTerminationMethod = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type AppPolicyShowDeveloperDiagnostic = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyShowDeveloperDiagnostic_None: AppPolicyShowDeveloperDiagnostic = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyShowDeveloperDiagnostic_ShowUI: AppPolicyShowDeveloperDiagnostic = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type AppPolicyThreadInitializationType = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyThreadInitializationType_None: AppPolicyThreadInitializationType = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyThreadInitializationType_InitializeWinRT: AppPolicyThreadInitializationType = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type AppPolicyWindowingModel = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyWindowingModel_None: AppPolicyWindowingModel = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyWindowingModel_Universal: AppPolicyWindowingModel = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyWindowingModel_ClassicDesktop: AppPolicyWindowingModel = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const AppPolicyWindowingModel_ClassicPhone: AppPolicyWindowingModel = 3i32;
-pub const AppxBundleFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 932054086, data2: 21380, data3: 17335, data4: [136, 119, 231, 219, 221, 136, 52, 70] };
-pub const AppxEncryptionFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3697692637, data2: 55400, data3: 18158, data4: [135, 128, 141, 25, 108, 183, 57, 247] };
-pub const AppxFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1480761664, data2: 65439, data3: 16742, data4: [143, 92, 98, 245, 183, 176, 199, 129] };
-pub const AppxPackageEditor: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4026856138, data2: 44732, data3: 19213, data4: [191, 88, 229, 22, 213, 188, 192, 171] };
-pub const AppxPackagingDiagnosticEventSinkManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1355418182, data2: 5512, data3: 16737, data4: [142, 210, 239, 158, 70, 156, 237, 93] };
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type CreatePackageDependencyOptions = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const CreatePackageDependencyOptions_None: CreatePackageDependencyOptions = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const CreatePackageDependencyOptions_DoNotVerifyDependencyResolution: CreatePackageDependencyOptions = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const CreatePackageDependencyOptions_ScopeIsSystem: CreatePackageDependencyOptions = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub type DX_FEATURE_LEVEL = i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const DX_FEATURE_LEVEL_UNSPECIFIED: DX_FEATURE_LEVEL = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const DX_FEATURE_LEVEL_9: DX_FEATURE_LEVEL = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const DX_FEATURE_LEVEL_10: DX_FEATURE_LEVEL = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub const DX_FEATURE_LEVEL_11: DX_FEATURE_LEVEL = 3i32;
 pub type IAppxBlockMapBlock = *mut ::core::ffi::c_void;
 pub type IAppxBlockMapBlocksEnumerator = *mut ::core::ffi::c_void;
 pub type IAppxBlockMapFile = *mut ::core::ffi::c_void;
@@ -577,17 +260,11 @@ pub type IAppxPackageWriter3 = *mut ::core::ffi::c_void;
 pub type IAppxPackagingDiagnosticEventSink = *mut ::core::ffi::c_void;
 pub type IAppxPackagingDiagnosticEventSinkManager = *mut ::core::ffi::c_void;
 pub type IAppxSourceContentGroupMapReader = *mut ::core::ffi::c_void;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub struct PACKAGEDEPENDENCY_CONTEXT__ {
-    pub unused: i32,
-}
-impl ::core::marker::Copy for PACKAGEDEPENDENCY_CONTEXT__ {}
-impl ::core::clone::Clone for PACKAGEDEPENDENCY_CONTEXT__ {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const AppxBundleFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 932054086, data2: 21380, data3: 17335, data4: [136, 119, 231, 219, 221, 136, 52, 70] };
+pub const AppxEncryptionFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3697692637, data2: 55400, data3: 18158, data4: [135, 128, 141, 25, 108, 183, 57, 247] };
+pub const AppxFactory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1480761664, data2: 65439, data3: 16742, data4: [143, 92, 98, 245, 183, 176, 199, 129] };
+pub const AppxPackageEditor: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4026856138, data2: 44732, data3: 19213, data4: [191, 88, 229, 22, 213, 188, 192, 171] };
+pub const AppxPackagingDiagnosticEventSinkManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1355418182, data2: 5512, data3: 16737, data4: [142, 210, 239, 158, 70, 156, 237, 93] };
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
 pub const PACKAGE_DEPENDENCY_RANK_DEFAULT: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
@@ -610,39 +287,6 @@ pub const PACKAGE_FILTER_OPTIONAL: u32 = 131072u32;
 pub const PACKAGE_FILTER_RESOURCE: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
 pub const PACKAGE_FILTER_STATIC: u32 = 524288u32;
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub struct PACKAGE_ID {
-    pub reserved: u32,
-    pub processorArchitecture: u32,
-    pub version: PACKAGE_VERSION,
-    pub name: ::windows_sys::core::PWSTR,
-    pub publisher: ::windows_sys::core::PWSTR,
-    pub resourceId: ::windows_sys::core::PWSTR,
-    pub publisherId: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for PACKAGE_ID {}
-impl ::core::clone::Clone for PACKAGE_ID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub struct PACKAGE_INFO {
-    pub reserved: u32,
-    pub flags: u32,
-    pub path: ::windows_sys::core::PWSTR,
-    pub packageFullName: ::windows_sys::core::PWSTR,
-    pub packageFamilyName: ::windows_sys::core::PWSTR,
-    pub packageId: PACKAGE_ID,
-}
-impl ::core::marker::Copy for PACKAGE_INFO {}
-impl ::core::clone::Clone for PACKAGE_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
 pub const PACKAGE_INFORMATION_BASIC: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
@@ -665,54 +309,226 @@ pub const PACKAGE_PROPERTY_OPTIONAL: u32 = 8u32;
 pub const PACKAGE_PROPERTY_RESOURCE: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
 pub const PACKAGE_PROPERTY_STATIC: u32 = 524288u32;
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub struct PACKAGE_VERSION {
-    pub Anonymous: PACKAGE_VERSION_0,
-}
-impl ::core::marker::Copy for PACKAGE_VERSION {}
-impl ::core::clone::Clone for PACKAGE_VERSION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
+pub type APPX_BUNDLE_FOOTPRINT_FILE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub union PACKAGE_VERSION_0 {
-    pub Version: u64,
-    pub Anonymous: PACKAGE_VERSION_0_0,
-}
-impl ::core::marker::Copy for PACKAGE_VERSION_0 {}
-impl ::core::clone::Clone for PACKAGE_VERSION_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub const APPX_BUNDLE_FOOTPRINT_FILE_TYPE_FIRST: APPX_BUNDLE_FOOTPRINT_FILE_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub struct PACKAGE_VERSION_0_0 {
-    pub Revision: u16,
-    pub Build: u16,
-    pub Minor: u16,
-    pub Major: u16,
-}
-impl ::core::marker::Copy for PACKAGE_VERSION_0_0 {}
-impl ::core::clone::Clone for PACKAGE_VERSION_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub const APPX_BUNDLE_FOOTPRINT_FILE_TYPE_MANIFEST: APPX_BUNDLE_FOOTPRINT_FILE_TYPE = 0i32;
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
-pub struct PACKAGE_VIRTUALIZATION_CONTEXT_HANDLE__ {
-    pub unused: i32,
-}
-impl ::core::marker::Copy for PACKAGE_VIRTUALIZATION_CONTEXT_HANDLE__ {}
-impl ::core::clone::Clone for PACKAGE_VIRTUALIZATION_CONTEXT_HANDLE__ {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const APPX_BUNDLE_FOOTPRINT_FILE_TYPE_BLOCKMAP: APPX_BUNDLE_FOOTPRINT_FILE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_BUNDLE_FOOTPRINT_FILE_TYPE_SIGNATURE: APPX_BUNDLE_FOOTPRINT_FILE_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_BUNDLE_FOOTPRINT_FILE_TYPE_LAST: APPX_BUNDLE_FOOTPRINT_FILE_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_BUNDLE_PAYLOAD_PACKAGE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_BUNDLE_PAYLOAD_PACKAGE_TYPE_APPLICATION: APPX_BUNDLE_PAYLOAD_PACKAGE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_BUNDLE_PAYLOAD_PACKAGE_TYPE_RESOURCE: APPX_BUNDLE_PAYLOAD_PACKAGE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_CAPABILITIES = u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_INTERNET_CLIENT: APPX_CAPABILITIES = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_INTERNET_CLIENT_SERVER: APPX_CAPABILITIES = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_PRIVATE_NETWORK_CLIENT_SERVER: APPX_CAPABILITIES = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_DOCUMENTS_LIBRARY: APPX_CAPABILITIES = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_PICTURES_LIBRARY: APPX_CAPABILITIES = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_VIDEOS_LIBRARY: APPX_CAPABILITIES = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_MUSIC_LIBRARY: APPX_CAPABILITIES = 64u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_ENTERPRISE_AUTHENTICATION: APPX_CAPABILITIES = 128u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_SHARED_USER_CERTIFICATES: APPX_CAPABILITIES = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_REMOVABLE_STORAGE: APPX_CAPABILITIES = 512u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_APPOINTMENTS: APPX_CAPABILITIES = 1024u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_CONTACTS: APPX_CAPABILITIES = 2048u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_CAPABILITY_CLASS_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_CLASS_DEFAULT: APPX_CAPABILITY_CLASS_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_CLASS_GENERAL: APPX_CAPABILITY_CLASS_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_CLASS_RESTRICTED: APPX_CAPABILITY_CLASS_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_CLASS_WINDOWS: APPX_CAPABILITY_CLASS_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_CLASS_ALL: APPX_CAPABILITY_CLASS_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_CAPABILITY_CLASS_CUSTOM: APPX_CAPABILITY_CLASS_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_COMPRESSION_OPTION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_COMPRESSION_OPTION_NONE: APPX_COMPRESSION_OPTION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_COMPRESSION_OPTION_NORMAL: APPX_COMPRESSION_OPTION = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_COMPRESSION_OPTION_MAXIMUM: APPX_COMPRESSION_OPTION = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_COMPRESSION_OPTION_FAST: APPX_COMPRESSION_OPTION = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_COMPRESSION_OPTION_SUPERFAST: APPX_COMPRESSION_OPTION = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_ENCRYPTED_PACKAGE_OPTIONS = u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_ENCRYPTED_PACKAGE_OPTION_NONE: APPX_ENCRYPTED_PACKAGE_OPTIONS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_ENCRYPTED_PACKAGE_OPTION_DIFFUSION: APPX_ENCRYPTED_PACKAGE_OPTIONS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_ENCRYPTED_PACKAGE_OPTION_PAGE_HASHING: APPX_ENCRYPTED_PACKAGE_OPTIONS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_FOOTPRINT_FILE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_FOOTPRINT_FILE_TYPE_MANIFEST: APPX_FOOTPRINT_FILE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_FOOTPRINT_FILE_TYPE_BLOCKMAP: APPX_FOOTPRINT_FILE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_FOOTPRINT_FILE_TYPE_SIGNATURE: APPX_FOOTPRINT_FILE_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_FOOTPRINT_FILE_TYPE_CODEINTEGRITY: APPX_FOOTPRINT_FILE_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_FOOTPRINT_FILE_TYPE_CONTENTGROUPMAP: APPX_FOOTPRINT_FILE_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_PACKAGE_ARCHITECTURE = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE_X86: APPX_PACKAGE_ARCHITECTURE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE_ARM: APPX_PACKAGE_ARCHITECTURE = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE_X64: APPX_PACKAGE_ARCHITECTURE = 9i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE_NEUTRAL: APPX_PACKAGE_ARCHITECTURE = 11i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE_ARM64: APPX_PACKAGE_ARCHITECTURE = 12i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_PACKAGE_ARCHITECTURE2 = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE2_X86: APPX_PACKAGE_ARCHITECTURE2 = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE2_ARM: APPX_PACKAGE_ARCHITECTURE2 = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE2_X64: APPX_PACKAGE_ARCHITECTURE2 = 9i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE2_NEUTRAL: APPX_PACKAGE_ARCHITECTURE2 = 11i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE2_ARM64: APPX_PACKAGE_ARCHITECTURE2 = 12i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE2_X86_ON_ARM64: APPX_PACKAGE_ARCHITECTURE2 = 14i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_ARCHITECTURE2_UNKNOWN: APPX_PACKAGE_ARCHITECTURE2 = 65535i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTIONS = u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTION_NONE: APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTIONS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTION_SKIP_VALIDATION: APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTIONS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTION_LOCALIZED: APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_MANIFEST_OPTIONS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_OPTION = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_OPTION_APPEND_DELTA: APPX_PACKAGE_EDITOR_UPDATE_PACKAGE_OPTION = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type APPX_PACKAGING_CONTEXT_CHANGE_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGING_CONTEXT_CHANGE_TYPE_START: APPX_PACKAGING_CONTEXT_CHANGE_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGING_CONTEXT_CHANGE_TYPE_CHANGE: APPX_PACKAGING_CONTEXT_CHANGE_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGING_CONTEXT_CHANGE_TYPE_DETAILS: APPX_PACKAGING_CONTEXT_CHANGE_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const APPX_PACKAGING_CONTEXT_CHANGE_TYPE_END: APPX_PACKAGING_CONTEXT_CHANGE_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type AddPackageDependencyOptions = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AddPackageDependencyOptions_None: AddPackageDependencyOptions = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AddPackageDependencyOptions_PrependIfRankCollision: AddPackageDependencyOptions = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type AppPolicyClrCompat = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyClrCompat_Other: AppPolicyClrCompat = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyClrCompat_ClassicDesktop: AppPolicyClrCompat = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyClrCompat_Universal: AppPolicyClrCompat = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyClrCompat_PackagedDesktop: AppPolicyClrCompat = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type AppPolicyCreateFileAccess = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyCreateFileAccess_Full: AppPolicyCreateFileAccess = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyCreateFileAccess_Limited: AppPolicyCreateFileAccess = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type AppPolicyLifecycleManagement = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyLifecycleManagement_Unmanaged: AppPolicyLifecycleManagement = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyLifecycleManagement_Managed: AppPolicyLifecycleManagement = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type AppPolicyMediaFoundationCodecLoading = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyMediaFoundationCodecLoading_All: AppPolicyMediaFoundationCodecLoading = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyMediaFoundationCodecLoading_InboxOnly: AppPolicyMediaFoundationCodecLoading = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type AppPolicyProcessTerminationMethod = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyProcessTerminationMethod_ExitProcess: AppPolicyProcessTerminationMethod = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyProcessTerminationMethod_TerminateProcess: AppPolicyProcessTerminationMethod = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type AppPolicyShowDeveloperDiagnostic = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyShowDeveloperDiagnostic_None: AppPolicyShowDeveloperDiagnostic = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyShowDeveloperDiagnostic_ShowUI: AppPolicyShowDeveloperDiagnostic = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type AppPolicyThreadInitializationType = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyThreadInitializationType_None: AppPolicyThreadInitializationType = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyThreadInitializationType_InitializeWinRT: AppPolicyThreadInitializationType = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type AppPolicyWindowingModel = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyWindowingModel_None: AppPolicyWindowingModel = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyWindowingModel_Universal: AppPolicyWindowingModel = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyWindowingModel_ClassicDesktop: AppPolicyWindowingModel = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const AppPolicyWindowingModel_ClassicPhone: AppPolicyWindowingModel = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type CreatePackageDependencyOptions = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const CreatePackageDependencyOptions_None: CreatePackageDependencyOptions = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const CreatePackageDependencyOptions_DoNotVerifyDependencyResolution: CreatePackageDependencyOptions = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const CreatePackageDependencyOptions_ScopeIsSystem: CreatePackageDependencyOptions = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub type DX_FEATURE_LEVEL = i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const DX_FEATURE_LEVEL_UNSPECIFIED: DX_FEATURE_LEVEL = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const DX_FEATURE_LEVEL_9: DX_FEATURE_LEVEL = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const DX_FEATURE_LEVEL_10: DX_FEATURE_LEVEL = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub const DX_FEATURE_LEVEL_11: DX_FEATURE_LEVEL = 3i32;
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
 pub type PackageDependencyLifetimeKind = i32;
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
@@ -767,6 +583,190 @@ pub const PackagePathType_MachineExternal: PackagePathType = 3i32;
 pub const PackagePathType_UserExternal: PackagePathType = 4i32;
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
 pub const PackagePathType_EffectiveExternal: PackagePathType = 5i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub struct APPX_ENCRYPTED_EXEMPTIONS {
+    pub count: u32,
+    pub plainTextFiles: *mut ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for APPX_ENCRYPTED_EXEMPTIONS {}
+impl ::core::clone::Clone for APPX_ENCRYPTED_EXEMPTIONS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
+pub struct APPX_ENCRYPTED_PACKAGE_SETTINGS {
+    pub keyLength: u32,
+    pub encryptionAlgorithm: ::windows_sys::core::PCWSTR,
+    pub useDiffusion: super::super::super::Foundation::BOOL,
+    pub blockMapHashAlgorithm: super::super::super::System::Com::IUri,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
+impl ::core::marker::Copy for APPX_ENCRYPTED_PACKAGE_SETTINGS {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
+impl ::core::clone::Clone for APPX_ENCRYPTED_PACKAGE_SETTINGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct APPX_ENCRYPTED_PACKAGE_SETTINGS2 {
+    pub keyLength: u32,
+    pub encryptionAlgorithm: ::windows_sys::core::PCWSTR,
+    pub blockMapHashAlgorithm: super::super::super::System::Com::IUri,
+    pub options: u32,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for APPX_ENCRYPTED_PACKAGE_SETTINGS2 {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for APPX_ENCRYPTED_PACKAGE_SETTINGS2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub struct APPX_KEY_INFO {
+    pub keyLength: u32,
+    pub keyIdLength: u32,
+    pub key: *mut u8,
+    pub keyId: *mut u8,
+}
+impl ::core::marker::Copy for APPX_KEY_INFO {}
+impl ::core::clone::Clone for APPX_KEY_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
+pub struct APPX_PACKAGE_SETTINGS {
+    pub forceZip32: super::super::super::Foundation::BOOL,
+    pub hashMethod: super::super::super::System::Com::IUri,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
+impl ::core::marker::Copy for APPX_PACKAGE_SETTINGS {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com"))]
+impl ::core::clone::Clone for APPX_PACKAGE_SETTINGS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct APPX_PACKAGE_WRITER_PAYLOAD_STREAM {
+    pub inputStream: super::super::super::System::Com::IStream,
+    pub fileName: ::windows_sys::core::PCWSTR,
+    pub contentType: ::windows_sys::core::PCWSTR,
+    pub compressionOption: APPX_COMPRESSION_OPTION,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for APPX_PACKAGE_WRITER_PAYLOAD_STREAM {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for APPX_PACKAGE_WRITER_PAYLOAD_STREAM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub struct PACKAGEDEPENDENCY_CONTEXT__ {
+    pub unused: i32,
+}
+impl ::core::marker::Copy for PACKAGEDEPENDENCY_CONTEXT__ {}
+impl ::core::clone::Clone for PACKAGEDEPENDENCY_CONTEXT__ {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub struct PACKAGE_ID {
+    pub reserved: u32,
+    pub processorArchitecture: u32,
+    pub version: PACKAGE_VERSION,
+    pub name: ::windows_sys::core::PWSTR,
+    pub publisher: ::windows_sys::core::PWSTR,
+    pub resourceId: ::windows_sys::core::PWSTR,
+    pub publisherId: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for PACKAGE_ID {}
+impl ::core::clone::Clone for PACKAGE_ID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub struct PACKAGE_INFO {
+    pub reserved: u32,
+    pub flags: u32,
+    pub path: ::windows_sys::core::PWSTR,
+    pub packageFullName: ::windows_sys::core::PWSTR,
+    pub packageFamilyName: ::windows_sys::core::PWSTR,
+    pub packageId: PACKAGE_ID,
+}
+impl ::core::marker::Copy for PACKAGE_INFO {}
+impl ::core::clone::Clone for PACKAGE_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub struct PACKAGE_VERSION {
+    pub Anonymous: PACKAGE_VERSION_0,
+}
+impl ::core::marker::Copy for PACKAGE_VERSION {}
+impl ::core::clone::Clone for PACKAGE_VERSION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub union PACKAGE_VERSION_0 {
+    pub Version: u64,
+    pub Anonymous: PACKAGE_VERSION_0_0,
+}
+impl ::core::marker::Copy for PACKAGE_VERSION_0 {}
+impl ::core::clone::Clone for PACKAGE_VERSION_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub struct PACKAGE_VERSION_0_0 {
+    pub Revision: u16,
+    pub Build: u16,
+    pub Minor: u16,
+    pub Major: u16,
+}
+impl ::core::marker::Copy for PACKAGE_VERSION_0_0 {}
+impl ::core::clone::Clone for PACKAGE_VERSION_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
+pub struct PACKAGE_VIRTUALIZATION_CONTEXT_HANDLE__ {
+    pub unused: i32,
+}
+impl ::core::marker::Copy for PACKAGE_VIRTUALIZATION_CONTEXT_HANDLE__ {}
+impl ::core::clone::Clone for PACKAGE_VIRTUALIZATION_CONTEXT_HANDLE__ {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_Packaging_Appx\"`*"]
 pub struct _PACKAGE_INFO_REFERENCE {

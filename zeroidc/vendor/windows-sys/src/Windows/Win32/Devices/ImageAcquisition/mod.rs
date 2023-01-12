@@ -1,3 +1,34 @@
+pub type IEnumWIA_DEV_CAPS = *mut ::core::ffi::c_void;
+pub type IEnumWIA_DEV_INFO = *mut ::core::ffi::c_void;
+pub type IEnumWIA_FORMAT_INFO = *mut ::core::ffi::c_void;
+pub type IEnumWiaItem = *mut ::core::ffi::c_void;
+pub type IEnumWiaItem2 = *mut ::core::ffi::c_void;
+pub type IWiaAppErrorHandler = *mut ::core::ffi::c_void;
+pub type IWiaDataCallback = *mut ::core::ffi::c_void;
+pub type IWiaDataTransfer = *mut ::core::ffi::c_void;
+pub type IWiaDevMgr = *mut ::core::ffi::c_void;
+pub type IWiaDevMgr2 = *mut ::core::ffi::c_void;
+pub type IWiaDrvItem = *mut ::core::ffi::c_void;
+pub type IWiaErrorHandler = *mut ::core::ffi::c_void;
+pub type IWiaEventCallback = *mut ::core::ffi::c_void;
+pub type IWiaImageFilter = *mut ::core::ffi::c_void;
+pub type IWiaItem = *mut ::core::ffi::c_void;
+pub type IWiaItem2 = *mut ::core::ffi::c_void;
+pub type IWiaItemExtras = *mut ::core::ffi::c_void;
+pub type IWiaLog = *mut ::core::ffi::c_void;
+pub type IWiaLogEx = *mut ::core::ffi::c_void;
+pub type IWiaMiniDrv = *mut ::core::ffi::c_void;
+pub type IWiaMiniDrvCallBack = *mut ::core::ffi::c_void;
+pub type IWiaMiniDrvTransferCallback = *mut ::core::ffi::c_void;
+pub type IWiaNotifyDevMgr = *mut ::core::ffi::c_void;
+pub type IWiaPreview = *mut ::core::ffi::c_void;
+pub type IWiaPropertyStorage = *mut ::core::ffi::c_void;
+pub type IWiaSegmentationFilter = *mut ::core::ffi::c_void;
+pub type IWiaTransfer = *mut ::core::ffi::c_void;
+pub type IWiaTransferCallback = *mut ::core::ffi::c_void;
+pub type IWiaUIExtension = *mut ::core::ffi::c_void;
+pub type IWiaUIExtension2 = *mut ::core::ffi::c_void;
+pub type IWiaVideo = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const ADVANCED_DUP: u32 = 8192u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -141,48 +172,6 @@ pub const DETECT_FLAT: u32 = 8u32;
 pub const DETECT_SCAN: u32 = 16u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const DETECT_STOR: u32 = 4096u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DEVICEDIALOGDATA {
-    pub cbSize: u32,
-    pub hwndParent: super::super::Foundation::HWND,
-    pub pIWiaItemRoot: IWiaItem,
-    pub dwFlags: u32,
-    pub lIntent: i32,
-    pub lItemCount: i32,
-    pub ppWiaItems: *mut IWiaItem,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DEVICEDIALOGDATA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DEVICEDIALOGDATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct DEVICEDIALOGDATA2 {
-    pub cbSize: u32,
-    pub pIWiaItemRoot: IWiaItem2,
-    pub dwFlags: u32,
-    pub hwndParent: super::super::Foundation::HWND,
-    pub bstrFolderName: super::super::Foundation::BSTR,
-    pub bstrFilename: super::super::Foundation::BSTR,
-    pub lNumFiles: i32,
-    pub pbstrFilePaths: *mut super::super::Foundation::BSTR,
-    pub pWiaItem: IWiaItem2,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for DEVICEDIALOGDATA2 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for DEVICEDIALOGDATA2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const DEVICE_ATTENTION: u32 = 1024u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -191,9 +180,6 @@ pub const DUP: u32 = 4u32;
 pub const DUPLEX: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const DUP_READY: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type DeviceDialogFunction = ::core::option::Option<unsafe extern "system" fn(param0: *mut DEVICEDIALOGDATA) -> ::windows_sys::core::HRESULT>;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const EFFECTMODE_BW: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -275,11 +261,6 @@ pub const FRONT_FIRST: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const FRONT_ONLY: u32 = 32u32;
 pub const GUID_DEVINTERFACE_IMAGE: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1809653702, data2: 33039, data3: 4560, data4: [190, 199, 8, 0, 43, 226, 9, 47] };
-pub type IEnumWIA_DEV_CAPS = *mut ::core::ffi::c_void;
-pub type IEnumWIA_DEV_INFO = *mut ::core::ffi::c_void;
-pub type IEnumWIA_FORMAT_INFO = *mut ::core::ffi::c_void;
-pub type IEnumWiaItem = *mut ::core::ffi::c_void;
-pub type IEnumWiaItem2 = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const IMPRINTER: u32 = 65536u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -306,32 +287,6 @@ pub const IT_STATUS_PROCESSING_DATA: u32 = 2u32;
 pub const IT_STATUS_TRANSFER_FROM_DEVICE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const IT_STATUS_TRANSFER_TO_CLIENT: u32 = 4u32;
-pub type IWiaAppErrorHandler = *mut ::core::ffi::c_void;
-pub type IWiaDataCallback = *mut ::core::ffi::c_void;
-pub type IWiaDataTransfer = *mut ::core::ffi::c_void;
-pub type IWiaDevMgr = *mut ::core::ffi::c_void;
-pub type IWiaDevMgr2 = *mut ::core::ffi::c_void;
-pub type IWiaDrvItem = *mut ::core::ffi::c_void;
-pub type IWiaErrorHandler = *mut ::core::ffi::c_void;
-pub type IWiaEventCallback = *mut ::core::ffi::c_void;
-pub type IWiaImageFilter = *mut ::core::ffi::c_void;
-pub type IWiaItem = *mut ::core::ffi::c_void;
-pub type IWiaItem2 = *mut ::core::ffi::c_void;
-pub type IWiaItemExtras = *mut ::core::ffi::c_void;
-pub type IWiaLog = *mut ::core::ffi::c_void;
-pub type IWiaLogEx = *mut ::core::ffi::c_void;
-pub type IWiaMiniDrv = *mut ::core::ffi::c_void;
-pub type IWiaMiniDrvCallBack = *mut ::core::ffi::c_void;
-pub type IWiaMiniDrvTransferCallback = *mut ::core::ffi::c_void;
-pub type IWiaNotifyDevMgr = *mut ::core::ffi::c_void;
-pub type IWiaPreview = *mut ::core::ffi::c_void;
-pub type IWiaPropertyStorage = *mut ::core::ffi::c_void;
-pub type IWiaSegmentationFilter = *mut ::core::ffi::c_void;
-pub type IWiaTransfer = *mut ::core::ffi::c_void;
-pub type IWiaTransferCallback = *mut ::core::ffi::c_void;
-pub type IWiaUIExtension = *mut ::core::ffi::c_void;
-pub type IWiaUIExtension2 = *mut ::core::ffi::c_void;
-pub type IWiaVideo = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const LAMP_ERR: u32 = 2048u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -378,46 +333,6 @@ pub const MCRO_STATUS_OK: u32 = 1u32;
 pub const MICR_READER: u32 = 1048576u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const MICR_READER_READY: u32 = 65536u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct MINIDRV_TRANSFER_CONTEXT {
-    pub lSize: i32,
-    pub lWidthInPixels: i32,
-    pub lLines: i32,
-    pub lDepth: i32,
-    pub lXRes: i32,
-    pub lYRes: i32,
-    pub lCompression: i32,
-    pub guidFormatID: ::windows_sys::core::GUID,
-    pub tymed: i32,
-    pub hFile: isize,
-    pub cbOffset: i32,
-    pub lBufferSize: i32,
-    pub lActiveBuffer: i32,
-    pub lNumBuffers: i32,
-    pub pBaseBuffer: *mut u8,
-    pub pTransferBuffer: *mut u8,
-    pub bTransferDataCB: super::super::Foundation::BOOL,
-    pub bClassDrvAllocBuf: super::super::Foundation::BOOL,
-    pub lClientAddress: isize,
-    pub pIWiaMiniDrvCallBack: IWiaMiniDrvCallBack,
-    pub lImageSize: i32,
-    pub lHeaderSize: i32,
-    pub lItemSize: i32,
-    pub cbWidthInBytes: i32,
-    pub lPage: i32,
-    pub lCurIfdOffset: i32,
-    pub lPrevIfdOffset: i32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for MINIDRV_TRANSFER_CONTEXT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for MINIDRV_TRANSFER_CONTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const MIRRORED: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -440,92 +355,16 @@ pub const POWERMODE_BATTERY: u32 = 2u32;
 pub const POWERMODE_LINE: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const PREFEED: u32 = 256u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct RANGEVALUE {
-    pub lMin: i32,
-    pub lMax: i32,
-    pub lStep: i32,
-}
-impl ::core::marker::Copy for RANGEVALUE {}
-impl ::core::clone::Clone for RANGEVALUE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const RIGHT_JUSTIFIED: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const ROT180: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const ROT270: u32 = 3u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SCANINFO {
-    pub ADF: i32,
-    pub TPA: i32,
-    pub Endorser: i32,
-    pub OpticalXResolution: i32,
-    pub OpticalYResolution: i32,
-    pub BedWidth: i32,
-    pub BedHeight: i32,
-    pub IntensityRange: RANGEVALUE,
-    pub ContrastRange: RANGEVALUE,
-    pub SupportedCompressionType: i32,
-    pub SupportedDataTypes: i32,
-    pub WidthPixels: i32,
-    pub WidthBytes: i32,
-    pub Lines: i32,
-    pub DataType: i32,
-    pub PixelBits: i32,
-    pub Intensity: i32,
-    pub Contrast: i32,
-    pub Xresolution: i32,
-    pub Yresolution: i32,
-    pub Window: SCANWINDOW,
-    pub DitherPattern: i32,
-    pub Negative: i32,
-    pub Mirror: i32,
-    pub AutoBack: i32,
-    pub ColorDitherPattern: i32,
-    pub ToneMap: i32,
-    pub Compression: i32,
-    pub RawDataFormat: i32,
-    pub RawPixelOrder: i32,
-    pub bNeedDataAlignment: i32,
-    pub DelayBetweenRead: i32,
-    pub MaxBufferSize: i32,
-    pub DeviceIOHandles: [super::super::Foundation::HANDLE; 16],
-    pub lReserved: [i32; 4],
-    pub pMicroDriverContext: *mut ::core::ffi::c_void,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SCANINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SCANINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const SCANMODE_FINALSCAN: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const SCANMODE_PREVIEWSCAN: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct SCANWINDOW {
-    pub xPos: i32,
-    pub yPos: i32,
-    pub xExtent: i32,
-    pub yExtent: i32,
-}
-impl ::core::marker::Copy for SCANWINDOW {}
-impl ::core::clone::Clone for SCANWINDOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const SCAN_FINISHED: u32 = 30u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -552,52 +391,12 @@ pub const TOP_JUSTIFIED: u32 = 0u32;
 pub const TRANSPARENCY_DYNAMIC_FRAME_SUPPORT: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const TRANSPARENCY_STATIC_FRAME_SUPPORT: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct TWAIN_CAPABILITY {
-    pub lSize: i32,
-    pub lMSG: i32,
-    pub lCapID: i32,
-    pub lConType: i32,
-    pub lRC: i32,
-    pub lCC: i32,
-    pub lDataSize: i32,
-    pub Data: [u8; 1],
-}
-impl ::core::marker::Copy for TWAIN_CAPABILITY {}
-impl ::core::clone::Clone for TWAIN_CAPABILITY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const TYMED_CALLBACK: u32 = 128u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const TYMED_MULTIPAGE_CALLBACK: u32 = 512u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const TYMED_MULTIPAGE_FILE: u32 = 256u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct VAL {
-    pub lVal: i32,
-    pub dblVal: f64,
-    pub pGuid: *mut ::windows_sys::core::GUID,
-    pub pScanInfo: *mut SCANINFO,
-    pub handle: isize,
-    pub ppButtonNames: *mut *mut u16,
-    pub pHandle: *mut super::super::Foundation::HANDLE,
-    pub lReserved: i32,
-    pub szVal: [super::super::Foundation::CHAR; 255],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for VAL {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for VAL {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WHITEBALANCE_AUTO: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -612,120 +411,8 @@ pub const WHITEBALANCE_MANUAL: u32 = 1u32;
 pub const WHITEBALANCE_ONEPUSH_AUTO: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WHITEBALANCE_TUNGSTEN: u32 = 6u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIAS_CHANGED_VALUE_INFO {
-    pub bChanged: super::super::Foundation::BOOL,
-    pub vt: i32,
-    pub Old: WIAS_CHANGED_VALUE_INFO_1,
-    pub Current: WIAS_CHANGED_VALUE_INFO_0,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIAS_CHANGED_VALUE_INFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIAS_CHANGED_VALUE_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union WIAS_CHANGED_VALUE_INFO_0 {
-    pub lVal: i32,
-    pub fltVal: f32,
-    pub bstrVal: super::super::Foundation::BSTR,
-    pub guidVal: ::windows_sys::core::GUID,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIAS_CHANGED_VALUE_INFO_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIAS_CHANGED_VALUE_INFO_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union WIAS_CHANGED_VALUE_INFO_1 {
-    pub lVal: i32,
-    pub fltVal: f32,
-    pub bstrVal: super::super::Foundation::BSTR,
-    pub guidVal: ::windows_sys::core::GUID,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIAS_CHANGED_VALUE_INFO_1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIAS_CHANGED_VALUE_INFO_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIAS_DOWN_SAMPLE_INFO {
-    pub ulOriginalWidth: u32,
-    pub ulOriginalHeight: u32,
-    pub ulBitsPerPixel: u32,
-    pub ulXRes: u32,
-    pub ulYRes: u32,
-    pub ulDownSampledWidth: u32,
-    pub ulDownSampledHeight: u32,
-    pub ulActualSize: u32,
-    pub ulDestBufSize: u32,
-    pub ulSrcBufSize: u32,
-    pub pSrcBuffer: *mut u8,
-    pub pDestBuffer: *mut u8,
-}
-impl ::core::marker::Copy for WIAS_DOWN_SAMPLE_INFO {}
-impl ::core::clone::Clone for WIAS_DOWN_SAMPLE_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIAS_ENDORSER_INFO {
-    pub ulPageCount: u32,
-    pub ulNumEndorserValues: u32,
-    pub pEndorserValues: *mut WIAS_ENDORSER_VALUE,
-}
-impl ::core::marker::Copy for WIAS_ENDORSER_INFO {}
-impl ::core::clone::Clone for WIAS_ENDORSER_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIAS_ENDORSER_VALUE {
-    pub wszTokenName: ::windows_sys::core::PWSTR,
-    pub wszValue: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for WIAS_ENDORSER_VALUE {}
-impl ::core::clone::Clone for WIAS_ENDORSER_VALUE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIAU_DEBUG_TSTR: &str = "S";
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub type WIAVIDEO_STATE = i32;
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub const WIAVIDEO_NO_VIDEO: WIAVIDEO_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub const WIAVIDEO_CREATING_VIDEO: WIAVIDEO_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub const WIAVIDEO_VIDEO_CREATED: WIAVIDEO_STATE = 3i32;
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub const WIAVIDEO_VIDEO_PLAYING: WIAVIDEO_STATE = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub const WIAVIDEO_VIDEO_PAUSED: WIAVIDEO_STATE = 5i32;
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub const WIAVIDEO_DESTROYING_VIDEO: WIAVIDEO_STATE = 6i32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_ACTION_EVENT: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -762,21 +449,6 @@ pub const WIA_AUTO_CROP_SINGLE: u32 = 1u32;
 pub const WIA_AUTO_DESKEW_OFF: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_AUTO_DESKEW_ON: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_BARCODES {
-    pub Tag: u32,
-    pub Version: u32,
-    pub Size: u32,
-    pub Count: u32,
-    pub Barcodes: [WIA_BARCODE_INFO; 1],
-}
-impl ::core::marker::Copy for WIA_BARCODES {}
-impl ::core::clone::Clone for WIA_BARCODES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_BARCODE_AUTO_SEARCH: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -825,25 +497,6 @@ pub const WIA_BARCODE_HIGH_CAPACITY_COLOR: u32 = 26u32;
 pub const WIA_BARCODE_HORIZONTAL_SEARCH: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_BARCODE_HORIZONTAL_VERTICAL_SEARCH: u32 = 2u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_BARCODE_INFO {
-    pub Size: u32,
-    pub Type: u32,
-    pub Page: u32,
-    pub Confidence: u32,
-    pub XOffset: u32,
-    pub YOffset: u32,
-    pub Rotation: u32,
-    pub Length: u32,
-    pub Text: [u16; 1],
-}
-impl ::core::marker::Copy for WIA_BARCODE_INFO {}
-impl ::core::clone::Clone for WIA_BARCODE_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_BARCODE_INTELLIGENT_MAIL: u32 = 23u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -974,20 +627,6 @@ pub const WIA_COMPRESSION_NONE: u32 = 0u32;
 pub const WIA_COMPRESSION_PNG: u32 = 8u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_DATA_AUTO: u32 = 100u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_DATA_CALLBACK_HEADER {
-    pub lSize: i32,
-    pub guidFormatID: ::windows_sys::core::GUID,
-    pub lBufferSize: i32,
-    pub lPageCount: i32,
-}
-impl ::core::marker::Copy for WIA_DATA_CALLBACK_HEADER {}
-impl ::core::clone::Clone for WIA_DATA_CALLBACK_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_DATA_COLOR: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -1012,26 +651,6 @@ pub const WIA_DATA_RAW_YUV: u32 = 8u32;
 pub const WIA_DATA_RAW_YUVK: u32 = 9u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_DATA_THRESHOLD: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_DATA_TRANSFER_INFO {
-    pub ulSize: u32,
-    pub ulSection: u32,
-    pub ulBufferSize: u32,
-    pub bDoubleBuffer: super::super::Foundation::BOOL,
-    pub ulReserved1: u32,
-    pub ulReserved2: u32,
-    pub ulReserved3: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_DATA_TRANSFER_INFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_DATA_TRANSFER_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_DEPTH_AUTO: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -1050,40 +669,6 @@ pub const WIA_DEVICE_NOT_CONNECTED: u32 = 0u32;
 pub const WIA_DEVINFO_ENUM_ALL: u32 = 15u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_DEVINFO_ENUM_LOCAL: u32 = 16u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_DEV_CAP {
-    pub guid: ::windows_sys::core::GUID,
-    pub ulFlags: u32,
-    pub bstrName: super::super::Foundation::BSTR,
-    pub bstrDescription: super::super::Foundation::BSTR,
-    pub bstrIcon: super::super::Foundation::BSTR,
-    pub bstrCommandline: super::super::Foundation::BSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_DEV_CAP {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_DEV_CAP {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_DEV_CAP_DRV {
-    pub guid: *mut ::windows_sys::core::GUID,
-    pub ulFlags: u32,
-    pub wszName: ::windows_sys::core::PWSTR,
-    pub wszDescription: ::windows_sys::core::PWSTR,
-    pub wszIcon: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for WIA_DEV_CAP_DRV {}
-impl ::core::clone::Clone for WIA_DEV_CAP_DRV {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_DIP_BAUDRATE: u32 = 12u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -1150,25 +735,6 @@ pub const WIA_DIP_VEND_DESC_STR: &str = "Manufacturer";
 pub const WIA_DIP_WIA_VERSION: u32 = 14u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_DIP_WIA_VERSION_STR: &str = "WIA Version";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_DITHER_PATTERN_DATA {
-    pub lSize: i32,
-    pub bstrPatternName: super::super::Foundation::BSTR,
-    pub lPatternWidth: i32,
-    pub lPatternLength: i32,
-    pub cbPattern: i32,
-    pub pbPattern: *mut u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_DITHER_PATTERN_DATA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_DITHER_PATTERN_DATA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_DONT_SHOW_PREVIEW_CONTROL: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -1622,21 +1188,6 @@ pub const WIA_EVENT_STORAGE_CREATED: ::windows_sys::core::GUID = ::windows_sys::
 pub const WIA_EVENT_STORAGE_DELETED: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1581377374, data2: 37776, data3: 17605, data4: [154, 81, 228, 112, 25, 227, 144, 207] };
 pub const WIA_EVENT_TREE_UPDATED: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3380976529, data2: 19122, data3: 19670, data4: [161, 252, 88, 46, 236, 85, 229, 133] };
 pub const WIA_EVENT_VOLUME_INSERT: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2520300541, data2: 53693, data3: 4562, data4: [179, 31, 0, 192, 79, 104, 206, 97] };
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_EXTENDED_TRANSFER_INFO {
-    pub ulSize: u32,
-    pub ulMinBufferSize: u32,
-    pub ulOptimalBufferSize: u32,
-    pub ulMaxBufferSize: u32,
-    pub ulNumBuffers: u32,
-}
-impl ::core::marker::Copy for WIA_EXTENDED_TRANSFER_INFO {}
-impl ::core::clone::Clone for WIA_EXTENDED_TRANSFER_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_FEEDER_CONTROL_AUTO: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -1655,18 +1206,6 @@ pub const WIA_FLAG_NOM: u32 = 0u32;
 pub const WIA_FLAG_NUM_ELEMS: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_FLAG_VALUES: u32 = 1u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_FORMAT_INFO {
-    pub guidFormatID: ::windows_sys::core::GUID,
-    pub lTymed: i32,
-}
-impl ::core::marker::Copy for WIA_FORMAT_INFO {}
-impl ::core::clone::Clone for WIA_FORMAT_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_IMAGEPROC_FILTER_STR: &str = "ImageProcessingFilter";
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -2309,37 +1848,6 @@ pub const WIA_MAJOR_EVENT_PICTURE_DELETED: u32 = 4u32;
 pub const WIA_MAJOR_EVENT_PICTURE_TAKEN: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_MAX_CTX_SIZE: u32 = 16777216u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_MICR {
-    pub Tag: u32,
-    pub Version: u32,
-    pub Size: u32,
-    pub Placeholder: u16,
-    pub Reserved: u16,
-    pub Count: u32,
-    pub Micr: [WIA_MICR_INFO; 1],
-}
-impl ::core::marker::Copy for WIA_MICR {}
-impl ::core::clone::Clone for WIA_MICR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_MICR_INFO {
-    pub Size: u32,
-    pub Page: u32,
-    pub Length: u32,
-    pub Text: [u16; 1],
-}
-impl ::core::marker::Copy for WIA_MICR_INFO {}
-impl ::core::clone::Clone for WIA_MICR_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_MICR_READER_AUTO: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -2500,21 +2008,6 @@ pub const WIA_PAGE_USLEGAL: u32 = 3u32;
 pub const WIA_PAGE_USLETTER: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_PAGE_USSTATEMENT: u32 = 5u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_PATCH_CODES {
-    pub Tag: u32,
-    pub Version: u32,
-    pub Size: u32,
-    pub Count: u32,
-    pub PatchCodes: [WIA_PATCH_CODE_INFO; 1],
-}
-impl ::core::marker::Copy for WIA_PATCH_CODES {}
-impl ::core::clone::Clone for WIA_PATCH_CODES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_PATCH_CODE_1: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -2543,17 +2036,6 @@ pub const WIA_PATCH_CODE_8: u32 = 8u32;
 pub const WIA_PATCH_CODE_9: u32 = 9u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_PATCH_CODE_CUSTOM_BASE: u32 = 32768u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_PATCH_CODE_INFO {
-    pub Type: u32,
-}
-impl ::core::marker::Copy for WIA_PATCH_CODE_INFO {}
-impl ::core::clone::Clone for WIA_PATCH_CODE_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_PATCH_CODE_READER_AUTO: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -2698,198 +2180,6 @@ pub const WIA_PRINT_YEAR: u32 = 1u32;
 pub const WIA_PRIVATE_DEVPROP: u32 = 38914u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_PRIVATE_ITEMPROP: u32 = 71682u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_PROPERTY_CONTEXT {
-    pub cProps: u32,
-    pub pProps: *mut u32,
-    pub pChanged: *mut super::super::Foundation::BOOL,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_CONTEXT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_CONTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_PROPERTY_INFO {
-    pub lAccessFlags: u32,
-    pub vt: u16,
-    pub ValidVal: WIA_PROPERTY_INFO_0,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_INFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union WIA_PROPERTY_INFO_0 {
-    pub Range: WIA_PROPERTY_INFO_0_7,
-    pub RangeFloat: WIA_PROPERTY_INFO_0_6,
-    pub List: WIA_PROPERTY_INFO_0_4,
-    pub ListFloat: WIA_PROPERTY_INFO_0_2,
-    pub ListGuid: WIA_PROPERTY_INFO_0_3,
-    pub ListBStr: WIA_PROPERTY_INFO_0_1,
-    pub Flag: WIA_PROPERTY_INFO_0_0,
-    pub None: WIA_PROPERTY_INFO_0_5,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_INFO_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_INFO_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_PROPERTY_INFO_0_0 {
-    pub Nom: i32,
-    pub ValidBits: i32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_PROPERTY_INFO_0_1 {
-    pub cNumList: i32,
-    pub Nom: super::super::Foundation::BSTR,
-    pub pList: *mut super::super::Foundation::BSTR,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_PROPERTY_INFO_0_2 {
-    pub cNumList: i32,
-    pub Nom: f64,
-    pub pList: *mut u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_2 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_PROPERTY_INFO_0_3 {
-    pub cNumList: i32,
-    pub Nom: ::windows_sys::core::GUID,
-    pub pList: *mut ::windows_sys::core::GUID,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_3 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_PROPERTY_INFO_0_4 {
-    pub cNumList: i32,
-    pub Nom: i32,
-    pub pList: *mut u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_4 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_4 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_PROPERTY_INFO_0_5 {
-    pub Dummy: i32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_5 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_5 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_PROPERTY_INFO_0_6 {
-    pub Min: f64,
-    pub Nom: f64,
-    pub Max: f64,
-    pub Inc: f64,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_6 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_6 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct WIA_PROPERTY_INFO_0_7 {
-    pub Min: i32,
-    pub Nom: i32,
-    pub Max: i32,
-    pub Inc: i32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_7 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_7 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_PROPID_TO_NAME {
-    pub propid: u32,
-    pub pszName: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for WIA_PROPID_TO_NAME {}
-impl ::core::clone::Clone for WIA_PROPID_TO_NAME {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_PROPPAGE_CAMERA_ITEM_GENERAL: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -2922,35 +2212,6 @@ pub const WIA_RANGE_NOM: u32 = 1u32;
 pub const WIA_RANGE_NUM_ELEMS: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_RANGE_STEP: u32 = 3u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub struct WIA_RAW_HEADER {
-    pub Tag: u32,
-    pub Version: u32,
-    pub HeaderSize: u32,
-    pub XRes: u32,
-    pub YRes: u32,
-    pub XExtent: u32,
-    pub YExtent: u32,
-    pub BytesPerLine: u32,
-    pub BitsPerPixel: u32,
-    pub ChannelsPerPixel: u32,
-    pub DataType: u32,
-    pub BitsPerChannel: [u8; 8],
-    pub Compression: u32,
-    pub PhotometricInterp: u32,
-    pub LineOrder: u32,
-    pub RawDataOffset: u32,
-    pub RawDataSize: u32,
-    pub PaletteOffset: u32,
-    pub PaletteSize: u32,
-}
-impl ::core::marker::Copy for WIA_RAW_HEADER {}
-impl ::core::clone::Clone for WIA_RAW_HEADER {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WIA_REGISTER_EVENT_CALLBACK: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
@@ -3148,6 +2409,739 @@ pub const WiaItemTypeVPanorama: u32 = 1024u32;
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub const WiaItemTypeVideo: u32 = 65536u32;
 pub const WiaLog: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2716291927, data2: 34842, data3: 16798, data4: [131, 226, 187, 22, 219, 25, 124, 104] };
+pub const WiaVideo: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 956875725, data2: 17528, data3: 17718, data4: [175, 47, 16, 194, 93, 78, 248, 154] };
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub const g_dwDebugFlags: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub type WIAVIDEO_STATE = i32;
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub const WIAVIDEO_NO_VIDEO: WIAVIDEO_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub const WIAVIDEO_CREATING_VIDEO: WIAVIDEO_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub const WIAVIDEO_VIDEO_CREATED: WIAVIDEO_STATE = 3i32;
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub const WIAVIDEO_VIDEO_PLAYING: WIAVIDEO_STATE = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub const WIAVIDEO_VIDEO_PAUSED: WIAVIDEO_STATE = 5i32;
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub const WIAVIDEO_DESTROYING_VIDEO: WIAVIDEO_STATE = 6i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DEVICEDIALOGDATA {
+    pub cbSize: u32,
+    pub hwndParent: super::super::Foundation::HWND,
+    pub pIWiaItemRoot: IWiaItem,
+    pub dwFlags: u32,
+    pub lIntent: i32,
+    pub lItemCount: i32,
+    pub ppWiaItems: *mut IWiaItem,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DEVICEDIALOGDATA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DEVICEDIALOGDATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct DEVICEDIALOGDATA2 {
+    pub cbSize: u32,
+    pub pIWiaItemRoot: IWiaItem2,
+    pub dwFlags: u32,
+    pub hwndParent: super::super::Foundation::HWND,
+    pub bstrFolderName: ::windows_sys::core::BSTR,
+    pub bstrFilename: ::windows_sys::core::BSTR,
+    pub lNumFiles: i32,
+    pub pbstrFilePaths: *mut ::windows_sys::core::BSTR,
+    pub pWiaItem: IWiaItem2,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for DEVICEDIALOGDATA2 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for DEVICEDIALOGDATA2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct MINIDRV_TRANSFER_CONTEXT {
+    pub lSize: i32,
+    pub lWidthInPixels: i32,
+    pub lLines: i32,
+    pub lDepth: i32,
+    pub lXRes: i32,
+    pub lYRes: i32,
+    pub lCompression: i32,
+    pub guidFormatID: ::windows_sys::core::GUID,
+    pub tymed: i32,
+    pub hFile: isize,
+    pub cbOffset: i32,
+    pub lBufferSize: i32,
+    pub lActiveBuffer: i32,
+    pub lNumBuffers: i32,
+    pub pBaseBuffer: *mut u8,
+    pub pTransferBuffer: *mut u8,
+    pub bTransferDataCB: super::super::Foundation::BOOL,
+    pub bClassDrvAllocBuf: super::super::Foundation::BOOL,
+    pub lClientAddress: isize,
+    pub pIWiaMiniDrvCallBack: IWiaMiniDrvCallBack,
+    pub lImageSize: i32,
+    pub lHeaderSize: i32,
+    pub lItemSize: i32,
+    pub cbWidthInBytes: i32,
+    pub lPage: i32,
+    pub lCurIfdOffset: i32,
+    pub lPrevIfdOffset: i32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for MINIDRV_TRANSFER_CONTEXT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for MINIDRV_TRANSFER_CONTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct RANGEVALUE {
+    pub lMin: i32,
+    pub lMax: i32,
+    pub lStep: i32,
+}
+impl ::core::marker::Copy for RANGEVALUE {}
+impl ::core::clone::Clone for RANGEVALUE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SCANINFO {
+    pub ADF: i32,
+    pub TPA: i32,
+    pub Endorser: i32,
+    pub OpticalXResolution: i32,
+    pub OpticalYResolution: i32,
+    pub BedWidth: i32,
+    pub BedHeight: i32,
+    pub IntensityRange: RANGEVALUE,
+    pub ContrastRange: RANGEVALUE,
+    pub SupportedCompressionType: i32,
+    pub SupportedDataTypes: i32,
+    pub WidthPixels: i32,
+    pub WidthBytes: i32,
+    pub Lines: i32,
+    pub DataType: i32,
+    pub PixelBits: i32,
+    pub Intensity: i32,
+    pub Contrast: i32,
+    pub Xresolution: i32,
+    pub Yresolution: i32,
+    pub Window: SCANWINDOW,
+    pub DitherPattern: i32,
+    pub Negative: i32,
+    pub Mirror: i32,
+    pub AutoBack: i32,
+    pub ColorDitherPattern: i32,
+    pub ToneMap: i32,
+    pub Compression: i32,
+    pub RawDataFormat: i32,
+    pub RawPixelOrder: i32,
+    pub bNeedDataAlignment: i32,
+    pub DelayBetweenRead: i32,
+    pub MaxBufferSize: i32,
+    pub DeviceIOHandles: [super::super::Foundation::HANDLE; 16],
+    pub lReserved: [i32; 4],
+    pub pMicroDriverContext: *mut ::core::ffi::c_void,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SCANINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SCANINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct SCANWINDOW {
+    pub xPos: i32,
+    pub yPos: i32,
+    pub xExtent: i32,
+    pub yExtent: i32,
+}
+impl ::core::marker::Copy for SCANWINDOW {}
+impl ::core::clone::Clone for SCANWINDOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct TWAIN_CAPABILITY {
+    pub lSize: i32,
+    pub lMSG: i32,
+    pub lCapID: i32,
+    pub lConType: i32,
+    pub lRC: i32,
+    pub lCC: i32,
+    pub lDataSize: i32,
+    pub Data: [u8; 1],
+}
+impl ::core::marker::Copy for TWAIN_CAPABILITY {}
+impl ::core::clone::Clone for TWAIN_CAPABILITY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct VAL {
+    pub lVal: i32,
+    pub dblVal: f64,
+    pub pGuid: *mut ::windows_sys::core::GUID,
+    pub pScanInfo: *mut SCANINFO,
+    pub handle: isize,
+    pub ppButtonNames: *mut *mut u16,
+    pub pHandle: *mut super::super::Foundation::HANDLE,
+    pub lReserved: i32,
+    pub szVal: [super::super::Foundation::CHAR; 255],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for VAL {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for VAL {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct WIAS_CHANGED_VALUE_INFO {
+    pub bChanged: super::super::Foundation::BOOL,
+    pub vt: i32,
+    pub Old: WIAS_CHANGED_VALUE_INFO_1,
+    pub Current: WIAS_CHANGED_VALUE_INFO_0,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WIAS_CHANGED_VALUE_INFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WIAS_CHANGED_VALUE_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union WIAS_CHANGED_VALUE_INFO_0 {
+    pub lVal: i32,
+    pub fltVal: f32,
+    pub bstrVal: ::windows_sys::core::BSTR,
+    pub guidVal: ::windows_sys::core::GUID,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WIAS_CHANGED_VALUE_INFO_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WIAS_CHANGED_VALUE_INFO_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union WIAS_CHANGED_VALUE_INFO_1 {
+    pub lVal: i32,
+    pub fltVal: f32,
+    pub bstrVal: ::windows_sys::core::BSTR,
+    pub guidVal: ::windows_sys::core::GUID,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WIAS_CHANGED_VALUE_INFO_1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WIAS_CHANGED_VALUE_INFO_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIAS_DOWN_SAMPLE_INFO {
+    pub ulOriginalWidth: u32,
+    pub ulOriginalHeight: u32,
+    pub ulBitsPerPixel: u32,
+    pub ulXRes: u32,
+    pub ulYRes: u32,
+    pub ulDownSampledWidth: u32,
+    pub ulDownSampledHeight: u32,
+    pub ulActualSize: u32,
+    pub ulDestBufSize: u32,
+    pub ulSrcBufSize: u32,
+    pub pSrcBuffer: *mut u8,
+    pub pDestBuffer: *mut u8,
+}
+impl ::core::marker::Copy for WIAS_DOWN_SAMPLE_INFO {}
+impl ::core::clone::Clone for WIAS_DOWN_SAMPLE_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIAS_ENDORSER_INFO {
+    pub ulPageCount: u32,
+    pub ulNumEndorserValues: u32,
+    pub pEndorserValues: *mut WIAS_ENDORSER_VALUE,
+}
+impl ::core::marker::Copy for WIAS_ENDORSER_INFO {}
+impl ::core::clone::Clone for WIAS_ENDORSER_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIAS_ENDORSER_VALUE {
+    pub wszTokenName: ::windows_sys::core::PWSTR,
+    pub wszValue: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for WIAS_ENDORSER_VALUE {}
+impl ::core::clone::Clone for WIAS_ENDORSER_VALUE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_BARCODES {
+    pub Tag: u32,
+    pub Version: u32,
+    pub Size: u32,
+    pub Count: u32,
+    pub Barcodes: [WIA_BARCODE_INFO; 1],
+}
+impl ::core::marker::Copy for WIA_BARCODES {}
+impl ::core::clone::Clone for WIA_BARCODES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_BARCODE_INFO {
+    pub Size: u32,
+    pub Type: u32,
+    pub Page: u32,
+    pub Confidence: u32,
+    pub XOffset: u32,
+    pub YOffset: u32,
+    pub Rotation: u32,
+    pub Length: u32,
+    pub Text: [u16; 1],
+}
+impl ::core::marker::Copy for WIA_BARCODE_INFO {}
+impl ::core::clone::Clone for WIA_BARCODE_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_DATA_CALLBACK_HEADER {
+    pub lSize: i32,
+    pub guidFormatID: ::windows_sys::core::GUID,
+    pub lBufferSize: i32,
+    pub lPageCount: i32,
+}
+impl ::core::marker::Copy for WIA_DATA_CALLBACK_HEADER {}
+impl ::core::clone::Clone for WIA_DATA_CALLBACK_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct WIA_DATA_TRANSFER_INFO {
+    pub ulSize: u32,
+    pub ulSection: u32,
+    pub ulBufferSize: u32,
+    pub bDoubleBuffer: super::super::Foundation::BOOL,
+    pub ulReserved1: u32,
+    pub ulReserved2: u32,
+    pub ulReserved3: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WIA_DATA_TRANSFER_INFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WIA_DATA_TRANSFER_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_DEV_CAP {
+    pub guid: ::windows_sys::core::GUID,
+    pub ulFlags: u32,
+    pub bstrName: ::windows_sys::core::BSTR,
+    pub bstrDescription: ::windows_sys::core::BSTR,
+    pub bstrIcon: ::windows_sys::core::BSTR,
+    pub bstrCommandline: ::windows_sys::core::BSTR,
+}
+impl ::core::marker::Copy for WIA_DEV_CAP {}
+impl ::core::clone::Clone for WIA_DEV_CAP {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_DEV_CAP_DRV {
+    pub guid: *mut ::windows_sys::core::GUID,
+    pub ulFlags: u32,
+    pub wszName: ::windows_sys::core::PWSTR,
+    pub wszDescription: ::windows_sys::core::PWSTR,
+    pub wszIcon: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for WIA_DEV_CAP_DRV {}
+impl ::core::clone::Clone for WIA_DEV_CAP_DRV {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_DITHER_PATTERN_DATA {
+    pub lSize: i32,
+    pub bstrPatternName: ::windows_sys::core::BSTR,
+    pub lPatternWidth: i32,
+    pub lPatternLength: i32,
+    pub cbPattern: i32,
+    pub pbPattern: *mut u8,
+}
+impl ::core::marker::Copy for WIA_DITHER_PATTERN_DATA {}
+impl ::core::clone::Clone for WIA_DITHER_PATTERN_DATA {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_EXTENDED_TRANSFER_INFO {
+    pub ulSize: u32,
+    pub ulMinBufferSize: u32,
+    pub ulOptimalBufferSize: u32,
+    pub ulMaxBufferSize: u32,
+    pub ulNumBuffers: u32,
+}
+impl ::core::marker::Copy for WIA_EXTENDED_TRANSFER_INFO {}
+impl ::core::clone::Clone for WIA_EXTENDED_TRANSFER_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_FORMAT_INFO {
+    pub guidFormatID: ::windows_sys::core::GUID,
+    pub lTymed: i32,
+}
+impl ::core::marker::Copy for WIA_FORMAT_INFO {}
+impl ::core::clone::Clone for WIA_FORMAT_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_MICR {
+    pub Tag: u32,
+    pub Version: u32,
+    pub Size: u32,
+    pub Placeholder: u16,
+    pub Reserved: u16,
+    pub Count: u32,
+    pub Micr: [WIA_MICR_INFO; 1],
+}
+impl ::core::marker::Copy for WIA_MICR {}
+impl ::core::clone::Clone for WIA_MICR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_MICR_INFO {
+    pub Size: u32,
+    pub Page: u32,
+    pub Length: u32,
+    pub Text: [u16; 1],
+}
+impl ::core::marker::Copy for WIA_MICR_INFO {}
+impl ::core::clone::Clone for WIA_MICR_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_PATCH_CODES {
+    pub Tag: u32,
+    pub Version: u32,
+    pub Size: u32,
+    pub Count: u32,
+    pub PatchCodes: [WIA_PATCH_CODE_INFO; 1],
+}
+impl ::core::marker::Copy for WIA_PATCH_CODES {}
+impl ::core::clone::Clone for WIA_PATCH_CODES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_PATCH_CODE_INFO {
+    pub Type: u32,
+}
+impl ::core::marker::Copy for WIA_PATCH_CODE_INFO {}
+impl ::core::clone::Clone for WIA_PATCH_CODE_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct WIA_PROPERTY_CONTEXT {
+    pub cProps: u32,
+    pub pProps: *mut u32,
+    pub pChanged: *mut super::super::Foundation::BOOL,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for WIA_PROPERTY_CONTEXT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for WIA_PROPERTY_CONTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct WIA_PROPERTY_INFO {
+    pub lAccessFlags: u32,
+    pub vt: super::super::System::Com::VARENUM,
+    pub ValidVal: WIA_PROPERTY_INFO_0,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for WIA_PROPERTY_INFO {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for WIA_PROPERTY_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub union WIA_PROPERTY_INFO_0 {
+    pub Range: WIA_PROPERTY_INFO_0_7,
+    pub RangeFloat: WIA_PROPERTY_INFO_0_6,
+    pub List: WIA_PROPERTY_INFO_0_4,
+    pub ListFloat: WIA_PROPERTY_INFO_0_2,
+    pub ListGuid: WIA_PROPERTY_INFO_0_3,
+    pub ListBStr: WIA_PROPERTY_INFO_0_1,
+    pub Flag: WIA_PROPERTY_INFO_0_0,
+    pub None: WIA_PROPERTY_INFO_0_5,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for WIA_PROPERTY_INFO_0 {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for WIA_PROPERTY_INFO_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct WIA_PROPERTY_INFO_0_0 {
+    pub Nom: i32,
+    pub ValidBits: i32,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_0 {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct WIA_PROPERTY_INFO_0_1 {
+    pub cNumList: i32,
+    pub Nom: ::windows_sys::core::BSTR,
+    pub pList: *mut ::windows_sys::core::BSTR,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_1 {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct WIA_PROPERTY_INFO_0_2 {
+    pub cNumList: i32,
+    pub Nom: f64,
+    pub pList: *mut u8,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_2 {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct WIA_PROPERTY_INFO_0_3 {
+    pub cNumList: i32,
+    pub Nom: ::windows_sys::core::GUID,
+    pub pList: *mut ::windows_sys::core::GUID,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_3 {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct WIA_PROPERTY_INFO_0_4 {
+    pub cNumList: i32,
+    pub Nom: i32,
+    pub pList: *mut u8,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_4 {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_4 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct WIA_PROPERTY_INFO_0_5 {
+    pub Dummy: i32,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_5 {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_5 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct WIA_PROPERTY_INFO_0_6 {
+    pub Min: f64,
+    pub Nom: f64,
+    pub Max: f64,
+    pub Inc: f64,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_6 {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_6 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_System_Com\"`*"]
+#[cfg(feature = "Win32_System_Com")]
+pub struct WIA_PROPERTY_INFO_0_7 {
+    pub Min: i32,
+    pub Nom: i32,
+    pub Max: i32,
+    pub Inc: i32,
+}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::marker::Copy for WIA_PROPERTY_INFO_0_7 {}
+#[cfg(feature = "Win32_System_Com")]
+impl ::core::clone::Clone for WIA_PROPERTY_INFO_0_7 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_PROPID_TO_NAME {
+    pub propid: u32,
+    pub pszName: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for WIA_PROPID_TO_NAME {}
+impl ::core::clone::Clone for WIA_PROPID_TO_NAME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
+pub struct WIA_RAW_HEADER {
+    pub Tag: u32,
+    pub Version: u32,
+    pub HeaderSize: u32,
+    pub XRes: u32,
+    pub YRes: u32,
+    pub XExtent: u32,
+    pub YExtent: u32,
+    pub BytesPerLine: u32,
+    pub BitsPerPixel: u32,
+    pub ChannelsPerPixel: u32,
+    pub DataType: u32,
+    pub BitsPerChannel: [u8; 8],
+    pub Compression: u32,
+    pub PhotometricInterp: u32,
+    pub LineOrder: u32,
+    pub RawDataOffset: u32,
+    pub RawDataSize: u32,
+    pub PaletteOffset: u32,
+    pub PaletteSize: u32,
+}
+impl ::core::marker::Copy for WIA_RAW_HEADER {}
+impl ::core::clone::Clone for WIA_RAW_HEADER {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
 pub struct WiaTransferParams {
@@ -3162,6 +3156,6 @@ impl ::core::clone::Clone for WiaTransferParams {
         *self
     }
 }
-pub const WiaVideo: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 956875725, data2: 17528, data3: 17718, data4: [175, 47, 16, 194, 93, 78, 248, 154] };
-#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`*"]
-pub const g_dwDebugFlags: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Devices_ImageAcquisition\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type DeviceDialogFunction = ::core::option::Option<unsafe extern "system" fn(param0: *mut DEVICEDIALOGDATA) -> ::windows_sys::core::HRESULT>;

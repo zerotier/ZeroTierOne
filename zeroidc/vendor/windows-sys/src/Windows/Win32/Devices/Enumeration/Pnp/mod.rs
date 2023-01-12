@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
     pub fn SwDeviceClose(hswdevice: HSWDEVICE);
@@ -24,23 +24,6 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
     pub fn SwMemFree(pmem: *const ::core::ffi::c_void);
 }
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const ADDRESS_FAMILY_VALUE_NAME: &str = "AddressFamily";
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const FAULT_ACTION_SPECIFIC_BASE: u32 = 600u32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const FAULT_ACTION_SPECIFIC_MAX: u32 = 899u32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const FAULT_DEVICE_INTERNAL_ERROR: u32 = 501u32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const FAULT_INVALID_ACTION: u32 = 401u32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const FAULT_INVALID_ARG: u32 = 402u32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const FAULT_INVALID_SEQUENCE_NUMBER: u32 = 403u32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const FAULT_INVALID_VARIABLE: u32 = 404u32;
-pub type HSWDEVICE = isize;
 pub type IUPnPAddressFamilyControl = *mut ::core::ffi::c_void;
 pub type IUPnPAsyncResult = *mut ::core::ffi::c_void;
 pub type IUPnPDescriptionDocument = *mut ::core::ffi::c_void;
@@ -68,51 +51,23 @@ pub type IUPnPServiceDocumentAccess = *mut ::core::ffi::c_void;
 pub type IUPnPServiceEnumProperty = *mut ::core::ffi::c_void;
 pub type IUPnPServices = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const ADDRESS_FAMILY_VALUE_NAME: &str = "AddressFamily";
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const FAULT_ACTION_SPECIFIC_BASE: u32 = 600u32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const FAULT_ACTION_SPECIFIC_MAX: u32 = 899u32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const FAULT_DEVICE_INTERNAL_ERROR: u32 = 501u32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const FAULT_INVALID_ACTION: u32 = 401u32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const FAULT_INVALID_ARG: u32 = 402u32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const FAULT_INVALID_SEQUENCE_NUMBER: u32 = 403u32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const FAULT_INVALID_VARIABLE: u32 = 404u32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
 pub const REMOTE_ADDRESS_VALUE_NAME: &str = "RemoteAddress";
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub type SW_DEVICE_CAPABILITIES = i32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const SWDeviceCapabilitiesNone: SW_DEVICE_CAPABILITIES = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const SWDeviceCapabilitiesRemovable: SW_DEVICE_CAPABILITIES = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const SWDeviceCapabilitiesSilentInstall: SW_DEVICE_CAPABILITIES = 2i32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const SWDeviceCapabilitiesNoDisplayInUI: SW_DEVICE_CAPABILITIES = 4i32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const SWDeviceCapabilitiesDriverRequired: SW_DEVICE_CAPABILITIES = 8i32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub type SW_DEVICE_CREATE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hswdevice: HSWDEVICE, createresult: ::windows_sys::core::HRESULT, pcontext: *const ::core::ffi::c_void, pszdeviceinstanceid: ::windows_sys::core::PCWSTR)>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`, `\"Win32_Foundation\"`, `\"Win32_Security\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
-pub struct SW_DEVICE_CREATE_INFO {
-    pub cbSize: u32,
-    pub pszInstanceId: ::windows_sys::core::PCWSTR,
-    pub pszzHardwareIds: ::windows_sys::core::PCWSTR,
-    pub pszzCompatibleIds: ::windows_sys::core::PCWSTR,
-    pub pContainerId: *const ::windows_sys::core::GUID,
-    pub CapabilityFlags: u32,
-    pub pszDeviceDescription: ::windows_sys::core::PCWSTR,
-    pub pszDeviceLocation: ::windows_sys::core::PCWSTR,
-    pub pSecurityDescriptor: *const super::super::super::Security::SECURITY_DESCRIPTOR,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
-impl ::core::marker::Copy for SW_DEVICE_CREATE_INFO {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
-impl ::core::clone::Clone for SW_DEVICE_CREATE_INFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub type SW_DEVICE_LIFETIME = i32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const SWDeviceLifetimeHandle: SW_DEVICE_LIFETIME = 0i32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const SWDeviceLifetimeParentPresent: SW_DEVICE_LIFETIME = 1i32;
-#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
-pub const SWDeviceLifetimeMax: SW_DEVICE_LIFETIME = 2i32;
 #[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
 pub const UPNP_ADDRESSFAMILY_BOTH: u32 = 3u32;
 #[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
@@ -199,3 +154,48 @@ pub const UPnPRegistrar: ::windows_sys::core::GUID = ::windows_sys::core::GUID {
 pub const UPnPRemoteEndpointInfo: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 777946345, data2: 16457, data3: 16964, data4: [183, 40, 45, 36, 34, 113, 87, 199] };
 pub const UPnPService: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3324295829, data2: 64459, data3: 17417, data4: [140, 3, 140, 206, 236, 83, 62, 241] };
 pub const UPnPServices: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3233565514, data2: 41990, data3: 20220, data4: [147, 47, 184, 84, 107, 129, 0, 204] };
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub type SW_DEVICE_CAPABILITIES = i32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const SWDeviceCapabilitiesNone: SW_DEVICE_CAPABILITIES = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const SWDeviceCapabilitiesRemovable: SW_DEVICE_CAPABILITIES = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const SWDeviceCapabilitiesSilentInstall: SW_DEVICE_CAPABILITIES = 2i32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const SWDeviceCapabilitiesNoDisplayInUI: SW_DEVICE_CAPABILITIES = 4i32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const SWDeviceCapabilitiesDriverRequired: SW_DEVICE_CAPABILITIES = 8i32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub type SW_DEVICE_LIFETIME = i32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const SWDeviceLifetimeHandle: SW_DEVICE_LIFETIME = 0i32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const SWDeviceLifetimeParentPresent: SW_DEVICE_LIFETIME = 1i32;
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub const SWDeviceLifetimeMax: SW_DEVICE_LIFETIME = 2i32;
+pub type HSWDEVICE = isize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`, `\"Win32_Foundation\"`, `\"Win32_Security\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
+pub struct SW_DEVICE_CREATE_INFO {
+    pub cbSize: u32,
+    pub pszInstanceId: ::windows_sys::core::PCWSTR,
+    pub pszzHardwareIds: ::windows_sys::core::PCWSTR,
+    pub pszzCompatibleIds: ::windows_sys::core::PCWSTR,
+    pub pContainerId: *const ::windows_sys::core::GUID,
+    pub CapabilityFlags: u32,
+    pub pszDeviceDescription: ::windows_sys::core::PCWSTR,
+    pub pszDeviceLocation: ::windows_sys::core::PCWSTR,
+    pub pSecurityDescriptor: *const super::super::super::Security::SECURITY_DESCRIPTOR,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
+impl ::core::marker::Copy for SW_DEVICE_CREATE_INFO {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
+impl ::core::clone::Clone for SW_DEVICE_CREATE_INFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_Devices_Enumeration_Pnp\"`*"]
+pub type SW_DEVICE_CREATE_CALLBACK = ::core::option::Option<unsafe extern "system" fn(hswdevice: HSWDEVICE, createresult: ::windows_sys::core::HRESULT, pcontext: *const ::core::ffi::c_void, pszdeviceinstanceid: ::windows_sys::core::PCWSTR)>;

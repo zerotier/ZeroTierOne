@@ -1,5 +1,265 @@
+pub type IEnumSpObjectTokens = *mut ::core::ffi::c_void;
+pub type ISpAudio = *mut ::core::ffi::c_void;
+pub type ISpContainerLexicon = *mut ::core::ffi::c_void;
+pub type ISpDataKey = *mut ::core::ffi::c_void;
+pub type ISpDisplayAlternates = *mut ::core::ffi::c_void;
+pub type ISpEnginePronunciation = *mut ::core::ffi::c_void;
+pub type ISpEventSink = *mut ::core::ffi::c_void;
+pub type ISpEventSource = *mut ::core::ffi::c_void;
+pub type ISpEventSource2 = *mut ::core::ffi::c_void;
+pub type ISpGrammarBuilder = *mut ::core::ffi::c_void;
+pub type ISpGrammarBuilder2 = *mut ::core::ffi::c_void;
+pub type ISpLexicon = *mut ::core::ffi::c_void;
+pub type ISpMMSysAudio = *mut ::core::ffi::c_void;
+pub type ISpNotifyCallback = *mut ::core::ffi::c_void;
+pub type ISpNotifySink = *mut ::core::ffi::c_void;
+pub type ISpNotifySource = *mut ::core::ffi::c_void;
+pub type ISpNotifyTranslator = *mut ::core::ffi::c_void;
+pub type ISpObjectToken = *mut ::core::ffi::c_void;
+pub type ISpObjectTokenCategory = *mut ::core::ffi::c_void;
+pub type ISpObjectTokenInit = *mut ::core::ffi::c_void;
+pub type ISpObjectWithToken = *mut ::core::ffi::c_void;
+pub type ISpPhoneConverter = *mut ::core::ffi::c_void;
+pub type ISpPhoneticAlphabetConverter = *mut ::core::ffi::c_void;
+pub type ISpPhoneticAlphabetSelection = *mut ::core::ffi::c_void;
+pub type ISpPhrase = *mut ::core::ffi::c_void;
+pub type ISpPhrase2 = *mut ::core::ffi::c_void;
+pub type ISpPhraseAlt = *mut ::core::ffi::c_void;
+pub type ISpProperties = *mut ::core::ffi::c_void;
+pub type ISpRecoContext = *mut ::core::ffi::c_void;
+pub type ISpRecoContext2 = *mut ::core::ffi::c_void;
+pub type ISpRecoGrammar = *mut ::core::ffi::c_void;
+pub type ISpRecoGrammar2 = *mut ::core::ffi::c_void;
+pub type ISpRecoResult = *mut ::core::ffi::c_void;
+pub type ISpRecoResult2 = *mut ::core::ffi::c_void;
+pub type ISpRecognizer = *mut ::core::ffi::c_void;
+pub type ISpRecognizer2 = *mut ::core::ffi::c_void;
+pub type ISpRegDataKey = *mut ::core::ffi::c_void;
+pub type ISpResourceManager = *mut ::core::ffi::c_void;
+pub type ISpSerializeState = *mut ::core::ffi::c_void;
+pub type ISpShortcut = *mut ::core::ffi::c_void;
+pub type ISpStream = *mut ::core::ffi::c_void;
+pub type ISpStreamFormat = *mut ::core::ffi::c_void;
+pub type ISpStreamFormatConverter = *mut ::core::ffi::c_void;
+pub type ISpTranscript = *mut ::core::ffi::c_void;
+pub type ISpVoice = *mut ::core::ffi::c_void;
+pub type ISpXMLRecoResult = *mut ::core::ffi::c_void;
+pub type ISpeechAudio = *mut ::core::ffi::c_void;
+pub type ISpeechAudioBufferInfo = *mut ::core::ffi::c_void;
+pub type ISpeechAudioFormat = *mut ::core::ffi::c_void;
+pub type ISpeechAudioStatus = *mut ::core::ffi::c_void;
+pub type ISpeechBaseStream = *mut ::core::ffi::c_void;
+pub type ISpeechCustomStream = *mut ::core::ffi::c_void;
+pub type ISpeechDataKey = *mut ::core::ffi::c_void;
+pub type ISpeechFileStream = *mut ::core::ffi::c_void;
+pub type ISpeechGrammarRule = *mut ::core::ffi::c_void;
+pub type ISpeechGrammarRuleState = *mut ::core::ffi::c_void;
+pub type ISpeechGrammarRuleStateTransition = *mut ::core::ffi::c_void;
+pub type ISpeechGrammarRuleStateTransitions = *mut ::core::ffi::c_void;
+pub type ISpeechGrammarRules = *mut ::core::ffi::c_void;
+pub type ISpeechLexicon = *mut ::core::ffi::c_void;
+pub type ISpeechLexiconPronunciation = *mut ::core::ffi::c_void;
+pub type ISpeechLexiconPronunciations = *mut ::core::ffi::c_void;
+pub type ISpeechLexiconWord = *mut ::core::ffi::c_void;
+pub type ISpeechLexiconWords = *mut ::core::ffi::c_void;
+pub type ISpeechMMSysAudio = *mut ::core::ffi::c_void;
+pub type ISpeechMemoryStream = *mut ::core::ffi::c_void;
+pub type ISpeechObjectToken = *mut ::core::ffi::c_void;
+pub type ISpeechObjectTokenCategory = *mut ::core::ffi::c_void;
+pub type ISpeechObjectTokens = *mut ::core::ffi::c_void;
+pub type ISpeechPhoneConverter = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseAlternate = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseAlternates = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseElement = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseElements = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseInfo = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseInfoBuilder = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseProperties = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseProperty = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseReplacement = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseReplacements = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseRule = *mut ::core::ffi::c_void;
+pub type ISpeechPhraseRules = *mut ::core::ffi::c_void;
+pub type ISpeechRecoContext = *mut ::core::ffi::c_void;
+pub type ISpeechRecoGrammar = *mut ::core::ffi::c_void;
+pub type ISpeechRecoResult = *mut ::core::ffi::c_void;
+pub type ISpeechRecoResult2 = *mut ::core::ffi::c_void;
+pub type ISpeechRecoResultDispatch = *mut ::core::ffi::c_void;
+pub type ISpeechRecoResultTimes = *mut ::core::ffi::c_void;
+pub type ISpeechRecognizer = *mut ::core::ffi::c_void;
+pub type ISpeechRecognizerStatus = *mut ::core::ffi::c_void;
+pub type ISpeechResourceLoader = *mut ::core::ffi::c_void;
+pub type ISpeechTextSelectionInformation = *mut ::core::ffi::c_void;
+pub type ISpeechVoice = *mut ::core::ffi::c_void;
+pub type ISpeechVoiceStatus = *mut ::core::ffi::c_void;
+pub type ISpeechWaveFormatEx = *mut ::core::ffi::c_void;
+pub type ISpeechXMLRecoResult = *mut ::core::ffi::c_void;
+pub type _ISpeechRecoContextEvents = *mut ::core::ffi::c_void;
+pub type _ISpeechVoiceEvents = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const DEFAULT_WEIGHT: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SAPI_ERROR_BASE: u32 = 20480u32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPALTERNATESCLSID: &str = "AlternatesCLSID";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPCAT_APPLEXICONS: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\AppLexicons";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPCAT_AUDIOIN: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\AudioInput";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPCAT_AUDIOOUT: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\AudioOutput";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPCAT_PHONECONVERTERS: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\PhoneConverters";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPCAT_RECOGNIZERS: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Recognizers";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPCAT_RECOPROFILES: &str = "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Speech\\RecoProfiles";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPCAT_TEXTNORMALIZERS: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\TextNormalizers";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPCAT_VOICES: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Voices";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPCURRENT_USER_LEXICON_TOKEN_ID: &str = "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Speech\\CurrentUserLexicon";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPCURRENT_USER_SHORTCUT_TOKEN_ID: &str = "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Speech\\CurrentUserShortcut";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDICTATION: &str = "*";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDUI_AddRemoveWord: &str = "AddRemoveWord";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDUI_AudioProperties: &str = "AudioProperties";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDUI_AudioVolume: &str = "AudioVolume";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDUI_EngineProperties: &str = "EngineProperties";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDUI_MicTraining: &str = "MicTraining";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDUI_RecoProfileProperties: &str = "RecoProfileProperties";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDUI_ShareData: &str = "ShareData";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDUI_Tutorial: &str = "Tutorial";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDUI_UserEnrollment: &str = "UserEnrollment";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPDUI_UserTraining: &str = "UserTraining";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPINFDICTATION: &str = "*+";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPMMSYS_AUDIO_IN_TOKEN_ID: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\AudioInput\\TokenEnums\\MMAudioIn\\";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPMMSYS_AUDIO_OUT_TOKEN_ID: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\AudioOutput\\TokenEnums\\MMAudioOut\\";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPPROP_ADAPTATION_ON: &str = "AdaptationOn";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPPROP_COMPLEX_RESPONSE_SPEED: &str = "ComplexResponseSpeed";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPPROP_HIGH_CONFIDENCE_THRESHOLD: &str = "HighConfidenceThreshold";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPPROP_LOW_CONFIDENCE_THRESHOLD: &str = "LowConfidenceThreshold";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPPROP_NORMAL_CONFIDENCE_THRESHOLD: &str = "NormalConfidenceThreshold";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPPROP_PERSISTED_BACKGROUND_ADAPTATION: &str = "PersistedBackgroundAdaptation";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPPROP_PERSISTED_LANGUAGE_MODEL_ADAPTATION: &str = "PersistedLanguageModelAdaptation";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPPROP_RESOURCE_USAGE: &str = "ResourceUsage";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPPROP_RESPONSE_SPEED: &str = "ResponseSpeed";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPPROP_UX_IS_LISTENING: &str = "UXIsListening";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPRECOEXTENSION: &str = "RecoExtension";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPREG_LOCAL_MACHINE_ROOT: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPREG_SAFE_USER_TOKENS: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\UserTokens";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPREG_USER_ROOT: &str = "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Speech";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPRP_NORMAL: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPTOKENKEY_ATTRIBUTES: &str = "Attributes";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPTOKENKEY_AUDIO_LATENCY_TRUNCATE: &str = "LatencyTruncateThreshold";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPTOKENKEY_AUDIO_LATENCY_UPDATE_INTERVAL: &str = "LatencyUpdateInterval";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPTOKENKEY_AUDIO_LATENCY_WARNING: &str = "LatencyWarningThreshold";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPTOKENKEY_FILES: &str = "Files";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPTOKENKEY_RETAINEDAUDIO: &str = "SecondsPerRetainedAudioEvent";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPTOKENKEY_UI: &str = "UI";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPTOKENVALUE_CLSID: &str = "CLSID";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPTOPIC_SPELLING: &str = "Spelling";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPVOICECATEGORY_TTSRATE: &str = "DefaultTTSRate";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SPWILDCARD: &str = "...";
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SP_EMULATE_RESULT: u32 = 1073741824u32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SP_LOW_CONFIDENCE: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SP_MAX_LANGIDS: u32 = 20u32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SP_MAX_PRON_LENGTH: u32 = 384u32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SP_MAX_WORD_LENGTH: u32 = 128u32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SP_NORMAL_CONFIDENCE: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SP_STREAMPOS_ASAP: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SP_STREAMPOS_REALTIME: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SR_LOCALIZED_DESCRIPTION: &str = "Description";
+pub const SpAudioFormat: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2667145328, data2: 57696, data3: 18322, data4: [130, 13, 72, 207, 6, 73, 228, 236] };
+pub const SpCompressedLexicon: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2425370390, data2: 12098, data3: 4563, data4: [156, 38, 0, 192, 79, 142, 248, 124] };
+pub const SpCustomStream: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2378101055, data2: 6472, data3: 19112, data4: [140, 240, 4, 142, 235, 237, 149, 216] };
+pub const SpFileStream: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2490897075, data2: 10977, data3: 17988, data4: [186, 134, 158, 144, 222, 215, 236, 145] };
+pub const SpInProcRecoContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1940744258, data2: 44256, data3: 17896, data4: [164, 221, 135, 149, 136, 26, 44, 42] };
+pub const SpInprocRecognizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1102617451, data2: 37785, data3: 4562, data4: [150, 35, 0, 192, 79, 142, 230, 40] };
+pub const SpLexicon: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 106292118, data2: 9680, data3: 4563, data4: [156, 38, 0, 192, 79, 142, 248, 124] };
+pub const SpMMAudioEnum: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2870513824, data2: 59679, data3: 4562, data4: [187, 145, 0, 192, 79, 142, 230, 192] };
+pub const SpMMAudioIn: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3476893264, data2: 21490, data3: 4562, data4: [150, 12, 0, 192, 79, 142, 230, 40] };
+pub const SpMMAudioOut: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2831581419, data2: 15666, data3: 4562, data4: [158, 231, 0, 192, 79, 121, 115, 150] };
+pub const SpMemoryStream: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1605889917, data2: 57332, data3: 18058, data4: [182, 183, 47, 203, 209, 136, 249, 148] };
+pub const SpNotifyTranslator: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3803075442, data2: 23872, data3: 4562, data4: [150, 14, 0, 192, 79, 142, 230, 40] };
+pub const SpNullPhoneConverter: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1163863273, data2: 29590, data3: 18966, data4: [151, 21, 124, 15, 219, 227, 239, 227] };
+pub const SpObjectToken: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4014020434, data2: 14134, data3: 19636, data4: [156, 140, 142, 244, 204, 181, 142, 254] };
+pub const SpObjectTokenCategory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2836404351, data2: 3194, data3: 17836, data4: [146, 204, 89, 237, 175, 183, 123, 83] };
+pub const SpPhoneConverter: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2441475907, data2: 4419, data3: 19496, data4: [134, 181, 191, 241, 79, 32, 229, 200] };
+pub const SpPhoneticAlphabetConverter: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1329676582, data2: 57315, data3: 17961, data4: [153, 238, 121, 121, 120, 49, 126, 173] };
+pub const SpPhraseInfoBuilder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3258958477, data2: 50527, data3: 18208, data4: [139, 50, 145, 247, 60, 43, 213, 209] };
+pub const SpResourceManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2524222323, data2: 13201, data3: 4562, data4: [158, 227, 0, 192, 79, 121, 115, 150] };
+pub const SpSharedRecoContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1193304580, data2: 24266, data3: 4562, data4: [150, 15, 0, 192, 79, 142, 230, 40] };
+pub const SpSharedRecognizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1005471888, data2: 20457, data3: 18999, data4: [140, 30, 94, 126, 18, 121, 28, 31] };
+pub const SpShortcut: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 225586970, data2: 40911, data3: 20066, data4: [150, 216, 109, 248, 240, 26, 38, 170] };
+pub const SpStream: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1901960281, data2: 17474, data3: 4562, data4: [150, 5, 0, 192, 79, 142, 230, 40] };
+pub const SpStreamFormatConverter: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1880331322, data2: 58092, data3: 4562, data4: [160, 134, 0, 192, 79, 142, 249, 181] };
+pub const SpTextSelectionInformation: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 261227274, data2: 52221, data3: 19128, data4: [161, 100, 255, 89, 133, 84, 127, 246] };
+pub const SpUnCompressedLexicon: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3387128853, data2: 57234, data3: 18215, data4: [133, 214, 114, 229, 238, 182, 153, 90] };
+pub const SpVoice: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2524222327, data2: 13201, data3: 4562, data4: [158, 227, 0, 192, 79, 121, 115, 150] };
+pub const SpWaveFormatEx: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3348780876, data2: 25534, data3: 17593, data4: [128, 31, 40, 63, 135, 248, 152, 190] };
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const SpeechAllElements: i32 = -1i32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const Speech_Default_Weight: f32 = 1f32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const Speech_Max_Pron_Length: i32 = 384i32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const Speech_Max_Word_Length: i32 = 128i32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const Speech_StreamPos_Asap: i32 = 0i32;
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub const Speech_StreamPos_RealTime: i32 = -1i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type DISPIDSPRG = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -786,102 +1046,6 @@ pub type DISPID_SpeechXMLRecoResult = i32;
 pub const DISPID_SRRGetXMLResult: DISPID_SpeechXMLRecoResult = 10i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const DISPID_SRRGetXMLErrorInfo: DISPID_SpeechXMLRecoResult = 11i32;
-pub type IEnumSpObjectTokens = *mut ::core::ffi::c_void;
-pub type ISpAudio = *mut ::core::ffi::c_void;
-pub type ISpContainerLexicon = *mut ::core::ffi::c_void;
-pub type ISpDataKey = *mut ::core::ffi::c_void;
-pub type ISpDisplayAlternates = *mut ::core::ffi::c_void;
-pub type ISpEnginePronunciation = *mut ::core::ffi::c_void;
-pub type ISpEventSink = *mut ::core::ffi::c_void;
-pub type ISpEventSource = *mut ::core::ffi::c_void;
-pub type ISpEventSource2 = *mut ::core::ffi::c_void;
-pub type ISpGrammarBuilder = *mut ::core::ffi::c_void;
-pub type ISpGrammarBuilder2 = *mut ::core::ffi::c_void;
-pub type ISpLexicon = *mut ::core::ffi::c_void;
-pub type ISpMMSysAudio = *mut ::core::ffi::c_void;
-pub type ISpNotifyCallback = *mut ::core::ffi::c_void;
-pub type ISpNotifySink = *mut ::core::ffi::c_void;
-pub type ISpNotifySource = *mut ::core::ffi::c_void;
-pub type ISpNotifyTranslator = *mut ::core::ffi::c_void;
-pub type ISpObjectToken = *mut ::core::ffi::c_void;
-pub type ISpObjectTokenCategory = *mut ::core::ffi::c_void;
-pub type ISpObjectTokenInit = *mut ::core::ffi::c_void;
-pub type ISpObjectWithToken = *mut ::core::ffi::c_void;
-pub type ISpPhoneConverter = *mut ::core::ffi::c_void;
-pub type ISpPhoneticAlphabetConverter = *mut ::core::ffi::c_void;
-pub type ISpPhoneticAlphabetSelection = *mut ::core::ffi::c_void;
-pub type ISpPhrase = *mut ::core::ffi::c_void;
-pub type ISpPhrase2 = *mut ::core::ffi::c_void;
-pub type ISpPhraseAlt = *mut ::core::ffi::c_void;
-pub type ISpProperties = *mut ::core::ffi::c_void;
-pub type ISpRecoContext = *mut ::core::ffi::c_void;
-pub type ISpRecoContext2 = *mut ::core::ffi::c_void;
-pub type ISpRecoGrammar = *mut ::core::ffi::c_void;
-pub type ISpRecoGrammar2 = *mut ::core::ffi::c_void;
-pub type ISpRecoResult = *mut ::core::ffi::c_void;
-pub type ISpRecoResult2 = *mut ::core::ffi::c_void;
-pub type ISpRecognizer = *mut ::core::ffi::c_void;
-pub type ISpRecognizer2 = *mut ::core::ffi::c_void;
-pub type ISpRegDataKey = *mut ::core::ffi::c_void;
-pub type ISpResourceManager = *mut ::core::ffi::c_void;
-pub type ISpSerializeState = *mut ::core::ffi::c_void;
-pub type ISpShortcut = *mut ::core::ffi::c_void;
-pub type ISpStream = *mut ::core::ffi::c_void;
-pub type ISpStreamFormat = *mut ::core::ffi::c_void;
-pub type ISpStreamFormatConverter = *mut ::core::ffi::c_void;
-pub type ISpTranscript = *mut ::core::ffi::c_void;
-pub type ISpVoice = *mut ::core::ffi::c_void;
-pub type ISpXMLRecoResult = *mut ::core::ffi::c_void;
-pub type ISpeechAudio = *mut ::core::ffi::c_void;
-pub type ISpeechAudioBufferInfo = *mut ::core::ffi::c_void;
-pub type ISpeechAudioFormat = *mut ::core::ffi::c_void;
-pub type ISpeechAudioStatus = *mut ::core::ffi::c_void;
-pub type ISpeechBaseStream = *mut ::core::ffi::c_void;
-pub type ISpeechCustomStream = *mut ::core::ffi::c_void;
-pub type ISpeechDataKey = *mut ::core::ffi::c_void;
-pub type ISpeechFileStream = *mut ::core::ffi::c_void;
-pub type ISpeechGrammarRule = *mut ::core::ffi::c_void;
-pub type ISpeechGrammarRuleState = *mut ::core::ffi::c_void;
-pub type ISpeechGrammarRuleStateTransition = *mut ::core::ffi::c_void;
-pub type ISpeechGrammarRuleStateTransitions = *mut ::core::ffi::c_void;
-pub type ISpeechGrammarRules = *mut ::core::ffi::c_void;
-pub type ISpeechLexicon = *mut ::core::ffi::c_void;
-pub type ISpeechLexiconPronunciation = *mut ::core::ffi::c_void;
-pub type ISpeechLexiconPronunciations = *mut ::core::ffi::c_void;
-pub type ISpeechLexiconWord = *mut ::core::ffi::c_void;
-pub type ISpeechLexiconWords = *mut ::core::ffi::c_void;
-pub type ISpeechMMSysAudio = *mut ::core::ffi::c_void;
-pub type ISpeechMemoryStream = *mut ::core::ffi::c_void;
-pub type ISpeechObjectToken = *mut ::core::ffi::c_void;
-pub type ISpeechObjectTokenCategory = *mut ::core::ffi::c_void;
-pub type ISpeechObjectTokens = *mut ::core::ffi::c_void;
-pub type ISpeechPhoneConverter = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseAlternate = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseAlternates = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseElement = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseElements = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseInfo = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseInfoBuilder = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseProperties = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseProperty = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseReplacement = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseReplacements = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseRule = *mut ::core::ffi::c_void;
-pub type ISpeechPhraseRules = *mut ::core::ffi::c_void;
-pub type ISpeechRecoContext = *mut ::core::ffi::c_void;
-pub type ISpeechRecoGrammar = *mut ::core::ffi::c_void;
-pub type ISpeechRecoResult = *mut ::core::ffi::c_void;
-pub type ISpeechRecoResult2 = *mut ::core::ffi::c_void;
-pub type ISpeechRecoResultDispatch = *mut ::core::ffi::c_void;
-pub type ISpeechRecoResultTimes = *mut ::core::ffi::c_void;
-pub type ISpeechRecognizer = *mut ::core::ffi::c_void;
-pub type ISpeechRecognizerStatus = *mut ::core::ffi::c_void;
-pub type ISpeechResourceLoader = *mut ::core::ffi::c_void;
-pub type ISpeechTextSelectionInformation = *mut ::core::ffi::c_void;
-pub type ISpeechVoice = *mut ::core::ffi::c_void;
-pub type ISpeechVoiceStatus = *mut ::core::ffi::c_void;
-pub type ISpeechWaveFormatEx = *mut ::core::ffi::c_void;
-pub type ISpeechXMLRecoResult = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type PHONETICALPHABET = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -890,8 +1054,6 @@ pub const PA_Ipa: PHONETICALPHABET = 0i32;
 pub const PA_Ups: PHONETICALPHABET = 1i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const PA_Sapi: PHONETICALPHABET = 2i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SAPI_ERROR_BASE: u32 = 20480u32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPADAPTATIONRELEVANCE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -917,21 +1079,6 @@ pub const SPADS_Reset: SPADAPTATIONSETTINGS = 8i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPADS_HighVolumeDataSource: SPADAPTATIONSETTINGS = 16i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPALTERNATESCLSID: &str = "AlternatesCLSID";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPAUDIOBUFFERINFO {
-    pub ulMsMinNotification: u32,
-    pub ulMsBufferSize: u32,
-    pub ulMsEventBias: u32,
-}
-impl ::core::marker::Copy for SPAUDIOBUFFERINFO {}
-impl ::core::clone::Clone for SPAUDIOBUFFERINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPAUDIOOPTIONS = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPAO_NONE: SPAUDIOOPTIONS = 0i32;
@@ -947,34 +1094,6 @@ pub const SPAS_STOP: SPAUDIOSTATE = 1i32;
 pub const SPAS_PAUSE: SPAUDIOSTATE = 2i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPAS_RUN: SPAUDIOSTATE = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPAUDIOSTATUS {
-    pub cbFreeBuffSpace: i32,
-    pub cbNonBlockingIO: u32,
-    pub State: SPAUDIOSTATE,
-    pub CurSeekPos: u64,
-    pub CurDevicePos: u64,
-    pub dwAudioLevel: u32,
-    pub dwReserved2: u32,
-}
-impl ::core::marker::Copy for SPAUDIOSTATUS {}
-impl ::core::clone::Clone for SPAUDIOSTATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPBINARYGRAMMAR {
-    pub ulTotalSerializedSize: u32,
-}
-impl ::core::marker::Copy for SPBINARYGRAMMAR {}
-impl ::core::clone::Clone for SPBINARYGRAMMAR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPBOOKMARKOPTIONS = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -985,22 +1104,6 @@ pub const SPBO_PAUSE: SPBOOKMARKOPTIONS = 1i32;
 pub const SPBO_AHEAD: SPBOOKMARKOPTIONS = 2i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPBO_TIME_UNITS: SPBOOKMARKOPTIONS = 4i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPCAT_APPLEXICONS: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\AppLexicons";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPCAT_AUDIOIN: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\AudioInput";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPCAT_AUDIOOUT: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\AudioOutput";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPCAT_PHONECONVERTERS: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\PhoneConverters";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPCAT_RECOGNIZERS: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Recognizers";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPCAT_RECOPROFILES: &str = "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Speech\\RecoProfiles";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPCAT_TEXTNORMALIZERS: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\TextNormalizers";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPCAT_VOICES: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\Voices";
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPCFGRULEATTRIBUTES = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -1036,10 +1139,6 @@ pub const SPCS_DISABLED: SPCONTEXTSTATE = 0i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPCS_ENABLED: SPCONTEXTSTATE = 1i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPCURRENT_USER_LEXICON_TOKEN_ID: &str = "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Speech\\CurrentUserLexicon";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPCURRENT_USER_SHORTCUT_TOKEN_ID: &str = "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Speech\\CurrentUserShortcut";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPDATAKEYLOCATION = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPDKL_DefaultLocation: SPDATAKEYLOCATION = 0i32;
@@ -1050,66 +1149,19 @@ pub const SPDKL_LocalMachine: SPDATAKEYLOCATION = 2i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPDKL_CurrentConfig: SPDATAKEYLOCATION = 5i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDICTATION: &str = "*";
-#[repr(C)]
+pub type SPDISPLAYATTRIBUTES = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPDISPLAYPHRASE {
-    pub ulNumTokens: u32,
-    pub pTokens: *mut SPDISPLAYTOKEN,
-}
-impl ::core::marker::Copy for SPDISPLAYPHRASE {}
-impl ::core::clone::Clone for SPDISPLAYPHRASE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
+pub const SPAF_ONE_TRAILING_SPACE: SPDISPLAYATTRIBUTES = 2i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPDISPLAYTOKEN {
-    pub pszLexical: ::windows_sys::core::PCWSTR,
-    pub pszDisplay: ::windows_sys::core::PCWSTR,
-    pub bDisplayAttributes: u8,
-}
-impl ::core::marker::Copy for SPDISPLAYTOKEN {}
-impl ::core::clone::Clone for SPDISPLAYTOKEN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const SPAF_TWO_TRAILING_SPACES: SPDISPLAYATTRIBUTES = 4i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub type SPDISPLYATTRIBUTES = i32;
+pub const SPAF_CONSUME_LEADING_SPACES: SPDISPLAYATTRIBUTES = 8i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPAF_ONE_TRAILING_SPACE: SPDISPLYATTRIBUTES = 2i32;
+pub const SPAF_BUFFER_POSITION: SPDISPLAYATTRIBUTES = 16i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPAF_TWO_TRAILING_SPACES: SPDISPLYATTRIBUTES = 4i32;
+pub const SPAF_ALL: SPDISPLAYATTRIBUTES = 31i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPAF_CONSUME_LEADING_SPACES: SPDISPLYATTRIBUTES = 8i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPAF_BUFFER_POSITION: SPDISPLYATTRIBUTES = 16i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPAF_ALL: SPDISPLYATTRIBUTES = 31i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPAF_USER_SPECIFIED: SPDISPLYATTRIBUTES = 128i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDUI_AddRemoveWord: &str = "AddRemoveWord";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDUI_AudioProperties: &str = "AudioProperties";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDUI_AudioVolume: &str = "AudioVolume";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDUI_EngineProperties: &str = "EngineProperties";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDUI_MicTraining: &str = "MicTraining";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDUI_RecoProfileProperties: &str = "RecoProfileProperties";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDUI_ShareData: &str = "ShareData";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDUI_Tutorial: &str = "Tutorial";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDUI_UserEnrollment: &str = "UserEnrollment";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPDUI_UserTraining: &str = "UserTraining";
+pub const SPAF_USER_SPECIFIED: SPDISPLAYATTRIBUTES = 128i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPEAKFLAGS = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -1150,24 +1202,6 @@ pub const SPESF_NONE: SPENDSRSTREAMFLAGS = 0i32;
 pub const SPESF_STREAM_RELEASED: SPENDSRSTREAMFLAGS = 1i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPESF_EMULATED: SPENDSRSTREAMFLAGS = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SPEVENT {
-    pub _bitfield: i32,
-    pub ulStreamNum: u32,
-    pub ullAudioStreamOffset: u64,
-    pub wParam: super::super::Foundation::WPARAM,
-    pub lParam: super::super::Foundation::LPARAM,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SPEVENT {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SPEVENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPEVENTENUM = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -1250,25 +1284,6 @@ pub const SPEI_RESERVED1: SPEVENTENUM = 30i32;
 pub const SPEI_RESERVED2: SPEVENTENUM = 33i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPEI_RESERVED3: SPEVENTENUM = 63i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SPEVENTEX {
-    pub _bitfield: i32,
-    pub ulStreamNum: u32,
-    pub ullAudioStreamOffset: u64,
-    pub wParam: super::super::Foundation::WPARAM,
-    pub lParam: super::super::Foundation::LPARAM,
-    pub ullAudioTimeOffset: u64,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SPEVENTEX {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SPEVENTEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPEVENTLPARAMTYPE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -1281,19 +1296,6 @@ pub const SPET_LPARAM_IS_OBJECT: SPEVENTLPARAMTYPE = 2i32;
 pub const SPET_LPARAM_IS_POINTER: SPEVENTLPARAMTYPE = 3i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPET_LPARAM_IS_STRING: SPEVENTLPARAMTYPE = 4i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPEVENTSOURCEINFO {
-    pub ullEventInterest: u64,
-    pub ullQueuedInterest: u64,
-    pub ulCount: u32,
-}
-impl ::core::marker::Copy for SPEVENTSOURCEINFO {}
-impl ::core::clone::Clone for SPEVENTSOURCEINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPFILEMODE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -1352,8 +1354,6 @@ pub const SPWT_LEXICAL: SPGRAMMARWORDTYPE = 1i32;
 pub const SPWT_PRONUNCIATION: SPGRAMMARWORDTYPE = 2i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPWT_LEXICAL_NO_SPECIAL_CHARS: SPGRAMMARWORDTYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPINFDICTATION: &str = "*+";
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPINTERFERENCE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -1461,25 +1461,6 @@ pub const SubsequenceContentRequired: SPMATCHINGMODE = 5i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const OrderedSubsetContentRequired: SPMATCHINGMODE = 7i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPMMSYS_AUDIO_IN_TOKEN_ID: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\AudioInput\\TokenEnums\\MMAudioIn\\";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPMMSYS_AUDIO_OUT_TOKEN_ID: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\AudioOutput\\TokenEnums\\MMAudioOut\\";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPNORMALIZATIONLIST {
-    pub ulSize: u32,
-    pub ppszzNormalizedList: *mut *mut u16,
-}
-impl ::core::marker::Copy for SPNORMALIZATIONLIST {}
-impl ::core::clone::Clone for SPNORMALIZATIONLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub type SPNOTIFYCALLBACK = ::core::option::Option<unsafe extern "system" fn(wparam: super::super::Foundation::WPARAM, lparam: super::super::Foundation::LPARAM)>;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPPARTOFSPEECH = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPPS_NotOverriden: SPPARTOFSPEECH = -1i32;
@@ -1501,227 +1482,20 @@ pub const SPPS_Noncontent: SPPARTOFSPEECH = 24576i32;
 pub const SPPS_LMA: SPPARTOFSPEECH = 28672i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPPS_SuppressWord: SPPARTOFSPEECH = 61440i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct SPPHRASE {
-    pub __AnonymousBase_sapi53_L5821_C34: SPPHRASE_50,
-    pub pSML: ::windows_sys::core::PWSTR,
-    pub pSemanticErrorInfo: *mut SPSEMANTICERRORINFO,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for SPPHRASE {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for SPPHRASE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPPHRASEELEMENT {
-    pub ulAudioTimeOffset: u32,
-    pub ulAudioSizeTime: u32,
-    pub ulAudioStreamOffset: u32,
-    pub ulAudioSizeBytes: u32,
-    pub ulRetainedStreamOffset: u32,
-    pub ulRetainedSizeBytes: u32,
-    pub pszDisplayText: ::windows_sys::core::PCWSTR,
-    pub pszLexicalForm: ::windows_sys::core::PCWSTR,
-    pub pszPronunciation: *const u16,
-    pub bDisplayAttributes: u8,
-    pub RequiredConfidence: i8,
-    pub ActualConfidence: i8,
-    pub Reserved: u8,
-    pub SREngineConfidence: f32,
-}
-impl ::core::marker::Copy for SPPHRASEELEMENT {}
-impl ::core::clone::Clone for SPPHRASEELEMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct SPPHRASEPROPERTY {
-    pub pszName: ::windows_sys::core::PCWSTR,
-    pub Anonymous: SPPHRASEPROPERTY_0,
-    pub pszValue: ::windows_sys::core::PCWSTR,
-    pub vValue: super::super::System::Com::VARIANT,
-    pub ulFirstElement: u32,
-    pub ulCountOfElements: u32,
-    pub pNextSibling: *const SPPHRASEPROPERTY,
-    pub pFirstChild: *const SPPHRASEPROPERTY,
-    pub SREngineConfidence: f32,
-    pub Confidence: i8,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for SPPHRASEPROPERTY {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for SPPHRASEPROPERTY {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub union SPPHRASEPROPERTY_0 {
-    pub ulId: u32,
-    pub Anonymous: SPPHRASEPROPERTY_0_0,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for SPPHRASEPROPERTY_0 {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for SPPHRASEPROPERTY_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct SPPHRASEPROPERTY_0_0 {
-    pub bType: u8,
-    pub bReserved: u8,
-    pub usArrayIndex: u16,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for SPPHRASEPROPERTY_0_0 {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for SPPHRASEPROPERTY_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPPHRASEPROPERTYUNIONTYPE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPPPUT_UNUSED: SPPHRASEPROPERTYUNIONTYPE = 0i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPPPUT_ARRAY_INDEX: SPPHRASEPROPERTYUNIONTYPE = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPPHRASEREPLACEMENT {
-    pub bDisplayAttributes: u8,
-    pub pszReplacementText: ::windows_sys::core::PCWSTR,
-    pub ulFirstElement: u32,
-    pub ulCountOfElements: u32,
-}
-impl ::core::marker::Copy for SPPHRASEREPLACEMENT {}
-impl ::core::clone::Clone for SPPHRASEREPLACEMENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPPHRASERNG = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPPR_ALL_ELEMENTS: SPPHRASERNG = -1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPPHRASERULE {
-    pub pszName: ::windows_sys::core::PCWSTR,
-    pub ulId: u32,
-    pub ulFirstElement: u32,
-    pub ulCountOfElements: u32,
-    pub pNextSibling: *const SPPHRASERULE,
-    pub pFirstChild: *const SPPHRASERULE,
-    pub SREngineConfidence: f32,
-    pub Confidence: i8,
-}
-impl ::core::marker::Copy for SPPHRASERULE {}
-impl ::core::clone::Clone for SPPHRASERULE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct SPPHRASE_50 {
-    pub cbSize: u32,
-    pub LangID: u16,
-    pub wHomophoneGroupId: u16,
-    pub ullGrammarID: u64,
-    pub ftStartTime: u64,
-    pub ullAudioStreamPosition: u64,
-    pub ulAudioSizeBytes: u32,
-    pub ulRetainedSizeBytes: u32,
-    pub ulAudioSizeTime: u32,
-    pub Rule: SPPHRASERULE,
-    pub pProperties: *const SPPHRASEPROPERTY,
-    pub pElements: *const SPPHRASEELEMENT,
-    pub cReplacements: u32,
-    pub pReplacements: *const SPPHRASEREPLACEMENT,
-    pub SREngineID: ::windows_sys::core::GUID,
-    pub ulSREnginePrivateDataSize: u32,
-    pub pSREnginePrivateData: *const u8,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for SPPHRASE_50 {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for SPPHRASE_50 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPPRONUNCIATIONFLAGS = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const ePRONFLAG_USED: SPPRONUNCIATIONFLAGS = 1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-pub struct SPPROPERTYINFO {
-    pub pszName: ::windows_sys::core::PCWSTR,
-    pub ulId: u32,
-    pub pszValue: ::windows_sys::core::PCWSTR,
-    pub vValue: super::super::System::Com::VARIANT,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::marker::Copy for SPPROPERTYINFO {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
-impl ::core::clone::Clone for SPPROPERTYINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPPROP_ADAPTATION_ON: &str = "AdaptationOn";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPPROP_COMPLEX_RESPONSE_SPEED: &str = "ComplexResponseSpeed";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPPROP_HIGH_CONFIDENCE_THRESHOLD: &str = "HighConfidenceThreshold";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPPROP_LOW_CONFIDENCE_THRESHOLD: &str = "LowConfidenceThreshold";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPPROP_NORMAL_CONFIDENCE_THRESHOLD: &str = "NormalConfidenceThreshold";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPPROP_PERSISTED_BACKGROUND_ADAPTATION: &str = "PersistedBackgroundAdaptation";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPPROP_PERSISTED_LANGUAGE_MODEL_ADAPTATION: &str = "PersistedLanguageModelAdaptation";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPPROP_RESOURCE_USAGE: &str = "ResourceUsage";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPPROP_RESPONSE_SPEED: &str = "ResponseSpeed";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPPROP_UX_IS_LISTENING: &str = "UXIsListening";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPRECOCONTEXTSTATUS {
-    pub eInterference: SPINTERFERENCE,
-    pub szRequestTypeOfUI: [u16; 255],
-    pub dwReserved1: u32,
-    pub dwReserved2: u32,
-}
-impl ::core::marker::Copy for SPRECOCONTEXTSTATUS {}
-impl ::core::clone::Clone for SPRECOCONTEXTSTATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPRECOEVENTFLAGS = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -1739,43 +1513,6 @@ pub const SPREF_Hypothesis: SPRECOEVENTFLAGS = 32i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPREF_FalseRecognition: SPRECOEVENTFLAGS = 64i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPRECOEXTENSION: &str = "RecoExtension";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPRECOGNIZERSTATUS {
-    pub AudioStatus: SPAUDIOSTATUS,
-    pub ullRecognitionStreamPos: u64,
-    pub ulStreamNumber: u32,
-    pub ulNumActive: u32,
-    pub clsidEngine: ::windows_sys::core::GUID,
-    pub cLangIDs: u32,
-    pub aLangID: [u16; 20],
-    pub ullRecognitionStreamTime: u64,
-}
-impl ::core::marker::Copy for SPRECOGNIZERSTATUS {}
-impl ::core::clone::Clone for SPRECOGNIZERSTATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct SPRECORESULTTIMES {
-    pub ftStreamTime: super::super::Foundation::FILETIME,
-    pub ullLength: u64,
-    pub dwTickCount: u32,
-    pub ullStart: u64,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for SPRECORESULTTIMES {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for SPRECORESULTTIMES {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPRECOSTATE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPRST_INACTIVE: SPRECOSTATE = 0i32;
@@ -1787,27 +1524,6 @@ pub const SPRST_ACTIVE_ALWAYS: SPRECOSTATE = 2i32;
 pub const SPRST_INACTIVE_WITH_PURGE: SPRECOSTATE = 3i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPRST_NUM_STATES: SPRECOSTATE = 4i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPREG_LOCAL_MACHINE_ROOT: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPREG_SAFE_USER_TOKENS: &str = "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Speech\\UserTokens";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPREG_USER_ROOT: &str = "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Speech";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPRP_NORMAL: u32 = 0u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPRULE {
-    pub pszRuleName: ::windows_sys::core::PCWSTR,
-    pub ulRuleId: u32,
-    pub dwAttributes: u32,
-}
-impl ::core::marker::Copy for SPRULE {}
-impl ::core::clone::Clone for SPRULE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPRULESTATE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -1824,21 +1540,6 @@ pub type SPRUNSTATE = i32;
 pub const SPRS_DONE: SPRUNSTATE = 1i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPRS_IS_SPEAKING: SPRUNSTATE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPSEMANTICERRORINFO {
-    pub ulLineNumber: u32,
-    pub pszScriptLine: ::windows_sys::core::PWSTR,
-    pub pszSource: ::windows_sys::core::PWSTR,
-    pub pszDescription: ::windows_sys::core::PWSTR,
-    pub hrResultCode: ::windows_sys::core::HRESULT,
-}
-impl ::core::marker::Copy for SPSEMANTICERRORINFO {}
-impl ::core::clone::Clone for SPSEMANTICERRORINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPSEMANTICFORMAT = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -1851,86 +1552,6 @@ pub const SPSMF_SRGS_SAPIPROPERTIES: SPSEMANTICFORMAT = 2i32;
 pub const SPSMF_UPS: SPSEMANTICFORMAT = 4i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPSMF_SRGS_SEMANTICINTERPRETATION_W3C: SPSEMANTICFORMAT = 8i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPSERIALIZEDEVENT {
-    pub _bitfield: i32,
-    pub ulStreamNum: u32,
-    pub ullAudioStreamOffset: u64,
-    pub SerializedwParam: u32,
-    pub SerializedlParam: i32,
-}
-impl ::core::marker::Copy for SPSERIALIZEDEVENT {}
-impl ::core::clone::Clone for SPSERIALIZEDEVENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPSERIALIZEDEVENT64 {
-    pub _bitfield: i32,
-    pub ulStreamNum: u32,
-    pub ullAudioStreamOffset: u64,
-    pub SerializedwParam: u64,
-    pub SerializedlParam: i64,
-}
-impl ::core::marker::Copy for SPSERIALIZEDEVENT64 {}
-impl ::core::clone::Clone for SPSERIALIZEDEVENT64 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPSERIALIZEDPHRASE {
-    pub ulSerializedSize: u32,
-}
-impl ::core::marker::Copy for SPSERIALIZEDPHRASE {}
-impl ::core::clone::Clone for SPSERIALIZEDPHRASE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPSERIALIZEDRESULT {
-    pub ulSerializedSize: u32,
-}
-impl ::core::marker::Copy for SPSERIALIZEDRESULT {}
-impl ::core::clone::Clone for SPSERIALIZEDRESULT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPSHORTCUTPAIR {
-    pub pNextSHORTCUTPAIR: *mut SPSHORTCUTPAIR,
-    pub LangID: u16,
-    pub shType: SPSHORTCUTTYPE,
-    pub pszDisplay: ::windows_sys::core::PWSTR,
-    pub pszSpoken: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for SPSHORTCUTPAIR {}
-impl ::core::clone::Clone for SPSHORTCUTPAIR {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPSHORTCUTPAIRLIST {
-    pub ulSize: u32,
-    pub pvBuffer: *mut u8,
-    pub pFirstShortcutPair: *mut SPSHORTCUTPAIR,
-}
-impl ::core::marker::Copy for SPSHORTCUTPAIRLIST {}
-impl ::core::clone::Clone for SPSHORTCUTPAIRLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPSHORTCUTTYPE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -1949,17 +1570,6 @@ pub const SPPS_RESERVED2: SPSHORTCUTTYPE = 16384i32;
 pub const SPPS_RESERVED3: SPSHORTCUTTYPE = 20480i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPPS_RESERVED4: SPSHORTCUTTYPE = 61440i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPSTATEHANDLE__ {
-    pub unused: i32,
-}
-impl ::core::marker::Copy for SPSTATEHANDLE__ {}
-impl ::core::clone::Clone for SPSTATEHANDLE__ {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPSTREAMFORMAT = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -2104,38 +1714,12 @@ pub const SPSF_GSM610_22kHzMono: SPSTREAMFORMAT = 67i32;
 pub const SPSF_GSM610_44kHzMono: SPSTREAMFORMAT = 68i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPSF_NUM_FORMATS: SPSTREAMFORMAT = 69i32;
-#[repr(C)]
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPTEXTSELECTIONINFO {
-    pub ulStartActiveOffset: u32,
-    pub cchActiveChars: u32,
-    pub ulStartSelection: u32,
-    pub cchSelection: u32,
-}
-impl ::core::marker::Copy for SPTEXTSELECTIONINFO {}
-impl ::core::clone::Clone for SPTEXTSELECTIONINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub type SPSTREAMFORMATTYPE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPTOKENKEY_ATTRIBUTES: &str = "Attributes";
+pub const SPWF_INPUT: SPSTREAMFORMATTYPE = 0i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPTOKENKEY_AUDIO_LATENCY_TRUNCATE: &str = "LatencyTruncateThreshold";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPTOKENKEY_AUDIO_LATENCY_UPDATE_INTERVAL: &str = "LatencyUpdateInterval";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPTOKENKEY_AUDIO_LATENCY_WARNING: &str = "LatencyWarningThreshold";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPTOKENKEY_FILES: &str = "Files";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPTOKENKEY_RETAINEDAUDIO: &str = "SecondsPerRetainedAudioEvent";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPTOKENKEY_UI: &str = "UI";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPTOKENVALUE_CLSID: &str = "CLSID";
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPTOPIC_SPELLING: &str = "Spelling";
+pub const SPWF_SRENGINE: SPSTREAMFORMATTYPE = 1i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPVACTIONS = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -2172,19 +1756,6 @@ pub const SPDF_AUDIO: SPVALUETYPE = 64i32;
 pub const SPDF_ALTERNATES: SPVALUETYPE = 128i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPDF_ALL: SPVALUETYPE = 255i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPVCONTEXT {
-    pub pCategory: ::windows_sys::core::PCWSTR,
-    pub pBefore: ::windows_sys::core::PCWSTR,
-    pub pAfter: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for SPVCONTEXT {}
-impl ::core::clone::Clone for SPVCONTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPVFEATURE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -2248,43 +1819,6 @@ pub const SPMIN_RATE: SPVLIMITS = -10i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPMAX_RATE: SPVLIMITS = 10i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPVOICECATEGORY_TTSRATE: &str = "DefaultTTSRate";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPVOICESTATUS {
-    pub ulCurrentStream: u32,
-    pub ulLastStreamQueued: u32,
-    pub hrLastResult: ::windows_sys::core::HRESULT,
-    pub dwRunningState: u32,
-    pub ulInputWordPos: u32,
-    pub ulInputWordLen: u32,
-    pub ulInputSentPos: u32,
-    pub ulInputSentLen: u32,
-    pub lBookmarkId: i32,
-    pub PhonemeId: u16,
-    pub VisemeId: SPVISEMES,
-    pub dwReserved1: u32,
-    pub dwReserved2: u32,
-}
-impl ::core::marker::Copy for SPVOICESTATUS {}
-impl ::core::clone::Clone for SPVOICESTATUS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPVPITCH {
-    pub MiddleAdj: i32,
-    pub RangeAdj: i32,
-}
-impl ::core::marker::Copy for SPVPITCH {}
-impl ::core::clone::Clone for SPVPITCH {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPVPRIORITY = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPVPRI_NORMAL: SPVPRIORITY = 0i32;
@@ -2292,64 +1826,6 @@ pub const SPVPRI_NORMAL: SPVPRIORITY = 0i32;
 pub const SPVPRI_ALERT: SPVPRIORITY = 1i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPVPRI_OVER: SPVPRIORITY = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPVSTATE {
-    pub eAction: SPVACTIONS,
-    pub LangID: u16,
-    pub wReserved: u16,
-    pub EmphAdj: i32,
-    pub RateAdj: i32,
-    pub Volume: u32,
-    pub PitchAdj: SPVPITCH,
-    pub SilenceMSecs: u32,
-    pub pPhoneIds: *mut u16,
-    pub ePartOfSpeech: SPPARTOFSPEECH,
-    pub Context: SPVCONTEXT,
-}
-impl ::core::marker::Copy for SPVSTATE {}
-impl ::core::clone::Clone for SPVSTATE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub type SPWAVEFORMATTYPE = i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPWF_INPUT: SPWAVEFORMATTYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPWF_SRENGINE: SPWAVEFORMATTYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SPWILDCARD: &str = "...";
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPWORD {
-    pub pNextWord: *mut SPWORD,
-    pub LangID: u16,
-    pub wReserved: u16,
-    pub eWordType: SPWORDTYPE,
-    pub pszWord: ::windows_sys::core::PWSTR,
-    pub pFirstWordPronunciation: *mut SPWORDPRONUNCIATION,
-}
-impl ::core::marker::Copy for SPWORD {}
-impl ::core::clone::Clone for SPWORD {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPWORDLIST {
-    pub ulSize: u32,
-    pub pvBuffer: *mut u8,
-    pub pFirstWord: *mut SPWORD,
-}
-impl ::core::marker::Copy for SPWORDLIST {}
-impl ::core::clone::Clone for SPWORDLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPWORDPRONOUNCEABLE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -2358,35 +1834,6 @@ pub const SPWP_UNKNOWN_WORD_UNPRONOUNCEABLE: SPWORDPRONOUNCEABLE = 0i32;
 pub const SPWP_UNKNOWN_WORD_PRONOUNCEABLE: SPWORDPRONOUNCEABLE = 1i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPWP_KNOWN_WORD_PRONOUNCEABLE: SPWORDPRONOUNCEABLE = 2i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPWORDPRONUNCIATION {
-    pub pNextWordPronunciation: *mut SPWORDPRONUNCIATION,
-    pub eLexiconType: SPLEXICONTYPE,
-    pub LangID: u16,
-    pub wPronunciationFlags: u16,
-    pub ePartOfSpeech: SPPARTOFSPEECH,
-    pub szPronunciation: [u16; 1],
-}
-impl ::core::marker::Copy for SPWORDPRONUNCIATION {}
-impl ::core::clone::Clone for SPWORDPRONUNCIATION {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub struct SPWORDPRONUNCIATIONLIST {
-    pub ulSize: u32,
-    pub pvBuffer: *mut u8,
-    pub pFirstWordPronunciation: *mut SPWORDPRONUNCIATION,
-}
-impl ::core::marker::Copy for SPWORDPRONUNCIATIONLIST {}
-impl ::core::clone::Clone for SPWORDPRONUNCIATIONLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SPWORDTYPE = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -2399,54 +1846,6 @@ pub type SPXMLRESULTOPTIONS = i32;
 pub const SPXRO_SML: SPXMLRESULTOPTIONS = 0i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SPXRO_Alternates_SML: SPXMLRESULTOPTIONS = 1i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SP_EMULATE_RESULT: u32 = 1073741824u32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SP_LOW_CONFIDENCE: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SP_MAX_LANGIDS: u32 = 20u32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SP_MAX_PRON_LENGTH: u32 = 384u32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SP_MAX_WORD_LENGTH: u32 = 128u32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SP_NORMAL_CONFIDENCE: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SP_STREAMPOS_ASAP: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SP_STREAMPOS_REALTIME: i32 = -1i32;
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SR_LOCALIZED_DESCRIPTION: &str = "Description";
-pub const SpAudioFormat: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2667145328, data2: 57696, data3: 18322, data4: [130, 13, 72, 207, 6, 73, 228, 236] };
-pub const SpCompressedLexicon: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2425370390, data2: 12098, data3: 4563, data4: [156, 38, 0, 192, 79, 142, 248, 124] };
-pub const SpCustomStream: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2378101055, data2: 6472, data3: 19112, data4: [140, 240, 4, 142, 235, 237, 149, 216] };
-pub const SpFileStream: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2490897075, data2: 10977, data3: 17988, data4: [186, 134, 158, 144, 222, 215, 236, 145] };
-pub const SpInProcRecoContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1940744258, data2: 44256, data3: 17896, data4: [164, 221, 135, 149, 136, 26, 44, 42] };
-pub const SpInprocRecognizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1102617451, data2: 37785, data3: 4562, data4: [150, 35, 0, 192, 79, 142, 230, 40] };
-pub const SpLexicon: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 106292118, data2: 9680, data3: 4563, data4: [156, 38, 0, 192, 79, 142, 248, 124] };
-pub const SpMMAudioEnum: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2870513824, data2: 59679, data3: 4562, data4: [187, 145, 0, 192, 79, 142, 230, 192] };
-pub const SpMMAudioIn: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3476893264, data2: 21490, data3: 4562, data4: [150, 12, 0, 192, 79, 142, 230, 40] };
-pub const SpMMAudioOut: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2831581419, data2: 15666, data3: 4562, data4: [158, 231, 0, 192, 79, 121, 115, 150] };
-pub const SpMemoryStream: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1605889917, data2: 57332, data3: 18058, data4: [182, 183, 47, 203, 209, 136, 249, 148] };
-pub const SpNotifyTranslator: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3803075442, data2: 23872, data3: 4562, data4: [150, 14, 0, 192, 79, 142, 230, 40] };
-pub const SpNullPhoneConverter: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1163863273, data2: 29590, data3: 18966, data4: [151, 21, 124, 15, 219, 227, 239, 227] };
-pub const SpObjectToken: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 4014020434, data2: 14134, data3: 19636, data4: [156, 140, 142, 244, 204, 181, 142, 254] };
-pub const SpObjectTokenCategory: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2836404351, data2: 3194, data3: 17836, data4: [146, 204, 89, 237, 175, 183, 123, 83] };
-pub const SpPhoneConverter: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2441475907, data2: 4419, data3: 19496, data4: [134, 181, 191, 241, 79, 32, 229, 200] };
-pub const SpPhoneticAlphabetConverter: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1329676582, data2: 57315, data3: 17961, data4: [153, 238, 121, 121, 120, 49, 126, 173] };
-pub const SpPhraseInfoBuilder: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3258958477, data2: 50527, data3: 18208, data4: [139, 50, 145, 247, 60, 43, 213, 209] };
-pub const SpResourceManager: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2524222323, data2: 13201, data3: 4562, data4: [158, 227, 0, 192, 79, 121, 115, 150] };
-pub const SpSharedRecoContext: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1193304580, data2: 24266, data3: 4562, data4: [150, 15, 0, 192, 79, 142, 230, 40] };
-pub const SpSharedRecognizer: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1005471888, data2: 20457, data3: 18999, data4: [140, 30, 94, 126, 18, 121, 28, 31] };
-pub const SpShortcut: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 225586970, data2: 40911, data3: 20066, data4: [150, 216, 109, 248, 240, 26, 38, 170] };
-pub const SpStream: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1901960281, data2: 17474, data3: 4562, data4: [150, 5, 0, 192, 79, 142, 230, 40] };
-pub const SpStreamFormatConverter: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 1880331322, data2: 58092, data3: 4562, data4: [160, 134, 0, 192, 79, 142, 249, 181] };
-pub const SpTextSelectionInformation: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 261227274, data2: 52221, data3: 19128, data4: [161, 100, 255, 89, 133, 84, 127, 246] };
-pub const SpUnCompressedLexicon: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3387128853, data2: 57234, data3: 18215, data4: [133, 214, 114, 229, 238, 182, 153, 90] };
-pub const SpVoice: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 2524222327, data2: 13201, data3: 4562, data4: [158, 227, 0, 192, 79, 121, 115, 150] };
-pub const SpWaveFormatEx: ::windows_sys::core::GUID = ::windows_sys::core::GUID { data1: 3348780876, data2: 25534, data3: 17593, data4: [128, 31, 40, 63, 135, 248, 152, 190] };
-#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const SpeechAllElements: i32 = -1i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub type SpeechAudioFormatType = i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
@@ -3041,15 +2440,616 @@ pub type SpeechWordType = i32;
 pub const SWTAdded: SpeechWordType = 1i32;
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
 pub const SWTDeleted: SpeechWordType = 2i32;
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const Speech_Default_Weight: f32 = 1f32;
+pub struct SPAUDIOBUFFERINFO {
+    pub ulMsMinNotification: u32,
+    pub ulMsBufferSize: u32,
+    pub ulMsEventBias: u32,
+}
+impl ::core::marker::Copy for SPAUDIOBUFFERINFO {}
+impl ::core::clone::Clone for SPAUDIOBUFFERINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const Speech_Max_Pron_Length: i32 = 384i32;
+pub struct SPAUDIOSTATUS {
+    pub cbFreeBuffSpace: i32,
+    pub cbNonBlockingIO: u32,
+    pub State: SPAUDIOSTATE,
+    pub CurSeekPos: u64,
+    pub CurDevicePos: u64,
+    pub dwAudioLevel: u32,
+    pub dwReserved2: u32,
+}
+impl ::core::marker::Copy for SPAUDIOSTATUS {}
+impl ::core::clone::Clone for SPAUDIOSTATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const Speech_Max_Word_Length: i32 = 128i32;
+pub struct SPBINARYGRAMMAR {
+    pub ulTotalSerializedSize: u32,
+}
+impl ::core::marker::Copy for SPBINARYGRAMMAR {}
+impl ::core::clone::Clone for SPBINARYGRAMMAR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const Speech_StreamPos_Asap: i32 = 0i32;
+pub struct SPDISPLAYPHRASE {
+    pub ulNumTokens: u32,
+    pub pTokens: *mut SPDISPLAYTOKEN,
+}
+impl ::core::marker::Copy for SPDISPLAYPHRASE {}
+impl ::core::clone::Clone for SPDISPLAYPHRASE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
 #[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
-pub const Speech_StreamPos_RealTime: i32 = -1i32;
-pub type _ISpeechRecoContextEvents = *mut ::core::ffi::c_void;
-pub type _ISpeechVoiceEvents = *mut ::core::ffi::c_void;
+pub struct SPDISPLAYTOKEN {
+    pub pszLexical: ::windows_sys::core::PCWSTR,
+    pub pszDisplay: ::windows_sys::core::PCWSTR,
+    pub bDisplayAttributes: u8,
+}
+impl ::core::marker::Copy for SPDISPLAYTOKEN {}
+impl ::core::clone::Clone for SPDISPLAYTOKEN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SPEVENT {
+    pub _bitfield: i32,
+    pub ulStreamNum: u32,
+    pub ullAudioStreamOffset: u64,
+    pub wParam: super::super::Foundation::WPARAM,
+    pub lParam: super::super::Foundation::LPARAM,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SPEVENT {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SPEVENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SPEVENTEX {
+    pub _bitfield: i32,
+    pub ulStreamNum: u32,
+    pub ullAudioStreamOffset: u64,
+    pub wParam: super::super::Foundation::WPARAM,
+    pub lParam: super::super::Foundation::LPARAM,
+    pub ullAudioTimeOffset: u64,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SPEVENTEX {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SPEVENTEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPEVENTSOURCEINFO {
+    pub ullEventInterest: u64,
+    pub ullQueuedInterest: u64,
+    pub ulCount: u32,
+}
+impl ::core::marker::Copy for SPEVENTSOURCEINFO {}
+impl ::core::clone::Clone for SPEVENTSOURCEINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPNORMALIZATIONLIST {
+    pub ulSize: u32,
+    pub ppszzNormalizedList: *mut *mut u16,
+}
+impl ::core::marker::Copy for SPNORMALIZATIONLIST {}
+impl ::core::clone::Clone for SPNORMALIZATIONLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct SPPHRASE {
+    pub Base: SPPHRASE_50,
+    pub pSML: ::windows_sys::core::PWSTR,
+    pub pSemanticErrorInfo: *mut SPSEMANTICERRORINFO,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for SPPHRASE {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for SPPHRASE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPPHRASEELEMENT {
+    pub ulAudioTimeOffset: u32,
+    pub ulAudioSizeTime: u32,
+    pub ulAudioStreamOffset: u32,
+    pub ulAudioSizeBytes: u32,
+    pub ulRetainedStreamOffset: u32,
+    pub ulRetainedSizeBytes: u32,
+    pub pszDisplayText: ::windows_sys::core::PCWSTR,
+    pub pszLexicalForm: ::windows_sys::core::PCWSTR,
+    pub pszPronunciation: *const u16,
+    pub bDisplayAttributes: u8,
+    pub RequiredConfidence: i8,
+    pub ActualConfidence: i8,
+    pub Reserved: u8,
+    pub SREngineConfidence: f32,
+}
+impl ::core::marker::Copy for SPPHRASEELEMENT {}
+impl ::core::clone::Clone for SPPHRASEELEMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct SPPHRASEPROPERTY {
+    pub pszName: ::windows_sys::core::PCWSTR,
+    pub Anonymous: SPPHRASEPROPERTY_0,
+    pub pszValue: ::windows_sys::core::PCWSTR,
+    pub vValue: super::super::System::Com::VARIANT,
+    pub ulFirstElement: u32,
+    pub ulCountOfElements: u32,
+    pub pNextSibling: *const SPPHRASEPROPERTY,
+    pub pFirstChild: *const SPPHRASEPROPERTY,
+    pub SREngineConfidence: f32,
+    pub Confidence: i8,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for SPPHRASEPROPERTY {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for SPPHRASEPROPERTY {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub union SPPHRASEPROPERTY_0 {
+    pub ulId: u32,
+    pub Anonymous: SPPHRASEPROPERTY_0_0,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for SPPHRASEPROPERTY_0 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for SPPHRASEPROPERTY_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct SPPHRASEPROPERTY_0_0 {
+    pub bType: u8,
+    pub bReserved: u8,
+    pub usArrayIndex: u16,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for SPPHRASEPROPERTY_0_0 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for SPPHRASEPROPERTY_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPPHRASEREPLACEMENT {
+    pub bDisplayAttributes: u8,
+    pub pszReplacementText: ::windows_sys::core::PCWSTR,
+    pub ulFirstElement: u32,
+    pub ulCountOfElements: u32,
+}
+impl ::core::marker::Copy for SPPHRASEREPLACEMENT {}
+impl ::core::clone::Clone for SPPHRASEREPLACEMENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPPHRASERULE {
+    pub pszName: ::windows_sys::core::PCWSTR,
+    pub ulId: u32,
+    pub ulFirstElement: u32,
+    pub ulCountOfElements: u32,
+    pub pNextSibling: *const SPPHRASERULE,
+    pub pFirstChild: *const SPPHRASERULE,
+    pub SREngineConfidence: f32,
+    pub Confidence: i8,
+}
+impl ::core::marker::Copy for SPPHRASERULE {}
+impl ::core::clone::Clone for SPPHRASERULE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct SPPHRASE_50 {
+    pub cbSize: u32,
+    pub LangID: u16,
+    pub wHomophoneGroupId: u16,
+    pub ullGrammarID: u64,
+    pub ftStartTime: u64,
+    pub ullAudioStreamPosition: u64,
+    pub ulAudioSizeBytes: u32,
+    pub ulRetainedSizeBytes: u32,
+    pub ulAudioSizeTime: u32,
+    pub Rule: SPPHRASERULE,
+    pub pProperties: *const SPPHRASEPROPERTY,
+    pub pElements: *const SPPHRASEELEMENT,
+    pub cReplacements: u32,
+    pub pReplacements: *const SPPHRASEREPLACEMENT,
+    pub SREngineID: ::windows_sys::core::GUID,
+    pub ulSREnginePrivateDataSize: u32,
+    pub pSREnginePrivateData: *const u8,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for SPPHRASE_50 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for SPPHRASE_50 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`, `\"Win32_System_Com\"`, `\"Win32_System_Ole\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+pub struct SPPROPERTYINFO {
+    pub pszName: ::windows_sys::core::PCWSTR,
+    pub ulId: u32,
+    pub pszValue: ::windows_sys::core::PCWSTR,
+    pub vValue: super::super::System::Com::VARIANT,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::marker::Copy for SPPROPERTYINFO {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_Com", feature = "Win32_System_Ole"))]
+impl ::core::clone::Clone for SPPROPERTYINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPRECOCONTEXTSTATUS {
+    pub eInterference: SPINTERFERENCE,
+    pub szRequestTypeOfUI: [u16; 255],
+    pub dwReserved1: u32,
+    pub dwReserved2: u32,
+}
+impl ::core::marker::Copy for SPRECOCONTEXTSTATUS {}
+impl ::core::clone::Clone for SPRECOCONTEXTSTATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPRECOGNIZERSTATUS {
+    pub AudioStatus: SPAUDIOSTATUS,
+    pub ullRecognitionStreamPos: u64,
+    pub ulStreamNumber: u32,
+    pub ulNumActive: u32,
+    pub clsidEngine: ::windows_sys::core::GUID,
+    pub cLangIDs: u32,
+    pub aLangID: [u16; 20],
+    pub ullRecognitionStreamTime: u64,
+}
+impl ::core::marker::Copy for SPRECOGNIZERSTATUS {}
+impl ::core::clone::Clone for SPRECOGNIZERSTATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct SPRECORESULTTIMES {
+    pub ftStreamTime: super::super::Foundation::FILETIME,
+    pub ullLength: u64,
+    pub dwTickCount: u32,
+    pub ullStart: u64,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for SPRECORESULTTIMES {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for SPRECORESULTTIMES {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPRULE {
+    pub pszRuleName: ::windows_sys::core::PCWSTR,
+    pub ulRuleId: u32,
+    pub dwAttributes: u32,
+}
+impl ::core::marker::Copy for SPRULE {}
+impl ::core::clone::Clone for SPRULE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPSEMANTICERRORINFO {
+    pub ulLineNumber: u32,
+    pub pszScriptLine: ::windows_sys::core::PWSTR,
+    pub pszSource: ::windows_sys::core::PWSTR,
+    pub pszDescription: ::windows_sys::core::PWSTR,
+    pub hrResultCode: ::windows_sys::core::HRESULT,
+}
+impl ::core::marker::Copy for SPSEMANTICERRORINFO {}
+impl ::core::clone::Clone for SPSEMANTICERRORINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPSERIALIZEDEVENT {
+    pub _bitfield: i32,
+    pub ulStreamNum: u32,
+    pub ullAudioStreamOffset: u64,
+    pub SerializedwParam: u32,
+    pub SerializedlParam: i32,
+}
+impl ::core::marker::Copy for SPSERIALIZEDEVENT {}
+impl ::core::clone::Clone for SPSERIALIZEDEVENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPSERIALIZEDEVENT64 {
+    pub _bitfield: i32,
+    pub ulStreamNum: u32,
+    pub ullAudioStreamOffset: u64,
+    pub SerializedwParam: u64,
+    pub SerializedlParam: i64,
+}
+impl ::core::marker::Copy for SPSERIALIZEDEVENT64 {}
+impl ::core::clone::Clone for SPSERIALIZEDEVENT64 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPSERIALIZEDPHRASE {
+    pub ulSerializedSize: u32,
+}
+impl ::core::marker::Copy for SPSERIALIZEDPHRASE {}
+impl ::core::clone::Clone for SPSERIALIZEDPHRASE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPSERIALIZEDRESULT {
+    pub ulSerializedSize: u32,
+}
+impl ::core::marker::Copy for SPSERIALIZEDRESULT {}
+impl ::core::clone::Clone for SPSERIALIZEDRESULT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPSHORTCUTPAIR {
+    pub pNextSHORTCUTPAIR: *mut SPSHORTCUTPAIR,
+    pub LangID: u16,
+    pub shType: SPSHORTCUTTYPE,
+    pub pszDisplay: ::windows_sys::core::PWSTR,
+    pub pszSpoken: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for SPSHORTCUTPAIR {}
+impl ::core::clone::Clone for SPSHORTCUTPAIR {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPSHORTCUTPAIRLIST {
+    pub ulSize: u32,
+    pub pvBuffer: *mut u8,
+    pub pFirstShortcutPair: *mut SPSHORTCUTPAIR,
+}
+impl ::core::marker::Copy for SPSHORTCUTPAIRLIST {}
+impl ::core::clone::Clone for SPSHORTCUTPAIRLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPSTATEHANDLE__ {
+    pub unused: i32,
+}
+impl ::core::marker::Copy for SPSTATEHANDLE__ {}
+impl ::core::clone::Clone for SPSTATEHANDLE__ {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPTEXTSELECTIONINFO {
+    pub ulStartActiveOffset: u32,
+    pub cchActiveChars: u32,
+    pub ulStartSelection: u32,
+    pub cchSelection: u32,
+}
+impl ::core::marker::Copy for SPTEXTSELECTIONINFO {}
+impl ::core::clone::Clone for SPTEXTSELECTIONINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPVCONTEXT {
+    pub pCategory: ::windows_sys::core::PCWSTR,
+    pub pBefore: ::windows_sys::core::PCWSTR,
+    pub pAfter: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for SPVCONTEXT {}
+impl ::core::clone::Clone for SPVCONTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPVOICESTATUS {
+    pub ulCurrentStream: u32,
+    pub ulLastStreamQueued: u32,
+    pub hrLastResult: ::windows_sys::core::HRESULT,
+    pub dwRunningState: u32,
+    pub ulInputWordPos: u32,
+    pub ulInputWordLen: u32,
+    pub ulInputSentPos: u32,
+    pub ulInputSentLen: u32,
+    pub lBookmarkId: i32,
+    pub PhonemeId: u16,
+    pub VisemeId: SPVISEMES,
+    pub dwReserved1: u32,
+    pub dwReserved2: u32,
+}
+impl ::core::marker::Copy for SPVOICESTATUS {}
+impl ::core::clone::Clone for SPVOICESTATUS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPVPITCH {
+    pub MiddleAdj: i32,
+    pub RangeAdj: i32,
+}
+impl ::core::marker::Copy for SPVPITCH {}
+impl ::core::clone::Clone for SPVPITCH {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPVSTATE {
+    pub eAction: SPVACTIONS,
+    pub LangID: u16,
+    pub wReserved: u16,
+    pub EmphAdj: i32,
+    pub RateAdj: i32,
+    pub Volume: u32,
+    pub PitchAdj: SPVPITCH,
+    pub SilenceMSecs: u32,
+    pub pPhoneIds: *mut u16,
+    pub ePartOfSpeech: SPPARTOFSPEECH,
+    pub Context: SPVCONTEXT,
+}
+impl ::core::marker::Copy for SPVSTATE {}
+impl ::core::clone::Clone for SPVSTATE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPWORD {
+    pub pNextWord: *mut SPWORD,
+    pub LangID: u16,
+    pub wReserved: u16,
+    pub eWordType: SPWORDTYPE,
+    pub pszWord: ::windows_sys::core::PWSTR,
+    pub pFirstWordPronunciation: *mut SPWORDPRONUNCIATION,
+}
+impl ::core::marker::Copy for SPWORD {}
+impl ::core::clone::Clone for SPWORD {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPWORDLIST {
+    pub ulSize: u32,
+    pub pvBuffer: *mut u8,
+    pub pFirstWord: *mut SPWORD,
+}
+impl ::core::marker::Copy for SPWORDLIST {}
+impl ::core::clone::Clone for SPWORDLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPWORDPRONUNCIATION {
+    pub pNextWordPronunciation: *mut SPWORDPRONUNCIATION,
+    pub eLexiconType: SPLEXICONTYPE,
+    pub LangID: u16,
+    pub wPronunciationFlags: u16,
+    pub ePartOfSpeech: SPPARTOFSPEECH,
+    pub szPronunciation: [u16; 1],
+}
+impl ::core::marker::Copy for SPWORDPRONUNCIATION {}
+impl ::core::clone::Clone for SPWORDPRONUNCIATION {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Media_Speech\"`*"]
+pub struct SPWORDPRONUNCIATIONLIST {
+    pub ulSize: u32,
+    pub pvBuffer: *mut u8,
+    pub pFirstWordPronunciation: *mut SPWORDPRONUNCIATION,
+}
+impl ::core::marker::Copy for SPWORDPRONUNCIATIONLIST {}
+impl ::core::clone::Clone for SPWORDPRONUNCIATIONLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_Media_Speech\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub type SPNOTIFYCALLBACK = ::core::option::Option<unsafe extern "system" fn(wparam: super::super::Foundation::WPARAM, lparam: super::super::Foundation::LPARAM)>;

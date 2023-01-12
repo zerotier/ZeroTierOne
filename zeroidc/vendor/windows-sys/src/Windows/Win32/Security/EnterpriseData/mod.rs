@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
     pub fn ProtectFileToEnterpriseIdentity(fileorfolderpath: ::windows_sys::core::PCWSTR, identity: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT;
@@ -34,6 +34,9 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
     pub fn UnprotectFile(fileorfolderpath: ::windows_sys::core::PCWSTR, options: *const FILE_UNPROTECT_OPTIONS) -> ::windows_sys::core::HRESULT;
 }
+pub type IProtectionPolicyManagerInterop = *mut ::core::ffi::c_void;
+pub type IProtectionPolicyManagerInterop2 = *mut ::core::ffi::c_void;
+pub type IProtectionPolicyManagerInterop3 = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
 pub type ENTERPRISE_DATA_POLICIES = u32;
 #[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
@@ -44,10 +47,22 @@ pub const ENTERPRISE_POLICY_ALLOWED: ENTERPRISE_DATA_POLICIES = 1u32;
 pub const ENTERPRISE_POLICY_ENLIGHTENED: ENTERPRISE_DATA_POLICIES = 2u32;
 #[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
 pub const ENTERPRISE_POLICY_EXEMPT: ENTERPRISE_DATA_POLICIES = 4u32;
+#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
+pub type SRPHOSTING_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
+pub const SRPHOSTING_TYPE_NONE: SRPHOSTING_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
+pub const SRPHOSTING_TYPE_WINHTTP: SRPHOSTING_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
+pub const SRPHOSTING_TYPE_WININET: SRPHOSTING_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
+pub type SRPHOSTING_VERSION = i32;
+#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
+pub const SRPHOSTING_VERSION1: SRPHOSTING_VERSION = 1i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
 pub struct FILE_UNPROTECT_OPTIONS {
-    pub audit: bool,
+    pub audit: u8,
 }
 impl ::core::marker::Copy for FILE_UNPROTECT_OPTIONS {}
 impl ::core::clone::Clone for FILE_UNPROTECT_OPTIONS {
@@ -70,18 +85,3 @@ impl ::core::clone::Clone for HTHREAD_NETWORK_CONTEXT {
         *self
     }
 }
-pub type IProtectionPolicyManagerInterop = *mut ::core::ffi::c_void;
-pub type IProtectionPolicyManagerInterop2 = *mut ::core::ffi::c_void;
-pub type IProtectionPolicyManagerInterop3 = *mut ::core::ffi::c_void;
-#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
-pub type SRPHOSTING_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
-pub const SRPHOSTING_TYPE_NONE: SRPHOSTING_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
-pub const SRPHOSTING_TYPE_WINHTTP: SRPHOSTING_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
-pub const SRPHOSTING_TYPE_WININET: SRPHOSTING_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
-pub type SRPHOSTING_VERSION = i32;
-#[doc = "*Required features: `\"Win32_Security_EnterpriseData\"`*"]
-pub const SRPHOSTING_VERSION1: SRPHOSTING_VERSION = 1i32;

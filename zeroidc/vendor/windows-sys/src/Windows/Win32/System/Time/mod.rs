@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_Time\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -46,6 +46,26 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn TzSpecificLocalTimeToSystemTimeEx(lptimezoneinformation: *const DYNAMIC_TIME_ZONE_INFORMATION, lplocaltime: *const super::super::Foundation::SYSTEMTIME, lpuniversaltime: *mut super::super::Foundation::SYSTEMTIME) -> super::super::Foundation::BOOL;
 }
+#[doc = "*Required features: `\"Win32_System_Time\"`*"]
+pub const TSF_Authenticated: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_System_Time\"`*"]
+pub const TSF_Hardware: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_System_Time\"`*"]
+pub const TSF_IPv6: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_System_Time\"`*"]
+pub const TSF_SignatureAuthenticated: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Time\"`*"]
+pub const wszW32TimeRegKeyPolicyTimeProviders: &str = "Software\\Policies\\Microsoft\\W32Time\\TimeProviders";
+#[doc = "*Required features: `\"Win32_System_Time\"`*"]
+pub const wszW32TimeRegKeyTimeProviders: &str = "System\\CurrentControlSet\\Services\\W32Time\\TimeProviders";
+#[doc = "*Required features: `\"Win32_System_Time\"`*"]
+pub const wszW32TimeRegValueDllName: &str = "DllName";
+#[doc = "*Required features: `\"Win32_System_Time\"`*"]
+pub const wszW32TimeRegValueEnabled: &str = "Enabled";
+#[doc = "*Required features: `\"Win32_System_Time\"`*"]
+pub const wszW32TimeRegValueInputProvider: &str = "InputProvider";
+#[doc = "*Required features: `\"Win32_System_Time\"`*"]
+pub const wszW32TimeRegValueMetaDataProvider: &str = "MetaDataProvider";
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_Time\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
@@ -88,23 +108,3 @@ impl ::core::clone::Clone for TIME_ZONE_INFORMATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Time\"`*"]
-pub const TSF_Authenticated: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_System_Time\"`*"]
-pub const TSF_Hardware: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_System_Time\"`*"]
-pub const TSF_IPv6: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_System_Time\"`*"]
-pub const TSF_SignatureAuthenticated: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Time\"`*"]
-pub const wszW32TimeRegKeyPolicyTimeProviders: &str = "Software\\Policies\\Microsoft\\W32Time\\TimeProviders";
-#[doc = "*Required features: `\"Win32_System_Time\"`*"]
-pub const wszW32TimeRegKeyTimeProviders: &str = "System\\CurrentControlSet\\Services\\W32Time\\TimeProviders";
-#[doc = "*Required features: `\"Win32_System_Time\"`*"]
-pub const wszW32TimeRegValueDllName: &str = "DllName";
-#[doc = "*Required features: `\"Win32_System_Time\"`*"]
-pub const wszW32TimeRegValueEnabled: &str = "Enabled";
-#[doc = "*Required features: `\"Win32_System_Time\"`*"]
-pub const wszW32TimeRegValueInputProvider: &str = "InputProvider";
-#[doc = "*Required features: `\"Win32_System_Time\"`*"]
-pub const wszW32TimeRegValueMetaDataProvider: &str = "MetaDataProvider";

@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -95,9 +95,16 @@ extern "system" {
     #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
     pub fn CfUpdateSyncProviderStatus(connectionkey: CF_CONNECTION_KEY, providerstatus: CF_SYNC_PROVIDER_STATUS) -> ::windows_sys::core::HRESULT;
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`, `\"Win32_Foundation\"`, `\"Win32_System_CorrelationVector\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_CorrelationVector"))]
-pub type CF_CALLBACK = ::core::option::Option<unsafe extern "system" fn(callbackinfo: *const CF_CALLBACK_INFO, callbackparameters: *const CF_CALLBACK_PARAMETERS)>;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_MAX_PRIORITY_HINT: u32 = 15u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_MAX_PROVIDER_NAME_LENGTH: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_MAX_PROVIDER_VERSION_LENGTH: u32 = 255u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_MAX_FILE_IDENTITY_LENGTH: u32 = 4096u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_REQUEST_KEY_DEFAULT: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub type CF_CALLBACK_CANCEL_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
@@ -162,6 +169,402 @@ pub const CF_CALLBACK_FETCH_DATA_FLAG_EXPLICIT_HYDRATION: CF_CALLBACK_FETCH_DATA
 pub type CF_CALLBACK_FETCH_PLACEHOLDERS_FLAGS = u32;
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub const CF_CALLBACK_FETCH_PLACEHOLDERS_FLAG_NONE: CF_CALLBACK_FETCH_PLACEHOLDERS_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_CALLBACK_OPEN_COMPLETION_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_OPEN_COMPLETION_FLAG_NONE: CF_CALLBACK_OPEN_COMPLETION_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_OPEN_COMPLETION_FLAG_PLACEHOLDER_UNKNOWN: CF_CALLBACK_OPEN_COMPLETION_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_OPEN_COMPLETION_FLAG_PLACEHOLDER_UNSUPPORTED: CF_CALLBACK_OPEN_COMPLETION_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_CALLBACK_RENAME_COMPLETION_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_RENAME_COMPLETION_FLAG_NONE: CF_CALLBACK_RENAME_COMPLETION_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_CALLBACK_RENAME_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_RENAME_FLAG_NONE: CF_CALLBACK_RENAME_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_RENAME_FLAG_IS_DIRECTORY: CF_CALLBACK_RENAME_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_RENAME_FLAG_SOURCE_IN_SCOPE: CF_CALLBACK_RENAME_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_RENAME_FLAG_TARGET_IN_SCOPE: CF_CALLBACK_RENAME_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_CALLBACK_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_FETCH_DATA: CF_CALLBACK_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_VALIDATE_DATA: CF_CALLBACK_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_CANCEL_FETCH_DATA: CF_CALLBACK_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_FETCH_PLACEHOLDERS: CF_CALLBACK_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_CANCEL_FETCH_PLACEHOLDERS: CF_CALLBACK_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_NOTIFY_FILE_OPEN_COMPLETION: CF_CALLBACK_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_NOTIFY_FILE_CLOSE_COMPLETION: CF_CALLBACK_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_NOTIFY_DEHYDRATE: CF_CALLBACK_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_NOTIFY_DEHYDRATE_COMPLETION: CF_CALLBACK_TYPE = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_NOTIFY_DELETE: CF_CALLBACK_TYPE = 9i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_NOTIFY_DELETE_COMPLETION: CF_CALLBACK_TYPE = 10i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_NOTIFY_RENAME: CF_CALLBACK_TYPE = 11i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_NOTIFY_RENAME_COMPLETION: CF_CALLBACK_TYPE = 12i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_TYPE_NONE: CF_CALLBACK_TYPE = -1i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_CALLBACK_VALIDATE_DATA_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_VALIDATE_DATA_FLAG_NONE: CF_CALLBACK_VALIDATE_DATA_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CALLBACK_VALIDATE_DATA_FLAG_EXPLICIT_HYDRATION: CF_CALLBACK_VALIDATE_DATA_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_CONNECT_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CONNECT_FLAG_NONE: CF_CONNECT_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CONNECT_FLAG_REQUIRE_PROCESS_INFO: CF_CONNECT_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CONNECT_FLAG_REQUIRE_FULL_FILE_PATH: CF_CONNECT_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CONNECT_FLAG_BLOCK_SELF_IMPLICIT_HYDRATION: CF_CONNECT_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_CONVERT_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CONVERT_FLAG_NONE: CF_CONVERT_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CONVERT_FLAG_MARK_IN_SYNC: CF_CONVERT_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CONVERT_FLAG_DEHYDRATE: CF_CONVERT_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CONVERT_FLAG_ENABLE_ON_DEMAND_POPULATION: CF_CONVERT_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CONVERT_FLAG_ALWAYS_FULL: CF_CONVERT_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CONVERT_FLAG_FORCE_CONVERT_TO_CLOUD_FILE: CF_CONVERT_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_CREATE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CREATE_FLAG_NONE: CF_CREATE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_CREATE_FLAG_STOP_ON_ERROR: CF_CREATE_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_DEHYDRATE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_DEHYDRATE_FLAG_NONE: CF_DEHYDRATE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_DEHYDRATE_FLAG_BACKGROUND: CF_DEHYDRATE_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_HARDLINK_POLICY = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HARDLINK_POLICY_NONE: CF_HARDLINK_POLICY = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HARDLINK_POLICY_ALLOWED: CF_HARDLINK_POLICY = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_HYDRATE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HYDRATE_FLAG_NONE: CF_HYDRATE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_HYDRATION_POLICY_MODIFIER = u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HYDRATION_POLICY_MODIFIER_NONE: CF_HYDRATION_POLICY_MODIFIER = 0u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HYDRATION_POLICY_MODIFIER_VALIDATION_REQUIRED: CF_HYDRATION_POLICY_MODIFIER = 1u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HYDRATION_POLICY_MODIFIER_STREAMING_ALLOWED: CF_HYDRATION_POLICY_MODIFIER = 2u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HYDRATION_POLICY_MODIFIER_AUTO_DEHYDRATION_ALLOWED: CF_HYDRATION_POLICY_MODIFIER = 4u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HYDRATION_POLICY_MODIFIER_ALLOW_FULL_RESTART_HYDRATION: CF_HYDRATION_POLICY_MODIFIER = 8u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_HYDRATION_POLICY_PRIMARY = u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HYDRATION_POLICY_PARTIAL: CF_HYDRATION_POLICY_PRIMARY = 0u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HYDRATION_POLICY_PROGRESSIVE: CF_HYDRATION_POLICY_PRIMARY = 1u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HYDRATION_POLICY_FULL: CF_HYDRATION_POLICY_PRIMARY = 2u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_HYDRATION_POLICY_ALWAYS_FULL: CF_HYDRATION_POLICY_PRIMARY = 3u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_INSYNC_POLICY = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_NONE: CF_INSYNC_POLICY = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_FILE_CREATION_TIME: CF_INSYNC_POLICY = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_FILE_READONLY_ATTRIBUTE: CF_INSYNC_POLICY = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_FILE_HIDDEN_ATTRIBUTE: CF_INSYNC_POLICY = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_FILE_SYSTEM_ATTRIBUTE: CF_INSYNC_POLICY = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_CREATION_TIME: CF_INSYNC_POLICY = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_READONLY_ATTRIBUTE: CF_INSYNC_POLICY = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_HIDDEN_ATTRIBUTE: CF_INSYNC_POLICY = 64u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_SYSTEM_ATTRIBUTE: CF_INSYNC_POLICY = 128u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_FILE_LAST_WRITE_TIME: CF_INSYNC_POLICY = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_LAST_WRITE_TIME: CF_INSYNC_POLICY = 512u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_FILE_ALL: CF_INSYNC_POLICY = 5592335u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_ALL: CF_INSYNC_POLICY = 11184880u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_TRACK_ALL: CF_INSYNC_POLICY = 16777215u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_INSYNC_POLICY_PRESERVE_INSYNC_FOR_SYNC_ENGINE: CF_INSYNC_POLICY = 2147483648u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_IN_SYNC_STATE = i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_IN_SYNC_STATE_NOT_IN_SYNC: CF_IN_SYNC_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_IN_SYNC_STATE_IN_SYNC: CF_IN_SYNC_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_OPEN_FILE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPEN_FILE_FLAG_NONE: CF_OPEN_FILE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPEN_FILE_FLAG_EXCLUSIVE: CF_OPEN_FILE_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPEN_FILE_FLAG_WRITE_ACCESS: CF_OPEN_FILE_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPEN_FILE_FLAG_DELETE_ACCESS: CF_OPEN_FILE_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPEN_FILE_FLAG_FOREGROUND: CF_OPEN_FILE_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_OPERATION_ACK_DATA_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_ACK_DATA_FLAG_NONE: CF_OPERATION_ACK_DATA_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_OPERATION_ACK_DEHYDRATE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_ACK_DEHYDRATE_FLAG_NONE: CF_OPERATION_ACK_DEHYDRATE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_OPERATION_ACK_DELETE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_ACK_DELETE_FLAG_NONE: CF_OPERATION_ACK_DELETE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_OPERATION_ACK_RENAME_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_ACK_RENAME_FLAG_NONE: CF_OPERATION_ACK_RENAME_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_OPERATION_RESTART_HYDRATION_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_RESTART_HYDRATION_FLAG_NONE: CF_OPERATION_RESTART_HYDRATION_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_RESTART_HYDRATION_FLAG_MARK_IN_SYNC: CF_OPERATION_RESTART_HYDRATION_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_OPERATION_RETRIEVE_DATA_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_RETRIEVE_DATA_FLAG_NONE: CF_OPERATION_RETRIEVE_DATA_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_OPERATION_TRANSFER_DATA_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TRANSFER_DATA_FLAG_NONE: CF_OPERATION_TRANSFER_DATA_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAG_NONE: CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAG_STOP_ON_ERROR: CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAG_DISABLE_ON_DEMAND_POPULATION: CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_OPERATION_TYPE = i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TYPE_TRANSFER_DATA: CF_OPERATION_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TYPE_RETRIEVE_DATA: CF_OPERATION_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TYPE_ACK_DATA: CF_OPERATION_TYPE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TYPE_RESTART_HYDRATION: CF_OPERATION_TYPE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TYPE_TRANSFER_PLACEHOLDERS: CF_OPERATION_TYPE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TYPE_ACK_DEHYDRATE: CF_OPERATION_TYPE = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TYPE_ACK_DELETE: CF_OPERATION_TYPE = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_OPERATION_TYPE_ACK_RENAME: CF_OPERATION_TYPE = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_PIN_STATE = i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PIN_STATE_UNSPECIFIED: CF_PIN_STATE = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PIN_STATE_PINNED: CF_PIN_STATE = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PIN_STATE_UNPINNED: CF_PIN_STATE = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PIN_STATE_EXCLUDED: CF_PIN_STATE = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PIN_STATE_INHERIT: CF_PIN_STATE = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_PLACEHOLDER_CREATE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_CREATE_FLAG_NONE: CF_PLACEHOLDER_CREATE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_CREATE_FLAG_DISABLE_ON_DEMAND_POPULATION: CF_PLACEHOLDER_CREATE_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_CREATE_FLAG_MARK_IN_SYNC: CF_PLACEHOLDER_CREATE_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_CREATE_FLAG_SUPERSEDE: CF_PLACEHOLDER_CREATE_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_CREATE_FLAG_ALWAYS_FULL: CF_PLACEHOLDER_CREATE_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_PLACEHOLDER_INFO_CLASS = i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_INFO_BASIC: CF_PLACEHOLDER_INFO_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_INFO_STANDARD: CF_PLACEHOLDER_INFO_CLASS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_PLACEHOLDER_MANAGEMENT_POLICY = i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_MANAGEMENT_POLICY_DEFAULT: CF_PLACEHOLDER_MANAGEMENT_POLICY = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_MANAGEMENT_POLICY_CREATE_UNRESTRICTED: CF_PLACEHOLDER_MANAGEMENT_POLICY = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_MANAGEMENT_POLICY_CONVERT_TO_UNRESTRICTED: CF_PLACEHOLDER_MANAGEMENT_POLICY = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_MANAGEMENT_POLICY_UPDATE_UNRESTRICTED: CF_PLACEHOLDER_MANAGEMENT_POLICY = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_PLACEHOLDER_RANGE_INFO_CLASS = i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_RANGE_INFO_ONDISK: CF_PLACEHOLDER_RANGE_INFO_CLASS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_RANGE_INFO_VALIDATED: CF_PLACEHOLDER_RANGE_INFO_CLASS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_RANGE_INFO_MODIFIED: CF_PLACEHOLDER_RANGE_INFO_CLASS = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_PLACEHOLDER_STATE = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_STATE_NO_STATES: CF_PLACEHOLDER_STATE = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_STATE_PLACEHOLDER: CF_PLACEHOLDER_STATE = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_STATE_SYNC_ROOT: CF_PLACEHOLDER_STATE = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_STATE_ESSENTIAL_PROP_PRESENT: CF_PLACEHOLDER_STATE = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_STATE_IN_SYNC: CF_PLACEHOLDER_STATE = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_STATE_PARTIAL: CF_PLACEHOLDER_STATE = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_STATE_PARTIALLY_ON_DISK: CF_PLACEHOLDER_STATE = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PLACEHOLDER_STATE_INVALID: CF_PLACEHOLDER_STATE = 4294967295u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_POPULATION_POLICY_MODIFIER = u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_POPULATION_POLICY_MODIFIER_NONE: CF_POPULATION_POLICY_MODIFIER = 0u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_POPULATION_POLICY_PRIMARY = u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_POPULATION_POLICY_PARTIAL: CF_POPULATION_POLICY_PRIMARY = 0u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_POPULATION_POLICY_FULL: CF_POPULATION_POLICY_PRIMARY = 2u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_POPULATION_POLICY_ALWAYS_FULL: CF_POPULATION_POLICY_PRIMARY = 3u16;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_REGISTER_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_REGISTER_FLAG_NONE: CF_REGISTER_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_REGISTER_FLAG_UPDATE: CF_REGISTER_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_REGISTER_FLAG_DISABLE_ON_DEMAND_POPULATION_ON_ROOT: CF_REGISTER_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_REGISTER_FLAG_MARK_IN_SYNC_ON_ROOT: CF_REGISTER_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_REVERT_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_REVERT_FLAG_NONE: CF_REVERT_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_SET_IN_SYNC_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_SET_IN_SYNC_FLAG_NONE: CF_SET_IN_SYNC_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_SET_PIN_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_SET_PIN_FLAG_NONE: CF_SET_PIN_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_SET_PIN_FLAG_RECURSE: CF_SET_PIN_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_SET_PIN_FLAG_RECURSE_ONLY: CF_SET_PIN_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_SET_PIN_FLAG_RECURSE_STOP_ON_ERROR: CF_SET_PIN_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_SYNC_PROVIDER_STATUS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_DISCONNECTED: CF_SYNC_PROVIDER_STATUS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_IDLE: CF_SYNC_PROVIDER_STATUS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_POPULATE_NAMESPACE: CF_SYNC_PROVIDER_STATUS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_POPULATE_METADATA: CF_SYNC_PROVIDER_STATUS = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_POPULATE_CONTENT: CF_SYNC_PROVIDER_STATUS = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_SYNC_INCREMENTAL: CF_SYNC_PROVIDER_STATUS = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_SYNC_FULL: CF_SYNC_PROVIDER_STATUS = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_CONNECTIVITY_LOST: CF_SYNC_PROVIDER_STATUS = 64u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_CLEAR_FLAGS: CF_SYNC_PROVIDER_STATUS = 2147483648u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_TERMINATED: CF_SYNC_PROVIDER_STATUS = 3221225473u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_PROVIDER_STATUS_ERROR: CF_SYNC_PROVIDER_STATUS = 3221225474u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_SYNC_ROOT_INFO_CLASS = i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_SYNC_ROOT_INFO_BASIC: CF_SYNC_ROOT_INFO_CLASS = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_SYNC_ROOT_INFO_STANDARD: CF_SYNC_ROOT_INFO_CLASS = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_SYNC_ROOT_INFO_PROVIDER: CF_SYNC_ROOT_INFO_CLASS = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub type CF_UPDATE_FLAGS = u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_NONE: CF_UPDATE_FLAGS = 0u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_VERIFY_IN_SYNC: CF_UPDATE_FLAGS = 1u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_MARK_IN_SYNC: CF_UPDATE_FLAGS = 2u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_DEHYDRATE: CF_UPDATE_FLAGS = 4u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_ENABLE_ON_DEMAND_POPULATION: CF_UPDATE_FLAGS = 8u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_DISABLE_ON_DEMAND_POPULATION: CF_UPDATE_FLAGS = 16u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_REMOVE_FILE_IDENTITY: CF_UPDATE_FLAGS = 32u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_CLEAR_IN_SYNC: CF_UPDATE_FLAGS = 64u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_REMOVE_PROPERTY: CF_UPDATE_FLAGS = 128u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_PASSTHROUGH_FS_METADATA: CF_UPDATE_FLAGS = 256u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_ALWAYS_FULL: CF_UPDATE_FLAGS = 512u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
+pub const CF_UPDATE_FLAG_ALLOW_PARTIAL: CF_UPDATE_FLAGS = 1024u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`, `\"Win32_Foundation\"`, `\"Win32_System_CorrelationVector\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_CorrelationVector"))]
@@ -194,14 +597,6 @@ impl ::core::clone::Clone for CF_CALLBACK_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_CALLBACK_OPEN_COMPLETION_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_OPEN_COMPLETION_FLAG_NONE: CF_CALLBACK_OPEN_COMPLETION_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_OPEN_COMPLETION_FLAG_PLACEHOLDER_UNKNOWN: CF_CALLBACK_OPEN_COMPLETION_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_OPEN_COMPLETION_FLAG_PLACEHOLDER_UNSUPPORTED: CF_CALLBACK_OPEN_COMPLETION_FLAGS = 2u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_CALLBACK_PARAMETERS {
@@ -420,93 +815,7 @@ impl ::core::clone::Clone for CF_CALLBACK_REGISTRATION {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_CALLBACK_RENAME_COMPLETION_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_RENAME_COMPLETION_FLAG_NONE: CF_CALLBACK_RENAME_COMPLETION_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_CALLBACK_RENAME_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_RENAME_FLAG_NONE: CF_CALLBACK_RENAME_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_RENAME_FLAG_IS_DIRECTORY: CF_CALLBACK_RENAME_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_RENAME_FLAG_SOURCE_IN_SCOPE: CF_CALLBACK_RENAME_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_RENAME_FLAG_TARGET_IN_SCOPE: CF_CALLBACK_RENAME_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_CALLBACK_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_FETCH_DATA: CF_CALLBACK_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_VALIDATE_DATA: CF_CALLBACK_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_CANCEL_FETCH_DATA: CF_CALLBACK_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_FETCH_PLACEHOLDERS: CF_CALLBACK_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_CANCEL_FETCH_PLACEHOLDERS: CF_CALLBACK_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_NOTIFY_FILE_OPEN_COMPLETION: CF_CALLBACK_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_NOTIFY_FILE_CLOSE_COMPLETION: CF_CALLBACK_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_NOTIFY_DEHYDRATE: CF_CALLBACK_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_NOTIFY_DEHYDRATE_COMPLETION: CF_CALLBACK_TYPE = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_NOTIFY_DELETE: CF_CALLBACK_TYPE = 9i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_NOTIFY_DELETE_COMPLETION: CF_CALLBACK_TYPE = 10i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_NOTIFY_RENAME: CF_CALLBACK_TYPE = 11i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_NOTIFY_RENAME_COMPLETION: CF_CALLBACK_TYPE = 12i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_TYPE_NONE: CF_CALLBACK_TYPE = -1i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_CALLBACK_VALIDATE_DATA_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_VALIDATE_DATA_FLAG_NONE: CF_CALLBACK_VALIDATE_DATA_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CALLBACK_VALIDATE_DATA_FLAG_EXPLICIT_HYDRATION: CF_CALLBACK_VALIDATE_DATA_FLAGS = 2u32;
-pub type CF_CONNECTION_KEY = isize;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_CONNECT_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CONNECT_FLAG_NONE: CF_CONNECT_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CONNECT_FLAG_REQUIRE_PROCESS_INFO: CF_CONNECT_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CONNECT_FLAG_REQUIRE_FULL_FILE_PATH: CF_CONNECT_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CONNECT_FLAG_BLOCK_SELF_IMPLICIT_HYDRATION: CF_CONNECT_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_CONVERT_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CONVERT_FLAG_NONE: CF_CONVERT_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CONVERT_FLAG_MARK_IN_SYNC: CF_CONVERT_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CONVERT_FLAG_DEHYDRATE: CF_CONVERT_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CONVERT_FLAG_ENABLE_ON_DEMAND_POPULATION: CF_CONVERT_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CONVERT_FLAG_ALWAYS_FULL: CF_CONVERT_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CONVERT_FLAG_FORCE_CONVERT_TO_CLOUD_FILE: CF_CONVERT_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_CREATE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CREATE_FLAG_NONE: CF_CREATE_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_CREATE_FLAG_STOP_ON_ERROR: CF_CREATE_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_DEHYDRATE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_DEHYDRATE_FLAG_NONE: CF_DEHYDRATE_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_DEHYDRATE_FLAG_BACKGROUND: CF_DEHYDRATE_FLAGS = 1u32;
+pub type CF_CONNECTION_KEY = i64;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_FILE_RANGE {
@@ -534,16 +843,6 @@ impl ::core::clone::Clone for CF_FS_METADATA {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_HARDLINK_POLICY = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HARDLINK_POLICY_NONE: CF_HARDLINK_POLICY = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HARDLINK_POLICY_ALLOWED: CF_HARDLINK_POLICY = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_HYDRATE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HYDRATE_FLAG_NONE: CF_HYDRATE_FLAGS = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_HYDRATION_POLICY {
@@ -556,18 +855,6 @@ impl ::core::clone::Clone for CF_HYDRATION_POLICY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_HYDRATION_POLICY_MODIFIER = u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HYDRATION_POLICY_MODIFIER_NONE: CF_HYDRATION_POLICY_MODIFIER = 0u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HYDRATION_POLICY_MODIFIER_VALIDATION_REQUIRED: CF_HYDRATION_POLICY_MODIFIER = 1u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HYDRATION_POLICY_MODIFIER_STREAMING_ALLOWED: CF_HYDRATION_POLICY_MODIFIER = 2u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HYDRATION_POLICY_MODIFIER_AUTO_DEHYDRATION_ALLOWED: CF_HYDRATION_POLICY_MODIFIER = 4u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HYDRATION_POLICY_MODIFIER_ALLOW_FULL_RESTART_HYDRATION: CF_HYDRATION_POLICY_MODIFIER = 8u16;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_HYDRATION_POLICY_MODIFIER_USHORT {
@@ -579,16 +866,6 @@ impl ::core::clone::Clone for CF_HYDRATION_POLICY_MODIFIER_USHORT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_HYDRATION_POLICY_PRIMARY = u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HYDRATION_POLICY_PARTIAL: CF_HYDRATION_POLICY_PRIMARY = 0u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HYDRATION_POLICY_PROGRESSIVE: CF_HYDRATION_POLICY_PRIMARY = 1u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HYDRATION_POLICY_FULL: CF_HYDRATION_POLICY_PRIMARY = 2u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_HYDRATION_POLICY_ALWAYS_FULL: CF_HYDRATION_POLICY_PRIMARY = 3u16;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_HYDRATION_POLICY_PRIMARY_USHORT {
@@ -600,78 +877,6 @@ impl ::core::clone::Clone for CF_HYDRATION_POLICY_PRIMARY_USHORT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_INSYNC_POLICY = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_NONE: CF_INSYNC_POLICY = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_FILE_CREATION_TIME: CF_INSYNC_POLICY = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_FILE_READONLY_ATTRIBUTE: CF_INSYNC_POLICY = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_FILE_HIDDEN_ATTRIBUTE: CF_INSYNC_POLICY = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_FILE_SYSTEM_ATTRIBUTE: CF_INSYNC_POLICY = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_CREATION_TIME: CF_INSYNC_POLICY = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_READONLY_ATTRIBUTE: CF_INSYNC_POLICY = 32u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_HIDDEN_ATTRIBUTE: CF_INSYNC_POLICY = 64u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_SYSTEM_ATTRIBUTE: CF_INSYNC_POLICY = 128u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_FILE_LAST_WRITE_TIME: CF_INSYNC_POLICY = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_LAST_WRITE_TIME: CF_INSYNC_POLICY = 512u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_FILE_ALL: CF_INSYNC_POLICY = 5592335u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_DIRECTORY_ALL: CF_INSYNC_POLICY = 11184880u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_TRACK_ALL: CF_INSYNC_POLICY = 16777215u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_INSYNC_POLICY_PRESERVE_INSYNC_FOR_SYNC_ENGINE: CF_INSYNC_POLICY = 2147483648u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_IN_SYNC_STATE = i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_IN_SYNC_STATE_NOT_IN_SYNC: CF_IN_SYNC_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_IN_SYNC_STATE_IN_SYNC: CF_IN_SYNC_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_MAX_PRIORITY_HINT: u32 = 15u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_MAX_PROVIDER_NAME_LENGTH: u32 = 255u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_MAX_PROVIDER_VERSION_LENGTH: u32 = 255u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_OPEN_FILE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPEN_FILE_FLAG_NONE: CF_OPEN_FILE_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPEN_FILE_FLAG_EXCLUSIVE: CF_OPEN_FILE_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPEN_FILE_FLAG_WRITE_ACCESS: CF_OPEN_FILE_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPEN_FILE_FLAG_DELETE_ACCESS: CF_OPEN_FILE_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPEN_FILE_FLAG_FOREGROUND: CF_OPEN_FILE_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_OPERATION_ACK_DATA_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_ACK_DATA_FLAG_NONE: CF_OPERATION_ACK_DATA_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_OPERATION_ACK_DEHYDRATE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_ACK_DEHYDRATE_FLAG_NONE: CF_OPERATION_ACK_DEHYDRATE_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_OPERATION_ACK_DELETE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_ACK_DELETE_FLAG_NONE: CF_OPERATION_ACK_DELETE_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_OPERATION_ACK_RENAME_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_ACK_RENAME_FLAG_NONE: CF_OPERATION_ACK_RENAME_FLAGS = 0u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`, `\"Win32_Foundation\"`, `\"Win32_System_CorrelationVector\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_CorrelationVector"))]
@@ -864,58 +1069,6 @@ impl ::core::clone::Clone for CF_OPERATION_PARAMETERS_0_7 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_OPERATION_RESTART_HYDRATION_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_RESTART_HYDRATION_FLAG_NONE: CF_OPERATION_RESTART_HYDRATION_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_RESTART_HYDRATION_FLAG_MARK_IN_SYNC: CF_OPERATION_RESTART_HYDRATION_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_OPERATION_RETRIEVE_DATA_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_RETRIEVE_DATA_FLAG_NONE: CF_OPERATION_RETRIEVE_DATA_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_OPERATION_TRANSFER_DATA_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TRANSFER_DATA_FLAG_NONE: CF_OPERATION_TRANSFER_DATA_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAG_NONE: CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAG_STOP_ON_ERROR: CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAG_DISABLE_ON_DEMAND_POPULATION: CF_OPERATION_TRANSFER_PLACEHOLDERS_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_OPERATION_TYPE = i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TYPE_TRANSFER_DATA: CF_OPERATION_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TYPE_RETRIEVE_DATA: CF_OPERATION_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TYPE_ACK_DATA: CF_OPERATION_TYPE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TYPE_RESTART_HYDRATION: CF_OPERATION_TYPE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TYPE_TRANSFER_PLACEHOLDERS: CF_OPERATION_TYPE = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TYPE_ACK_DEHYDRATE: CF_OPERATION_TYPE = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TYPE_ACK_DELETE: CF_OPERATION_TYPE = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_OPERATION_TYPE_ACK_RENAME: CF_OPERATION_TYPE = 7i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_PIN_STATE = i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PIN_STATE_UNSPECIFIED: CF_PIN_STATE = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PIN_STATE_PINNED: CF_PIN_STATE = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PIN_STATE_UNPINNED: CF_PIN_STATE = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PIN_STATE_EXCLUDED: CF_PIN_STATE = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PIN_STATE_INHERIT: CF_PIN_STATE = 4i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_PLACEHOLDER_BASIC_INFO {
@@ -932,18 +1085,6 @@ impl ::core::clone::Clone for CF_PLACEHOLDER_BASIC_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_PLACEHOLDER_CREATE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_CREATE_FLAG_NONE: CF_PLACEHOLDER_CREATE_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_CREATE_FLAG_DISABLE_ON_DEMAND_POPULATION: CF_PLACEHOLDER_CREATE_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_CREATE_FLAG_MARK_IN_SYNC: CF_PLACEHOLDER_CREATE_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_CREATE_FLAG_SUPERSEDE: CF_PLACEHOLDER_CREATE_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_CREATE_FLAG_ALWAYS_FULL: CF_PLACEHOLDER_CREATE_FLAGS = 8u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`, `\"Win32_Storage_FileSystem\"`*"]
 #[cfg(feature = "Win32_Storage_FileSystem")]
@@ -964,32 +1105,6 @@ impl ::core::clone::Clone for CF_PLACEHOLDER_CREATE_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_PLACEHOLDER_INFO_CLASS = i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_INFO_BASIC: CF_PLACEHOLDER_INFO_CLASS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_INFO_STANDARD: CF_PLACEHOLDER_INFO_CLASS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_PLACEHOLDER_MANAGEMENT_POLICY = i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_MANAGEMENT_POLICY_DEFAULT: CF_PLACEHOLDER_MANAGEMENT_POLICY = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_MANAGEMENT_POLICY_CREATE_UNRESTRICTED: CF_PLACEHOLDER_MANAGEMENT_POLICY = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_MANAGEMENT_POLICY_CONVERT_TO_UNRESTRICTED: CF_PLACEHOLDER_MANAGEMENT_POLICY = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_MANAGEMENT_POLICY_UPDATE_UNRESTRICTED: CF_PLACEHOLDER_MANAGEMENT_POLICY = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_MAX_FILE_IDENTITY_LENGTH: u32 = 4096u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_PLACEHOLDER_RANGE_INFO_CLASS = i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_RANGE_INFO_ONDISK: CF_PLACEHOLDER_RANGE_INFO_CLASS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_RANGE_INFO_VALIDATED: CF_PLACEHOLDER_RANGE_INFO_CLASS = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_RANGE_INFO_MODIFIED: CF_PLACEHOLDER_RANGE_INFO_CLASS = 3i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_PLACEHOLDER_STANDARD_INFO {
@@ -1010,24 +1125,6 @@ impl ::core::clone::Clone for CF_PLACEHOLDER_STANDARD_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_PLACEHOLDER_STATE = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_STATE_NO_STATES: CF_PLACEHOLDER_STATE = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_STATE_PLACEHOLDER: CF_PLACEHOLDER_STATE = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_STATE_SYNC_ROOT: CF_PLACEHOLDER_STATE = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_STATE_ESSENTIAL_PROP_PRESENT: CF_PLACEHOLDER_STATE = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_STATE_IN_SYNC: CF_PLACEHOLDER_STATE = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_STATE_PARTIAL: CF_PLACEHOLDER_STATE = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_STATE_PARTIALLY_ON_DISK: CF_PLACEHOLDER_STATE = 32u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PLACEHOLDER_STATE_INVALID: CF_PLACEHOLDER_STATE = 4294967295u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_PLATFORM_INFO {
@@ -1053,10 +1150,6 @@ impl ::core::clone::Clone for CF_POPULATION_POLICY {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_POPULATION_POLICY_MODIFIER = u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_POPULATION_POLICY_MODIFIER_NONE: CF_POPULATION_POLICY_MODIFIER = 0u16;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_POPULATION_POLICY_MODIFIER_USHORT {
@@ -1068,14 +1161,6 @@ impl ::core::clone::Clone for CF_POPULATION_POLICY_MODIFIER_USHORT {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_POPULATION_POLICY_PRIMARY = u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_POPULATION_POLICY_PARTIAL: CF_POPULATION_POLICY_PRIMARY = 0u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_POPULATION_POLICY_FULL: CF_POPULATION_POLICY_PRIMARY = 2u16;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_POPULATION_POLICY_ALWAYS_FULL: CF_POPULATION_POLICY_PRIMARY = 3u16;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_POPULATION_POLICY_PRIMARY_USHORT {
@@ -1104,36 +1189,6 @@ impl ::core::clone::Clone for CF_PROCESS_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_REGISTER_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_REGISTER_FLAG_NONE: CF_REGISTER_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_REGISTER_FLAG_UPDATE: CF_REGISTER_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_REGISTER_FLAG_DISABLE_ON_DEMAND_POPULATION_ON_ROOT: CF_REGISTER_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_REGISTER_FLAG_MARK_IN_SYNC_ON_ROOT: CF_REGISTER_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_REQUEST_KEY_DEFAULT: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_REVERT_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_REVERT_FLAG_NONE: CF_REVERT_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_SET_IN_SYNC_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_SET_IN_SYNC_FLAG_NONE: CF_SET_IN_SYNC_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_SET_PIN_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_SET_PIN_FLAG_NONE: CF_SET_PIN_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_SET_PIN_FLAG_RECURSE: CF_SET_PIN_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_SET_PIN_FLAG_RECURSE_ONLY: CF_SET_PIN_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_SET_PIN_FLAG_RECURSE_STOP_ON_ERROR: CF_SET_PIN_FLAGS = 4u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_SYNC_POLICIES {
@@ -1150,30 +1205,6 @@ impl ::core::clone::Clone for CF_SYNC_POLICIES {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_SYNC_PROVIDER_STATUS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_DISCONNECTED: CF_SYNC_PROVIDER_STATUS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_IDLE: CF_SYNC_PROVIDER_STATUS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_POPULATE_NAMESPACE: CF_SYNC_PROVIDER_STATUS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_POPULATE_METADATA: CF_SYNC_PROVIDER_STATUS = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_POPULATE_CONTENT: CF_SYNC_PROVIDER_STATUS = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_SYNC_INCREMENTAL: CF_SYNC_PROVIDER_STATUS = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_SYNC_FULL: CF_SYNC_PROVIDER_STATUS = 32u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_CONNECTIVITY_LOST: CF_SYNC_PROVIDER_STATUS = 64u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_CLEAR_FLAGS: CF_SYNC_PROVIDER_STATUS = 2147483648u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_TERMINATED: CF_SYNC_PROVIDER_STATUS = 3221225473u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_PROVIDER_STATUS_ERROR: CF_SYNC_PROVIDER_STATUS = 3221225474u32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_SYNC_REGISTRATION {
@@ -1203,14 +1234,6 @@ impl ::core::clone::Clone for CF_SYNC_ROOT_BASIC_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_SYNC_ROOT_INFO_CLASS = i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_SYNC_ROOT_INFO_BASIC: CF_SYNC_ROOT_INFO_CLASS = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_SYNC_ROOT_INFO_STANDARD: CF_SYNC_ROOT_INFO_CLASS = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_SYNC_ROOT_INFO_PROVIDER: CF_SYNC_ROOT_INFO_CLASS = 2i32;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
 pub struct CF_SYNC_ROOT_PROVIDER_INFO {
@@ -1260,29 +1283,6 @@ impl ::core::clone::Clone for CF_SYNC_STATUS {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub type CF_UPDATE_FLAGS = u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_NONE: CF_UPDATE_FLAGS = 0u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_VERIFY_IN_SYNC: CF_UPDATE_FLAGS = 1u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_MARK_IN_SYNC: CF_UPDATE_FLAGS = 2u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_DEHYDRATE: CF_UPDATE_FLAGS = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_ENABLE_ON_DEMAND_POPULATION: CF_UPDATE_FLAGS = 8u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_DISABLE_ON_DEMAND_POPULATION: CF_UPDATE_FLAGS = 16u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_REMOVE_FILE_IDENTITY: CF_UPDATE_FLAGS = 32u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_CLEAR_IN_SYNC: CF_UPDATE_FLAGS = 64u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_REMOVE_PROPERTY: CF_UPDATE_FLAGS = 128u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_PASSTHROUGH_FS_METADATA: CF_UPDATE_FLAGS = 256u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_ALWAYS_FULL: CF_UPDATE_FLAGS = 512u32;
-#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`*"]
-pub const CF_UPDATE_FLAG_ALLOW_PARTIAL: CF_UPDATE_FLAGS = 1024u32;
+#[doc = "*Required features: `\"Win32_Storage_CloudFilters\"`, `\"Win32_Foundation\"`, `\"Win32_System_CorrelationVector\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_System_CorrelationVector"))]
+pub type CF_CALLBACK = ::core::option::Option<unsafe extern "system" fn(callbackinfo: *const CF_CALLBACK_INFO, callbackparameters: *const CF_CALLBACK_PARAMETERS)>;

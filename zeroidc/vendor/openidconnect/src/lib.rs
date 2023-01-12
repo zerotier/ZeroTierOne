@@ -800,6 +800,7 @@ where
     issuer: IssuerUrl,
     userinfo_endpoint: Option<UserInfoUrl>,
     jwks: JsonWebKeySet<JS, JT, JU, K>,
+    id_token_signing_algs: Vec<JS>,
     use_openid_scope: bool,
     _phantom: PhantomData<(AC, AD, GC, JE, P)>,
 }
@@ -824,6 +825,8 @@ where
 {
     ///
     /// Initializes an OpenID Connect client.
+    /// If you need to configure the algorithms used for signing, ...,
+    /// do this directly on the respected components. (e.g. IdTokenVerifier)
     ///
     pub fn new(
         client_id: ClientId,
@@ -846,6 +849,7 @@ where
             issuer,
             userinfo_endpoint,
             jwks,
+            id_token_signing_algs: vec![],
             use_openid_scope: true,
             _phantom: PhantomData,
         }
@@ -873,15 +877,24 @@ where
         RS: ResponseType,
         S: SubjectIdentifierType,
     {
-        Self::new(
+        Client {
+            oauth2_client: oauth2::Client::new(
+                client_id.clone(),
+                client_secret.clone(),
+                provider_metadata.authorization_endpoint().clone(),
+                provider_metadata.token_endpoint().cloned(),
+            ),
             client_id,
             client_secret,
-            provider_metadata.issuer().clone(),
-            provider_metadata.authorization_endpoint().clone(),
-            provider_metadata.token_endpoint().cloned(),
-            provider_metadata.userinfo_endpoint().cloned(),
-            provider_metadata.jwks().to_owned(),
-        )
+            issuer: provider_metadata.issuer().clone(),
+            userinfo_endpoint: provider_metadata.userinfo_endpoint().cloned(),
+            jwks: provider_metadata.jwks().to_owned(),
+            id_token_signing_algs: provider_metadata
+                .id_token_signing_alg_values_supported()
+                .to_owned(),
+            use_openid_scope: true,
+            _phantom: PhantomData,
+        }
     }
 
     ///
@@ -889,7 +902,10 @@ where
     /// server.
     ///
     /// The default is to use HTTP Basic authentication, as recommended in
-    /// [Section 2.3.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-2.3.1).
+    /// [Section 2.3.1 of RFC 6749](https://tools.ietf.org/html/rfc6749#section-2.3.1). Note that
+    /// if a client secret is omitted (i.e., `client_secret` is set to `None` when calling
+    /// [`Client::new`]), [`AuthType::RequestBody`] is used regardless of the `auth_type` passed to
+    /// this function.
     ///
     pub fn set_auth_type(mut self, auth_type: AuthType) -> Self {
         self.oauth2_client = self.oauth2_client.set_auth_type(auth_type);
@@ -946,7 +962,7 @@ where
     /// Returns an ID token verifier for use with the [`IdToken::claims`] method.
     ///
     pub fn id_token_verifier(&self) -> IdTokenVerifier<JS, JT, JU, K> {
-        if let Some(ref client_secret) = self.client_secret {
+        let verifier = if let Some(ref client_secret) = self.client_secret {
             IdTokenVerifier::new_confidential_client(
                 self.client_id.clone(),
                 client_secret.clone(),
@@ -959,7 +975,9 @@ where
                 self.issuer.clone(),
                 self.jwks.clone(),
             )
-        }
+        };
+
+        verifier.set_allowed_algs(self.id_token_signing_algs.clone())
     }
 
     ///

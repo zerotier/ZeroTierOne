@@ -1,8 +1,7 @@
-use crate::encode::encode_to_slice;
-use crate::{encode_config_slice, Config};
+use crate::engine::Engine;
 use std::{
-    cmp, fmt,
-    io::{ErrorKind, Result, Write},
+    cmp, fmt, io,
+    io::{ErrorKind, Result},
 };
 
 pub(crate) const BUF_SIZE: usize = 1024;
@@ -23,9 +22,10 @@ const MIN_ENCODE_CHUNK_SIZE: usize = 3;
 ///
 /// ```
 /// use std::io::Write;
+/// use base64::engine::general_purpose;
 ///
 /// // use a vec as the simplest possible `Write` -- in real code this is probably a file, etc.
-/// let mut enc = base64::write::EncoderWriter::new(Vec::new(), base64::STANDARD);
+/// let mut enc = base64::write::EncoderWriter::new(Vec::new(), &general_purpose::STANDARD);
 ///
 /// // handle errors as you normally would
 /// enc.write_all(b"asdf").unwrap();
@@ -53,8 +53,15 @@ const MIN_ENCODE_CHUNK_SIZE: usize = 3;
 ///
 /// It has some minor performance loss compared to encoding slices (a couple percent).
 /// It does not do any heap allocation.
-pub struct EncoderWriter<W: Write> {
-    config: Config,
+///
+/// # Limitations
+///
+/// Owing to the specification of the `write` and `flush` methods on the `Write` trait and their
+/// implications for a buffering implementation, these methods may not behave as expected. In
+/// particular, calling `write_all` on this interface may fail with `io::ErrorKind::WriteZero`.
+/// See the documentation of the `Write` trait implementation for further details.
+pub struct EncoderWriter<'e, E: Engine, W: io::Write> {
+    engine: &'e E,
     /// Where encoded data is written to. It's an Option as it's None immediately before Drop is
     /// called so that finish() can return the underlying writer. None implies that finish() has
     /// been called successfully.
@@ -73,7 +80,7 @@ pub struct EncoderWriter<W: Write> {
     panicked: bool,
 }
 
-impl<W: Write> fmt::Debug for EncoderWriter<W> {
+impl<'e, E: Engine, W: io::Write> fmt::Debug for EncoderWriter<'e, E, W> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -86,12 +93,12 @@ impl<W: Write> fmt::Debug for EncoderWriter<W> {
     }
 }
 
-impl<W: Write> EncoderWriter<W> {
-    /// Create a new encoder that will write to the provided delegate writer `w`.
-    pub fn new(w: W, config: Config) -> EncoderWriter<W> {
+impl<'e, E: Engine, W: io::Write> EncoderWriter<'e, E, W> {
+    /// Create a new encoder that will write to the provided delegate writer.
+    pub fn new(delegate: W, engine: &'e E) -> EncoderWriter<'e, E, W> {
         EncoderWriter {
-            config,
-            delegate: Some(w),
+            engine,
+            delegate: Some(delegate),
             extra_input: [0u8; MIN_ENCODE_CHUNK_SIZE],
             extra_input_occupied_len: 0,
             output: [0u8; BUF_SIZE],
@@ -120,7 +127,7 @@ impl<W: Write> EncoderWriter<W> {
         // If we could consume self in finish(), we wouldn't have to worry about this case, but
         // finish() is retryable in the face of I/O errors, so we can't consume here.
         if self.delegate.is_none() {
-            panic!("Encoder has already had finish() called")
+            panic!("Encoder has already had finish() called");
         };
 
         self.write_final_leftovers()?;
@@ -141,11 +148,13 @@ impl<W: Write> EncoderWriter<W> {
         self.write_all_encoded_output()?;
 
         if self.extra_input_occupied_len > 0 {
-            let encoded_len = encode_config_slice(
-                &self.extra_input[..self.extra_input_occupied_len],
-                self.config,
-                &mut self.output[..],
-            );
+            let encoded_len = self
+                .engine
+                .encode_slice(
+                    &self.extra_input[..self.extra_input_occupied_len],
+                    &mut self.output[..],
+                )
+                .expect("buffer is large enough");
 
             self.output_occupied_len = encoded_len;
 
@@ -182,7 +191,7 @@ impl<W: Write> EncoderWriter<W> {
                 self.output_occupied_len = current_output_len.checked_sub(consumed).unwrap();
                 // If we're blocking on I/O, the minor inefficiency of copying bytes to the
                 // start of the buffer is the least of our concerns...
-                // Rotate moves more than we need to, but copy_within isn't stabilized yet.
+                // TODO Rotate moves more than we need to; copy_within now stable.
                 self.output.rotate_left(consumed);
             } else {
                 self.output_occupied_len = 0;
@@ -215,15 +224,34 @@ impl<W: Write> EncoderWriter<W> {
         debug_assert_eq!(0, self.output_occupied_len);
         Ok(())
     }
+
+    /// Unwraps this `EncoderWriter`, returning the base writer it writes base64 encoded output
+    /// to.
+    ///
+    /// Normally this method should not be needed, since `finish()` returns the inner writer if
+    /// it completes successfully. That will also ensure all data has been flushed, which the
+    /// `into_inner()` function does *not* do.
+    ///
+    /// Calling this method after `finish()` has completed successfully will panic, since the
+    /// writer has already been returned.
+    ///
+    /// This method may be useful if the writer implements additional APIs beyond the `Write`
+    /// trait. Note that the inner writer might be in an error state or have an incomplete
+    /// base64 string written to it.
+    pub fn into_inner(mut self) -> W {
+        self.delegate
+            .take()
+            .expect("Encoder has already had finish() called")
+    }
 }
 
-impl<W: Write> Write for EncoderWriter<W> {
+impl<'e, E: Engine, W: io::Write> io::Write for EncoderWriter<'e, E, W> {
     /// Encode input and then write to the delegate writer.
     ///
     /// Under non-error circumstances, this returns `Ok` with the value being the number of bytes
     /// of `input` consumed. The value may be `0`, which interacts poorly with `write_all`, which
     /// interprets `Ok(0)` as an error, despite it being allowed by the contract of `write`. See
-    /// https://github.com/rust-lang/rust/issues/56889 for more on that.
+    /// <https://github.com/rust-lang/rust/issues/56889> for more on that.
     ///
     /// If the previous call to `write` provided more (encoded) data than the delegate writer could
     /// accept in a single call to its `write`, the remaining data is buffered. As long as buffered
@@ -286,10 +314,9 @@ impl<W: Write> Write for EncoderWriter<W> {
                 self.extra_input[self.extra_input_occupied_len..MIN_ENCODE_CHUNK_SIZE]
                     .copy_from_slice(&input[0..extra_input_read_len]);
 
-                let len = encode_to_slice(
+                let len = self.engine.internal_encode(
                     &self.extra_input[0..MIN_ENCODE_CHUNK_SIZE],
                     &mut self.output[..],
-                    self.config.char_set.encode_table(),
                 );
                 debug_assert_eq!(4, len);
 
@@ -335,10 +362,9 @@ impl<W: Write> Write for EncoderWriter<W> {
         debug_assert_eq!(0, max_input_len % MIN_ENCODE_CHUNK_SIZE);
         debug_assert_eq!(0, input_chunks_to_encode_len % MIN_ENCODE_CHUNK_SIZE);
 
-        encoded_size += encode_to_slice(
+        encoded_size += self.engine.internal_encode(
             &input[..(input_chunks_to_encode_len)],
             &mut self.output[encoded_size..],
-            self.config.char_set.encode_table(),
         );
 
         // not updating `self.output_occupied_len` here because if the below write fails, it should
@@ -371,7 +397,7 @@ impl<W: Write> Write for EncoderWriter<W> {
     }
 }
 
-impl<W: Write> Drop for EncoderWriter<W> {
+impl<'e, E: Engine, W: io::Write> Drop for EncoderWriter<'e, E, W> {
     fn drop(&mut self) {
         if !self.panicked {
             // like `BufWriter`, ignore errors during drop

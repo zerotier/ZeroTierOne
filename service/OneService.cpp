@@ -523,7 +523,7 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 	}
 }
 
-static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer, SharedPtr<Bond> &bond)
+static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer, SharedPtr<Bond> &bond, bool isTunneled)
 {
 	char tmp[256];
 
@@ -544,6 +544,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer, SharedPtr<Bond> 
 	pj["latency"] = peer->latency;
 	pj["role"] = prole;
 	pj["isBonded"] = peer->isBonded;
+	pj["tunneled"] = isTunneled;
 	if (bond && peer->isBonded) {
 		pj["bondingPolicyCode"] = peer->bondingPolicy;
 		pj["bondingPolicyStr"] = Bond::getPolicyStrByCode(peer->bondingPolicy);
@@ -716,6 +717,7 @@ public:
 	PhySocket *_localControlSocket6;
 	bool _updateAutoApply;
 	bool _allowTcpFallbackRelay;
+	bool _forceTcpRelay;
 	bool _allowSecondaryPort;
 
 	unsigned int _primaryPort;
@@ -814,6 +816,7 @@ public:
 		,_localControlSocket4((PhySocket *)0)
 		,_localControlSocket6((PhySocket *)0)
 		,_updateAutoApply(false)
+		,_forceTcpRelay(false)
 		,_primaryPort(port)
 		,_udpPortPickerCounter(0)
 		,_lastDirectReceiveFromGlobal(0)
@@ -1095,7 +1098,10 @@ public:
 						if (_ports[i])
 							p[pc++] = _ports[i];
 					}
-					_binder.refresh(_phy,p,pc,explicitBind,*this);
+					if (!_forceTcpRelay) {
+						// Only bother binding UDP ports if we aren't forcing TCP-relay mode
+						_binder.refresh(_phy,p,pc,explicitBind,*this);
+					}
 					{
 						Mutex::Lock _l(_nets_m);
 						for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {
@@ -1113,8 +1119,9 @@ public:
 				}
 
 				// Close TCP fallback tunnel if we have direct UDP
-				if ((_tcpFallbackTunnel)&&((now - _lastDirectReceiveFromGlobal) < (ZT_TCP_FALLBACK_AFTER / 2)))
+				if (!_forceTcpRelay && (_tcpFallbackTunnel) && ((now - _lastDirectReceiveFromGlobal) < (ZT_TCP_FALLBACK_AFTER / 2))) {
 					_phy.close(_tcpFallbackTunnel->sock);
+				}
 
 				// Sync multicast group memberships
 				if ((now - lastTapMulticastGroupCheck) >= ZT_TAP_CHECK_MULTICAST_INTERVAL) {
@@ -1490,7 +1497,7 @@ public:
 											if (ps[1] == "show") {
 												SharedPtr<Bond> bond = _node->bondController()->getBondByPeerId(wantp);
 												if (bond) {
-													_peerToJson(res,&(pl->peers[i]),bond);
+													_peerToJson(res,&(pl->peers[i]),bond,(_tcpFallbackTunnel != (TcpConnection *)0));
 													scode = 200;
 												} else {
 													scode = 400;
@@ -1532,6 +1539,7 @@ public:
 					}
 					json &settings = res["config"]["settings"];
 					settings["allowTcpFallbackRelay"] = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],_allowTcpFallbackRelay);
+					settings["forceTcpRelay"] = OSUtils::jsonBool(settings["forceTcpRelay"],_forceTcpRelay);
 					settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
 					settings["secondaryPort"] = OSUtils::jsonInt(settings["secondaryPort"],(uint64_t)_secondaryPort) & 0xffff;
 					settings["tertiaryPort"] = OSUtils::jsonInt(settings["tertiaryPort"],(uint64_t)_tertiaryPort) & 0xffff;
@@ -1636,7 +1644,7 @@ public:
 									const uint64_t id = pl->peers[i].address;
 									bond = _node->bondController()->getBondByPeerId(id);
 								}
-								_peerToJson(pj,&(pl->peers[i]),bond);
+								_peerToJson(pj,&(pl->peers[i]),bond,(_tcpFallbackTunnel != (TcpConnection *)0));
 								res.push_back(pj);
 							}
 
@@ -1651,7 +1659,7 @@ public:
 									if (pl->peers[i].isBonded) {
 										bond = _node->bondController()->getBondByPeerId(wantp);
 									}
-									_peerToJson(res,&(pl->peers[i]),bond);
+									_peerToJson(res,&(pl->peers[i]),bond,(_tcpFallbackTunnel != (TcpConnection *)0));
 									scode = 200;
 									break;
 								}
@@ -2069,6 +2077,7 @@ public:
 					bool enabled = OSUtils::jsonInt(link["enabled"],true);
 					uint32_t capacity = OSUtils::jsonInt(link["capacity"],0);
 					uint8_t ipvPref = OSUtils::jsonInt(link["ipvPref"],0);
+					uint16_t mtu = OSUtils::jsonInt(link["mtu"],0);
 					std::string failoverToStr(OSUtils::jsonString(link["failoverTo"],""));
 					// Mode
 					std::string linkModeStr(OSUtils::jsonString(link["mode"],"spare"));
@@ -2085,7 +2094,7 @@ public:
 						failoverToStr = "";
 						enabled = false;
 					}
-					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,capacity,enabled,linkMode,failoverToStr));
+					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,mtu,capacity,enabled,linkMode,failoverToStr));
 				}
 				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
 				if (linkSelectMethodStr == "always") {
@@ -2120,6 +2129,8 @@ public:
 
 		// bondingPolicy cannot be used with allowTcpFallbackRelay
 		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
+		_forceTcpRelay = OSUtils::jsonBool(settings["forceTcpRelay"],false);
+
 #ifdef ZT_TCP_FALLBACK_RELAY
 		_fallbackRelayAddress = InetAddress(OSUtils::jsonString(settings["tcpFallbackRelay"], ZT_TCP_FALLBACK_RELAY).c_str());
 #endif
@@ -2406,6 +2417,9 @@ public:
 
 	inline void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
 	{
+		if (_forceTcpRelay) {
+			return;
+		}
 		const uint64_t now = OSUtils::now();
 		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
 			_lastDirectReceiveFromGlobal = now;
@@ -3114,7 +3128,7 @@ public:
 					// IP address in ZT_TCP_FALLBACK_AFTER milliseconds. If we do start getting
 					// valid direct traffic we'll stop using it and close the socket after a while.
 					const int64_t now = OSUtils::now();
-					if (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER)) {
+					if (_forceTcpRelay || (((now - _lastDirectReceiveFromGlobal) > ZT_TCP_FALLBACK_AFTER)&&((now - _lastRestart) > ZT_TCP_FALLBACK_AFTER))) {
 						if (_tcpFallbackTunnel) {
 							bool flushNow = false;
 							{
@@ -3140,7 +3154,7 @@ public:
 								void *tmpptr = (void *)_tcpFallbackTunnel;
 								phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
 							}
-						} else if (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2))) {
+						} else if (_forceTcpRelay || (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2)))) {
 							const InetAddress addr(_fallbackRelayAddress);
 							TcpConnection *tc = new TcpConnection();
 							{
@@ -3161,12 +3175,15 @@ public:
 				}
 			}
 		}
+		if (_forceTcpRelay) {
+			// Shortcut here so that we don't emit any UDP packets
+			return 0;
+		}
 #endif // ZT_TCP_FALLBACK_RELAY
 
 		// Even when relaying we still send via UDP. This way if UDP starts
 		// working we can instantly "fail forward" to it and stop using TCP
 		// proxy fallback, which is slow.
-
 		if ((localSocket != -1)&&(localSocket != 0)&&(_binder.isUdpSocketValid((PhySocket *)((uintptr_t)localSocket)))) {
 			if ((ttl)&&(addr->ss_family == AF_INET)) _phy.setIp4UdpTtl((PhySocket *)((uintptr_t)localSocket),ttl);
 			const bool r = _phy.udpSend((PhySocket *)((uintptr_t)localSocket),(const struct sockaddr *)addr,data,len);

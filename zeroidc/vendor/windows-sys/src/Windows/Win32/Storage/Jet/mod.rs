@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
     #[cfg(feature = "Win32_Storage_StructuredStorage")]
@@ -70,10 +70,10 @@ extern "system" {
     pub fn JetCommitTransaction2(sesid: super::StructuredStorage::JET_SESID, grbit: u32, cmsecdurablecommit: u32, pcommitid: *mut JET_COMMIT_ID) -> i32;
     #[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
     #[cfg(feature = "Win32_Storage_StructuredStorage")]
-    pub fn JetCompactA(sesid: super::StructuredStorage::JET_SESID, szdatabasesrc: *const i8, szdatabasedest: *const i8, pfnstatus: JET_PFNSTATUS, pconvert: *const CONVERT_A, grbit: u32) -> i32;
+    pub fn JetCompactA(sesid: super::StructuredStorage::JET_SESID, szdatabasesrc: *const i8, szdatabasedest: *const i8, pfnstatus: JET_PFNSTATUS, pconvert: *const JET_CONVERT_A, grbit: u32) -> i32;
     #[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
     #[cfg(feature = "Win32_Storage_StructuredStorage")]
-    pub fn JetCompactW(sesid: super::StructuredStorage::JET_SESID, szdatabasesrc: *const u16, szdatabasedest: *const u16, pfnstatus: JET_PFNSTATUS, pconvert: *const CONVERT_W, grbit: u32) -> i32;
+    pub fn JetCompactW(sesid: super::StructuredStorage::JET_SESID, szdatabasesrc: *const u16, szdatabasedest: *const u16, pfnstatus: JET_PFNSTATUS, pconvert: *const JET_CONVERT_W, grbit: u32) -> i32;
     #[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
     #[cfg(feature = "Win32_Storage_StructuredStorage")]
     pub fn JetComputeStats(sesid: super::StructuredStorage::JET_SESID, tableid: super::StructuredStorage::JET_TABLEID) -> i32;
@@ -668,621 +668,14 @@ extern "system" {
     #[cfg(feature = "Win32_Storage_StructuredStorage")]
     pub fn JetUpdate2(sesid: super::StructuredStorage::JET_SESID, tableid: super::StructuredStorage::JET_TABLEID, pvbookmark: *mut ::core::ffi::c_void, cbbookmark: u32, pcbactual: *mut u32, grbit: u32) -> i32;
 }
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct CONVERT_A {
-    pub szOldDll: ::windows_sys::core::PSTR,
-    pub Anonymous: CONVERT_A_0,
-}
-impl ::core::marker::Copy for CONVERT_A {}
-impl ::core::clone::Clone for CONVERT_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union CONVERT_A_0 {
-    pub fFlags: u32,
-    pub Anonymous: CONVERT_A_0_0,
-}
-impl ::core::marker::Copy for CONVERT_A_0 {}
-impl ::core::clone::Clone for CONVERT_A_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct CONVERT_A_0_0 {
-    pub _bitfield: u32,
-}
-impl ::core::marker::Copy for CONVERT_A_0_0 {}
-impl ::core::clone::Clone for CONVERT_A_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct CONVERT_W {
-    pub szOldDll: ::windows_sys::core::PWSTR,
-    pub Anonymous: CONVERT_W_0,
-}
-impl ::core::marker::Copy for CONVERT_W {}
-impl ::core::clone::Clone for CONVERT_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union CONVERT_W_0 {
-    pub fFlags: u32,
-    pub Anonymous: CONVERT_W_0_0,
-}
-impl ::core::marker::Copy for CONVERT_W_0 {}
-impl ::core::clone::Clone for CONVERT_W_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct CONVERT_W_0_0 {
-    pub _bitfield: u32,
-}
-impl ::core::marker::Copy for CONVERT_W_0_0 {}
-impl ::core::clone::Clone for CONVERT_W_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_BASE_NAME_LENGTH: u32 = 3u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_BKINFO {
-    pub lgposMark: JET_LGPOS,
-    pub Anonymous: JET_BKINFO_0,
-    pub genLow: u32,
-    pub genHigh: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_BKINFO {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_BKINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union JET_BKINFO_0 {
-    pub logtimeMark: JET_LOGTIME,
-    pub bklogtimeMark: JET_BKLOGTIME,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_BKINFO_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_BKINFO_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_BKLOGTIME {
-    pub bSeconds: super::super::Foundation::CHAR,
-    pub bMinutes: super::super::Foundation::CHAR,
-    pub bHours: super::super::Foundation::CHAR,
-    pub bDay: super::super::Foundation::CHAR,
-    pub bMonth: super::super::Foundation::CHAR,
-    pub bYear: super::super::Foundation::CHAR,
-    pub Anonymous1: JET_BKLOGTIME_0,
-    pub Anonymous2: JET_BKLOGTIME_1,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_BKLOGTIME {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_BKLOGTIME {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union JET_BKLOGTIME_0 {
-    pub bFiller1: super::super::Foundation::CHAR,
-    pub Anonymous: JET_BKLOGTIME_0_0,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_BKLOGTIME_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_BKLOGTIME_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_BKLOGTIME_0_0 {
-    pub _bitfield: u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_BKLOGTIME_0_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_BKLOGTIME_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union JET_BKLOGTIME_1 {
-    pub bFiller2: super::super::Foundation::CHAR,
-    pub Anonymous: JET_BKLOGTIME_1_0,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_BKLOGTIME_1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_BKLOGTIME_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_BKLOGTIME_1_0 {
-    pub _bitfield: u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_BKLOGTIME_1_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_BKLOGTIME_1_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub type JET_CALLBACK = ::core::option::Option<unsafe extern "system" fn(sesid: super::StructuredStorage::JET_SESID, dbid: u32, tableid: super::StructuredStorage::JET_TABLEID, cbtyp: u32, pvarg1: *mut ::core::ffi::c_void, pvarg2: *mut ::core::ffi::c_void, pvcontext: *const ::core::ffi::c_void, ulunused: super::StructuredStorage::JET_API_PTR) -> i32>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_COLUMNBASE_A {
-    pub cbStruct: u32,
-    pub columnid: u32,
-    pub coltyp: u32,
-    pub wCountry: u16,
-    pub langid: u16,
-    pub cp: u16,
-    pub wFiller: u16,
-    pub cbMax: u32,
-    pub grbit: u32,
-    pub szBaseTableName: [super::super::Foundation::CHAR; 256],
-    pub szBaseColumnName: [super::super::Foundation::CHAR; 256],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_COLUMNBASE_A {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_COLUMNBASE_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_COLUMNBASE_W {
-    pub cbStruct: u32,
-    pub columnid: u32,
-    pub coltyp: u32,
-    pub wCountry: u16,
-    pub langid: u16,
-    pub cp: u16,
-    pub wFiller: u16,
-    pub cbMax: u32,
-    pub grbit: u32,
-    pub szBaseTableName: [u16; 256],
-    pub szBaseColumnName: [u16; 256],
-}
-impl ::core::marker::Copy for JET_COLUMNBASE_W {}
-impl ::core::clone::Clone for JET_COLUMNBASE_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_COLUMNCREATE_A {
-    pub cbStruct: u32,
-    pub szColumnName: ::windows_sys::core::PSTR,
-    pub coltyp: u32,
-    pub cbMax: u32,
-    pub grbit: u32,
-    pub pvDefault: *mut ::core::ffi::c_void,
-    pub cbDefault: u32,
-    pub cp: u32,
-    pub columnid: u32,
-    pub err: i32,
-}
-impl ::core::marker::Copy for JET_COLUMNCREATE_A {}
-impl ::core::clone::Clone for JET_COLUMNCREATE_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_COLUMNCREATE_W {
-    pub cbStruct: u32,
-    pub szColumnName: ::windows_sys::core::PWSTR,
-    pub coltyp: u32,
-    pub cbMax: u32,
-    pub grbit: u32,
-    pub pvDefault: *mut ::core::ffi::c_void,
-    pub cbDefault: u32,
-    pub cp: u32,
-    pub columnid: u32,
-    pub err: i32,
-}
-impl ::core::marker::Copy for JET_COLUMNCREATE_W {}
-impl ::core::clone::Clone for JET_COLUMNCREATE_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_COLUMNDEF {
-    pub cbStruct: u32,
-    pub columnid: u32,
-    pub coltyp: u32,
-    pub wCountry: u16,
-    pub langid: u16,
-    pub cp: u16,
-    pub wCollate: u16,
-    pub cbMax: u32,
-    pub grbit: u32,
-}
-impl ::core::marker::Copy for JET_COLUMNDEF {}
-impl ::core::clone::Clone for JET_COLUMNDEF {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_COLUMNLIST {
-    pub cbStruct: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cRecord: u32,
-    pub columnidPresentationOrder: u32,
-    pub columnidcolumnname: u32,
-    pub columnidcolumnid: u32,
-    pub columnidcoltyp: u32,
-    pub columnidCountry: u32,
-    pub columnidLangid: u32,
-    pub columnidCp: u32,
-    pub columnidCollate: u32,
-    pub columnidcbMax: u32,
-    pub columnidgrbit: u32,
-    pub columnidDefault: u32,
-    pub columnidBaseTableName: u32,
-    pub columnidBaseColumnName: u32,
-    pub columnidDefinitionName: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_COLUMNLIST {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_COLUMNLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_COMMIT_ID {
-    pub signLog: JET_SIGNATURE,
-    pub reserved: i32,
-    pub commitId: i64,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_COMMIT_ID {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_COMMIT_ID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_COMMIT_ID {
-    pub signLog: JET_SIGNATURE,
-    pub reserved: i32,
-    pub commitId: i64,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_COMMIT_ID {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_COMMIT_ID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_CONDITIONALCOLUMN_A {
-    pub cbStruct: u32,
-    pub szColumnName: ::windows_sys::core::PSTR,
-    pub grbit: u32,
-}
-impl ::core::marker::Copy for JET_CONDITIONALCOLUMN_A {}
-impl ::core::clone::Clone for JET_CONDITIONALCOLUMN_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_CONDITIONALCOLUMN_W {
-    pub cbStruct: u32,
-    pub szColumnName: ::windows_sys::core::PWSTR,
-    pub grbit: u32,
-}
-impl ::core::marker::Copy for JET_CONDITIONALCOLUMN_W {}
-impl ::core::clone::Clone for JET_CONDITIONALCOLUMN_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_ColInfoGrbitMinimalInfo: u32 = 1073741824u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_ColInfoGrbitNonDerivedColumnsOnly: u32 = 2147483648u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_ColInfoGrbitSortByColumnid: u32 = 536870912u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_DBINFOMISC {
-    pub ulVersion: u32,
-    pub ulUpdate: u32,
-    pub signDb: JET_SIGNATURE,
-    pub dbstate: u32,
-    pub lgposConsistent: JET_LGPOS,
-    pub logtimeConsistent: JET_LOGTIME,
-    pub logtimeAttach: JET_LOGTIME,
-    pub lgposAttach: JET_LGPOS,
-    pub logtimeDetach: JET_LOGTIME,
-    pub lgposDetach: JET_LGPOS,
-    pub signLog: JET_SIGNATURE,
-    pub bkinfoFullPrev: JET_BKINFO,
-    pub bkinfoIncPrev: JET_BKINFO,
-    pub bkinfoFullCur: JET_BKINFO,
-    pub fShadowingDisabled: u32,
-    pub fUpgradeDb: u32,
-    pub dwMajorVersion: u32,
-    pub dwMinorVersion: u32,
-    pub dwBuildNumber: u32,
-    pub lSPNumber: i32,
-    pub cbPageSize: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_DBINFOMISC {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_DBINFOMISC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_DBINFOMISC2 {
-    pub ulVersion: u32,
-    pub ulUpdate: u32,
-    pub signDb: JET_SIGNATURE,
-    pub dbstate: u32,
-    pub lgposConsistent: JET_LGPOS,
-    pub logtimeConsistent: JET_LOGTIME,
-    pub logtimeAttach: JET_LOGTIME,
-    pub lgposAttach: JET_LGPOS,
-    pub logtimeDetach: JET_LOGTIME,
-    pub lgposDetach: JET_LGPOS,
-    pub signLog: JET_SIGNATURE,
-    pub bkinfoFullPrev: JET_BKINFO,
-    pub bkinfoIncPrev: JET_BKINFO,
-    pub bkinfoFullCur: JET_BKINFO,
-    pub fShadowingDisabled: u32,
-    pub fUpgradeDb: u32,
-    pub dwMajorVersion: u32,
-    pub dwMinorVersion: u32,
-    pub dwBuildNumber: u32,
-    pub lSPNumber: i32,
-    pub cbPageSize: u32,
-    pub genMinRequired: u32,
-    pub genMaxRequired: u32,
-    pub logtimeGenMaxCreate: JET_LOGTIME,
-    pub ulRepairCount: u32,
-    pub logtimeRepair: JET_LOGTIME,
-    pub ulRepairCountOld: u32,
-    pub ulECCFixSuccess: u32,
-    pub logtimeECCFixSuccess: JET_LOGTIME,
-    pub ulECCFixSuccessOld: u32,
-    pub ulECCFixFail: u32,
-    pub logtimeECCFixFail: JET_LOGTIME,
-    pub ulECCFixFailOld: u32,
-    pub ulBadChecksum: u32,
-    pub logtimeBadChecksum: JET_LOGTIME,
-    pub ulBadChecksumOld: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_DBINFOMISC2 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_DBINFOMISC2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_DBINFOMISC3 {
-    pub ulVersion: u32,
-    pub ulUpdate: u32,
-    pub signDb: JET_SIGNATURE,
-    pub dbstate: u32,
-    pub lgposConsistent: JET_LGPOS,
-    pub logtimeConsistent: JET_LOGTIME,
-    pub logtimeAttach: JET_LOGTIME,
-    pub lgposAttach: JET_LGPOS,
-    pub logtimeDetach: JET_LOGTIME,
-    pub lgposDetach: JET_LGPOS,
-    pub signLog: JET_SIGNATURE,
-    pub bkinfoFullPrev: JET_BKINFO,
-    pub bkinfoIncPrev: JET_BKINFO,
-    pub bkinfoFullCur: JET_BKINFO,
-    pub fShadowingDisabled: u32,
-    pub fUpgradeDb: u32,
-    pub dwMajorVersion: u32,
-    pub dwMinorVersion: u32,
-    pub dwBuildNumber: u32,
-    pub lSPNumber: i32,
-    pub cbPageSize: u32,
-    pub genMinRequired: u32,
-    pub genMaxRequired: u32,
-    pub logtimeGenMaxCreate: JET_LOGTIME,
-    pub ulRepairCount: u32,
-    pub logtimeRepair: JET_LOGTIME,
-    pub ulRepairCountOld: u32,
-    pub ulECCFixSuccess: u32,
-    pub logtimeECCFixSuccess: JET_LOGTIME,
-    pub ulECCFixSuccessOld: u32,
-    pub ulECCFixFail: u32,
-    pub logtimeECCFixFail: JET_LOGTIME,
-    pub ulECCFixFailOld: u32,
-    pub ulBadChecksum: u32,
-    pub logtimeBadChecksum: JET_LOGTIME,
-    pub ulBadChecksumOld: u32,
-    pub genCommitted: u32,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_DBINFOMISC3 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_DBINFOMISC3 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_DBINFOMISC4 {
-    pub ulVersion: u32,
-    pub ulUpdate: u32,
-    pub signDb: JET_SIGNATURE,
-    pub dbstate: u32,
-    pub lgposConsistent: JET_LGPOS,
-    pub logtimeConsistent: JET_LOGTIME,
-    pub logtimeAttach: JET_LOGTIME,
-    pub lgposAttach: JET_LGPOS,
-    pub logtimeDetach: JET_LOGTIME,
-    pub lgposDetach: JET_LGPOS,
-    pub signLog: JET_SIGNATURE,
-    pub bkinfoFullPrev: JET_BKINFO,
-    pub bkinfoIncPrev: JET_BKINFO,
-    pub bkinfoFullCur: JET_BKINFO,
-    pub fShadowingDisabled: u32,
-    pub fUpgradeDb: u32,
-    pub dwMajorVersion: u32,
-    pub dwMinorVersion: u32,
-    pub dwBuildNumber: u32,
-    pub lSPNumber: i32,
-    pub cbPageSize: u32,
-    pub genMinRequired: u32,
-    pub genMaxRequired: u32,
-    pub logtimeGenMaxCreate: JET_LOGTIME,
-    pub ulRepairCount: u32,
-    pub logtimeRepair: JET_LOGTIME,
-    pub ulRepairCountOld: u32,
-    pub ulECCFixSuccess: u32,
-    pub logtimeECCFixSuccess: JET_LOGTIME,
-    pub ulECCFixSuccessOld: u32,
-    pub ulECCFixFail: u32,
-    pub logtimeECCFixFail: JET_LOGTIME,
-    pub ulECCFixFailOld: u32,
-    pub ulBadChecksum: u32,
-    pub logtimeBadChecksum: JET_LOGTIME,
-    pub ulBadChecksumOld: u32,
-    pub genCommitted: u32,
-    pub bkinfoCopyPrev: JET_BKINFO,
-    pub bkinfoDiffPrev: JET_BKINFO,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_DBINFOMISC4 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_DBINFOMISC4 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_DBINFOUPGRADE {
-    pub cbStruct: u32,
-    pub cbFilesizeLow: u32,
-    pub cbFilesizeHigh: u32,
-    pub cbFreeSpaceRequiredLow: u32,
-    pub cbFreeSpaceRequiredHigh: u32,
-    pub csecToUpgrade: u32,
-    pub Anonymous: JET_DBINFOUPGRADE_0,
-}
-impl ::core::marker::Copy for JET_DBINFOUPGRADE {}
-impl ::core::clone::Clone for JET_DBINFOUPGRADE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_DBINFOUPGRADE_0 {
-    pub ulFlags: u32,
-    pub Anonymous: JET_DBINFOUPGRADE_0_0,
-}
-impl ::core::marker::Copy for JET_DBINFOUPGRADE_0 {}
-impl ::core::clone::Clone for JET_DBINFOUPGRADE_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_DBINFOUPGRADE_0_0 {
-    pub _bitfield: u32,
-}
-impl ::core::marker::Copy for JET_DBINFOUPGRADE_0_0 {}
-impl ::core::clone::Clone for JET_DBINFOUPGRADE_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_DbInfoCollate: u32 = 5u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
@@ -1323,136 +716,6 @@ pub const JET_DbInfoTransactions: u32 = 7u32;
 pub const JET_DbInfoUpgrade: u32 = 13u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_DbInfoVersion: u32 = 8u32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_ENUMCOLUMN {
-    pub columnid: u32,
-    pub err: i32,
-    pub Anonymous: JET_ENUMCOLUMN_0,
-}
-impl ::core::marker::Copy for JET_ENUMCOLUMN {}
-impl ::core::clone::Clone for JET_ENUMCOLUMN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_ENUMCOLUMN_0 {
-    pub Anonymous1: JET_ENUMCOLUMN_0_0,
-    pub Anonymous2: JET_ENUMCOLUMN_0_1,
-}
-impl ::core::marker::Copy for JET_ENUMCOLUMN_0 {}
-impl ::core::clone::Clone for JET_ENUMCOLUMN_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_ENUMCOLUMN_0_0 {
-    pub cEnumColumnValue: u32,
-    pub rgEnumColumnValue: *mut JET_ENUMCOLUMNVALUE,
-}
-impl ::core::marker::Copy for JET_ENUMCOLUMN_0_0 {}
-impl ::core::clone::Clone for JET_ENUMCOLUMN_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_ENUMCOLUMN_0_1 {
-    pub cbData: u32,
-    pub pvData: *mut ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for JET_ENUMCOLUMN_0_1 {}
-impl ::core::clone::Clone for JET_ENUMCOLUMN_0_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_ENUMCOLUMNID {
-    pub columnid: u32,
-    pub ctagSequence: u32,
-    pub rgtagSequence: *mut u32,
-}
-impl ::core::marker::Copy for JET_ENUMCOLUMNID {}
-impl ::core::clone::Clone for JET_ENUMCOLUMNID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_ENUMCOLUMNVALUE {
-    pub itagSequence: u32,
-    pub err: i32,
-    pub cbData: u32,
-    pub pvData: *mut ::core::ffi::c_void,
-}
-impl ::core::marker::Copy for JET_ENUMCOLUMNVALUE {}
-impl ::core::clone::Clone for JET_ENUMCOLUMNVALUE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub type JET_ERRCAT = i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatUnknown: JET_ERRCAT = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatError: JET_ERRCAT = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatOperation: JET_ERRCAT = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatFatal: JET_ERRCAT = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatIO: JET_ERRCAT = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatResource: JET_ERRCAT = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatMemory: JET_ERRCAT = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatQuota: JET_ERRCAT = 7i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatDisk: JET_ERRCAT = 8i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatData: JET_ERRCAT = 9i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatCorruption: JET_ERRCAT = 10i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatInconsistent: JET_ERRCAT = 11i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatFragmentation: JET_ERRCAT = 12i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatApi: JET_ERRCAT = 13i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatUsage: JET_ERRCAT = 14i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatState: JET_ERRCAT = 15i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatObsolete: JET_ERRCAT = 16i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_errcatMax: JET_ERRCAT = 17i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_ERRINFOBASIC_W {
-    pub cbStruct: u32,
-    pub errValue: i32,
-    pub errcatMostSpecific: JET_ERRCAT,
-    pub rgCategoricalHierarchy: [u8; 8],
-    pub lSourceLine: u32,
-    pub rgszSourceFile: [u16; 64],
-}
-impl ::core::marker::Copy for JET_ERRINFOBASIC_W {}
-impl ::core::clone::Clone for JET_ERRINFOBASIC_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_EventLoggingDisable: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
@@ -1472,544 +735,9 @@ pub const JET_ExceptionMsgBox: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_ExceptionNone: u32 = 2u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub type JET_INDEXCHECKING = i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_IndexCheckingOff: JET_INDEXCHECKING = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_IndexCheckingOn: JET_INDEXCHECKING = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_IndexCheckingDeferToOpenTable: JET_INDEXCHECKING = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_IndexCheckingMax: JET_INDEXCHECKING = 3i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_INDEXCREATE2_A {
-    pub cbStruct: u32,
-    pub szIndexName: ::windows_sys::core::PSTR,
-    pub szKey: ::windows_sys::core::PSTR,
-    pub cbKey: u32,
-    pub grbit: u32,
-    pub ulDensity: u32,
-    pub Anonymous1: JET_INDEXCREATE2_A_0,
-    pub Anonymous2: JET_INDEXCREATE2_A_1,
-    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_A,
-    pub cConditionalColumn: u32,
-    pub err: i32,
-    pub cbKeyMost: u32,
-    pub pSpacehints: *mut JET_SPACEHINTS,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE2_A {}
-impl ::core::clone::Clone for JET_INDEXCREATE2_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_INDEXCREATE2_A_0 {
-    pub lcid: u32,
-    pub pidxunicode: *mut JET_UNICODEINDEX,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE2_A_0 {}
-impl ::core::clone::Clone for JET_INDEXCREATE2_A_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_INDEXCREATE2_A_1 {
-    pub cbVarSegMac: u32,
-    pub ptuplelimits: *mut JET_TUPLELIMITS,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE2_A_1 {}
-impl ::core::clone::Clone for JET_INDEXCREATE2_A_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_INDEXCREATE2_W {
-    pub cbStruct: u32,
-    pub szIndexName: ::windows_sys::core::PWSTR,
-    pub szKey: ::windows_sys::core::PWSTR,
-    pub cbKey: u32,
-    pub grbit: u32,
-    pub ulDensity: u32,
-    pub Anonymous1: JET_INDEXCREATE2_W_0,
-    pub Anonymous2: JET_INDEXCREATE2_W_1,
-    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_W,
-    pub cConditionalColumn: u32,
-    pub err: i32,
-    pub cbKeyMost: u32,
-    pub pSpacehints: *mut JET_SPACEHINTS,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE2_W {}
-impl ::core::clone::Clone for JET_INDEXCREATE2_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_INDEXCREATE2_W_0 {
-    pub lcid: u32,
-    pub pidxunicode: *mut JET_UNICODEINDEX,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE2_W_0 {}
-impl ::core::clone::Clone for JET_INDEXCREATE2_W_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_INDEXCREATE2_W_1 {
-    pub cbVarSegMac: u32,
-    pub ptuplelimits: *mut JET_TUPLELIMITS,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE2_W_1 {}
-impl ::core::clone::Clone for JET_INDEXCREATE2_W_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_INDEXCREATE3_A {
-    pub cbStruct: u32,
-    pub szIndexName: ::windows_sys::core::PSTR,
-    pub szKey: ::windows_sys::core::PSTR,
-    pub cbKey: u32,
-    pub grbit: u32,
-    pub ulDensity: u32,
-    pub pidxunicode: *mut JET_UNICODEINDEX2,
-    pub Anonymous: JET_INDEXCREATE3_A_0,
-    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_A,
-    pub cConditionalColumn: u32,
-    pub err: i32,
-    pub cbKeyMost: u32,
-    pub pSpacehints: *mut JET_SPACEHINTS,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE3_A {}
-impl ::core::clone::Clone for JET_INDEXCREATE3_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_INDEXCREATE3_A_0 {
-    pub cbVarSegMac: u32,
-    pub ptuplelimits: *mut JET_TUPLELIMITS,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE3_A_0 {}
-impl ::core::clone::Clone for JET_INDEXCREATE3_A_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_INDEXCREATE3_W {
-    pub cbStruct: u32,
-    pub szIndexName: ::windows_sys::core::PWSTR,
-    pub szKey: ::windows_sys::core::PWSTR,
-    pub cbKey: u32,
-    pub grbit: u32,
-    pub ulDensity: u32,
-    pub pidxunicode: *mut JET_UNICODEINDEX2,
-    pub Anonymous: JET_INDEXCREATE3_W_0,
-    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_W,
-    pub cConditionalColumn: u32,
-    pub err: i32,
-    pub cbKeyMost: u32,
-    pub pSpacehints: *mut JET_SPACEHINTS,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE3_W {}
-impl ::core::clone::Clone for JET_INDEXCREATE3_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_INDEXCREATE3_W_0 {
-    pub cbVarSegMac: u32,
-    pub ptuplelimits: *mut JET_TUPLELIMITS,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE3_W_0 {}
-impl ::core::clone::Clone for JET_INDEXCREATE3_W_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_INDEXCREATE_A {
-    pub cbStruct: u32,
-    pub szIndexName: ::windows_sys::core::PSTR,
-    pub szKey: ::windows_sys::core::PSTR,
-    pub cbKey: u32,
-    pub grbit: u32,
-    pub ulDensity: u32,
-    pub Anonymous1: JET_INDEXCREATE_A_0,
-    pub Anonymous2: JET_INDEXCREATE_A_1,
-    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_A,
-    pub cConditionalColumn: u32,
-    pub err: i32,
-    pub cbKeyMost: u32,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE_A {}
-impl ::core::clone::Clone for JET_INDEXCREATE_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_INDEXCREATE_A_0 {
-    pub lcid: u32,
-    pub pidxunicode: *mut JET_UNICODEINDEX,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE_A_0 {}
-impl ::core::clone::Clone for JET_INDEXCREATE_A_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_INDEXCREATE_A_1 {
-    pub cbVarSegMac: u32,
-    pub ptuplelimits: *mut JET_TUPLELIMITS,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE_A_1 {}
-impl ::core::clone::Clone for JET_INDEXCREATE_A_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_INDEXCREATE_W {
-    pub cbStruct: u32,
-    pub szIndexName: ::windows_sys::core::PWSTR,
-    pub szKey: ::windows_sys::core::PWSTR,
-    pub cbKey: u32,
-    pub grbit: u32,
-    pub ulDensity: u32,
-    pub Anonymous1: JET_INDEXCREATE_W_0,
-    pub Anonymous2: JET_INDEXCREATE_W_1,
-    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_W,
-    pub cConditionalColumn: u32,
-    pub err: i32,
-    pub cbKeyMost: u32,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE_W {}
-impl ::core::clone::Clone for JET_INDEXCREATE_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_INDEXCREATE_W_0 {
-    pub lcid: u32,
-    pub pidxunicode: *mut JET_UNICODEINDEX,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE_W_0 {}
-impl ::core::clone::Clone for JET_INDEXCREATE_W_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub union JET_INDEXCREATE_W_1 {
-    pub cbVarSegMac: u32,
-    pub ptuplelimits: *mut JET_TUPLELIMITS,
-}
-impl ::core::marker::Copy for JET_INDEXCREATE_W_1 {}
-impl ::core::clone::Clone for JET_INDEXCREATE_W_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct JET_INDEXID {
-    pub cbStruct: u32,
-    pub rgbIndexId: [u8; 16],
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for JET_INDEXID {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for JET_INDEXID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct JET_INDEXID {
-    pub cbStruct: u32,
-    pub rgbIndexId: [u8; 12],
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for JET_INDEXID {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for JET_INDEXID {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_INDEXLIST {
-    pub cbStruct: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cRecord: u32,
-    pub columnidindexname: u32,
-    pub columnidgrbitIndex: u32,
-    pub columnidcKey: u32,
-    pub columnidcEntry: u32,
-    pub columnidcPage: u32,
-    pub columnidcColumn: u32,
-    pub columnidiColumn: u32,
-    pub columnidcolumnid: u32,
-    pub columnidcoltyp: u32,
-    pub columnidCountry: u32,
-    pub columnidLangid: u32,
-    pub columnidCp: u32,
-    pub columnidCollate: u32,
-    pub columnidgrbitColumn: u32,
-    pub columnidcolumnname: u32,
-    pub columnidLCMapFlags: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_INDEXLIST {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_INDEXLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_INDEXRANGE {
-    pub cbStruct: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub grbit: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_INDEXRANGE {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_INDEXRANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_INDEX_COLUMN {
-    pub columnid: u32,
-    pub relop: JET_RELOP,
-    pub pv: *mut ::core::ffi::c_void,
-    pub cb: u32,
-    pub grbit: u32,
-}
-impl ::core::marker::Copy for JET_INDEX_COLUMN {}
-impl ::core::clone::Clone for JET_INDEX_COLUMN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_INDEX_RANGE {
-    pub rgStartColumns: *mut JET_INDEX_COLUMN,
-    pub cStartColumns: u32,
-    pub rgEndColumns: *mut JET_INDEX_COLUMN,
-    pub cEndColumns: u32,
-}
-impl ::core::marker::Copy for JET_INDEX_RANGE {}
-impl ::core::clone::Clone for JET_INDEX_RANGE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_INSTANCE_INFO_A {
-    pub hInstanceId: super::StructuredStorage::JET_INSTANCE,
-    pub szInstanceName: ::windows_sys::core::PSTR,
-    pub cDatabases: super::StructuredStorage::JET_API_PTR,
-    pub szDatabaseFileName: *mut *mut i8,
-    pub szDatabaseDisplayName: *mut *mut i8,
-    pub szDatabaseSLVFileName_Obsolete: *mut *mut i8,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_INSTANCE_INFO_A {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_INSTANCE_INFO_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_INSTANCE_INFO_W {
-    pub hInstanceId: super::StructuredStorage::JET_INSTANCE,
-    pub szInstanceName: ::windows_sys::core::PWSTR,
-    pub cDatabases: super::StructuredStorage::JET_API_PTR,
-    pub szDatabaseFileName: *mut *mut u16,
-    pub szDatabaseDisplayName: *mut *mut u16,
-    pub szDatabaseSLVFileName_Obsolete: *mut *mut u16,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_INSTANCE_INFO_W {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_INSTANCE_INFO_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_IOPriorityLow: u32 = 1u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_IOPriorityNormal: u32 = 0u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_LGPOS {
-    pub ib: u16,
-    pub isec: u16,
-    pub lGeneration: i32,
-}
-impl ::core::marker::Copy for JET_LGPOS {}
-impl ::core::clone::Clone for JET_LGPOS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_LOGINFO_A {
-    pub cbSize: u32,
-    pub ulGenLow: u32,
-    pub ulGenHigh: u32,
-    pub szBaseName: [super::super::Foundation::CHAR; 4],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_LOGINFO_A {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_LOGINFO_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_LOGINFO_W {
-    pub cbSize: u32,
-    pub ulGenLow: u32,
-    pub ulGenHigh: u32,
-    pub szBaseName: [u16; 4],
-}
-impl ::core::marker::Copy for JET_LOGINFO_W {}
-impl ::core::clone::Clone for JET_LOGINFO_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_LOGTIME {
-    pub bSeconds: super::super::Foundation::CHAR,
-    pub bMinutes: super::super::Foundation::CHAR,
-    pub bHours: super::super::Foundation::CHAR,
-    pub bDay: super::super::Foundation::CHAR,
-    pub bMonth: super::super::Foundation::CHAR,
-    pub bYear: super::super::Foundation::CHAR,
-    pub Anonymous1: JET_LOGTIME_0,
-    pub Anonymous2: JET_LOGTIME_1,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_LOGTIME {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_LOGTIME {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union JET_LOGTIME_0 {
-    pub bFiller1: super::super::Foundation::CHAR,
-    pub Anonymous: JET_LOGTIME_0_0,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_LOGTIME_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_LOGTIME_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_LOGTIME_0_0 {
-    pub _bitfield: u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_LOGTIME_0_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_LOGTIME_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub union JET_LOGTIME_1 {
-    pub bFiller2: super::super::Foundation::CHAR,
-    pub Anonymous: JET_LOGTIME_1_0,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_LOGTIME_1 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_LOGTIME_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_LOGTIME_1_0 {
-    pub _bitfield: u8,
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_LOGTIME_1_0 {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_LOGTIME_1_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type JET_LS = usize;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_MAX_COMPUTERNAME_LENGTH: u32 = 15u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
@@ -2018,133 +746,6 @@ pub const JET_MoveFirst: u32 = 2147483648u32;
 pub const JET_MoveLast: u32 = 2147483647u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_MovePrevious: i32 = -1i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct JET_OBJECTINFO {
-    pub cbStruct: u32,
-    pub objtyp: u32,
-    pub dtCreate: f64,
-    pub dtUpdate: f64,
-    pub grbit: u32,
-    pub flags: u32,
-    pub cRecord: u32,
-    pub cPage: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for JET_OBJECTINFO {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for JET_OBJECTINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct JET_OBJECTINFO {
-    pub cbStruct: u32,
-    pub objtyp: u32,
-    pub dtCreate: f64,
-    pub dtUpdate: f64,
-    pub grbit: u32,
-    pub flags: u32,
-    pub cRecord: u32,
-    pub cPage: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for JET_OBJECTINFO {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for JET_OBJECTINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_OBJECTLIST {
-    pub cbStruct: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cRecord: u32,
-    pub columnidcontainername: u32,
-    pub columnidobjectname: u32,
-    pub columnidobjtyp: u32,
-    pub columniddtCreate: u32,
-    pub columniddtUpdate: u32,
-    pub columnidgrbit: u32,
-    pub columnidflags: u32,
-    pub columnidcRecord: u32,
-    pub columnidcPage: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_OBJECTLIST {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_OBJECTLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_OPENTEMPORARYTABLE {
-    pub cbStruct: u32,
-    pub prgcolumndef: *const JET_COLUMNDEF,
-    pub ccolumn: u32,
-    pub pidxunicode: *mut JET_UNICODEINDEX,
-    pub grbit: u32,
-    pub prgcolumnid: *mut u32,
-    pub cbKeyMost: u32,
-    pub cbVarSegMac: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_OPENTEMPORARYTABLE {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_OPENTEMPORARYTABLE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_OPENTEMPORARYTABLE2 {
-    pub cbStruct: u32,
-    pub prgcolumndef: *const JET_COLUMNDEF,
-    pub ccolumn: u32,
-    pub pidxunicode: *mut JET_UNICODEINDEX2,
-    pub grbit: u32,
-    pub prgcolumnid: *mut u32,
-    pub cbKeyMost: u32,
-    pub cbVarSegMac: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_OPENTEMPORARYTABLE2 {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_OPENTEMPORARYTABLE2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_OPERATIONCONTEXT {
-    pub ulUserID: u32,
-    pub nOperationID: u8,
-    pub nOperationType: u8,
-    pub nClientType: u8,
-    pub fFlags: u8,
-}
-impl ::core::marker::Copy for JET_OPERATIONCONTEXT {}
-impl ::core::clone::Clone for JET_OPERATIONCONTEXT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-pub type JET_OSSNAPID = usize;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_OnlineDefragAll: u32 = 65535u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
@@ -2155,806 +756,6 @@ pub const JET_OnlineDefragDatabases: u32 = 2u32;
 pub const JET_OnlineDefragDisable: u32 = 0u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_OnlineDefragSpaceTrees: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
-pub type JET_PFNDURABLECOMMITCALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: super::StructuredStorage::JET_INSTANCE, pcommitidseen: *const JET_COMMIT_ID, grbit: u32) -> i32>;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub type JET_PFNREALLOC = ::core::option::Option<unsafe extern "system" fn(pvcontext: *const ::core::ffi::c_void, pv: *const ::core::ffi::c_void, cb: u32) -> *mut ::core::ffi::c_void>;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub type JET_PFNSTATUS = ::core::option::Option<unsafe extern "system" fn(sesid: super::StructuredStorage::JET_SESID, snp: u32, snt: u32, pv: *const ::core::ffi::c_void) -> i32>;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_RBSINFOMISC {
-    pub lRBSGeneration: i32,
-    pub logtimeCreate: JET_LOGTIME,
-    pub logtimeCreatePrevRBS: JET_LOGTIME,
-    pub ulMajor: u32,
-    pub ulMinor: u32,
-    pub cbLogicalFileSize: u64,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_RBSINFOMISC {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_RBSINFOMISC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_RBSINFOMISC {
-    pub lRBSGeneration: i32,
-    pub logtimeCreate: JET_LOGTIME,
-    pub logtimeCreatePrevRBS: JET_LOGTIME,
-    pub ulMajor: u32,
-    pub ulMinor: u32,
-    pub cbLogicalFileSize: u64,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_RBSINFOMISC {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_RBSINFOMISC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_RBSREVERTINFOMISC {
-    pub lGenMinRevertStart: i32,
-    pub lGenMaxRevertStart: i32,
-    pub lGenMinRevertEnd: i32,
-    pub lGenMaxRevertEnd: i32,
-    pub logtimeRevertFrom: JET_LOGTIME,
-    pub cSecRevert: u64,
-    pub cPagesReverted: u64,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_RBSREVERTINFOMISC {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_RBSREVERTINFOMISC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_RBSREVERTINFOMISC {
-    pub lGenMinRevertStart: i32,
-    pub lGenMaxRevertStart: i32,
-    pub lGenMinRevertEnd: i32,
-    pub lGenMaxRevertEnd: i32,
-    pub logtimeRevertFrom: JET_LOGTIME,
-    pub cSecRevert: u64,
-    pub cPagesReverted: u64,
-}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_RBSREVERTINFOMISC {}
-#[cfg(target_arch = "x86")]
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_RBSREVERTINFOMISC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_RECORDLIST {
-    pub cbStruct: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cRecord: u32,
-    pub columnidBookmark: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_RECORDLIST {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_RECORDLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_RECPOS {
-    pub cbStruct: u32,
-    pub centriesLT: u32,
-    pub centriesInRange: u32,
-    pub centriesTotal: u32,
-}
-impl ::core::marker::Copy for JET_RECPOS {}
-impl ::core::clone::Clone for JET_RECPOS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct JET_RECSIZE {
-    pub cbData: u64,
-    pub cbLongValueData: u64,
-    pub cbOverhead: u64,
-    pub cbLongValueOverhead: u64,
-    pub cNonTaggedColumns: u64,
-    pub cTaggedColumns: u64,
-    pub cLongValues: u64,
-    pub cMultiValues: u64,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for JET_RECSIZE {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for JET_RECSIZE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct JET_RECSIZE {
-    pub cbData: u64,
-    pub cbLongValueData: u64,
-    pub cbOverhead: u64,
-    pub cbLongValueOverhead: u64,
-    pub cNonTaggedColumns: u64,
-    pub cTaggedColumns: u64,
-    pub cLongValues: u64,
-    pub cMultiValues: u64,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for JET_RECSIZE {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for JET_RECSIZE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct JET_RECSIZE2 {
-    pub cbData: u64,
-    pub cbLongValueData: u64,
-    pub cbOverhead: u64,
-    pub cbLongValueOverhead: u64,
-    pub cNonTaggedColumns: u64,
-    pub cTaggedColumns: u64,
-    pub cLongValues: u64,
-    pub cMultiValues: u64,
-    pub cCompressedColumns: u64,
-    pub cbDataCompressed: u64,
-    pub cbLongValueDataCompressed: u64,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for JET_RECSIZE2 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for JET_RECSIZE2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct JET_RECSIZE2 {
-    pub cbData: u64,
-    pub cbLongValueData: u64,
-    pub cbOverhead: u64,
-    pub cbLongValueOverhead: u64,
-    pub cNonTaggedColumns: u64,
-    pub cTaggedColumns: u64,
-    pub cLongValues: u64,
-    pub cMultiValues: u64,
-    pub cCompressedColumns: u64,
-    pub cbDataCompressed: u64,
-    pub cbLongValueDataCompressed: u64,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for JET_RECSIZE2 {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for JET_RECSIZE2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub type JET_RELOP = i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_relopEquals: JET_RELOP = 0i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_relopPrefixEquals: JET_RELOP = 1i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_relopNotEquals: JET_RELOP = 2i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_relopLessThanOrEqual: JET_RELOP = 3i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_relopLessThan: JET_RELOP = 4i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_relopGreaterThanOrEqual: JET_RELOP = 5i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_relopGreaterThan: JET_RELOP = 6i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_relopBitmaskEqualsZero: JET_RELOP = 7i32;
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub const JET_relopBitmaskNotEqualsZero: JET_RELOP = 8i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_RETINFO {
-    pub cbStruct: u32,
-    pub ibLongValue: u32,
-    pub itagSequence: u32,
-    pub columnidNextTagged: u32,
-}
-impl ::core::marker::Copy for JET_RETINFO {}
-impl ::core::clone::Clone for JET_RETINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_RETRIEVECOLUMN {
-    pub columnid: u32,
-    pub pvData: *mut ::core::ffi::c_void,
-    pub cbData: u32,
-    pub cbActual: u32,
-    pub grbit: u32,
-    pub ibLongValue: u32,
-    pub itagSequence: u32,
-    pub columnidNextTagged: u32,
-    pub err: i32,
-}
-impl ::core::marker::Copy for JET_RETRIEVECOLUMN {}
-impl ::core::clone::Clone for JET_RETRIEVECOLUMN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
-pub struct JET_RSTINFO_A {
-    pub cbStruct: u32,
-    pub rgrstmap: *mut JET_RSTMAP_A,
-    pub crstmap: i32,
-    pub lgposStop: JET_LGPOS,
-    pub logtimeStop: JET_LOGTIME,
-    pub pfnStatus: JET_PFNSTATUS,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
-impl ::core::marker::Copy for JET_RSTINFO_A {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
-impl ::core::clone::Clone for JET_RSTINFO_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
-pub struct JET_RSTINFO_W {
-    pub cbStruct: u32,
-    pub rgrstmap: *mut JET_RSTMAP_W,
-    pub crstmap: i32,
-    pub lgposStop: JET_LGPOS,
-    pub logtimeStop: JET_LOGTIME,
-    pub pfnStatus: JET_PFNSTATUS,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
-impl ::core::marker::Copy for JET_RSTINFO_W {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
-impl ::core::clone::Clone for JET_RSTINFO_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_RSTMAP_A {
-    pub szDatabaseName: ::windows_sys::core::PSTR,
-    pub szNewDatabaseName: ::windows_sys::core::PSTR,
-}
-impl ::core::marker::Copy for JET_RSTMAP_A {}
-impl ::core::clone::Clone for JET_RSTMAP_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_RSTMAP_W {
-    pub szDatabaseName: ::windows_sys::core::PWSTR,
-    pub szNewDatabaseName: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for JET_RSTMAP_W {}
-impl ::core::clone::Clone for JET_RSTMAP_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_SETCOLUMN {
-    pub columnid: u32,
-    pub pvData: *const ::core::ffi::c_void,
-    pub cbData: u32,
-    pub grbit: u32,
-    pub ibLongValue: u32,
-    pub itagSequence: u32,
-    pub err: i32,
-}
-impl ::core::marker::Copy for JET_SETCOLUMN {}
-impl ::core::clone::Clone for JET_SETCOLUMN {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_SETINFO {
-    pub cbStruct: u32,
-    pub ibLongValue: u32,
-    pub itagSequence: u32,
-}
-impl ::core::marker::Copy for JET_SETINFO {}
-impl ::core::clone::Clone for JET_SETINFO {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_SETSYSPARAM_A {
-    pub paramid: u32,
-    pub lParam: super::StructuredStorage::JET_API_PTR,
-    pub sz: ::windows_sys::core::PCSTR,
-    pub err: i32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_SETSYSPARAM_A {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_SETSYSPARAM_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_SETSYSPARAM_W {
-    pub paramid: u32,
-    pub lParam: super::StructuredStorage::JET_API_PTR,
-    pub sz: ::windows_sys::core::PCWSTR,
-    pub err: i32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_SETSYSPARAM_W {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_SETSYSPARAM_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct JET_SIGNATURE {
-    pub ulRandom: u32,
-    pub logtimeCreate: JET_LOGTIME,
-    pub szComputerName: [super::super::Foundation::CHAR; 16],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for JET_SIGNATURE {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for JET_SIGNATURE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_SNPROG {
-    pub cbStruct: u32,
-    pub cunitDone: u32,
-    pub cunitTotal: u32,
-}
-impl ::core::marker::Copy for JET_SNPROG {}
-impl ::core::clone::Clone for JET_SNPROG {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_SPACEHINTS {
-    pub cbStruct: u32,
-    pub ulInitialDensity: u32,
-    pub cbInitial: u32,
-    pub grbit: u32,
-    pub ulMaintDensity: u32,
-    pub ulGrowth: u32,
-    pub cbMinExtent: u32,
-    pub cbMaxExtent: u32,
-}
-impl ::core::marker::Copy for JET_SPACEHINTS {}
-impl ::core::clone::Clone for JET_SPACEHINTS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_TABLECREATE2_A {
-    pub cbStruct: u32,
-    pub szTableName: ::windows_sys::core::PSTR,
-    pub szTemplateTableName: ::windows_sys::core::PSTR,
-    pub ulPages: u32,
-    pub ulDensity: u32,
-    pub rgcolumncreate: *mut JET_COLUMNCREATE_A,
-    pub cColumns: u32,
-    pub rgindexcreate: *mut JET_INDEXCREATE_A,
-    pub cIndexes: u32,
-    pub szCallback: ::windows_sys::core::PSTR,
-    pub cbtyp: u32,
-    pub grbit: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cCreated: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_TABLECREATE2_A {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_TABLECREATE2_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_TABLECREATE2_W {
-    pub cbStruct: u32,
-    pub szTableName: ::windows_sys::core::PWSTR,
-    pub szTemplateTableName: ::windows_sys::core::PWSTR,
-    pub ulPages: u32,
-    pub ulDensity: u32,
-    pub rgcolumncreate: *mut JET_COLUMNCREATE_W,
-    pub cColumns: u32,
-    pub rgindexcreate: *mut JET_INDEXCREATE_W,
-    pub cIndexes: u32,
-    pub szCallback: ::windows_sys::core::PWSTR,
-    pub cbtyp: u32,
-    pub grbit: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cCreated: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_TABLECREATE2_W {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_TABLECREATE2_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_TABLECREATE3_A {
-    pub cbStruct: u32,
-    pub szTableName: ::windows_sys::core::PSTR,
-    pub szTemplateTableName: ::windows_sys::core::PSTR,
-    pub ulPages: u32,
-    pub ulDensity: u32,
-    pub rgcolumncreate: *mut JET_COLUMNCREATE_A,
-    pub cColumns: u32,
-    pub rgindexcreate: *mut JET_INDEXCREATE2_A,
-    pub cIndexes: u32,
-    pub szCallback: ::windows_sys::core::PSTR,
-    pub cbtyp: u32,
-    pub grbit: u32,
-    pub pSeqSpacehints: *mut JET_SPACEHINTS,
-    pub pLVSpacehints: *mut JET_SPACEHINTS,
-    pub cbSeparateLV: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cCreated: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_TABLECREATE3_A {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_TABLECREATE3_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_TABLECREATE3_W {
-    pub cbStruct: u32,
-    pub szTableName: ::windows_sys::core::PWSTR,
-    pub szTemplateTableName: ::windows_sys::core::PWSTR,
-    pub ulPages: u32,
-    pub ulDensity: u32,
-    pub rgcolumncreate: *mut JET_COLUMNCREATE_W,
-    pub cColumns: u32,
-    pub rgindexcreate: *mut JET_INDEXCREATE2_W,
-    pub cIndexes: u32,
-    pub szCallback: ::windows_sys::core::PWSTR,
-    pub cbtyp: u32,
-    pub grbit: u32,
-    pub pSeqSpacehints: *mut JET_SPACEHINTS,
-    pub pLVSpacehints: *mut JET_SPACEHINTS,
-    pub cbSeparateLV: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cCreated: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_TABLECREATE3_W {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_TABLECREATE3_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_TABLECREATE4_A {
-    pub cbStruct: u32,
-    pub szTableName: ::windows_sys::core::PSTR,
-    pub szTemplateTableName: ::windows_sys::core::PSTR,
-    pub ulPages: u32,
-    pub ulDensity: u32,
-    pub rgcolumncreate: *mut JET_COLUMNCREATE_A,
-    pub cColumns: u32,
-    pub rgindexcreate: *mut JET_INDEXCREATE3_A,
-    pub cIndexes: u32,
-    pub szCallback: ::windows_sys::core::PSTR,
-    pub cbtyp: u32,
-    pub grbit: u32,
-    pub pSeqSpacehints: *mut JET_SPACEHINTS,
-    pub pLVSpacehints: *mut JET_SPACEHINTS,
-    pub cbSeparateLV: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cCreated: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_TABLECREATE4_A {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_TABLECREATE4_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_TABLECREATE4_W {
-    pub cbStruct: u32,
-    pub szTableName: ::windows_sys::core::PWSTR,
-    pub szTemplateTableName: ::windows_sys::core::PWSTR,
-    pub ulPages: u32,
-    pub ulDensity: u32,
-    pub rgcolumncreate: *mut JET_COLUMNCREATE_W,
-    pub cColumns: u32,
-    pub rgindexcreate: *mut JET_INDEXCREATE3_W,
-    pub cIndexes: u32,
-    pub szCallback: ::windows_sys::core::PWSTR,
-    pub cbtyp: u32,
-    pub grbit: u32,
-    pub pSeqSpacehints: *mut JET_SPACEHINTS,
-    pub pLVSpacehints: *mut JET_SPACEHINTS,
-    pub cbSeparateLV: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cCreated: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_TABLECREATE4_W {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_TABLECREATE4_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_TABLECREATE_A {
-    pub cbStruct: u32,
-    pub szTableName: ::windows_sys::core::PSTR,
-    pub szTemplateTableName: ::windows_sys::core::PSTR,
-    pub ulPages: u32,
-    pub ulDensity: u32,
-    pub rgcolumncreate: *mut JET_COLUMNCREATE_A,
-    pub cColumns: u32,
-    pub rgindexcreate: *mut JET_INDEXCREATE_A,
-    pub cIndexes: u32,
-    pub grbit: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cCreated: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_TABLECREATE_A {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_TABLECREATE_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-pub struct JET_TABLECREATE_W {
-    pub cbStruct: u32,
-    pub szTableName: ::windows_sys::core::PWSTR,
-    pub szTemplateTableName: ::windows_sys::core::PWSTR,
-    pub ulPages: u32,
-    pub ulDensity: u32,
-    pub rgcolumncreate: *mut JET_COLUMNCREATE_W,
-    pub cColumns: u32,
-    pub rgindexcreate: *mut JET_INDEXCREATE_W,
-    pub cIndexes: u32,
-    pub grbit: u32,
-    pub tableid: super::StructuredStorage::JET_TABLEID,
-    pub cCreated: u32,
-}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::marker::Copy for JET_TABLECREATE_W {}
-#[cfg(feature = "Win32_Storage_StructuredStorage")]
-impl ::core::clone::Clone for JET_TABLECREATE_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_THREADSTATS {
-    pub cbStruct: u32,
-    pub cPageReferenced: u32,
-    pub cPageRead: u32,
-    pub cPagePreread: u32,
-    pub cPageDirtied: u32,
-    pub cPageRedirtied: u32,
-    pub cLogRecord: u32,
-    pub cbLogRecord: u32,
-}
-impl ::core::marker::Copy for JET_THREADSTATS {}
-impl ::core::clone::Clone for JET_THREADSTATS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-pub struct JET_THREADSTATS2 {
-    pub cbStruct: u32,
-    pub cPageReferenced: u32,
-    pub cPageRead: u32,
-    pub cPagePreread: u32,
-    pub cPageDirtied: u32,
-    pub cPageRedirtied: u32,
-    pub cLogRecord: u32,
-    pub cbLogRecord: u32,
-    pub cusecPageCacheMiss: u64,
-    pub cPageCacheMiss: u32,
-}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::marker::Copy for JET_THREADSTATS2 {}
-#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
-impl ::core::clone::Clone for JET_THREADSTATS2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(4))]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-#[cfg(target_arch = "x86")]
-pub struct JET_THREADSTATS2 {
-    pub cbStruct: u32,
-    pub cPageReferenced: u32,
-    pub cPageRead: u32,
-    pub cPagePreread: u32,
-    pub cPageDirtied: u32,
-    pub cPageRedirtied: u32,
-    pub cLogRecord: u32,
-    pub cbLogRecord: u32,
-    pub cusecPageCacheMiss: u64,
-    pub cPageCacheMiss: u32,
-}
-#[cfg(target_arch = "x86")]
-impl ::core::marker::Copy for JET_THREADSTATS2 {}
-#[cfg(target_arch = "x86")]
-impl ::core::clone::Clone for JET_THREADSTATS2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_TUPLELIMITS {
-    pub chLengthMin: u32,
-    pub chLengthMax: u32,
-    pub chToIndexMax: u32,
-    pub cchIncrement: u32,
-    pub ichStart: u32,
-}
-impl ::core::marker::Copy for JET_TUPLELIMITS {}
-impl ::core::clone::Clone for JET_TUPLELIMITS {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_UNICODEINDEX {
-    pub lcid: u32,
-    pub dwMapFlags: u32,
-}
-impl ::core::marker::Copy for JET_UNICODEINDEX {}
-impl ::core::clone::Clone for JET_UNICODEINDEX {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_UNICODEINDEX2 {
-    pub szLocaleName: ::windows_sys::core::PWSTR,
-    pub dwMapFlags: u32,
-}
-impl ::core::marker::Copy for JET_UNICODEINDEX2 {}
-impl ::core::clone::Clone for JET_UNICODEINDEX2 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_USERDEFINEDDEFAULT_A {
-    pub szCallback: ::windows_sys::core::PSTR,
-    pub pbUserData: *mut u8,
-    pub cbUserData: u32,
-    pub szDependantColumns: ::windows_sys::core::PSTR,
-}
-impl ::core::marker::Copy for JET_USERDEFINEDDEFAULT_A {}
-impl ::core::clone::Clone for JET_USERDEFINEDDEFAULT_A {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
-pub struct JET_USERDEFINEDDEFAULT_W {
-    pub szCallback: ::windows_sys::core::PWSTR,
-    pub pbUserData: *mut u8,
-    pub cbUserData: u32,
-    pub szDependantColumns: ::windows_sys::core::PWSTR,
-}
-impl ::core::marker::Copy for JET_USERDEFINEDDEFAULT_W {}
-impl ::core::clone::Clone for JET_USERDEFINEDDEFAULT_W {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const JET_VERSION: u32 = 1280u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
@@ -4765,3 +2566,2202 @@ pub const cObjectInfoCols: u32 = 9u32;
 pub const wrnBTNotVisibleAccumulated: u32 = 353u32;
 #[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
 pub const wrnBTNotVisibleRejected: u32 = 352u32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub type JET_ERRCAT = i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatUnknown: JET_ERRCAT = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatError: JET_ERRCAT = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatOperation: JET_ERRCAT = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatFatal: JET_ERRCAT = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatIO: JET_ERRCAT = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatResource: JET_ERRCAT = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatMemory: JET_ERRCAT = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatQuota: JET_ERRCAT = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatDisk: JET_ERRCAT = 8i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatData: JET_ERRCAT = 9i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatCorruption: JET_ERRCAT = 10i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatInconsistent: JET_ERRCAT = 11i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatFragmentation: JET_ERRCAT = 12i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatApi: JET_ERRCAT = 13i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatUsage: JET_ERRCAT = 14i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatState: JET_ERRCAT = 15i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatObsolete: JET_ERRCAT = 16i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_errcatMax: JET_ERRCAT = 17i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub type JET_INDEXCHECKING = i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_IndexCheckingOff: JET_INDEXCHECKING = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_IndexCheckingOn: JET_INDEXCHECKING = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_IndexCheckingDeferToOpenTable: JET_INDEXCHECKING = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_IndexCheckingMax: JET_INDEXCHECKING = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub type JET_RELOP = i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_relopEquals: JET_RELOP = 0i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_relopPrefixEquals: JET_RELOP = 1i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_relopNotEquals: JET_RELOP = 2i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_relopLessThanOrEqual: JET_RELOP = 3i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_relopLessThan: JET_RELOP = 4i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_relopGreaterThanOrEqual: JET_RELOP = 5i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_relopGreaterThan: JET_RELOP = 6i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_relopBitmaskEqualsZero: JET_RELOP = 7i32;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub const JET_relopBitmaskNotEqualsZero: JET_RELOP = 8i32;
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_BKINFO {
+    pub lgposMark: JET_LGPOS,
+    pub Anonymous: JET_BKINFO_0,
+    pub genLow: u32,
+    pub genHigh: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_BKINFO {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_BKINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union JET_BKINFO_0 {
+    pub logtimeMark: JET_LOGTIME,
+    pub bklogtimeMark: JET_BKLOGTIME,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_BKINFO_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_BKINFO_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_BKLOGTIME {
+    pub bSeconds: super::super::Foundation::CHAR,
+    pub bMinutes: super::super::Foundation::CHAR,
+    pub bHours: super::super::Foundation::CHAR,
+    pub bDay: super::super::Foundation::CHAR,
+    pub bMonth: super::super::Foundation::CHAR,
+    pub bYear: super::super::Foundation::CHAR,
+    pub Anonymous1: JET_BKLOGTIME_0,
+    pub Anonymous2: JET_BKLOGTIME_1,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_BKLOGTIME {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_BKLOGTIME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union JET_BKLOGTIME_0 {
+    pub bFiller1: super::super::Foundation::CHAR,
+    pub Anonymous: JET_BKLOGTIME_0_0,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_BKLOGTIME_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_BKLOGTIME_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_BKLOGTIME_0_0 {
+    pub _bitfield: u8,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_BKLOGTIME_0_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_BKLOGTIME_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union JET_BKLOGTIME_1 {
+    pub bFiller2: super::super::Foundation::CHAR,
+    pub Anonymous: JET_BKLOGTIME_1_0,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_BKLOGTIME_1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_BKLOGTIME_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_BKLOGTIME_1_0 {
+    pub _bitfield: u8,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_BKLOGTIME_1_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_BKLOGTIME_1_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_COLUMNBASE_A {
+    pub cbStruct: u32,
+    pub columnid: u32,
+    pub coltyp: u32,
+    pub wCountry: u16,
+    pub langid: u16,
+    pub cp: u16,
+    pub wFiller: u16,
+    pub cbMax: u32,
+    pub grbit: u32,
+    pub szBaseTableName: [super::super::Foundation::CHAR; 256],
+    pub szBaseColumnName: [super::super::Foundation::CHAR; 256],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_COLUMNBASE_A {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_COLUMNBASE_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_COLUMNBASE_W {
+    pub cbStruct: u32,
+    pub columnid: u32,
+    pub coltyp: u32,
+    pub wCountry: u16,
+    pub langid: u16,
+    pub cp: u16,
+    pub wFiller: u16,
+    pub cbMax: u32,
+    pub grbit: u32,
+    pub szBaseTableName: [u16; 256],
+    pub szBaseColumnName: [u16; 256],
+}
+impl ::core::marker::Copy for JET_COLUMNBASE_W {}
+impl ::core::clone::Clone for JET_COLUMNBASE_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_COLUMNCREATE_A {
+    pub cbStruct: u32,
+    pub szColumnName: ::windows_sys::core::PSTR,
+    pub coltyp: u32,
+    pub cbMax: u32,
+    pub grbit: u32,
+    pub pvDefault: *mut ::core::ffi::c_void,
+    pub cbDefault: u32,
+    pub cp: u32,
+    pub columnid: u32,
+    pub err: i32,
+}
+impl ::core::marker::Copy for JET_COLUMNCREATE_A {}
+impl ::core::clone::Clone for JET_COLUMNCREATE_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_COLUMNCREATE_W {
+    pub cbStruct: u32,
+    pub szColumnName: ::windows_sys::core::PWSTR,
+    pub coltyp: u32,
+    pub cbMax: u32,
+    pub grbit: u32,
+    pub pvDefault: *mut ::core::ffi::c_void,
+    pub cbDefault: u32,
+    pub cp: u32,
+    pub columnid: u32,
+    pub err: i32,
+}
+impl ::core::marker::Copy for JET_COLUMNCREATE_W {}
+impl ::core::clone::Clone for JET_COLUMNCREATE_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_COLUMNDEF {
+    pub cbStruct: u32,
+    pub columnid: u32,
+    pub coltyp: u32,
+    pub wCountry: u16,
+    pub langid: u16,
+    pub cp: u16,
+    pub wCollate: u16,
+    pub cbMax: u32,
+    pub grbit: u32,
+}
+impl ::core::marker::Copy for JET_COLUMNDEF {}
+impl ::core::clone::Clone for JET_COLUMNDEF {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_COLUMNLIST {
+    pub cbStruct: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cRecord: u32,
+    pub columnidPresentationOrder: u32,
+    pub columnidcolumnname: u32,
+    pub columnidcolumnid: u32,
+    pub columnidcoltyp: u32,
+    pub columnidCountry: u32,
+    pub columnidLangid: u32,
+    pub columnidCp: u32,
+    pub columnidCollate: u32,
+    pub columnidcbMax: u32,
+    pub columnidgrbit: u32,
+    pub columnidDefault: u32,
+    pub columnidBaseTableName: u32,
+    pub columnidBaseColumnName: u32,
+    pub columnidDefinitionName: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_COLUMNLIST {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_COLUMNLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_COMMIT_ID {
+    pub signLog: JET_SIGNATURE,
+    pub reserved: i32,
+    pub commitId: i64,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_COMMIT_ID {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_COMMIT_ID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_COMMIT_ID {
+    pub signLog: JET_SIGNATURE,
+    pub reserved: i32,
+    pub commitId: i64,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_COMMIT_ID {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_COMMIT_ID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_CONDITIONALCOLUMN_A {
+    pub cbStruct: u32,
+    pub szColumnName: ::windows_sys::core::PSTR,
+    pub grbit: u32,
+}
+impl ::core::marker::Copy for JET_CONDITIONALCOLUMN_A {}
+impl ::core::clone::Clone for JET_CONDITIONALCOLUMN_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_CONDITIONALCOLUMN_W {
+    pub cbStruct: u32,
+    pub szColumnName: ::windows_sys::core::PWSTR,
+    pub grbit: u32,
+}
+impl ::core::marker::Copy for JET_CONDITIONALCOLUMN_W {}
+impl ::core::clone::Clone for JET_CONDITIONALCOLUMN_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_CONVERT_A {
+    pub szOldDll: ::windows_sys::core::PSTR,
+    pub Anonymous: JET_CONVERT_A_0,
+}
+impl ::core::marker::Copy for JET_CONVERT_A {}
+impl ::core::clone::Clone for JET_CONVERT_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_CONVERT_A_0 {
+    pub fFlags: u32,
+    pub Anonymous: JET_CONVERT_A_0_0,
+}
+impl ::core::marker::Copy for JET_CONVERT_A_0 {}
+impl ::core::clone::Clone for JET_CONVERT_A_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_CONVERT_A_0_0 {
+    pub _bitfield: u32,
+}
+impl ::core::marker::Copy for JET_CONVERT_A_0_0 {}
+impl ::core::clone::Clone for JET_CONVERT_A_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_CONVERT_W {
+    pub szOldDll: ::windows_sys::core::PWSTR,
+    pub Anonymous: JET_CONVERT_W_0,
+}
+impl ::core::marker::Copy for JET_CONVERT_W {}
+impl ::core::clone::Clone for JET_CONVERT_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_CONVERT_W_0 {
+    pub fFlags: u32,
+    pub Anonymous: JET_CONVERT_W_0_0,
+}
+impl ::core::marker::Copy for JET_CONVERT_W_0 {}
+impl ::core::clone::Clone for JET_CONVERT_W_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_CONVERT_W_0_0 {
+    pub _bitfield: u32,
+}
+impl ::core::marker::Copy for JET_CONVERT_W_0_0 {}
+impl ::core::clone::Clone for JET_CONVERT_W_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_DBINFOMISC {
+    pub ulVersion: u32,
+    pub ulUpdate: u32,
+    pub signDb: JET_SIGNATURE,
+    pub dbstate: u32,
+    pub lgposConsistent: JET_LGPOS,
+    pub logtimeConsistent: JET_LOGTIME,
+    pub logtimeAttach: JET_LOGTIME,
+    pub lgposAttach: JET_LGPOS,
+    pub logtimeDetach: JET_LOGTIME,
+    pub lgposDetach: JET_LGPOS,
+    pub signLog: JET_SIGNATURE,
+    pub bkinfoFullPrev: JET_BKINFO,
+    pub bkinfoIncPrev: JET_BKINFO,
+    pub bkinfoFullCur: JET_BKINFO,
+    pub fShadowingDisabled: u32,
+    pub fUpgradeDb: u32,
+    pub dwMajorVersion: u32,
+    pub dwMinorVersion: u32,
+    pub dwBuildNumber: u32,
+    pub lSPNumber: i32,
+    pub cbPageSize: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_DBINFOMISC {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_DBINFOMISC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_DBINFOMISC2 {
+    pub ulVersion: u32,
+    pub ulUpdate: u32,
+    pub signDb: JET_SIGNATURE,
+    pub dbstate: u32,
+    pub lgposConsistent: JET_LGPOS,
+    pub logtimeConsistent: JET_LOGTIME,
+    pub logtimeAttach: JET_LOGTIME,
+    pub lgposAttach: JET_LGPOS,
+    pub logtimeDetach: JET_LOGTIME,
+    pub lgposDetach: JET_LGPOS,
+    pub signLog: JET_SIGNATURE,
+    pub bkinfoFullPrev: JET_BKINFO,
+    pub bkinfoIncPrev: JET_BKINFO,
+    pub bkinfoFullCur: JET_BKINFO,
+    pub fShadowingDisabled: u32,
+    pub fUpgradeDb: u32,
+    pub dwMajorVersion: u32,
+    pub dwMinorVersion: u32,
+    pub dwBuildNumber: u32,
+    pub lSPNumber: i32,
+    pub cbPageSize: u32,
+    pub genMinRequired: u32,
+    pub genMaxRequired: u32,
+    pub logtimeGenMaxCreate: JET_LOGTIME,
+    pub ulRepairCount: u32,
+    pub logtimeRepair: JET_LOGTIME,
+    pub ulRepairCountOld: u32,
+    pub ulECCFixSuccess: u32,
+    pub logtimeECCFixSuccess: JET_LOGTIME,
+    pub ulECCFixSuccessOld: u32,
+    pub ulECCFixFail: u32,
+    pub logtimeECCFixFail: JET_LOGTIME,
+    pub ulECCFixFailOld: u32,
+    pub ulBadChecksum: u32,
+    pub logtimeBadChecksum: JET_LOGTIME,
+    pub ulBadChecksumOld: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_DBINFOMISC2 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_DBINFOMISC2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_DBINFOMISC3 {
+    pub ulVersion: u32,
+    pub ulUpdate: u32,
+    pub signDb: JET_SIGNATURE,
+    pub dbstate: u32,
+    pub lgposConsistent: JET_LGPOS,
+    pub logtimeConsistent: JET_LOGTIME,
+    pub logtimeAttach: JET_LOGTIME,
+    pub lgposAttach: JET_LGPOS,
+    pub logtimeDetach: JET_LOGTIME,
+    pub lgposDetach: JET_LGPOS,
+    pub signLog: JET_SIGNATURE,
+    pub bkinfoFullPrev: JET_BKINFO,
+    pub bkinfoIncPrev: JET_BKINFO,
+    pub bkinfoFullCur: JET_BKINFO,
+    pub fShadowingDisabled: u32,
+    pub fUpgradeDb: u32,
+    pub dwMajorVersion: u32,
+    pub dwMinorVersion: u32,
+    pub dwBuildNumber: u32,
+    pub lSPNumber: i32,
+    pub cbPageSize: u32,
+    pub genMinRequired: u32,
+    pub genMaxRequired: u32,
+    pub logtimeGenMaxCreate: JET_LOGTIME,
+    pub ulRepairCount: u32,
+    pub logtimeRepair: JET_LOGTIME,
+    pub ulRepairCountOld: u32,
+    pub ulECCFixSuccess: u32,
+    pub logtimeECCFixSuccess: JET_LOGTIME,
+    pub ulECCFixSuccessOld: u32,
+    pub ulECCFixFail: u32,
+    pub logtimeECCFixFail: JET_LOGTIME,
+    pub ulECCFixFailOld: u32,
+    pub ulBadChecksum: u32,
+    pub logtimeBadChecksum: JET_LOGTIME,
+    pub ulBadChecksumOld: u32,
+    pub genCommitted: u32,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_DBINFOMISC3 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_DBINFOMISC3 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_DBINFOMISC4 {
+    pub ulVersion: u32,
+    pub ulUpdate: u32,
+    pub signDb: JET_SIGNATURE,
+    pub dbstate: u32,
+    pub lgposConsistent: JET_LGPOS,
+    pub logtimeConsistent: JET_LOGTIME,
+    pub logtimeAttach: JET_LOGTIME,
+    pub lgposAttach: JET_LGPOS,
+    pub logtimeDetach: JET_LOGTIME,
+    pub lgposDetach: JET_LGPOS,
+    pub signLog: JET_SIGNATURE,
+    pub bkinfoFullPrev: JET_BKINFO,
+    pub bkinfoIncPrev: JET_BKINFO,
+    pub bkinfoFullCur: JET_BKINFO,
+    pub fShadowingDisabled: u32,
+    pub fUpgradeDb: u32,
+    pub dwMajorVersion: u32,
+    pub dwMinorVersion: u32,
+    pub dwBuildNumber: u32,
+    pub lSPNumber: i32,
+    pub cbPageSize: u32,
+    pub genMinRequired: u32,
+    pub genMaxRequired: u32,
+    pub logtimeGenMaxCreate: JET_LOGTIME,
+    pub ulRepairCount: u32,
+    pub logtimeRepair: JET_LOGTIME,
+    pub ulRepairCountOld: u32,
+    pub ulECCFixSuccess: u32,
+    pub logtimeECCFixSuccess: JET_LOGTIME,
+    pub ulECCFixSuccessOld: u32,
+    pub ulECCFixFail: u32,
+    pub logtimeECCFixFail: JET_LOGTIME,
+    pub ulECCFixFailOld: u32,
+    pub ulBadChecksum: u32,
+    pub logtimeBadChecksum: JET_LOGTIME,
+    pub ulBadChecksumOld: u32,
+    pub genCommitted: u32,
+    pub bkinfoCopyPrev: JET_BKINFO,
+    pub bkinfoDiffPrev: JET_BKINFO,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_DBINFOMISC4 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_DBINFOMISC4 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_DBINFOUPGRADE {
+    pub cbStruct: u32,
+    pub cbFilesizeLow: u32,
+    pub cbFilesizeHigh: u32,
+    pub cbFreeSpaceRequiredLow: u32,
+    pub cbFreeSpaceRequiredHigh: u32,
+    pub csecToUpgrade: u32,
+    pub Anonymous: JET_DBINFOUPGRADE_0,
+}
+impl ::core::marker::Copy for JET_DBINFOUPGRADE {}
+impl ::core::clone::Clone for JET_DBINFOUPGRADE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_DBINFOUPGRADE_0 {
+    pub ulFlags: u32,
+    pub Anonymous: JET_DBINFOUPGRADE_0_0,
+}
+impl ::core::marker::Copy for JET_DBINFOUPGRADE_0 {}
+impl ::core::clone::Clone for JET_DBINFOUPGRADE_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_DBINFOUPGRADE_0_0 {
+    pub _bitfield: u32,
+}
+impl ::core::marker::Copy for JET_DBINFOUPGRADE_0_0 {}
+impl ::core::clone::Clone for JET_DBINFOUPGRADE_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_ENUMCOLUMN {
+    pub columnid: u32,
+    pub err: i32,
+    pub Anonymous: JET_ENUMCOLUMN_0,
+}
+impl ::core::marker::Copy for JET_ENUMCOLUMN {}
+impl ::core::clone::Clone for JET_ENUMCOLUMN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_ENUMCOLUMN_0 {
+    pub Anonymous1: JET_ENUMCOLUMN_0_0,
+    pub Anonymous2: JET_ENUMCOLUMN_0_1,
+}
+impl ::core::marker::Copy for JET_ENUMCOLUMN_0 {}
+impl ::core::clone::Clone for JET_ENUMCOLUMN_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_ENUMCOLUMN_0_0 {
+    pub cEnumColumnValue: u32,
+    pub rgEnumColumnValue: *mut JET_ENUMCOLUMNVALUE,
+}
+impl ::core::marker::Copy for JET_ENUMCOLUMN_0_0 {}
+impl ::core::clone::Clone for JET_ENUMCOLUMN_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_ENUMCOLUMN_0_1 {
+    pub cbData: u32,
+    pub pvData: *mut ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for JET_ENUMCOLUMN_0_1 {}
+impl ::core::clone::Clone for JET_ENUMCOLUMN_0_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_ENUMCOLUMNID {
+    pub columnid: u32,
+    pub ctagSequence: u32,
+    pub rgtagSequence: *mut u32,
+}
+impl ::core::marker::Copy for JET_ENUMCOLUMNID {}
+impl ::core::clone::Clone for JET_ENUMCOLUMNID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_ENUMCOLUMNVALUE {
+    pub itagSequence: u32,
+    pub err: i32,
+    pub cbData: u32,
+    pub pvData: *mut ::core::ffi::c_void,
+}
+impl ::core::marker::Copy for JET_ENUMCOLUMNVALUE {}
+impl ::core::clone::Clone for JET_ENUMCOLUMNVALUE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_ERRINFOBASIC_W {
+    pub cbStruct: u32,
+    pub errValue: i32,
+    pub errcatMostSpecific: JET_ERRCAT,
+    pub rgCategoricalHierarchy: [u8; 8],
+    pub lSourceLine: u32,
+    pub rgszSourceFile: [u16; 64],
+}
+impl ::core::marker::Copy for JET_ERRINFOBASIC_W {}
+impl ::core::clone::Clone for JET_ERRINFOBASIC_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_INDEXCREATE2_A {
+    pub cbStruct: u32,
+    pub szIndexName: ::windows_sys::core::PSTR,
+    pub szKey: ::windows_sys::core::PSTR,
+    pub cbKey: u32,
+    pub grbit: u32,
+    pub ulDensity: u32,
+    pub Anonymous1: JET_INDEXCREATE2_A_0,
+    pub Anonymous2: JET_INDEXCREATE2_A_1,
+    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_A,
+    pub cConditionalColumn: u32,
+    pub err: i32,
+    pub cbKeyMost: u32,
+    pub pSpacehints: *mut JET_SPACEHINTS,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE2_A {}
+impl ::core::clone::Clone for JET_INDEXCREATE2_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_INDEXCREATE2_A_0 {
+    pub lcid: u32,
+    pub pidxunicode: *mut JET_UNICODEINDEX,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE2_A_0 {}
+impl ::core::clone::Clone for JET_INDEXCREATE2_A_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_INDEXCREATE2_A_1 {
+    pub cbVarSegMac: u32,
+    pub ptuplelimits: *mut JET_TUPLELIMITS,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE2_A_1 {}
+impl ::core::clone::Clone for JET_INDEXCREATE2_A_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_INDEXCREATE2_W {
+    pub cbStruct: u32,
+    pub szIndexName: ::windows_sys::core::PWSTR,
+    pub szKey: ::windows_sys::core::PWSTR,
+    pub cbKey: u32,
+    pub grbit: u32,
+    pub ulDensity: u32,
+    pub Anonymous1: JET_INDEXCREATE2_W_0,
+    pub Anonymous2: JET_INDEXCREATE2_W_1,
+    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_W,
+    pub cConditionalColumn: u32,
+    pub err: i32,
+    pub cbKeyMost: u32,
+    pub pSpacehints: *mut JET_SPACEHINTS,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE2_W {}
+impl ::core::clone::Clone for JET_INDEXCREATE2_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_INDEXCREATE2_W_0 {
+    pub lcid: u32,
+    pub pidxunicode: *mut JET_UNICODEINDEX,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE2_W_0 {}
+impl ::core::clone::Clone for JET_INDEXCREATE2_W_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_INDEXCREATE2_W_1 {
+    pub cbVarSegMac: u32,
+    pub ptuplelimits: *mut JET_TUPLELIMITS,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE2_W_1 {}
+impl ::core::clone::Clone for JET_INDEXCREATE2_W_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_INDEXCREATE3_A {
+    pub cbStruct: u32,
+    pub szIndexName: ::windows_sys::core::PSTR,
+    pub szKey: ::windows_sys::core::PSTR,
+    pub cbKey: u32,
+    pub grbit: u32,
+    pub ulDensity: u32,
+    pub pidxunicode: *mut JET_UNICODEINDEX2,
+    pub Anonymous: JET_INDEXCREATE3_A_0,
+    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_A,
+    pub cConditionalColumn: u32,
+    pub err: i32,
+    pub cbKeyMost: u32,
+    pub pSpacehints: *mut JET_SPACEHINTS,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE3_A {}
+impl ::core::clone::Clone for JET_INDEXCREATE3_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_INDEXCREATE3_A_0 {
+    pub cbVarSegMac: u32,
+    pub ptuplelimits: *mut JET_TUPLELIMITS,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE3_A_0 {}
+impl ::core::clone::Clone for JET_INDEXCREATE3_A_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_INDEXCREATE3_W {
+    pub cbStruct: u32,
+    pub szIndexName: ::windows_sys::core::PWSTR,
+    pub szKey: ::windows_sys::core::PWSTR,
+    pub cbKey: u32,
+    pub grbit: u32,
+    pub ulDensity: u32,
+    pub pidxunicode: *mut JET_UNICODEINDEX2,
+    pub Anonymous: JET_INDEXCREATE3_W_0,
+    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_W,
+    pub cConditionalColumn: u32,
+    pub err: i32,
+    pub cbKeyMost: u32,
+    pub pSpacehints: *mut JET_SPACEHINTS,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE3_W {}
+impl ::core::clone::Clone for JET_INDEXCREATE3_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_INDEXCREATE3_W_0 {
+    pub cbVarSegMac: u32,
+    pub ptuplelimits: *mut JET_TUPLELIMITS,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE3_W_0 {}
+impl ::core::clone::Clone for JET_INDEXCREATE3_W_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_INDEXCREATE_A {
+    pub cbStruct: u32,
+    pub szIndexName: ::windows_sys::core::PSTR,
+    pub szKey: ::windows_sys::core::PSTR,
+    pub cbKey: u32,
+    pub grbit: u32,
+    pub ulDensity: u32,
+    pub Anonymous1: JET_INDEXCREATE_A_0,
+    pub Anonymous2: JET_INDEXCREATE_A_1,
+    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_A,
+    pub cConditionalColumn: u32,
+    pub err: i32,
+    pub cbKeyMost: u32,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE_A {}
+impl ::core::clone::Clone for JET_INDEXCREATE_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_INDEXCREATE_A_0 {
+    pub lcid: u32,
+    pub pidxunicode: *mut JET_UNICODEINDEX,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE_A_0 {}
+impl ::core::clone::Clone for JET_INDEXCREATE_A_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_INDEXCREATE_A_1 {
+    pub cbVarSegMac: u32,
+    pub ptuplelimits: *mut JET_TUPLELIMITS,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE_A_1 {}
+impl ::core::clone::Clone for JET_INDEXCREATE_A_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_INDEXCREATE_W {
+    pub cbStruct: u32,
+    pub szIndexName: ::windows_sys::core::PWSTR,
+    pub szKey: ::windows_sys::core::PWSTR,
+    pub cbKey: u32,
+    pub grbit: u32,
+    pub ulDensity: u32,
+    pub Anonymous1: JET_INDEXCREATE_W_0,
+    pub Anonymous2: JET_INDEXCREATE_W_1,
+    pub rgconditionalcolumn: *mut JET_CONDITIONALCOLUMN_W,
+    pub cConditionalColumn: u32,
+    pub err: i32,
+    pub cbKeyMost: u32,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE_W {}
+impl ::core::clone::Clone for JET_INDEXCREATE_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_INDEXCREATE_W_0 {
+    pub lcid: u32,
+    pub pidxunicode: *mut JET_UNICODEINDEX,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE_W_0 {}
+impl ::core::clone::Clone for JET_INDEXCREATE_W_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub union JET_INDEXCREATE_W_1 {
+    pub cbVarSegMac: u32,
+    pub ptuplelimits: *mut JET_TUPLELIMITS,
+}
+impl ::core::marker::Copy for JET_INDEXCREATE_W_1 {}
+impl ::core::clone::Clone for JET_INDEXCREATE_W_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct JET_INDEXID {
+    pub cbStruct: u32,
+    pub rgbIndexId: [u8; 16],
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for JET_INDEXID {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for JET_INDEXID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct JET_INDEXID {
+    pub cbStruct: u32,
+    pub rgbIndexId: [u8; 12],
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for JET_INDEXID {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for JET_INDEXID {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_INDEXLIST {
+    pub cbStruct: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cRecord: u32,
+    pub columnidindexname: u32,
+    pub columnidgrbitIndex: u32,
+    pub columnidcKey: u32,
+    pub columnidcEntry: u32,
+    pub columnidcPage: u32,
+    pub columnidcColumn: u32,
+    pub columnidiColumn: u32,
+    pub columnidcolumnid: u32,
+    pub columnidcoltyp: u32,
+    pub columnidCountry: u32,
+    pub columnidLangid: u32,
+    pub columnidCp: u32,
+    pub columnidCollate: u32,
+    pub columnidgrbitColumn: u32,
+    pub columnidcolumnname: u32,
+    pub columnidLCMapFlags: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_INDEXLIST {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_INDEXLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_INDEXRANGE {
+    pub cbStruct: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub grbit: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_INDEXRANGE {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_INDEXRANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_INDEX_COLUMN {
+    pub columnid: u32,
+    pub relop: JET_RELOP,
+    pub pv: *mut ::core::ffi::c_void,
+    pub cb: u32,
+    pub grbit: u32,
+}
+impl ::core::marker::Copy for JET_INDEX_COLUMN {}
+impl ::core::clone::Clone for JET_INDEX_COLUMN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_INDEX_RANGE {
+    pub rgStartColumns: *mut JET_INDEX_COLUMN,
+    pub cStartColumns: u32,
+    pub rgEndColumns: *mut JET_INDEX_COLUMN,
+    pub cEndColumns: u32,
+}
+impl ::core::marker::Copy for JET_INDEX_RANGE {}
+impl ::core::clone::Clone for JET_INDEX_RANGE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_INSTANCE_INFO_A {
+    pub hInstanceId: super::StructuredStorage::JET_INSTANCE,
+    pub szInstanceName: ::windows_sys::core::PSTR,
+    pub cDatabases: super::StructuredStorage::JET_API_PTR,
+    pub szDatabaseFileName: *mut *mut i8,
+    pub szDatabaseDisplayName: *mut *mut i8,
+    pub szDatabaseSLVFileName_Obsolete: *mut *mut i8,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_INSTANCE_INFO_A {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_INSTANCE_INFO_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_INSTANCE_INFO_W {
+    pub hInstanceId: super::StructuredStorage::JET_INSTANCE,
+    pub szInstanceName: ::windows_sys::core::PWSTR,
+    pub cDatabases: super::StructuredStorage::JET_API_PTR,
+    pub szDatabaseFileName: *mut *mut u16,
+    pub szDatabaseDisplayName: *mut *mut u16,
+    pub szDatabaseSLVFileName_Obsolete: *mut *mut u16,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_INSTANCE_INFO_W {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_INSTANCE_INFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_LGPOS {
+    pub ib: u16,
+    pub isec: u16,
+    pub lGeneration: i32,
+}
+impl ::core::marker::Copy for JET_LGPOS {}
+impl ::core::clone::Clone for JET_LGPOS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_LOGINFO_A {
+    pub cbSize: u32,
+    pub ulGenLow: u32,
+    pub ulGenHigh: u32,
+    pub szBaseName: [super::super::Foundation::CHAR; 4],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_LOGINFO_A {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_LOGINFO_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_LOGINFO_W {
+    pub cbSize: u32,
+    pub ulGenLow: u32,
+    pub ulGenHigh: u32,
+    pub szBaseName: [u16; 4],
+}
+impl ::core::marker::Copy for JET_LOGINFO_W {}
+impl ::core::clone::Clone for JET_LOGINFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_LOGTIME {
+    pub bSeconds: super::super::Foundation::CHAR,
+    pub bMinutes: super::super::Foundation::CHAR,
+    pub bHours: super::super::Foundation::CHAR,
+    pub bDay: super::super::Foundation::CHAR,
+    pub bMonth: super::super::Foundation::CHAR,
+    pub bYear: super::super::Foundation::CHAR,
+    pub Anonymous1: JET_LOGTIME_0,
+    pub Anonymous2: JET_LOGTIME_1,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_LOGTIME {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_LOGTIME {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union JET_LOGTIME_0 {
+    pub bFiller1: super::super::Foundation::CHAR,
+    pub Anonymous: JET_LOGTIME_0_0,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_LOGTIME_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_LOGTIME_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_LOGTIME_0_0 {
+    pub _bitfield: u8,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_LOGTIME_0_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_LOGTIME_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub union JET_LOGTIME_1 {
+    pub bFiller2: super::super::Foundation::CHAR,
+    pub Anonymous: JET_LOGTIME_1_0,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_LOGTIME_1 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_LOGTIME_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_LOGTIME_1_0 {
+    pub _bitfield: u8,
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_LOGTIME_1_0 {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_LOGTIME_1_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type JET_LS = usize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct JET_OBJECTINFO {
+    pub cbStruct: u32,
+    pub objtyp: u32,
+    pub dtCreate: f64,
+    pub dtUpdate: f64,
+    pub grbit: u32,
+    pub flags: u32,
+    pub cRecord: u32,
+    pub cPage: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for JET_OBJECTINFO {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for JET_OBJECTINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct JET_OBJECTINFO {
+    pub cbStruct: u32,
+    pub objtyp: u32,
+    pub dtCreate: f64,
+    pub dtUpdate: f64,
+    pub grbit: u32,
+    pub flags: u32,
+    pub cRecord: u32,
+    pub cPage: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for JET_OBJECTINFO {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for JET_OBJECTINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_OBJECTLIST {
+    pub cbStruct: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cRecord: u32,
+    pub columnidcontainername: u32,
+    pub columnidobjectname: u32,
+    pub columnidobjtyp: u32,
+    pub columniddtCreate: u32,
+    pub columniddtUpdate: u32,
+    pub columnidgrbit: u32,
+    pub columnidflags: u32,
+    pub columnidcRecord: u32,
+    pub columnidcPage: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_OBJECTLIST {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_OBJECTLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_OPENTEMPORARYTABLE {
+    pub cbStruct: u32,
+    pub prgcolumndef: *const JET_COLUMNDEF,
+    pub ccolumn: u32,
+    pub pidxunicode: *mut JET_UNICODEINDEX,
+    pub grbit: u32,
+    pub prgcolumnid: *mut u32,
+    pub cbKeyMost: u32,
+    pub cbVarSegMac: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_OPENTEMPORARYTABLE {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_OPENTEMPORARYTABLE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_OPENTEMPORARYTABLE2 {
+    pub cbStruct: u32,
+    pub prgcolumndef: *const JET_COLUMNDEF,
+    pub ccolumn: u32,
+    pub pidxunicode: *mut JET_UNICODEINDEX2,
+    pub grbit: u32,
+    pub prgcolumnid: *mut u32,
+    pub cbKeyMost: u32,
+    pub cbVarSegMac: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_OPENTEMPORARYTABLE2 {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_OPENTEMPORARYTABLE2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_OPERATIONCONTEXT {
+    pub ulUserID: u32,
+    pub nOperationID: u8,
+    pub nOperationType: u8,
+    pub nClientType: u8,
+    pub fFlags: u8,
+}
+impl ::core::marker::Copy for JET_OPERATIONCONTEXT {}
+impl ::core::clone::Clone for JET_OPERATIONCONTEXT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type JET_OSSNAPID = usize;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_RBSINFOMISC {
+    pub lRBSGeneration: i32,
+    pub logtimeCreate: JET_LOGTIME,
+    pub logtimeCreatePrevRBS: JET_LOGTIME,
+    pub ulMajor: u32,
+    pub ulMinor: u32,
+    pub cbLogicalFileSize: u64,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_RBSINFOMISC {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_RBSINFOMISC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_RBSINFOMISC {
+    pub lRBSGeneration: i32,
+    pub logtimeCreate: JET_LOGTIME,
+    pub logtimeCreatePrevRBS: JET_LOGTIME,
+    pub ulMajor: u32,
+    pub ulMinor: u32,
+    pub cbLogicalFileSize: u64,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_RBSINFOMISC {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_RBSINFOMISC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_RBSREVERTINFOMISC {
+    pub lGenMinRevertStart: i32,
+    pub lGenMaxRevertStart: i32,
+    pub lGenMinRevertEnd: i32,
+    pub lGenMaxRevertEnd: i32,
+    pub logtimeRevertFrom: JET_LOGTIME,
+    pub cSecRevert: u64,
+    pub cPagesReverted: u64,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_RBSREVERTINFOMISC {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_RBSREVERTINFOMISC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_RBSREVERTINFOMISC {
+    pub lGenMinRevertStart: i32,
+    pub lGenMaxRevertStart: i32,
+    pub lGenMinRevertEnd: i32,
+    pub lGenMaxRevertEnd: i32,
+    pub logtimeRevertFrom: JET_LOGTIME,
+    pub cSecRevert: u64,
+    pub cPagesReverted: u64,
+}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_RBSREVERTINFOMISC {}
+#[cfg(target_arch = "x86")]
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_RBSREVERTINFOMISC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_RECORDLIST {
+    pub cbStruct: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cRecord: u32,
+    pub columnidBookmark: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_RECORDLIST {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_RECORDLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_RECPOS {
+    pub cbStruct: u32,
+    pub centriesLT: u32,
+    pub centriesInRange: u32,
+    pub centriesTotal: u32,
+}
+impl ::core::marker::Copy for JET_RECPOS {}
+impl ::core::clone::Clone for JET_RECPOS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct JET_RECSIZE {
+    pub cbData: u64,
+    pub cbLongValueData: u64,
+    pub cbOverhead: u64,
+    pub cbLongValueOverhead: u64,
+    pub cNonTaggedColumns: u64,
+    pub cTaggedColumns: u64,
+    pub cLongValues: u64,
+    pub cMultiValues: u64,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for JET_RECSIZE {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for JET_RECSIZE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct JET_RECSIZE {
+    pub cbData: u64,
+    pub cbLongValueData: u64,
+    pub cbOverhead: u64,
+    pub cbLongValueOverhead: u64,
+    pub cNonTaggedColumns: u64,
+    pub cTaggedColumns: u64,
+    pub cLongValues: u64,
+    pub cMultiValues: u64,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for JET_RECSIZE {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for JET_RECSIZE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct JET_RECSIZE2 {
+    pub cbData: u64,
+    pub cbLongValueData: u64,
+    pub cbOverhead: u64,
+    pub cbLongValueOverhead: u64,
+    pub cNonTaggedColumns: u64,
+    pub cTaggedColumns: u64,
+    pub cLongValues: u64,
+    pub cMultiValues: u64,
+    pub cCompressedColumns: u64,
+    pub cbDataCompressed: u64,
+    pub cbLongValueDataCompressed: u64,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for JET_RECSIZE2 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for JET_RECSIZE2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct JET_RECSIZE2 {
+    pub cbData: u64,
+    pub cbLongValueData: u64,
+    pub cbOverhead: u64,
+    pub cbLongValueOverhead: u64,
+    pub cNonTaggedColumns: u64,
+    pub cTaggedColumns: u64,
+    pub cLongValues: u64,
+    pub cMultiValues: u64,
+    pub cCompressedColumns: u64,
+    pub cbDataCompressed: u64,
+    pub cbLongValueDataCompressed: u64,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for JET_RECSIZE2 {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for JET_RECSIZE2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_RETINFO {
+    pub cbStruct: u32,
+    pub ibLongValue: u32,
+    pub itagSequence: u32,
+    pub columnidNextTagged: u32,
+}
+impl ::core::marker::Copy for JET_RETINFO {}
+impl ::core::clone::Clone for JET_RETINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_RETRIEVECOLUMN {
+    pub columnid: u32,
+    pub pvData: *mut ::core::ffi::c_void,
+    pub cbData: u32,
+    pub cbActual: u32,
+    pub grbit: u32,
+    pub ibLongValue: u32,
+    pub itagSequence: u32,
+    pub columnidNextTagged: u32,
+    pub err: i32,
+}
+impl ::core::marker::Copy for JET_RETRIEVECOLUMN {}
+impl ::core::clone::Clone for JET_RETRIEVECOLUMN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
+pub struct JET_RSTINFO_A {
+    pub cbStruct: u32,
+    pub rgrstmap: *mut JET_RSTMAP_A,
+    pub crstmap: i32,
+    pub lgposStop: JET_LGPOS,
+    pub logtimeStop: JET_LOGTIME,
+    pub pfnStatus: JET_PFNSTATUS,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
+impl ::core::marker::Copy for JET_RSTINFO_A {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
+impl ::core::clone::Clone for JET_RSTINFO_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
+pub struct JET_RSTINFO_W {
+    pub cbStruct: u32,
+    pub rgrstmap: *mut JET_RSTMAP_W,
+    pub crstmap: i32,
+    pub lgposStop: JET_LGPOS,
+    pub logtimeStop: JET_LOGTIME,
+    pub pfnStatus: JET_PFNSTATUS,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
+impl ::core::marker::Copy for JET_RSTINFO_W {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
+impl ::core::clone::Clone for JET_RSTINFO_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_RSTMAP_A {
+    pub szDatabaseName: ::windows_sys::core::PSTR,
+    pub szNewDatabaseName: ::windows_sys::core::PSTR,
+}
+impl ::core::marker::Copy for JET_RSTMAP_A {}
+impl ::core::clone::Clone for JET_RSTMAP_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_RSTMAP_W {
+    pub szDatabaseName: ::windows_sys::core::PWSTR,
+    pub szNewDatabaseName: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for JET_RSTMAP_W {}
+impl ::core::clone::Clone for JET_RSTMAP_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_SETCOLUMN {
+    pub columnid: u32,
+    pub pvData: *const ::core::ffi::c_void,
+    pub cbData: u32,
+    pub grbit: u32,
+    pub ibLongValue: u32,
+    pub itagSequence: u32,
+    pub err: i32,
+}
+impl ::core::marker::Copy for JET_SETCOLUMN {}
+impl ::core::clone::Clone for JET_SETCOLUMN {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_SETINFO {
+    pub cbStruct: u32,
+    pub ibLongValue: u32,
+    pub itagSequence: u32,
+}
+impl ::core::marker::Copy for JET_SETINFO {}
+impl ::core::clone::Clone for JET_SETINFO {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_SETSYSPARAM_A {
+    pub paramid: u32,
+    pub lParam: super::StructuredStorage::JET_API_PTR,
+    pub sz: ::windows_sys::core::PCSTR,
+    pub err: i32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_SETSYSPARAM_A {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_SETSYSPARAM_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_SETSYSPARAM_W {
+    pub paramid: u32,
+    pub lParam: super::StructuredStorage::JET_API_PTR,
+    pub sz: ::windows_sys::core::PCWSTR,
+    pub err: i32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_SETSYSPARAM_W {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_SETSYSPARAM_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct JET_SIGNATURE {
+    pub ulRandom: u32,
+    pub logtimeCreate: JET_LOGTIME,
+    pub szComputerName: [super::super::Foundation::CHAR; 16],
+}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for JET_SIGNATURE {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for JET_SIGNATURE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_SNPROG {
+    pub cbStruct: u32,
+    pub cunitDone: u32,
+    pub cunitTotal: u32,
+}
+impl ::core::marker::Copy for JET_SNPROG {}
+impl ::core::clone::Clone for JET_SNPROG {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_SPACEHINTS {
+    pub cbStruct: u32,
+    pub ulInitialDensity: u32,
+    pub cbInitial: u32,
+    pub grbit: u32,
+    pub ulMaintDensity: u32,
+    pub ulGrowth: u32,
+    pub cbMinExtent: u32,
+    pub cbMaxExtent: u32,
+}
+impl ::core::marker::Copy for JET_SPACEHINTS {}
+impl ::core::clone::Clone for JET_SPACEHINTS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_TABLECREATE2_A {
+    pub cbStruct: u32,
+    pub szTableName: ::windows_sys::core::PSTR,
+    pub szTemplateTableName: ::windows_sys::core::PSTR,
+    pub ulPages: u32,
+    pub ulDensity: u32,
+    pub rgcolumncreate: *mut JET_COLUMNCREATE_A,
+    pub cColumns: u32,
+    pub rgindexcreate: *mut JET_INDEXCREATE_A,
+    pub cIndexes: u32,
+    pub szCallback: ::windows_sys::core::PSTR,
+    pub cbtyp: u32,
+    pub grbit: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cCreated: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_TABLECREATE2_A {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_TABLECREATE2_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_TABLECREATE2_W {
+    pub cbStruct: u32,
+    pub szTableName: ::windows_sys::core::PWSTR,
+    pub szTemplateTableName: ::windows_sys::core::PWSTR,
+    pub ulPages: u32,
+    pub ulDensity: u32,
+    pub rgcolumncreate: *mut JET_COLUMNCREATE_W,
+    pub cColumns: u32,
+    pub rgindexcreate: *mut JET_INDEXCREATE_W,
+    pub cIndexes: u32,
+    pub szCallback: ::windows_sys::core::PWSTR,
+    pub cbtyp: u32,
+    pub grbit: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cCreated: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_TABLECREATE2_W {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_TABLECREATE2_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_TABLECREATE3_A {
+    pub cbStruct: u32,
+    pub szTableName: ::windows_sys::core::PSTR,
+    pub szTemplateTableName: ::windows_sys::core::PSTR,
+    pub ulPages: u32,
+    pub ulDensity: u32,
+    pub rgcolumncreate: *mut JET_COLUMNCREATE_A,
+    pub cColumns: u32,
+    pub rgindexcreate: *mut JET_INDEXCREATE2_A,
+    pub cIndexes: u32,
+    pub szCallback: ::windows_sys::core::PSTR,
+    pub cbtyp: u32,
+    pub grbit: u32,
+    pub pSeqSpacehints: *mut JET_SPACEHINTS,
+    pub pLVSpacehints: *mut JET_SPACEHINTS,
+    pub cbSeparateLV: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cCreated: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_TABLECREATE3_A {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_TABLECREATE3_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_TABLECREATE3_W {
+    pub cbStruct: u32,
+    pub szTableName: ::windows_sys::core::PWSTR,
+    pub szTemplateTableName: ::windows_sys::core::PWSTR,
+    pub ulPages: u32,
+    pub ulDensity: u32,
+    pub rgcolumncreate: *mut JET_COLUMNCREATE_W,
+    pub cColumns: u32,
+    pub rgindexcreate: *mut JET_INDEXCREATE2_W,
+    pub cIndexes: u32,
+    pub szCallback: ::windows_sys::core::PWSTR,
+    pub cbtyp: u32,
+    pub grbit: u32,
+    pub pSeqSpacehints: *mut JET_SPACEHINTS,
+    pub pLVSpacehints: *mut JET_SPACEHINTS,
+    pub cbSeparateLV: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cCreated: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_TABLECREATE3_W {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_TABLECREATE3_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_TABLECREATE4_A {
+    pub cbStruct: u32,
+    pub szTableName: ::windows_sys::core::PSTR,
+    pub szTemplateTableName: ::windows_sys::core::PSTR,
+    pub ulPages: u32,
+    pub ulDensity: u32,
+    pub rgcolumncreate: *mut JET_COLUMNCREATE_A,
+    pub cColumns: u32,
+    pub rgindexcreate: *mut JET_INDEXCREATE3_A,
+    pub cIndexes: u32,
+    pub szCallback: ::windows_sys::core::PSTR,
+    pub cbtyp: u32,
+    pub grbit: u32,
+    pub pSeqSpacehints: *mut JET_SPACEHINTS,
+    pub pLVSpacehints: *mut JET_SPACEHINTS,
+    pub cbSeparateLV: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cCreated: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_TABLECREATE4_A {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_TABLECREATE4_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_TABLECREATE4_W {
+    pub cbStruct: u32,
+    pub szTableName: ::windows_sys::core::PWSTR,
+    pub szTemplateTableName: ::windows_sys::core::PWSTR,
+    pub ulPages: u32,
+    pub ulDensity: u32,
+    pub rgcolumncreate: *mut JET_COLUMNCREATE_W,
+    pub cColumns: u32,
+    pub rgindexcreate: *mut JET_INDEXCREATE3_W,
+    pub cIndexes: u32,
+    pub szCallback: ::windows_sys::core::PWSTR,
+    pub cbtyp: u32,
+    pub grbit: u32,
+    pub pSeqSpacehints: *mut JET_SPACEHINTS,
+    pub pLVSpacehints: *mut JET_SPACEHINTS,
+    pub cbSeparateLV: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cCreated: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_TABLECREATE4_W {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_TABLECREATE4_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_TABLECREATE_A {
+    pub cbStruct: u32,
+    pub szTableName: ::windows_sys::core::PSTR,
+    pub szTemplateTableName: ::windows_sys::core::PSTR,
+    pub ulPages: u32,
+    pub ulDensity: u32,
+    pub rgcolumncreate: *mut JET_COLUMNCREATE_A,
+    pub cColumns: u32,
+    pub rgindexcreate: *mut JET_INDEXCREATE_A,
+    pub cIndexes: u32,
+    pub grbit: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cCreated: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_TABLECREATE_A {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_TABLECREATE_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub struct JET_TABLECREATE_W {
+    pub cbStruct: u32,
+    pub szTableName: ::windows_sys::core::PWSTR,
+    pub szTemplateTableName: ::windows_sys::core::PWSTR,
+    pub ulPages: u32,
+    pub ulDensity: u32,
+    pub rgcolumncreate: *mut JET_COLUMNCREATE_W,
+    pub cColumns: u32,
+    pub rgindexcreate: *mut JET_INDEXCREATE_W,
+    pub cIndexes: u32,
+    pub grbit: u32,
+    pub tableid: super::StructuredStorage::JET_TABLEID,
+    pub cCreated: u32,
+}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::marker::Copy for JET_TABLECREATE_W {}
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+impl ::core::clone::Clone for JET_TABLECREATE_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_THREADSTATS {
+    pub cbStruct: u32,
+    pub cPageReferenced: u32,
+    pub cPageRead: u32,
+    pub cPagePreread: u32,
+    pub cPageDirtied: u32,
+    pub cPageRedirtied: u32,
+    pub cLogRecord: u32,
+    pub cbLogRecord: u32,
+}
+impl ::core::marker::Copy for JET_THREADSTATS {}
+impl ::core::clone::Clone for JET_THREADSTATS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+pub struct JET_THREADSTATS2 {
+    pub cbStruct: u32,
+    pub cPageReferenced: u32,
+    pub cPageRead: u32,
+    pub cPagePreread: u32,
+    pub cPageDirtied: u32,
+    pub cPageRedirtied: u32,
+    pub cLogRecord: u32,
+    pub cbLogRecord: u32,
+    pub cusecPageCacheMiss: u64,
+    pub cPageCacheMiss: u32,
+}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::marker::Copy for JET_THREADSTATS2 {}
+#[cfg(any(target_arch = "aarch64", target_arch = "x86_64"))]
+impl ::core::clone::Clone for JET_THREADSTATS2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(4))]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+#[cfg(target_arch = "x86")]
+pub struct JET_THREADSTATS2 {
+    pub cbStruct: u32,
+    pub cPageReferenced: u32,
+    pub cPageRead: u32,
+    pub cPagePreread: u32,
+    pub cPageDirtied: u32,
+    pub cPageRedirtied: u32,
+    pub cLogRecord: u32,
+    pub cbLogRecord: u32,
+    pub cusecPageCacheMiss: u64,
+    pub cPageCacheMiss: u32,
+}
+#[cfg(target_arch = "x86")]
+impl ::core::marker::Copy for JET_THREADSTATS2 {}
+#[cfg(target_arch = "x86")]
+impl ::core::clone::Clone for JET_THREADSTATS2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_TUPLELIMITS {
+    pub chLengthMin: u32,
+    pub chLengthMax: u32,
+    pub chToIndexMax: u32,
+    pub cchIncrement: u32,
+    pub ichStart: u32,
+}
+impl ::core::marker::Copy for JET_TUPLELIMITS {}
+impl ::core::clone::Clone for JET_TUPLELIMITS {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_UNICODEINDEX {
+    pub lcid: u32,
+    pub dwMapFlags: u32,
+}
+impl ::core::marker::Copy for JET_UNICODEINDEX {}
+impl ::core::clone::Clone for JET_UNICODEINDEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_UNICODEINDEX2 {
+    pub szLocaleName: ::windows_sys::core::PWSTR,
+    pub dwMapFlags: u32,
+}
+impl ::core::marker::Copy for JET_UNICODEINDEX2 {}
+impl ::core::clone::Clone for JET_UNICODEINDEX2 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_USERDEFINEDDEFAULT_A {
+    pub szCallback: ::windows_sys::core::PSTR,
+    pub pbUserData: *mut u8,
+    pub cbUserData: u32,
+    pub szDependantColumns: ::windows_sys::core::PSTR,
+}
+impl ::core::marker::Copy for JET_USERDEFINEDDEFAULT_A {}
+impl ::core::clone::Clone for JET_USERDEFINEDDEFAULT_A {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub struct JET_USERDEFINEDDEFAULT_W {
+    pub szCallback: ::windows_sys::core::PWSTR,
+    pub pbUserData: *mut u8,
+    pub cbUserData: u32,
+    pub szDependantColumns: ::windows_sys::core::PWSTR,
+}
+impl ::core::marker::Copy for JET_USERDEFINEDDEFAULT_W {}
+impl ::core::clone::Clone for JET_USERDEFINEDDEFAULT_W {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub type JET_CALLBACK = ::core::option::Option<unsafe extern "system" fn(sesid: super::StructuredStorage::JET_SESID, dbid: u32, tableid: super::StructuredStorage::JET_TABLEID, cbtyp: u32, pvarg1: *mut ::core::ffi::c_void, pvarg2: *mut ::core::ffi::c_void, pvcontext: *const ::core::ffi::c_void, ulunused: super::StructuredStorage::JET_API_PTR) -> i32>;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Foundation\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Storage_StructuredStorage"))]
+pub type JET_PFNDURABLECOMMITCALLBACK = ::core::option::Option<unsafe extern "system" fn(instance: super::StructuredStorage::JET_INSTANCE, pcommitidseen: *const JET_COMMIT_ID, grbit: u32) -> i32>;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`*"]
+pub type JET_PFNREALLOC = ::core::option::Option<unsafe extern "system" fn(pvcontext: *const ::core::ffi::c_void, pv: *const ::core::ffi::c_void, cb: u32) -> *mut ::core::ffi::c_void>;
+#[doc = "*Required features: `\"Win32_Storage_Jet\"`, `\"Win32_Storage_StructuredStorage\"`*"]
+#[cfg(feature = "Win32_Storage_StructuredStorage")]
+pub type JET_PFNSTATUS = ::core::option::Option<unsafe extern "system" fn(sesid: super::StructuredStorage::JET_SESID, snp: u32, snt: u32, pv: *const ::core::ffi::c_void) -> i32>;

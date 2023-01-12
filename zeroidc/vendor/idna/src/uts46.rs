@@ -156,7 +156,7 @@ fn passes_bidi(label: &str, is_bidi_domain: bool) -> bool {
         // LTR label
         BidiClass::L => {
             // Rule 5
-            while let Some(c) = chars.next() {
+            for c in chars.by_ref() {
                 if !matches!(
                     bidi_class(c),
                     BidiClass::L
@@ -318,51 +318,48 @@ fn check_validity(label: &str, config: Config, errors: &mut Errors) {
     // V8: Bidi rules are checked inside `processing()`
 }
 
-/// http://www.unicode.org/reports/tr46/#Processing
-#[allow(clippy::manual_strip)] // introduced in 1.45, MSRV is 1.36
-fn processing(
-    domain: &str,
-    config: Config,
-    normalized: &mut String,
-    output: &mut String,
-) -> Errors {
-    // Weed out the simple cases: only allow all lowercase ASCII characters and digits where none
-    // of the labels start with PUNYCODE_PREFIX and labels don't start or end with hyphen.
-    let (mut prev, mut simple, mut puny_prefix) = ('?', !domain.is_empty(), 0);
+// Detect simple cases: all lowercase ASCII characters and digits where none
+// of the labels start with PUNYCODE_PREFIX and labels don't start or end with hyphen.
+fn is_simple(domain: &str) -> bool {
+    if domain.is_empty() {
+        return false;
+    }
+    let (mut prev, mut puny_prefix) = ('?', 0);
     for c in domain.chars() {
         if c == '.' {
             if prev == '-' {
-                simple = false;
-                break;
+                return false;
             }
             puny_prefix = 0;
             continue;
         } else if puny_prefix == 0 && c == '-' {
-            simple = false;
-            break;
+            return false;
         } else if puny_prefix < 5 {
             if c == ['x', 'n', '-', '-'][puny_prefix] {
                 puny_prefix += 1;
                 if puny_prefix == 4 {
-                    simple = false;
-                    break;
+                    return false;
                 }
             } else {
                 puny_prefix = 5;
             }
         }
         if !c.is_ascii_lowercase() && !c.is_ascii_digit() {
-            simple = false;
-            break;
+            return false;
         }
         prev = c;
     }
 
-    if simple {
-        output.push_str(domain);
-        return Errors::default();
-    }
+    true
+}
 
+/// http://www.unicode.org/reports/tr46/#Processing
+fn processing(
+    domain: &str,
+    config: Config,
+    normalized: &mut String,
+    output: &mut String,
+) -> Errors {
     normalized.clear();
     let mut errors = Errors::default();
     let offset = output.len();
@@ -384,8 +381,8 @@ fn processing(
             output.push('.');
         }
         first = false;
-        if label.starts_with(PUNYCODE_PREFIX) {
-            match decoder.decode(&label[PUNYCODE_PREFIX.len()..]) {
+        if let Some(remainder) = label.strip_prefix(PUNYCODE_PREFIX) {
+            match decoder.decode(remainder) {
                 Ok(decode) => {
                     let start = output.len();
                     output.extend(decode);
@@ -396,7 +393,7 @@ fn processing(
                     }
 
                     if !errors.is_err() {
-                        if !is_nfc(&decoded_label) {
+                        if !is_nfc(decoded_label) {
                             errors.nfc = true;
                         } else {
                             check_validity(decoded_label, non_transitional, &mut errors);
@@ -448,11 +445,13 @@ impl Idna {
         }
     }
 
-    /// http://www.unicode.org/reports/tr46/#ToASCII
-    #[allow(clippy::wrong_self_convention)]
-    pub fn to_ascii<'a>(&'a mut self, domain: &str, out: &mut String) -> Result<(), Errors> {
-        let mut errors = processing(domain, self.config, &mut self.normalized, &mut self.output);
-
+    pub fn to_ascii_inner(&mut self, domain: &str, out: &mut String) -> Errors {
+        if is_simple(domain) {
+            out.push_str(domain);
+            return Errors::default();
+        }
+        let mut errors = processing(domain, self.config, &mut self.normalized, out);
+        self.output = std::mem::replace(out, String::with_capacity(out.len()));
         let mut first = true;
         for label in self.output.split('.') {
             if !first {
@@ -471,6 +470,13 @@ impl Idna {
                 }
             }
         }
+        errors
+    }
+
+    /// http://www.unicode.org/reports/tr46/#ToASCII
+    #[allow(clippy::wrong_self_convention)]
+    pub fn to_ascii<'a>(&'a mut self, domain: &str, out: &mut String) -> Result<(), Errors> {
+        let mut errors = self.to_ascii_inner(domain, out);
 
         if self.config.verify_dns_length {
             let domain = if out.ends_with('.') {
@@ -492,6 +498,10 @@ impl Idna {
     /// http://www.unicode.org/reports/tr46/#ToUnicode
     #[allow(clippy::wrong_self_convention)]
     pub fn to_unicode<'a>(&'a mut self, domain: &str, out: &mut String) -> Result<(), Errors> {
+        if is_simple(domain) {
+            out.push_str(domain);
+            return Errors::default().into();
+        }
         processing(domain, self.config, &mut self.normalized, out).into()
     }
 }
@@ -555,7 +565,7 @@ impl Config {
 
     /// http://www.unicode.org/reports/tr46/#ToASCII
     pub fn to_ascii(self, domain: &str) -> Result<String, Errors> {
-        let mut result = String::new();
+        let mut result = String::with_capacity(domain.len());
         let mut codec = Idna::new(self);
         codec.to_ascii(domain, &mut result).map(|()| result)
     }

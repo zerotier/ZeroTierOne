@@ -23,15 +23,41 @@ pub struct Selector {
 
 impl Selector {
     pub fn new() -> io::Result<Selector> {
+        #[cfg(not(target_os = "android"))]
+        let res = syscall!(epoll_create1(libc::EPOLL_CLOEXEC));
+
+        // On Android < API level 16 `epoll_create1` is not defined, so use a
+        // raw system call.
         // According to libuv, `EPOLL_CLOEXEC` is not defined on Android API <
         // 21. But `EPOLL_CLOEXEC` is an alias for `O_CLOEXEC` on that platform,
         // so we use it instead.
         #[cfg(target_os = "android")]
-        let flag = libc::O_CLOEXEC;
-        #[cfg(not(target_os = "android"))]
-        let flag = libc::EPOLL_CLOEXEC;
+        let res = syscall!(syscall(libc::SYS_epoll_create1, libc::O_CLOEXEC));
 
-        syscall!(epoll_create1(flag)).map(|ep| Selector {
+        let ep = match res {
+            Ok(ep) => ep as RawFd,
+            Err(err) => {
+                // When `epoll_create1` is not available fall back to use
+                // `epoll_create` followed by `fcntl`.
+                if let Some(libc::ENOSYS) = err.raw_os_error() {
+                    match syscall!(epoll_create(1024)) {
+                        Ok(ep) => match syscall!(fcntl(ep, libc::F_SETFD, libc::FD_CLOEXEC)) {
+                            Ok(ep) => ep as RawFd,
+                            Err(err) => {
+                                // `fcntl` failed, cleanup `ep`.
+                                let _ = unsafe { libc::close(ep) };
+                                return Err(err);
+                            }
+                        },
+                        Err(err) => return Err(err),
+                    }
+                } else {
+                    return Err(err);
+                }
+            }
+        };
+
+        Ok(Selector {
             #[cfg(debug_assertions)]
             id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
             ep,
@@ -61,7 +87,19 @@ impl Selector {
         const MAX_SAFE_TIMEOUT: u128 = libc::c_int::max_value() as u128;
 
         let timeout = timeout
-            .map(|to| cmp::min(to.as_millis(), MAX_SAFE_TIMEOUT) as libc::c_int)
+            .map(|to| {
+                let to_ms = to.as_millis();
+                // as_millis() truncates, so round up to 1 ms as the documentation says can happen.
+                // This avoids turning submillisecond timeouts into immediate returns unless the
+                // caller explicitly requests that by specifying a zero timeout.
+                let to_ms = to_ms
+                    + if to_ms == 0 && to.subsec_nanos() != 0 {
+                        1
+                    } else {
+                        0
+                    };
+                cmp::min(MAX_SAFE_TIMEOUT, to_ms) as libc::c_int
+            })
             .unwrap_or(-1);
 
         events.clear();

@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -84,69 +84,6 @@ extern "system" {
     #[cfg(feature = "Win32_Foundation")]
     pub fn SkipPointerFrameMessages(pointerid: u32) -> super::super::super::Foundation::BOOL;
 }
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
-pub struct INPUT_INJECTION_VALUE {
-    pub page: u16,
-    pub usage: u16,
-    pub value: i32,
-    pub index: u16,
-}
-impl ::core::marker::Copy for INPUT_INJECTION_VALUE {}
-impl ::core::clone::Clone for INPUT_INJECTION_VALUE {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
-pub struct INPUT_TRANSFORM {
-    pub Anonymous: INPUT_TRANSFORM_0,
-}
-impl ::core::marker::Copy for INPUT_TRANSFORM {}
-impl ::core::clone::Clone for INPUT_TRANSFORM {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
-pub union INPUT_TRANSFORM_0 {
-    pub Anonymous: INPUT_TRANSFORM_0_0,
-    pub m: [f32; 16],
-}
-impl ::core::marker::Copy for INPUT_TRANSFORM_0 {}
-impl ::core::clone::Clone for INPUT_TRANSFORM_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
-pub struct INPUT_TRANSFORM_0_0 {
-    pub _11: f32,
-    pub _12: f32,
-    pub _13: f32,
-    pub _14: f32,
-    pub _21: f32,
-    pub _22: f32,
-    pub _23: f32,
-    pub _24: f32,
-    pub _31: f32,
-    pub _32: f32,
-    pub _33: f32,
-    pub _34: f32,
-    pub _41: f32,
-    pub _42: f32,
-    pub _43: f32,
-    pub _44: f32,
-}
-impl ::core::marker::Copy for INPUT_TRANSFORM_0_0 {}
-impl ::core::clone::Clone for INPUT_TRANSFORM_0_0 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
 pub type POINTER_BUTTON_CHANGE_TYPE = i32;
 #[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
@@ -211,6 +148,77 @@ pub const POINTER_FLAG_HWHEEL: POINTER_FLAGS = 1048576u32;
 pub const POINTER_FLAG_CAPTURECHANGED: POINTER_FLAGS = 2097152u32;
 #[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
 pub const POINTER_FLAG_HASTRANSFORM: POINTER_FLAGS = 4194304u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
+pub type TOUCH_FEEDBACK_MODE = u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
+pub const TOUCH_FEEDBACK_DEFAULT: TOUCH_FEEDBACK_MODE = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
+pub const TOUCH_FEEDBACK_INDIRECT: TOUCH_FEEDBACK_MODE = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
+pub const TOUCH_FEEDBACK_NONE: TOUCH_FEEDBACK_MODE = 3u32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
+pub struct INPUT_INJECTION_VALUE {
+    pub page: u16,
+    pub usage: u16,
+    pub value: i32,
+    pub index: u16,
+}
+impl ::core::marker::Copy for INPUT_INJECTION_VALUE {}
+impl ::core::clone::Clone for INPUT_INJECTION_VALUE {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
+pub struct INPUT_TRANSFORM {
+    pub Anonymous: INPUT_TRANSFORM_0,
+}
+impl ::core::marker::Copy for INPUT_TRANSFORM {}
+impl ::core::clone::Clone for INPUT_TRANSFORM {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
+pub union INPUT_TRANSFORM_0 {
+    pub Anonymous: INPUT_TRANSFORM_0_0,
+    pub m: [f32; 16],
+}
+impl ::core::marker::Copy for INPUT_TRANSFORM_0 {}
+impl ::core::clone::Clone for INPUT_TRANSFORM_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
+pub struct INPUT_TRANSFORM_0_0 {
+    pub _11: f32,
+    pub _12: f32,
+    pub _13: f32,
+    pub _14: f32,
+    pub _21: f32,
+    pub _22: f32,
+    pub _23: f32,
+    pub _24: f32,
+    pub _31: f32,
+    pub _32: f32,
+    pub _33: f32,
+    pub _34: f32,
+    pub _41: f32,
+    pub _42: f32,
+    pub _43: f32,
+    pub _44: f32,
+}
+impl ::core::marker::Copy for INPUT_TRANSFORM_0_0 {}
+impl ::core::clone::Clone for INPUT_TRANSFORM_0_0 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`, `\"Win32_Foundation\"`, `\"Win32_UI_WindowsAndMessaging\"`*"]
 #[cfg(all(feature = "Win32_Foundation", feature = "Win32_UI_WindowsAndMessaging"))]
@@ -280,11 +288,3 @@ impl ::core::clone::Clone for POINTER_TOUCH_INFO {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
-pub type TOUCH_FEEDBACK_MODE = u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
-pub const TOUCH_FEEDBACK_DEFAULT: TOUCH_FEEDBACK_MODE = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
-pub const TOUCH_FEEDBACK_INDIRECT: TOUCH_FEEDBACK_MODE = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Input_Pointer\"`*"]
-pub const TOUCH_FEEDBACK_NONE: TOUCH_FEEDBACK_MODE = 3u32;

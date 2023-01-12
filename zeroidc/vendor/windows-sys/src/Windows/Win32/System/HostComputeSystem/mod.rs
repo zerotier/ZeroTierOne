@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
     pub fn HcsAttachLayerStorageFilter(layerpath: ::windows_sys::core::PCWSTR, layerdata: ::windows_sys::core::PCWSTR) -> ::windows_sys::core::HRESULT;
@@ -141,40 +141,6 @@ extern "system" {
 pub type HCS_CREATE_OPTIONS = i32;
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
 pub const HcsCreateOptions_1: HCS_CREATE_OPTIONS = 65536i32;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`, `\"Win32_Foundation\"`, `\"Win32_Security\"`*"]
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
-pub struct HCS_CREATE_OPTIONS_1 {
-    pub Version: HCS_CREATE_OPTIONS,
-    pub UserToken: super::super::Foundation::HANDLE,
-    pub SecurityDescriptor: *mut super::super::Security::SECURITY_DESCRIPTOR,
-    pub CallbackOptions: HCS_EVENT_OPTIONS,
-    pub CallbackContext: *mut ::core::ffi::c_void,
-    pub Callback: HCS_EVENT_CALLBACK,
-}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
-impl ::core::marker::Copy for HCS_CREATE_OPTIONS_1 {}
-#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
-impl ::core::clone::Clone for HCS_CREATE_OPTIONS_1 {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
-pub struct HCS_EVENT {
-    pub Type: HCS_EVENT_TYPE,
-    pub EventData: ::windows_sys::core::PCWSTR,
-    pub Operation: HCS_OPERATION,
-}
-impl ::core::marker::Copy for HCS_EVENT {}
-impl ::core::clone::Clone for HCS_EVENT {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
-pub type HCS_EVENT_CALLBACK = ::core::option::Option<unsafe extern "system" fn(event: *const HCS_EVENT, context: *const ::core::ffi::c_void)>;
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
 pub type HCS_EVENT_OPTIONS = u32;
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
@@ -248,16 +214,11 @@ pub const HcsNotificationServiceDisconnect: HCS_NOTIFICATIONS = 16777216i32;
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
 pub const HcsNotificationFlagsReserved: HCS_NOTIFICATIONS = -268435456i32;
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
-pub type HCS_NOTIFICATION_CALLBACK = ::core::option::Option<unsafe extern "system" fn(notificationtype: u32, context: *const ::core::ffi::c_void, notificationstatus: ::windows_sys::core::HRESULT, notificationdata: ::windows_sys::core::PCWSTR)>;
-#[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
 pub type HCS_NOTIFICATION_FLAGS = i32;
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
 pub const HcsNotificationFlagSuccess: HCS_NOTIFICATION_FLAGS = 0i32;
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
 pub const HcsNotificationFlagFailure: HCS_NOTIFICATION_FLAGS = -2147483648i32;
-pub type HCS_OPERATION = isize;
-#[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
-pub type HCS_OPERATION_COMPLETION = ::core::option::Option<unsafe extern "system" fn(operation: HCS_OPERATION, context: *const ::core::ffi::c_void)>;
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
 pub type HCS_OPERATION_TYPE = i32;
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
@@ -294,6 +255,39 @@ pub const HcsOperationTypeGetProcessProperties: HCS_OPERATION_TYPE = 13i32;
 pub const HcsOperationTypeModifyProcess: HCS_OPERATION_TYPE = 14i32;
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
 pub const HcsOperationTypeCrash: HCS_OPERATION_TYPE = 15i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`, `\"Win32_Foundation\"`, `\"Win32_Security\"`*"]
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
+pub struct HCS_CREATE_OPTIONS_1 {
+    pub Version: HCS_CREATE_OPTIONS,
+    pub UserToken: super::super::Foundation::HANDLE,
+    pub SecurityDescriptor: *mut super::super::Security::SECURITY_DESCRIPTOR,
+    pub CallbackOptions: HCS_EVENT_OPTIONS,
+    pub CallbackContext: *mut ::core::ffi::c_void,
+    pub Callback: HCS_EVENT_CALLBACK,
+}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
+impl ::core::marker::Copy for HCS_CREATE_OPTIONS_1 {}
+#[cfg(all(feature = "Win32_Foundation", feature = "Win32_Security"))]
+impl ::core::clone::Clone for HCS_CREATE_OPTIONS_1 {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
+pub struct HCS_EVENT {
+    pub Type: HCS_EVENT_TYPE,
+    pub EventData: ::windows_sys::core::PCWSTR,
+    pub Operation: HCS_OPERATION,
+}
+impl ::core::marker::Copy for HCS_EVENT {}
+impl ::core::clone::Clone for HCS_EVENT {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+pub type HCS_OPERATION = isize;
 pub type HCS_PROCESS = isize;
 #[repr(C)]
 #[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`, `\"Win32_Foundation\"`*"]
@@ -314,3 +308,9 @@ impl ::core::clone::Clone for HCS_PROCESS_INFORMATION {
     }
 }
 pub type HCS_SYSTEM = isize;
+#[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
+pub type HCS_EVENT_CALLBACK = ::core::option::Option<unsafe extern "system" fn(event: *const HCS_EVENT, context: *const ::core::ffi::c_void)>;
+#[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
+pub type HCS_NOTIFICATION_CALLBACK = ::core::option::Option<unsafe extern "system" fn(notificationtype: u32, context: *const ::core::ffi::c_void, notificationstatus: ::windows_sys::core::HRESULT, notificationdata: ::windows_sys::core::PCWSTR)>;
+#[doc = "*Required features: `\"Win32_System_HostComputeSystem\"`*"]
+pub type HCS_OPERATION_COMPLETION = ::core::option::Option<unsafe extern "system" fn(operation: HCS_OPERATION, context: *const ::core::ffi::c_void)>;

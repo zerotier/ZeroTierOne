@@ -1,15 +1,19 @@
-#[repr(C)]
+pub type IObjectArray = *mut ::core::ffi::c_void;
+pub type IObjectCollection = *mut ::core::ffi::c_void;
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub struct COMDLG_FILTERSPEC {
-    pub pszName: ::windows_sys::core::PCWSTR,
-    pub pszSpec: ::windows_sys::core::PCWSTR,
-}
-impl ::core::marker::Copy for COMDLG_FILTERSPEC {}
-impl ::core::clone::Clone for COMDLG_FILTERSPEC {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const PERCEIVEDFLAG_GDIPLUS: u32 = 16u32;
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub const PERCEIVEDFLAG_HARDCODED: u32 = 2u32;
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub const PERCEIVEDFLAG_NATIVESUPPORT: u32 = 4u32;
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub const PERCEIVEDFLAG_SOFTCODED: u32 = 1u32;
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub const PERCEIVEDFLAG_UNDEFINED: u32 = 0u32;
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub const PERCEIVEDFLAG_WMSDK: u32 = 32u32;
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub const PERCEIVEDFLAG_ZIPFOLDER: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
 pub type DEVICE_SCALE_FACTOR = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
@@ -46,19 +50,6 @@ pub const SCALE_400_PERCENT: DEVICE_SCALE_FACTOR = 400i32;
 pub const SCALE_450_PERCENT: DEVICE_SCALE_FACTOR = 450i32;
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
 pub const SCALE_500_PERCENT: DEVICE_SCALE_FACTOR = 500i32;
-pub type IObjectArray = *mut ::core::ffi::c_void;
-pub type IObjectCollection = *mut ::core::ffi::c_void;
-#[repr(C)]
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub struct ITEMIDLIST {
-    pub mkid: SHITEMID,
-}
-impl ::core::marker::Copy for ITEMIDLIST {}
-impl ::core::clone::Clone for ITEMIDLIST {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
 pub type PERCEIVED = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
@@ -93,20 +84,6 @@ pub const PERCEIVED_TYPE_GAMEMEDIA: PERCEIVED = 9i32;
 pub const PERCEIVED_TYPE_CONTACTS: PERCEIVED = 10i32;
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
 pub const PERCEIVED_TYPE_LAST: PERCEIVED = 10i32;
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub const PERCEIVEDFLAG_GDIPLUS: u32 = 16u32;
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub const PERCEIVEDFLAG_HARDCODED: u32 = 2u32;
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub const PERCEIVEDFLAG_NATIVESUPPORT: u32 = 4u32;
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub const PERCEIVEDFLAG_SOFTCODED: u32 = 1u32;
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub const PERCEIVEDFLAG_UNDEFINED: u32 = 0u32;
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub const PERCEIVEDFLAG_WMSDK: u32 = 32u32;
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub const PERCEIVEDFLAG_ZIPFOLDER: u32 = 64u32;
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
 pub type SHCOLSTATE = i32;
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
@@ -149,6 +126,37 @@ pub const SHCOLSTATE_NODPISCALE: SHCOLSTATE = 8192i32;
 pub const SHCOLSTATE_FIXED_RATIO: SHCOLSTATE = 16384i32;
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
 pub const SHCOLSTATE_DISPLAYMASK: SHCOLSTATE = 61440i32;
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub type STRRET_TYPE = i32;
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub const STRRET_WSTR: STRRET_TYPE = 0i32;
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub const STRRET_OFFSET: STRRET_TYPE = 1i32;
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub const STRRET_CSTR: STRRET_TYPE = 2i32;
+#[repr(C)]
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub struct COMDLG_FILTERSPEC {
+    pub pszName: ::windows_sys::core::PCWSTR,
+    pub pszSpec: ::windows_sys::core::PCWSTR,
+}
+impl ::core::marker::Copy for COMDLG_FILTERSPEC {}
+impl ::core::clone::Clone for COMDLG_FILTERSPEC {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
+pub struct ITEMIDLIST {
+    pub mkid: SHITEMID,
+}
+impl ::core::marker::Copy for ITEMIDLIST {}
+impl ::core::clone::Clone for ITEMIDLIST {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
 pub struct SHELLDETAILS {
@@ -199,11 +207,3 @@ impl ::core::clone::Clone for STRRET_0 {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub type STRRET_TYPE = i32;
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub const STRRET_WSTR: STRRET_TYPE = 0i32;
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub const STRRET_OFFSET: STRRET_TYPE = 1i32;
-#[doc = "*Required features: `\"Win32_UI_Shell_Common\"`*"]
-pub const STRRET_CSTR: STRRET_TYPE = 2i32;

@@ -11,9 +11,9 @@ use http::method::Method;
 use http::status::StatusCode;
 use oauth2::helpers::deserialize_space_delimited_vec;
 use rand::{thread_rng, Rng};
-use ring::constant_time;
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, VecSkipError};
 use thiserror::Error;
 use url::Url;
 
@@ -375,7 +375,7 @@ pub trait ResponseMode: Debug + DeserializeOwned + Serialize + 'static {}
 pub trait ResponseType: AsRef<str> + Debug + DeserializeOwned + Serialize + 'static {
     ///
     /// Converts this OpenID Connect response type to an [`oauth2::ResponseType`] used by the
-    /// underyling [`oauth2`] crate.
+    /// underlying [`oauth2`] crate.
     ///
     fn to_oauth2(&self) -> oauth2::ResponseType;
 }
@@ -710,6 +710,7 @@ new_type![
 ///
 /// JSON Web Key Set.
 ///
+#[serde_as]
 #[derive(Debug, Deserialize, PartialEq, Serialize)]
 pub struct JsonWebKeySet<JS, JT, JU, K>
 where
@@ -720,11 +721,10 @@ where
 {
     // FIXME: write a test that ensures duplicate object member names cause an error
     // (see https://tools.ietf.org/html/rfc7517#section-5)
-    // FIXME: add a deserializer that optionally ignores invalid keys rather than failing. That way,
-    // clients can function using the keys that they do understand, which is fine if they only ever
-    // get JWTs signed with those keys. See what other places we might want to be more tolerant of
-    // deserialization errors.
     #[serde(bound = "K: JsonWebKey<JS, JT, JU>")]
+    // Ignores invalid keys rather than failing. That way, clients can function using the keys that
+    // they do understand, which is fine if they only ever get JWTs signed with those keys.
+    #[serde_as(as = "VecSkipError<_>")]
     keys: Vec<K>,
     #[serde(skip)]
     _phantom: PhantomData<(JS, JT, JU)>,
@@ -919,8 +919,11 @@ new_secret_type![
 ];
 impl PartialEq for Nonce {
     fn eq(&self, other: &Self) -> bool {
-        constant_time::verify_slices_are_equal(self.secret().as_bytes(), other.secret().as_bytes())
-            .is_ok()
+        use subtle::ConstantTimeEq;
+        self.secret()
+            .as_bytes()
+            .ct_eq(other.secret().as_bytes())
+            .into()
     }
 }
 
@@ -1016,6 +1019,25 @@ impl Display for Timestamp {
             #[cfg(feature = "accept-rfc3339-timestamps")]
             Timestamp::Rfc3339(iso) => Display::fmt(iso, f),
         }
+    }
+}
+
+///
+/// Newtype around a bool, optionally supporting string values.
+///
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(transparent)]
+pub(crate) struct Boolean(
+    #[cfg_attr(
+        feature = "accept-string-booleans",
+        serde(deserialize_with = "helpers::serde_string_bool::deserialize")
+    )]
+    pub bool,
+);
+
+impl Display for Boolean {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), FormatterError> {
+        Display::fmt(&self.0, f)
     }
 }
 
@@ -1189,6 +1211,45 @@ pub(crate) mod helpers {
         Timestamp::Seconds(utc.timestamp().into())
     }
 
+    // Some providers return boolean values as strings. Provide support for
+    // parsing using stdlib.
+    #[cfg(feature = "accept-string-booleans")]
+    pub mod serde_string_bool {
+        use serde::{de, Deserializer};
+
+        use std::fmt;
+
+        pub fn deserialize<'de, D>(deserializer: D) -> Result<bool, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            struct BooleanLikeVisitor;
+
+            impl<'de> de::Visitor<'de> for BooleanLikeVisitor {
+                type Value = bool;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str("A boolean-like value")
+                }
+
+                fn visit_bool<E>(self, v: bool) -> Result<Self::Value, E>
+                where
+                    E: de::Error,
+                {
+                    Ok(v)
+                }
+
+                fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+                where
+                    E: de::Error,
+                {
+                    v.parse().map_err(E::custom)
+                }
+            }
+            deserializer.deserialize_any(BooleanLikeVisitor)
+        }
+    }
+
     pub mod serde_utc_seconds {
         use crate::types::Timestamp;
         use chrono::{DateTime, Utc};
@@ -1338,5 +1399,21 @@ mod tests {
                 .unwrap(),
             "\"http://example.com\"",
         );
+    }
+
+    #[cfg(feature = "accept-string-booleans")]
+    #[test]
+    fn test_string_bool_parse() {
+        use crate::types::Boolean;
+
+        fn test_case(input: &str, expect: bool) {
+            let value: Boolean = serde_json::from_str(input).unwrap();
+            assert_eq!(value.0, expect);
+        }
+        test_case("true", true);
+        test_case("false", false);
+        test_case("\"true\"", true);
+        test_case("\"false\"", false);
+        assert!(serde_json::from_str::<Boolean>("\"maybe\"").is_err());
     }
 }

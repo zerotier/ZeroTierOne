@@ -1,4 +1,4 @@
-#[link(name = "windows")]
+#[cfg_attr(windows, link(name = "windows"))]
 extern "system" {
     #[doc = "*Required features: `\"Win32_System_Restore\"`, `\"Win32_Foundation\"`*"]
     #[cfg(feature = "Win32_Foundation")]
@@ -43,37 +43,12 @@ pub const MIN_RPT: u32 = 0u32;
 pub const OE_SETTING: u32 = 4u32;
 #[doc = "*Required features: `\"Win32_System_Restore\"`*"]
 pub const RESTORE: u32 = 6u32;
-#[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_System_Restore\"`, `\"Win32_Foundation\"`*"]
-#[cfg(feature = "Win32_Foundation")]
-pub struct RESTOREPOINTINFOA {
-    pub dwEventType: RESTOREPOINTINFO_EVENT_TYPE,
-    pub dwRestorePtType: RESTOREPOINTINFO_TYPE,
-    pub llSequenceNumber: i64,
-    pub szDescription: [super::super::Foundation::CHAR; 64],
-}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for RESTOREPOINTINFOA {}
-#[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for RESTOREPOINTINFOA {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
-#[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_System_Restore\"`*"]
-pub struct RESTOREPOINTINFOW {
-    pub dwEventType: RESTOREPOINTINFO_EVENT_TYPE,
-    pub dwRestorePtType: RESTOREPOINTINFO_TYPE,
-    pub llSequenceNumber: i64,
-    pub szDescription: [u16; 256],
-}
-impl ::core::marker::Copy for RESTOREPOINTINFOW {}
-impl ::core::clone::Clone for RESTOREPOINTINFOW {
-    fn clone(&self) -> Self {
-        *self
-    }
-}
+pub const WINDOWS_BOOT: u32 = 9u32;
+#[doc = "*Required features: `\"Win32_System_Restore\"`*"]
+pub const WINDOWS_SHUTDOWN: u32 = 8u32;
+#[doc = "*Required features: `\"Win32_System_Restore\"`*"]
+pub const WINDOWS_UPDATE: u32 = 17u32;
 #[doc = "*Required features: `\"Win32_System_Restore\"`*"]
 pub type RESTOREPOINTINFO_EVENT_TYPE = u32;
 #[doc = "*Required features: `\"Win32_System_Restore\"`*"]
@@ -97,27 +72,26 @@ pub const MODIFY_SETTINGS: RESTOREPOINTINFO_TYPE = 12u32;
 #[doc = "*Required features: `\"Win32_System_Restore\"`*"]
 pub const CANCELLED_OPERATION: RESTOREPOINTINFO_TYPE = 13u32;
 #[repr(C, packed(1))]
-#[doc = "*Required features: `\"Win32_System_Restore\"`*"]
-pub struct STATEMGRSTATUS {
-    pub nStatus: u32,
+#[doc = "*Required features: `\"Win32_System_Restore\"`, `\"Win32_Foundation\"`*"]
+#[cfg(feature = "Win32_Foundation")]
+pub struct RESTOREPOINTINFOA {
+    pub dwEventType: RESTOREPOINTINFO_EVENT_TYPE,
+    pub dwRestorePtType: RESTOREPOINTINFO_TYPE,
     pub llSequenceNumber: i64,
+    pub szDescription: [super::super::Foundation::CHAR; 64],
 }
-impl ::core::marker::Copy for STATEMGRSTATUS {}
-impl ::core::clone::Clone for STATEMGRSTATUS {
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::marker::Copy for RESTOREPOINTINFOA {}
+#[cfg(feature = "Win32_Foundation")]
+impl ::core::clone::Clone for RESTOREPOINTINFOA {
     fn clone(&self) -> Self {
         *self
     }
 }
-#[doc = "*Required features: `\"Win32_System_Restore\"`*"]
-pub const WINDOWS_BOOT: u32 = 9u32;
-#[doc = "*Required features: `\"Win32_System_Restore\"`*"]
-pub const WINDOWS_SHUTDOWN: u32 = 8u32;
-#[doc = "*Required features: `\"Win32_System_Restore\"`*"]
-pub const WINDOWS_UPDATE: u32 = 17u32;
 #[repr(C, packed(1))]
 #[doc = "*Required features: `\"Win32_System_Restore\"`, `\"Win32_Foundation\"`*"]
 #[cfg(feature = "Win32_Foundation")]
-pub struct _RESTOREPTINFOEX {
+pub struct RESTOREPOINTINFOEX {
     pub ftCreation: super::super::Foundation::FILETIME,
     pub dwEventType: u32,
     pub dwRestorePtType: u32,
@@ -125,9 +99,35 @@ pub struct _RESTOREPTINFOEX {
     pub szDescription: [u16; 256],
 }
 #[cfg(feature = "Win32_Foundation")]
-impl ::core::marker::Copy for _RESTOREPTINFOEX {}
+impl ::core::marker::Copy for RESTOREPOINTINFOEX {}
 #[cfg(feature = "Win32_Foundation")]
-impl ::core::clone::Clone for _RESTOREPTINFOEX {
+impl ::core::clone::Clone for RESTOREPOINTINFOEX {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_System_Restore\"`*"]
+pub struct RESTOREPOINTINFOW {
+    pub dwEventType: RESTOREPOINTINFO_EVENT_TYPE,
+    pub dwRestorePtType: RESTOREPOINTINFO_TYPE,
+    pub llSequenceNumber: i64,
+    pub szDescription: [u16; 256],
+}
+impl ::core::marker::Copy for RESTOREPOINTINFOW {}
+impl ::core::clone::Clone for RESTOREPOINTINFOW {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+#[repr(C, packed(1))]
+#[doc = "*Required features: `\"Win32_System_Restore\"`*"]
+pub struct STATEMGRSTATUS {
+    pub nStatus: u32,
+    pub llSequenceNumber: i64,
+}
+impl ::core::marker::Copy for STATEMGRSTATUS {}
+impl ::core::clone::Clone for STATEMGRSTATUS {
     fn clone(&self) -> Self {
         *self
     }

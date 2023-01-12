@@ -269,49 +269,49 @@ impl TcpStream {
 
 impl Read for TcpStream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.do_io(|inner| (&*inner).read(buf))
+        self.inner.do_io(|mut inner| inner.read(buf))
     }
 
     fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
-        self.inner.do_io(|inner| (&*inner).read_vectored(bufs))
+        self.inner.do_io(|mut inner| inner.read_vectored(bufs))
     }
 }
 
 impl<'a> Read for &'a TcpStream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.inner.do_io(|inner| (&*inner).read(buf))
+        self.inner.do_io(|mut inner| inner.read(buf))
     }
 
     fn read_vectored(&mut self, bufs: &mut [IoSliceMut<'_>]) -> io::Result<usize> {
-        self.inner.do_io(|inner| (&*inner).read_vectored(bufs))
+        self.inner.do_io(|mut inner| inner.read_vectored(bufs))
     }
 }
 
 impl Write for TcpStream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.do_io(|inner| (&*inner).write(buf))
+        self.inner.do_io(|mut inner| inner.write(buf))
     }
 
     fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
-        self.inner.do_io(|inner| (&*inner).write_vectored(bufs))
+        self.inner.do_io(|mut inner| inner.write_vectored(bufs))
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.inner.do_io(|inner| (&*inner).flush())
+        self.inner.do_io(|mut inner| inner.flush())
     }
 }
 
 impl<'a> Write for &'a TcpStream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.inner.do_io(|inner| (&*inner).write(buf))
+        self.inner.do_io(|mut inner| inner.write(buf))
     }
 
     fn write_vectored(&mut self, bufs: &[IoSlice<'_>]) -> io::Result<usize> {
-        self.inner.do_io(|inner| (&*inner).write_vectored(bufs))
+        self.inner.do_io(|mut inner| inner.write_vectored(bufs))
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.inner.do_io(|inner| (&*inner).flush())
+        self.inner.do_io(|mut inner| inner.flush())
     }
 }
 
