@@ -136,7 +136,7 @@ impl ZeroIDC {
         };
 
         println!(
-            "issuer: {}, client_id: {}, auth_endopint: {}, local_web_port: {}",
+            "issuer: {}, client_id: {}, auth_endpoint: {}, local_web_port: {}",
             issuer, client_id, auth_ep, local_web_port
         );
         let iss = IssuerUrl::new(issuer.to_string())?;
