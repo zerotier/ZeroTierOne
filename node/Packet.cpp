@@ -605,7 +605,11 @@ _next_match:
 				*token += ML_MASK;
 				matchCode -= ML_MASK;
 				LZ4_write32(op, 0xFFFFFFFF);
-				while (matchCode >= 4*255) op+=4, LZ4_write32(op, 0xFFFFFFFF), matchCode -= 4*255;
+				while (matchCode >= 4*255) {
+					op+=4;
+					LZ4_write32(op, 0xFFFFFFFF);
+					matchCode -= 4*255;
+				}
 				op += matchCode / 255;
 				*op++ = (BYTE)(matchCode % 255);
 			} else
