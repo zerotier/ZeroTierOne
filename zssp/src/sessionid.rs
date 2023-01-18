@@ -25,6 +25,13 @@ impl SessionId {
         Self(NonZeroU64::new(((random::xorshift64_random() % (Self::MAX - 1)) + 1).to_le()).unwrap())
     }
 
+    pub(crate) fn new_from_bytes(b: &[u8; SESSION_ID_SIZE]) -> Option<SessionId> {
+        let mut tmp = [0u8; 8];
+        tmp[..SESSION_ID_SIZE].copy_from_slice(b);
+        Self::new_from_u64_le(u64::from_ne_bytes(tmp))
+    }
+
+    /// Create from a u64 that is already in little-endian byte order.
     #[inline(always)]
     pub(crate) fn new_from_u64_le(i: u64) -> Option<SessionId> {
         NonZeroU64::new(i & Self::MAX.to_le()).map(|i| Self(i))

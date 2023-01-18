@@ -1,5 +1,6 @@
 mod applicationlayer;
 mod error;
+mod proto;
 mod sessionid;
 mod tests;
 mod zssp;

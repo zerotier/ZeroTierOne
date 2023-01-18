@@ -62,6 +62,9 @@ pub trait ApplicationLayer: Sized {
     /// Rate limit and check an attempted new session (called before accept_new_session).
     fn check_new_session(&self, rc: &ReceiveContext<Self>, remote_address: &Self::RemoteAddress) -> bool;
 
+    /// Get a new locally unique session ID.
+    fn new_session(&self, remote_address: &Self::RemoteAddress) -> Option<(SessionId, Self::Data)>;
+
     /// Check whether a new session should be accepted.
     ///
     /// On success a tuple of local session ID, static secret, and associated object is returned. The
