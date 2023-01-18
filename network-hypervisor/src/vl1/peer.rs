@@ -784,7 +784,7 @@ impl Peer {
         inner: &Inner,
         node: &Node,
         time_ticks: i64,
-        message_id: MessageId,
+        _message_id: MessageId,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if node.this_node_is_root() || inner.should_respond_to(&self.identity) {
@@ -813,12 +813,12 @@ impl Peer {
 
     fn handle_incoming_rendezvous<Application: ApplicationLayer + ?Sized>(
         self: &Arc<Self>,
-        app: &Application,
+        _app: &Application,
         node: &Node,
-        time_ticks: i64,
-        message_id: MessageId,
-        source_path: &Arc<Path>,
-        payload: &PacketBuffer,
+        _time_ticks: i64,
+        _message_id: MessageId,
+        _source_path: &Arc<Path>,
+        _payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if node.is_peer_root(self) {}
         return PacketHandlerResult::Ok;
@@ -853,22 +853,22 @@ impl Peer {
 
     fn handle_incoming_push_direct_paths<Application: ApplicationLayer + ?Sized>(
         self: &Arc<Self>,
-        app: &Application,
-        node: &Node,
-        time_ticks: i64,
-        source_path: &Arc<Path>,
-        payload: &PacketBuffer,
+        _app: &Application,
+        _node: &Node,
+        _time_ticks: i64,
+        _source_path: &Arc<Path>,
+        _payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         PacketHandlerResult::Ok
     }
 
     fn handle_incoming_user_message<Application: ApplicationLayer + ?Sized>(
         self: &Arc<Self>,
-        app: &Application,
-        node: &Node,
-        time_ticks: i64,
-        source_path: &Arc<Path>,
-        payload: &PacketBuffer,
+        _app: &Application,
+        _node: &Node,
+        _time_ticks: i64,
+        _source_path: &Arc<Path>,
+        _payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         PacketHandlerResult::Ok
     }
