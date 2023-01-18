@@ -20,8 +20,14 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: ${{ runner.os }}-cargo-
 
-    - name: make
-      run: make
+    - name: cargo fmt
+      run: cargo fmt --all -- --check
+        
+    - name: cargo build
+      run: cargo build
+
+    - name: cargo test
+      run: cargo test
 
   build_macos:
     runs-on: macos-latest
@@ -42,52 +48,14 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: ${{ runner.os }}-cargo-
 
-    - name: make
-      run: make
-
-  test_ubuntu:
-    runs-on: ubuntu-latest
-    steps:
-    - name: checkout
-      uses: actions/checkout@v3
-
-    - name: Set up cargo cache
-      uses: actions/cache@v3
-      continue-on-error: false
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: ${{ runner.os }}-cargo-
+    - name: cargo fmt
+      run: cargo fmt --all -- --check
+        
+    - name: cargo build
+      run: cargo build
 
     - name: cargo test
-      run: cargo test -v
-
-  test_macos:
-    runs-on: macos-latest
-    steps:
-    - name: checkout
-      uses: actions/checkout@v3
-
-    - name: Set up cargo cache
-      uses: actions/cache@v3
-      continue-on-error: false
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: ${{ runner.os }}-cargo-
-
-    - name: cargo test
-      run: cargo test -v
+      run: cargo test
 
   # build_windows:
   #   runs-on: windows-latest

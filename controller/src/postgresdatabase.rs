@@ -193,7 +193,7 @@ impl VL1DataStorage for PostgresDatabase {
         Some(self.local_identity.clone())
     }
 
-    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
+    fn save_node_identity(&self, _id: &Valid<Identity>) -> bool {
         panic!("local identity saving not supported by PostgresDatabase")
     }
 }
@@ -389,7 +389,7 @@ impl Database for PostgresDatabase {
         }))
     }
 
-    async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Error> {
+    async fn save_network(&self, _obj: Network, _generate_change_notification: bool) -> Result<(), Error> {
         todo!()
     }
 
@@ -405,11 +405,11 @@ impl Database for PostgresDatabase {
         Ok(r)
     }
 
-    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Error> {
+    async fn get_member(&self, _network_id: NetworkId, _node_id: Address) -> Result<Option<Member>, Error> {
         todo!()
     }
 
-    async fn save_member(&self, obj: Member, generate_change_notification: bool) -> Result<(), Error> {
+    async fn save_member(&self, _obj: Member, _generate_change_notification: bool) -> Result<(), Error> {
         todo!()
     }
 
@@ -443,7 +443,7 @@ impl Database for PostgresDatabase {
         return Ok(false);
     }
 
-    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Error> {
+    async fn log_request(&self, _obj: RequestLogItem) -> Result<(), Error> {
         todo!()
     }
 }
