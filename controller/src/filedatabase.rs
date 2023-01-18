@@ -50,8 +50,8 @@ impl FileDatabase {
         let db_weak = db_weak_tmp.clone();
         let runtime2 = runtime.clone();
 
-        let local_identity = load_node_identity(base_path.as_path())
-            .ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "identity.secret not found"))?;
+        let local_identity =
+            load_node_identity(base_path.as_path()).ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "identity.secret not found"))?;
         let controller_address = local_identity.address;
 
         let db = Arc::new(Self {
@@ -144,8 +144,7 @@ impl FileDatabase {
                                                                                 .send(Change::NetworkChanged(old_network, new_network));
                                                                         }
                                                                         (true, None) => {
-                                                                            let _ =
-                                                                                db.change_sender.send(Change::NetworkCreated(new_network));
+                                                                            let _ = db.change_sender.send(Change::NetworkCreated(new_network));
                                                                         }
                                                                         _ => {}
                                                                     }
@@ -155,13 +154,11 @@ impl FileDatabase {
                                                                 if let Ok(Some(new_member)) = Self::load_object::<Member>(changed).await {
                                                                     match db.cache.on_member_updated(new_member.clone()) {
                                                                         (true, Some(old_member)) => {
-                                                                            let _ = db
-                                                                                .change_sender
-                                                                                .send(Change::MemberChanged(old_member, new_member));
+                                                                            let _ =
+                                                                                db.change_sender.send(Change::MemberChanged(old_member, new_member));
                                                                         }
                                                                         (true, None) => {
-                                                                            let _ =
-                                                                                db.change_sender.send(Change::MemberCreated(new_member));
+                                                                            let _ = db.change_sender.send(Change::MemberCreated(new_member));
                                                                         }
                                                                         _ => {}
                                                                     }
@@ -315,9 +312,7 @@ impl Database for FileDatabase {
             if ent.file_type().await.map_or(false, |t| t.is_file() || t.is_symlink()) {
                 let osname = ent.file_name();
                 let name = osname.to_string_lossy();
-                if name.len() == (zerotier_network_hypervisor::protocol::ADDRESS_SIZE_STRING + 6)
-                    && name.starts_with("M")
-                    && name.ends_with(".yaml")
+                if name.len() == (zerotier_network_hypervisor::protocol::ADDRESS_SIZE_STRING + 6) && name.starts_with("M") && name.ends_with(".yaml")
                 {
                     if let Ok(member_address) = u64::from_str_radix(&name[1..11], 16) {
                         if let Some(member_address) = Address::from_u64(member_address) {

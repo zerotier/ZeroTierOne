@@ -1,4 +1,10 @@
-// (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
 
 pub mod arrayvec;
 pub mod blob;
@@ -49,10 +55,7 @@ pub fn base64_decode_url_nopad(b64: &str) -> Option<Vec<u8>> {
 /// Get milliseconds since unix epoch.
 #[inline]
 pub fn ms_since_epoch() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as i64
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
 /// Get milliseconds since an arbitrary time in the past, guaranteed to monotonically increase.

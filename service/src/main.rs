@@ -171,10 +171,7 @@ fn main() {
                         if suggested.is_empty() {
                             eprintln!("Unrecognized option '{}'. Use 'help' for help.", invalid);
                         } else {
-                            eprintln!(
-                                "Unrecognized option '{}', did you mean {}? Use 'help' for help.",
-                                invalid, suggested
-                            );
+                            eprintln!("Unrecognized option '{}', did you mean {}? Use 'help' for help.", invalid, suggested);
                         }
                     }
                     std::process::exit(exitcode::ERR_USAGE);
@@ -184,9 +181,7 @@ fn main() {
 
     let flags = Flags {
         json_output: global_args.is_present("json"),
-        base_path: global_args
-            .value_of("path")
-            .map_or_else(platform_default_home_path, |p| p.to_string()),
+        base_path: global_args.value_of("path").map_or_else(platform_default_home_path, |p| p.to_string()),
         auth_token_path_override: global_args.value_of("token_path").map(|p| p.to_string()),
         auth_token_override: global_args.value_of("token").map(|t| t.to_string()),
     };

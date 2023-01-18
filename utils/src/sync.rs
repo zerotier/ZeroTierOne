@@ -1,3 +1,11 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
+
 use std::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 /// Variant version of lock for RwLock with automatic conversion to a write lock as needed.

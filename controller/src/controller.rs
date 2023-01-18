@@ -67,9 +67,7 @@ impl Controller {
                 recently_authorized: RwLock::new(HashMap::new()),
             }))
         } else {
-            Err(Box::new(InvalidParameterError(
-                "local controller's identity not readable by database",
-            )))
+            Err(Box::new(InvalidParameterError("local controller's identity not readable by database")))
         }
     }
 
@@ -238,8 +236,7 @@ impl Controller {
                 if member.node_id != *m {
                     if let Some(peer) = self.service.read().unwrap().upgrade().and_then(|s| s.node().peer(*m)) {
                         revocations.clear();
-                        Revocation::new(member.network_id, time_clock, member.node_id, *m, &self.local_identity, false)
-                            .map(|r| revocations.push(r));
+                        Revocation::new(member.network_id, time_clock, member.node_id, *m, &self.local_identity, false).map(|r| revocations.push(r));
                         self.send_revocations(&peer, &mut revocations);
                     }
                 }
@@ -565,8 +562,7 @@ impl InnerProtocolLayer for Controller {
                 };
 
                 // Launch handler as an async background task.
-                let (self2, source, source_remote_endpoint) =
-                    (self.self_ref.upgrade().unwrap(), source.clone(), source_path.endpoint.clone());
+                let (self2, source, source_remote_endpoint) = (self.self_ref.upgrade().unwrap(), source.clone(), source_path.endpoint.clone());
                 self.reaper.add(
                     self.runtime.spawn(async move {
                         let node_id = source.identity.address;

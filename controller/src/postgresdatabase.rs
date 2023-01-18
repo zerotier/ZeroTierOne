@@ -88,18 +88,13 @@ impl PostgresConnection {
         let (client, connection) = tokio_postgres::connect(postgres_path, tokio_postgres::NoTls).await?;
         Ok(Box::new(Self {
             s_list_networks: client
-                .prepare_typed(
-                    "SELECT id FROM ztc_network WHERE controller_id = $1 AND deleted = false",
-                    &[Type::TEXT],
-                )
+                .prepare_typed("SELECT id FROM ztc_network WHERE controller_id = $1 AND deleted = false", &[Type::TEXT])
                 .await?,
             s_list_members: client
                 .prepare_typed("SELECT id FROM ztc_member WHERE network_id = $1 AND deleted = false", &[Type::TEXT])
                 .await?,
             s_get_network: client.prepare_typed(GET_NETWORK_SQL, &[Type::TEXT]).await?,
-            s_get_network_members_with_capabilities: client
-                .prepare_typed(GET_NETWORK_MEMBERS_WITH_CAPABILITIES_SQL, &[Type::TEXT])
-                .await?,
+            s_get_network_members_with_capabilities: client.prepare_typed(GET_NETWORK_MEMBERS_WITH_CAPABILITIES_SQL, &[Type::TEXT]).await?,
             client,
             connection_task: runtime.spawn(async move {
                 if let Err(e) = connection.await {
@@ -144,12 +139,7 @@ pub struct PostgresDatabase {
 }
 
 impl PostgresDatabase {
-    pub async fn new(
-        runtime: Handle,
-        postgres_path: String,
-        num_connections: usize,
-        local_identity: Valid<Identity>,
-    ) -> Result<Arc<Self>, Error> {
+    pub async fn new(runtime: Handle, postgres_path: String, num_connections: usize, local_identity: Valid<Identity>) -> Result<Arc<Self>, Error> {
         assert!(num_connections > 0);
         let (sender, _) = channel(4096);
         let mut connections = Vec::with_capacity(num_connections);
@@ -193,7 +183,7 @@ impl VL1DataStorage for PostgresDatabase {
         Some(self.local_identity.clone())
     }
 
-    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
+    fn save_node_identity(&self, _id: &Valid<Identity>) -> bool {
         panic!("local identity saving not supported by PostgresDatabase")
     }
 }
@@ -217,11 +207,7 @@ impl Database for PostgresDatabase {
             let c = self.get_connection().await?;
             let network_id_string = id.to_string();
             if let Some(r) = c.client.query_opt(&c.s_get_network, &[&network_id_string]).await? {
-                if let Ok(with_caps) = c
-                    .client
-                    .query(&c.s_get_network_members_with_capabilities, &[&network_id_string])
-                    .await
-                {
+                if let Ok(with_caps) = c.client.query(&c.s_get_network_members_with_capabilities, &[&network_id_string]).await {
                     (r, with_caps)
                 } else {
                     (r, Vec::new())
@@ -341,10 +327,7 @@ impl Database for PostgresDatabase {
                         if let Ok(member_id) = Address::from_str(wc.get(0)) {
                             if let Ok(cap_ids) = serde_json::from_str::<Vec<u32>>(wc.get(1)) {
                                 for cap_id in cap_ids.iter() {
-                                    members_by_cap
-                                        .entry(*cap_id)
-                                        .or_insert_with(|| Vec::with_capacity(4))
-                                        .push(member_id);
+                                    members_by_cap.entry(*cap_id).or_insert_with(|| Vec::with_capacity(4)).push(member_id);
                                 }
                             }
                         }
@@ -389,7 +372,7 @@ impl Database for PostgresDatabase {
         }))
     }
 
-    async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Error> {
+    async fn save_network(&self, _obj: Network, _generate_change_notification: bool) -> Result<(), Error> {
         todo!()
     }
 
@@ -405,11 +388,11 @@ impl Database for PostgresDatabase {
         Ok(r)
     }
 
-    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Error> {
+    async fn get_member(&self, _network_id: NetworkId, _node_id: Address) -> Result<Option<Member>, Error> {
         todo!()
     }
 
-    async fn save_member(&self, obj: Member, generate_change_notification: bool) -> Result<(), Error> {
+    async fn save_member(&self, _obj: Member, _generate_change_notification: bool) -> Result<(), Error> {
         todo!()
     }
 
@@ -443,7 +426,7 @@ impl Database for PostgresDatabase {
         return Ok(false);
     }
 
-    async fn log_request(&self, obj: RequestLogItem) -> Result<(), Error> {
+    async fn log_request(&self, _obj: RequestLogItem) -> Result<(), Error> {
         todo!()
     }
 }

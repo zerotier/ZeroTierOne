@@ -113,8 +113,7 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
                     if !state.settings.fixed_ports.contains(p) {
                         let (total_smart_ptr_handles, most_recent_receive) = s.read().unwrap().liveness();
                         if total_smart_ptr_handles < most_stale_binding_liveness.0
-                            || (total_smart_ptr_handles == most_stale_binding_liveness.0
-                                && most_recent_receive <= most_stale_binding_liveness.1)
+                            || (total_smart_ptr_handles == most_stale_binding_liveness.0 && most_recent_receive <= most_stale_binding_liveness.1)
                         {
                             most_stale_binding_liveness.0 = total_smart_ptr_handles;
                             most_stale_binding_liveness.1 = most_recent_receive;

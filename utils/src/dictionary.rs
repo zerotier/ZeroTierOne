@@ -1,4 +1,10 @@
-// (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
 
 use std::collections::BTreeMap;
 use std::io::Write;
@@ -87,13 +93,11 @@ impl Dictionary {
     }
 
     pub fn get_u64(&self, k: &str) -> Option<u64> {
-        self.get_str(k)
-            .map_or(None, |s| u64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
+        self.get_str(k).map_or(None, |s| u64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
     }
 
     pub fn get_i64(&self, k: &str) -> Option<i64> {
-        self.get_str(k)
-            .map_or(None, |s| i64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
+        self.get_str(k).map_or(None, |s| i64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
     }
 
     pub fn get_bool(&self, k: &str) -> Option<bool> {

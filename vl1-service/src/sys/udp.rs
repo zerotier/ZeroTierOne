@@ -31,11 +31,7 @@ fn socket_read_concurrency() -> usize {
     unsafe {
         let mut t = THREADS_PER_SOCKET;
         if t == 0 {
-            t = std::thread::available_parallelism()
-                .unwrap()
-                .get()
-                .max(1)
-                .min(MAX_PER_SOCKET_CONCURRENCY);
+            t = std::thread::available_parallelism().unwrap().get().max(1).min(MAX_PER_SOCKET_CONCURRENCY);
             THREADS_PER_SOCKET = t;
         }
         t
@@ -43,13 +39,7 @@ fn socket_read_concurrency() -> usize {
 }
 
 pub trait UdpPacketHandler: Send + Sync {
-    fn incoming_udp_packet(
-        self: &Arc<Self>,
-        time_ticks: i64,
-        socket: &Arc<BoundUdpSocket>,
-        source_address: &InetAddress,
-        packet: PooledPacketBuffer,
-    );
+    fn incoming_udp_packet(self: &Arc<Self>, time_ticks: i64, socket: &Arc<BoundUdpSocket>, source_address: &InetAddress, packet: PooledPacketBuffer);
 }
 
 /// A local port to which one or more UDP sockets is bound.

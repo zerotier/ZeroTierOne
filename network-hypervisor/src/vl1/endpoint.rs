@@ -216,10 +216,7 @@ impl Marshalable for Endpoint {
                 TYPE_NIL => Ok(Endpoint::Nil),
                 TYPE_ZEROTIER => {
                     let zt = Address::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)?;
-                    Ok(Endpoint::ZeroTier(
-                        zt,
-                        buf.read_bytes_fixed::<IDENTITY_FINGERPRINT_SIZE>(cursor)?.clone(),
-                    ))
+                    Ok(Endpoint::ZeroTier(zt, buf.read_bytes_fixed::<IDENTITY_FINGERPRINT_SIZE>(cursor)?.clone()))
                 }
                 TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::unmarshal(buf, cursor)?)),
                 TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::unmarshal(buf, cursor)?)),
@@ -230,9 +227,7 @@ impl Marshalable for Endpoint {
                 TYPE_HTTP => Ok(Endpoint::Http(
                     String::from_utf8_lossy(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?).to_string(),
                 )),
-                TYPE_WEBRTC => Ok(Endpoint::WebRTC(
-                    buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec(),
-                )),
+                TYPE_WEBRTC => Ok(Endpoint::WebRTC(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec())),
                 TYPE_ZEROTIER_ENCAP => {
                     let zt = Address::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)?;
                     Ok(Endpoint::ZeroTierEncap(zt, buf.read_bytes_fixed(cursor)?.clone()))
@@ -361,10 +356,7 @@ impl FromStr for Endpoint {
                             if endpoint_type == "zt" {
                                 return Ok(Endpoint::ZeroTier(Address::from_str(address)?, hash.as_slice().try_into().unwrap()));
                             } else {
-                                return Ok(Endpoint::ZeroTierEncap(
-                                    Address::from_str(address)?,
-                                    hash.as_slice().try_into().unwrap(),
-                                ));
+                                return Ok(Endpoint::ZeroTierEncap(Address::from_str(address)?, hash.as_slice().try_into().unwrap()));
                             }
                         }
                     }
@@ -587,11 +579,7 @@ mod tests {
 
             let inet = crate::vl1::InetAddress::from_ip_port(&v, 1234);
 
-            for e in [
-                Endpoint::Icmp(inet.clone()),
-                Endpoint::IpTcp(inet.clone()),
-                Endpoint::IpUdp(inet.clone()),
-            ] {
+            for e in [Endpoint::Icmp(inet.clone()), Endpoint::IpTcp(inet.clone()), Endpoint::IpUdp(inet.clone())] {
                 let mut buf = Buffer::<20>::new();
 
                 let res = e.marshal(&mut buf);

@@ -222,9 +222,7 @@ impl Identity {
     /// It would be possible to change this in the future, with care.
     pub fn upgrade(&mut self) -> Result<bool, InvalidParameterError> {
         if self.secret.is_none() {
-            return Err(InvalidParameterError(
-                "an identity can only be upgraded if it includes its private key",
-            ));
+            return Err(InvalidParameterError("an identity can only be upgraded if it includes its private key"));
         }
         if self.p384.is_none() {
             let p384_ecdh = P384KeyPair::generate();
@@ -292,9 +290,8 @@ impl Identity {
     /// This is somewhat time consuming due to the memory-intensive work algorithm.
     pub fn validate(self) -> Option<Valid<Self>> {
         if let Some(p384) = self.p384.as_ref() {
-            let mut self_sign_buf: Vec<u8> = Vec::with_capacity(
-                ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE,
-            );
+            let mut self_sign_buf: Vec<u8> =
+                Vec::with_capacity(ADDRESS_SIZE + 4 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE);
             let _ = self_sign_buf.write_all(&self.address.to_bytes());
             let _ = self_sign_buf.write_all(&self.x25519);
             let _ = self_sign_buf.write_all(&self.ed25519);
@@ -331,11 +328,7 @@ impl Identity {
     ///
     /// This does NOT validate either identity. Ensure that validation has been performed.
     pub fn is_upgraded_from(&self, other: &Identity) -> bool {
-        self.address == other.address
-            && self.x25519 == other.x25519
-            && self.ed25519 == other.ed25519
-            && self.p384.is_some()
-            && other.p384.is_none()
+        self.address == other.address && self.x25519 == other.x25519 && self.ed25519 == other.ed25519 && self.p384.is_some() && other.p384.is_none()
     }
 
     /// Perform ECDH key agreement, returning a shared secret or None on error.
@@ -493,13 +486,12 @@ impl Identity {
                 s.push(':');
             }
             s.push_str(":2:"); // 2 == IDENTITY_ALGORITHM_EC_NIST_P384
-            let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] =
-                concat_arrays_4(
-                    p384.ecdh.as_bytes(),
-                    p384.ecdsa.as_bytes(),
-                    &p384.ecdsa_self_signature,
-                    &p384.ed25519_self_signature,
-                );
+            let p384_joined: [u8; P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE] = concat_arrays_4(
+                p384.ecdh.as_bytes(),
+                p384.ecdsa.as_bytes(),
+                &p384.ecdsa_self_signature,
+                &p384.ed25519_self_signature,
+            );
             s.push_str(base64_encode_url_nopad(&p384_joined).as_str());
             if self.secret.is_some() && include_private {
                 let secret = self.secret.as_ref().unwrap();
@@ -600,9 +592,7 @@ impl FromStr for Identity {
         if keys[0].len() != C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE {
             return Err(InvalidFormatError);
         }
-        if !keys[2].is_empty()
-            && keys[2].len() != P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE
-        {
+        if !keys[2].is_empty() && keys[2].len() != P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_ECDSA_SIGNATURE_SIZE + ED25519_SIGNATURE_SIZE {
             return Err(InvalidFormatError);
         }
         if !keys[3].is_empty() && keys[3].len() != P384_SECRET_KEY_SIZE + P384_SECRET_KEY_SIZE {
@@ -632,8 +622,7 @@ impl FromStr for Identity {
                 Some(IdentityP384Public {
                     ecdh: ecdh.unwrap(),
                     ecdsa: ecdsa.unwrap(),
-                    ecdsa_self_signature: keys[2].as_slice()
-                        [(P384_PUBLIC_KEY_SIZE * 2)..((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)]
+                    ecdsa_self_signature: keys[2].as_slice()[(P384_PUBLIC_KEY_SIZE * 2)..((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)]
                         .try_into()
                         .unwrap(),
                     ed25519_self_signature: keys[2].as_slice()[((P384_PUBLIC_KEY_SIZE * 2) + P384_ECDSA_SIGNATURE_SIZE)..]
@@ -667,10 +656,8 @@ impl FromStr for Identity {
                     } else {
                         Some(IdentityP384Secret {
                             ecdh: {
-                                let tmp = P384KeyPair::from_bytes(
-                                    &keys[2].as_slice()[..P384_PUBLIC_KEY_SIZE],
-                                    &keys[3].as_slice()[..P384_SECRET_KEY_SIZE],
-                                );
+                                let tmp =
+                                    P384KeyPair::from_bytes(&keys[2].as_slice()[..P384_PUBLIC_KEY_SIZE], &keys[3].as_slice()[..P384_SECRET_KEY_SIZE]);
                                 if tmp.is_none() {
                                     return Err(InvalidFormatError);
                                 }
@@ -711,16 +698,8 @@ impl Marshalable for Identity {
         let x25519 = buf.read_bytes_fixed::<C25519_PUBLIC_KEY_SIZE>(cursor)?;
         let ed25519 = buf.read_bytes_fixed::<ED25519_PUBLIC_KEY_SIZE>(cursor)?;
 
-        let (
-            mut ecdh,
-            mut ecdsa,
-            mut ecdsa_self_signature,
-            mut ed25519_self_signature,
-            mut x25519_s,
-            mut ed25519_s,
-            mut ecdh_s,
-            mut ecdsa_s,
-        ) = (None, None, None, None, None, None, None, None);
+        let (mut ecdh, mut ecdsa, mut ecdsa_self_signature, mut ed25519_self_signature, mut x25519_s, mut ed25519_s, mut ecdh_s, mut ecdsa_s) =
+            (None, None, None, None, None, None, None, None);
 
         if type_flags == 0 {
             const C25519_SECRETS_SIZE: u8 = (C25519_SECRET_KEY_SIZE + ED25519_SECRET_KEY_SIZE) as u8;
@@ -736,9 +715,7 @@ impl Marshalable for Identity {
                 _ => return Err(UnmarshalError::InvalidData),
             }
         } else {
-            if (type_flags & (Self::ALGORITHM_X25519 | Self::FLAG_INCLUDES_SECRETS))
-                == (Self::ALGORITHM_X25519 | Self::FLAG_INCLUDES_SECRETS)
-            {
+            if (type_flags & (Self::ALGORITHM_X25519 | Self::FLAG_INCLUDES_SECRETS)) == (Self::ALGORITHM_X25519 | Self::FLAG_INCLUDES_SECRETS) {
                 x25519_s = Some(buf.read_bytes_fixed::<C25519_SECRET_KEY_SIZE>(cursor)?);
                 ed25519_s = Some(buf.read_bytes_fixed::<ED25519_SECRET_KEY_SIZE>(cursor)?);
             }
@@ -772,17 +749,12 @@ impl Marshalable for Identity {
             secret: if let Some(x25519_s) = x25519_s {
                 Some(IdentitySecret {
                     x25519: X25519KeyPair::from_bytes(x25519, x25519_s).ok_or(UnmarshalError::InvalidData)?,
-                    ed25519: Ed25519KeyPair::from_bytes(ed25519, ed25519_s.ok_or(UnmarshalError::InvalidData)?)
-                        .ok_or(UnmarshalError::InvalidData)?,
+                    ed25519: Ed25519KeyPair::from_bytes(ed25519, ed25519_s.ok_or(UnmarshalError::InvalidData)?).ok_or(UnmarshalError::InvalidData)?,
                     p384: if let Some(ecdh_s) = ecdh_s {
                         Some(IdentityP384Secret {
-                            ecdh: P384KeyPair::from_bytes(ecdh.ok_or(UnmarshalError::InvalidData)?, ecdh_s)
+                            ecdh: P384KeyPair::from_bytes(ecdh.ok_or(UnmarshalError::InvalidData)?, ecdh_s).ok_or(UnmarshalError::InvalidData)?,
+                            ecdsa: P384KeyPair::from_bytes(ecdsa.ok_or(UnmarshalError::InvalidData)?, ecdsa_s.ok_or(UnmarshalError::InvalidData)?)
                                 .ok_or(UnmarshalError::InvalidData)?,
-                            ecdsa: P384KeyPair::from_bytes(
-                                ecdsa.ok_or(UnmarshalError::InvalidData)?,
-                                ecdsa_s.ok_or(UnmarshalError::InvalidData)?,
-                            )
-                            .ok_or(UnmarshalError::InvalidData)?,
                         })
                     } else {
                         None
@@ -810,9 +782,7 @@ impl Eq for Identity {}
 impl Ord for Identity {
     #[inline(always)]
     fn cmp(&self, other: &Self) -> Ordering {
-        self.address
-            .cmp(&other.address)
-            .then_with(|| self.fingerprint.cmp(&other.fingerprint))
+        self.address.cmp(&other.address).then_with(|| self.fingerprint.cmp(&other.fingerprint))
     }
 }
 
@@ -941,11 +911,7 @@ mod tests {
         let gen_unmarshaled = Identity::from_bytes(bytes.as_bytes()).unwrap();
         assert!(gen_unmarshaled.secret.is_some());
         if !gen_unmarshaled.eq(&gen) {
-            println!(
-                "{} != {}",
-                hex::to_string(&gen_unmarshaled.fingerprint),
-                hex::to_string(&gen.fingerprint)
-            );
+            println!("{} != {}", hex::to_string(&gen_unmarshaled.fingerprint), hex::to_string(&gen.fingerprint));
         }
 
         assert!(Identity::from_str(string.as_str()).unwrap().secret.is_some());

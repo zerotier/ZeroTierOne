@@ -1,37 +1,77 @@
-use std::ops::Deref;
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
 
-use zerotier_crypto::{
-    p384::{P384KeyPair, P384PublicKey},
-    secret::Secret,
-};
+use std::hash::Hash;
 
-use crate::{
-    sessionid::SessionId,
-    zssp::{ReceiveContext, Session},
-};
+use zerotier_crypto::p384::P384KeyPair;
 
 /// Trait to implement to integrate the session into an application.
 ///
 /// Templating the session on this trait lets the code here be almost entirely transport, OS,
 /// and use case independent.
+///
+/// The constants exposed in this trait can be redefined from their defaults to change rekey
+/// and negotiation timeout behavior. This is discouraged except for testing purposes when low
+/// key lifetime values may be desirable to test rekeying. Also note that each side takes turns
+/// initiating rekey, so if both sides don't have the same values you'll get asymmetric timing
+/// behavior. This will still work as long as the key usage counter doesn't exceed the
+/// EXPIRE_AFTER_USES limit.
 pub trait ApplicationLayer: Sized {
-    /// Arbitrary opaque object associated with a session, such as a connection state object.
+    /// Rekey after this many key uses.
+    ///
+    /// The default is 1/4 the recommended NIST limit for AES-GCM. Unless you are transferring
+    /// a massive amount of data REKEY_AFTER_TIME_MS is probably going to kick in first.
+    const REKEY_AFTER_USES: u64 = 536870912;
+
+    /// Hard expiration after this many uses.
+    ///
+    /// Attempting to encrypt more than this many messages with a key will cause a hard error
+    /// and the internal erasure of ephemeral key material. You'll only ever hit this if something
+    /// goes wrong and rekeying fails.
+    const EXPIRE_AFTER_USES: u64 = 2147483647;
+
+    /// Start attempting to rekey after a key has been in use for this many milliseconds.
+    ///
+    /// Default is two hours.
+    const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60 * 2;
+
+    /// Maximum random jitter to add to rekey-after time.
+    ///
+    /// Default is ten minutes.
+    const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10;
+
+    /// Timeout for incoming Noise_XK session negotiation in milliseconds.
+    ///
+    /// Default is two seconds, which should be enough for even extremely slow links or links
+    /// over very long distances.
+    const INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS: i64 = 2000;
+
+    /// Retry interval for outgoing connection initiation or rekey attempts.
+    ///
+    /// Retry attepmpts will be no more often than this, but the delay may end up being slightly more
+    /// in some cases depending on where in the cycle the initial attempt falls.
+    const RETRY_INTERVAL: i64 = 500;
+
+    /// Type for arbitrary opaque object for use by the application that is attached to each session.
     type Data;
 
-    /// Arbitrary object that dereferences to the session, such as Arc<Session<Self>>.
-    type SessionRef<'a>: Deref<Target = Session<Self>>;
-
-    /// A buffer containing data read from the network that can be cached.
+    /// Data type for incoming packet buffers.
     ///
-    /// This can be e.g. a pooled buffer that automatically returns itself to the pool when dropped.
-    /// It can also just be a Vec<u8> or Box<[u8]> or something like that.
+    /// This can be something like Vec<u8> or Box<[u8]> or it can be something like a pooled reusable
+    /// buffer that automatically returns to its pool when ZSSP is done with it. ZSSP may hold these
+    /// for a short period of time when assembling fragmented packets on the receive path.
     type IncomingPacketBuffer: AsRef<[u8]> + AsMut<[u8]>;
 
-    /// Remote physical address on whatever transport this session is using.
-    type RemoteAddress;
-
-    /// Rate limit for attempts to rekey existing sessions in milliseconds (default: 2000).
-    const REKEY_RATE_LIMIT_MS: i64 = 2000;
+    /// Opaque type for whatever constitutes a physical path to the application.
+    ///
+    /// A physical path could be an IP address or IP plus device in the case of UDP, a socket in the
+    /// case of TCP, etc.
+    type PhysicalPath: PartialEq + Eq + Hash + Clone;
 
     /// Get a reference to this host's static public key blob.
     ///
@@ -39,39 +79,8 @@ pub trait ApplicationLayer: Sized {
     /// is a byte serialized identity. It could just be a naked NIST P-384 key if that's all you need.
     fn get_local_s_public_blob(&self) -> &[u8];
 
-    /// Get SHA384(this host's static public key blob).
-    ///
-    /// This allows us to avoid computing SHA384(public key blob) over and over again.
-    fn get_local_s_public_blob_hash(&self) -> &[u8; 48];
-
-    /// Get a reference to this hosts' static public key's NIST P-384 secret key pair.
+    /// Get a reference to this host's static public key's NIST P-384 secret key pair.
     ///
     /// This must return the NIST P-384 public key that is contained within the static public key blob.
     fn get_local_s_keypair(&self) -> &P384KeyPair;
-
-    /// Extract the NIST P-384 ECC public key component from a static public key blob or return None on failure.
-    ///
-    /// This is called to parse the static public key blob from the other end and extract its NIST P-384 public
-    /// key. SECURITY NOTE: the information supplied here is from the wire so care must be taken to parse it
-    /// safely and fail on any error or corruption.
-    fn extract_s_public_from_raw(static_public: &[u8]) -> Option<P384PublicKey>;
-
-    /// Look up a local session by local session ID or return None if not found.
-    fn lookup_session<'a>(&self, local_session_id: SessionId) -> Option<Self::SessionRef<'a>>;
-
-    /// Rate limit and check an attempted new session (called before accept_new_session).
-    fn check_new_session(&self, rc: &ReceiveContext<Self>, remote_address: &Self::RemoteAddress) -> bool;
-
-    /// Check whether a new session should be accepted.
-    ///
-    /// On success a tuple of local session ID, static secret, and associated object is returned. The
-    /// static secret is whatever results from agreement between the local and remote static public
-    /// keys.
-    fn accept_new_session(
-        &self,
-        receive_context: &ReceiveContext<Self>,
-        remote_address: &Self::RemoteAddress,
-        remote_static_public: &[u8],
-        remote_metadata: &[u8],
-    ) -> Option<(SessionId, Secret<64>, Self::Data)>;
 }

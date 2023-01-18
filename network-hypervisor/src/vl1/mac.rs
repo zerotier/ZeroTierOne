@@ -27,12 +27,7 @@ impl MAC {
     pub fn from_bytes(b: &[u8]) -> Option<MAC> {
         if b.len() >= 6 {
             NonZeroU64::new(
-                (b[0] as u64) << 40
-                    | (b[1] as u64) << 32
-                    | (b[2] as u64) << 24
-                    | (b[3] as u64) << 16 as u64
-                    | (b[4] as u64) << 8
-                    | b[5] as u64,
+                (b[0] as u64) << 40 | (b[1] as u64) << 32 | (b[2] as u64) << 24 | (b[3] as u64) << 16 as u64 | (b[4] as u64) << 8 | b[5] as u64,
             )
             .map(|i| MAC(i))
         } else {
@@ -94,10 +89,7 @@ impl Marshalable for MAC {
 impl ToString for MAC {
     fn to_string(&self) -> String {
         let b: [u8; 6] = self.to_bytes();
-        format!(
-            "{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}",
-            b[0], b[1], b[2], b[3], b[4], b[5]
-        )
+        format!("{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}:{:0>2x}", b[0], b[1], b[2], b[3], b[4], b[5])
     }
 }
 
