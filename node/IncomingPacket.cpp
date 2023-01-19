@@ -217,6 +217,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 							char ssoNonce[64] = { 0 };
 							char ssoState[128] = {0};
 							char ssoClientID[256] = { 0 };
+							char ssoProvider[64] = { 0 };
 
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_ISSUER_URL, issuerURL, sizeof(issuerURL)) > 0) {
 								issuerURL[sizeof(issuerURL) - 1] = 0;
@@ -233,8 +234,13 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_CLIENT_ID, ssoClientID, sizeof(ssoClientID)) > 0) {
 								ssoClientID[sizeof(ssoClientID) - 1] = 0;
 							}
+							if (authInfo.get(ZT_AUTHINFO_DICT_KEY_SSO_PROVIDER, ssoProvider, sizeof(ssoProvider)) > 0 ) {
+								ssoProvider[sizeof(ssoProvider) - 1] = 0;
+							} else {
+								strncpy(ssoProvider, "default", sizeof(ssoProvider));
+							}
 
-							network->setAuthenticationRequired(tPtr, issuerURL, centralAuthURL, ssoClientID, ssoNonce, ssoState);
+							network->setAuthenticationRequired(tPtr, issuerURL, centralAuthURL, ssoClientID, ssoProvider, ssoNonce, ssoState);
 						}
 					}
 				} else {

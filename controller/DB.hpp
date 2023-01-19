@@ -53,6 +53,7 @@ public:
 	, ssoNonce()
 	, ssoState()
 	, ssoClientID()
+	, ssoProvider("default")
 	{}
 
 	bool enabled;
@@ -64,6 +65,7 @@ public:
 	std::string ssoNonce;
 	std::string ssoState;
 	std::string ssoClientID;
+	std::string ssoProvider;
 };
 
 /**

@@ -1450,6 +1450,7 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	Utils::scopy(ec->ssoNonce, sizeof(ec->ssoNonce), _config.ssoNonce);
 	Utils::scopy(ec->ssoState, sizeof(ec->ssoState), _config.ssoState);
 	Utils::scopy(ec->ssoClientID, sizeof(ec->ssoClientID), _config.ssoClientID);
+	Utils::scopy(ec->ssoProvider, sizeof(ec->ssoProvider), _config.ssoProvider);
 }
 
 void Network::_sendUpdatesToMembers(void *tPtr,const MulticastGroup *const newMulticastGroup)
@@ -1556,7 +1557,7 @@ Membership &Network::_membership(const Address &a)
 	return _memberships[a];
 }
 
-void Network::setAuthenticationRequired(void *tPtr, const char* issuerURL, const char* centralEndpoint, const char* clientID, const char* nonce, const char* state)
+void Network::setAuthenticationRequired(void *tPtr, const char* issuerURL, const char* centralEndpoint, const char* clientID, const char *ssoProvider, const char* nonce, const char* state)
 {
 	Mutex::Lock _l(_lock);
 	_netconfFailure = NETCONF_FAILURE_AUTHENTICATION_REQUIRED;
@@ -1568,6 +1569,7 @@ void Network::setAuthenticationRequired(void *tPtr, const char* issuerURL, const
 	Utils::scopy(_config.ssoClientID, sizeof(_config.ssoClientID), clientID);
 	Utils::scopy(_config.ssoNonce, sizeof(_config.ssoNonce), nonce);
 	Utils::scopy(_config.ssoState, sizeof(_config.ssoState), state);
+	Utils::scopy(_config.ssoProvider, sizeof(_config.ssoProvider), ssoProvider);
 	_sendUpdateEvent(tPtr);
 }
 

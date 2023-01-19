@@ -201,6 +201,7 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NONCE, this->ssoNonce)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_STATE, this->ssoState)) return false;
 			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CLIENT_ID, this->ssoClientID)) return false;
+			if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_SSO_PROVIDER, this->ssoProvider)) return false;
 		}
 
 		delete tmp;
@@ -424,6 +425,12 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 					if (d.get(ZT_NETWORKCONFIG_DICT_KEY_CLIENT_ID, this->ssoClientID, (unsigned int)sizeof(this->ssoClientID)) > 0) {
 						this->ssoClientID[sizeof(this->ssoClientID) - 1] = 0;
 					}
+					if (d.get(ZT_NETWORKCONFIG_DICT_KEY_SSO_PROVIDER, this->ssoProvider, (unsigned int)(sizeof(this->ssoProvider))) > 0) {
+						this->ssoProvider[sizeof(this->ssoProvider) - 1] = 0;
+					} else {
+						strncpy(this->ssoProvider, "default", sizeof(this->ssoProvider));
+						this->ssoProvider[sizeof(this->ssoProvider) - 1] = 0;
+					}
 				} else {
 					this->authenticationURL[0] = 0;
 					this->authenticationExpiryTime = 0;
@@ -432,6 +439,7 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 					this->ssoState[0] = 0;
 					this->ssoClientID[0] = 0;
 					this->issuerURL[0] = 0;
+					this->ssoProvider[0] = 0;
 				}
 			}
 		}
