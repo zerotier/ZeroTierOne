@@ -429,6 +429,7 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 						this->ssoProvider[sizeof(this->ssoProvider) - 1] = 0;
 					} else {
 						strncpy(this->ssoProvider, "default", sizeof(this->ssoProvider));
+						this->ssoProvider[sizeof(this->ssoProvider) - 1] = 0;
 					}
 				} else {
 					this->authenticationURL[0] = 0;
