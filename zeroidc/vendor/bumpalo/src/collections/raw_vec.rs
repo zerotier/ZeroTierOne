@@ -60,15 +60,10 @@ impl<'a, T> RawVec<'a, T> {
     /// Like `new` but parameterized over the choice of allocator for
     /// the returned RawVec.
     pub fn new_in(a: &'a Bump) -> Self {
-        // !0 is usize::MAX. This branch should be stripped at compile time.
-        // FIXME(mark-i-m): use this line when `if`s are allowed in `const`
-        //let cap = if mem::size_of::<T>() == 0 { !0 } else { 0 };
-
-        // Unique::empty() doubles as "unallocated" and "zero-sized allocation"
+        // `cap: 0` means "unallocated". zero-sized types are ignored.
         RawVec {
-            ptr: unsafe { NonNull::new_unchecked(mem::align_of::<T>() as *mut T) },
-            // FIXME(mark-i-m): use `cap` when ifs are allowed in const
-            cap: [0, !0][(mem::size_of::<T>() == 0) as usize],
+            ptr: NonNull::dangling(),
+            cap: 0,
             a,
         }
     }

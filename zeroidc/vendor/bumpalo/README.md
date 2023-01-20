@@ -147,7 +147,8 @@ in its space itself.
     // Drop our `Box<CountDrops>`.
     drop(c);
 
-    // Its `Drop` implementation was run, and so `NUM_DROPS` has been incremented.
+    // Its `Drop` implementation was run, and so `NUM_DROPS` has been
+    // incremented.
     assert_eq!(NUM_DROPPED.load(Ordering::SeqCst), 1);
 }
 ```
@@ -158,11 +159,11 @@ Bumpalo is a `no_std` crate. It depends only on the `alloc` and `core` crates.
 
 ### Thread support
 
-The `Bump` is `!Sync`, which makes it hard to use in certain situations around threads ‒ for
-example in `rayon`.
+The `Bump` is `!Sync`, which makes it hard to use in certain situations around
+threads ‒ for example in `rayon`.
 
-The [`bumpalo-herd`](https://crates.io/crates/bumpalo-herd) crate provides a pool of `Bump`
-allocators for use in such situations.
+The [`bumpalo-herd`](https://crates.io/crates/bumpalo-herd) crate provides a
+pool of `Bump` allocators for use in such situations.
 
 ### Nightly Rust `allocator_api` Support
 
@@ -181,7 +182,8 @@ First, enable the `allocator_api` feature in your `Cargo.toml`:
 bumpalo = { version = "3.9", features = ["allocator_api"] }
 ```
 
-Next, enable the `allocator_api` nightly Rust feature in your `src/lib.rs` or `src/main.rs`:
+Next, enable the `allocator_api` nightly Rust feature in your `src/lib.rs` or
+`src/main.rs`:
 
 ```rust,ignore
 #![feature(allocator_api)]
@@ -207,8 +209,8 @@ v.push(2);
 
 #### Minimum Supported Rust Version (MSRV)
 
-This crate is guaranteed to compile on stable Rust **1.54** and up. It might
+This crate is guaranteed to compile on stable Rust **1.56** and up. It might
 compile with older versions but that may change in any new patch release.
 
-We reserve the right to increment the MSRV on minor releases, however we will strive
-to only do it deliberately and for good reasons.
+We reserve the right to increment the MSRV on minor releases, however we will
+strive to only do it deliberately and for good reasons.
