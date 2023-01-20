@@ -24,7 +24,7 @@
 #if !defined(ZT_AES_NO_ACCEL) && defined(ZT_ARCH_X64)
 #define ZT_AES_AESNI 1
 #endif
-#if !defined(ZT_AES_NO_ACCEL) && defined(ZT_ARCH_ARM_HAS_NEON)
+#if !defined(ZT_AES_NO_ACCEL) && defined(ZT_ARCH_ARM_HAS_NEON) && defined(ZT_ARCH_ARM_HAS_CRYPTO)
 #define ZT_AES_NEON 1
 #endif
 
