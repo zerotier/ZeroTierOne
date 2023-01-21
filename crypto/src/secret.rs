@@ -37,6 +37,11 @@ impl<const L: usize> Secret<L> {
         &self.0
     }
 
+    #[inline(always)]
+    pub fn as_bytes_mut(&mut self) -> &mut [u8; L] {
+        &mut self.0
+    }
+
     /// Get the first N bytes of this secret as a fixed length array.
     #[inline(always)]
     pub fn first_n<const N: usize>(&self) -> &[u8; N] {

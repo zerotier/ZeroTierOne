@@ -52,6 +52,7 @@ pub(crate) const AES_KEY_SIZE: usize = 32;
 pub(crate) const AES_HEADER_CHECK_KEY_SIZE: usize = 16;
 pub(crate) const AES_GCM_TAG_SIZE: usize = 16;
 pub(crate) const AES_GCM_NONCE_SIZE: usize = 12;
+pub(crate) const AES_CTR_NONCE_SIZE: usize = 12;
 
 /// Size of a session ID, which behaves a bit like a TCP port number.
 ///
@@ -61,6 +62,9 @@ pub(crate) const SESSION_ID_SIZE: usize = 6;
 /// Maximum difference between out-of-order incoming packet counters, and size of deduplication buffer.
 pub(crate) const COUNTER_WINDOW_MAX_OUT_OF_ORDER: usize = 16;
 
+/// Timeout for a "note to self" that must be returned by a session initiator.
+pub(crate) const BOB_NOTE_TO_SELF_TIMEOUT_MS: i64 = 500;
+
 /// Maximum skip-ahead for counter.
 ///
 /// This is huge (2^24) because its real purpose is to filter out bad packets where decryption of
@@ -68,7 +72,8 @@ pub(crate) const COUNTER_WINDOW_MAX_OUT_OF_ORDER: usize = 16;
 pub(crate) const COUNTER_WINDOW_MAX_SKIP_AHEAD: u64 = 16777216;
 
 // Key usage labels for sub-key derivation using NIST-style KBKDF (basically just HMAC KDF).
-pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_PAYLOAD_ENCRYPTION: u8 = b'M'; // intermediate keys used in key exchanges
+pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_PAYLOAD_ENCRYPTION: u8 = b'X'; // intermediate keys used in key exchanges
+pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION: u8 = b'x'; // intermediate keys used in key exchanges
 pub(crate) const KBKDF_KEY_USAGE_LABEL_HEADER_CHECK: u8 = b'H'; // AES-based header check code generation
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A'; // AES-GCM in A->B direction
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE: u8 = b'B'; // AES-GCM in B->A direction

@@ -27,3 +27,13 @@ pub fn secure_eq<A: AsRef<[u8]> + ?Sized, B: AsRef<[u8]> + ?Sized>(a: &A, b: &B)
         false
     }
 }
+
+extern "C" {
+    fn OPENSSL_cleanse(ptr: *mut std::ffi::c_void, len: usize);
+}
+
+/// Destroy the contents of some memory
+#[inline(always)]
+pub fn burn(b: &mut [u8]) {
+    unsafe { OPENSSL_cleanse(b.as_mut_ptr().cast(), b.len()) };
+}

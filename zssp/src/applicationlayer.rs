@@ -33,6 +33,13 @@ pub trait ApplicationLayer: Sized {
     /// Rate limit for attempts to rekey existing sessions in milliseconds (default: 2000).
     const REKEY_RATE_LIMIT_MS: i64 = 2000;
 
+    /// Extract the NIST P-384 ECC public key component from a static public key blob or return None on failure.
+    ///
+    /// This is called to parse the static public key blob from the other end and extract its NIST P-384 public
+    /// key. SECURITY NOTE: the information supplied here is from the wire so care must be taken to parse it
+    /// safely and fail on any error or corruption.
+    fn extract_s_public_from_raw(static_public: &[u8]) -> Option<P384PublicKey>;
+
     /// Get a reference to this host's static public key blob.
     ///
     /// This must contain a NIST P-384 public key but can contain other information. In ZeroTier this
@@ -49,27 +56,21 @@ pub trait ApplicationLayer: Sized {
     /// This must return the NIST P-384 public key that is contained within the static public key blob.
     fn get_local_s_keypair(&self) -> &P384KeyPair;
 
-    /// Extract the NIST P-384 ECC public key component from a static public key blob or return None on failure.
-    ///
-    /// This is called to parse the static public key blob from the other end and extract its NIST P-384 public
-    /// key. SECURITY NOTE: the information supplied here is from the wire so care must be taken to parse it
-    /// safely and fail on any error or corruption.
-    fn extract_s_public_from_raw(static_public: &[u8]) -> Option<P384PublicKey>;
-
     /// Look up a local session by local session ID or return None if not found.
     fn lookup_session<'a>(&self, local_session_id: SessionId) -> Option<Self::SessionRef<'a>>;
 
-    /// Rate limit and check an attempted new session (called before accept_new_session).
-    fn check_new_session(&self, rc: &ReceiveContext<Self>, remote_address: &Self::RemoteAddress) -> bool;
-
-    /// Get a new locally unique session ID.
-    fn new_session(&self, remote_address: &Self::RemoteAddress) -> Option<(SessionId, Self::Data)>;
+    /// Rate limit and check an attempted new session.
+    fn prescreen_new_session(&self, rc: &ReceiveContext<Self>, remote_address: &Self::RemoteAddress) -> bool;
 
     /// Check whether a new session should be accepted.
     ///
-    /// On success a tuple of local session ID, static secret, and associated object is returned. The
-    /// static secret is whatever results from agreement between the local and remote static public
-    /// keys.
+    /// This is called in the final phase of Noise_XK once Alice's identity is known. If it should be
+    /// accepted then this should return a session ID, a PSK or all zeroes if there is none, and application
+    /// specific data to attach to the session.
+    ///
+    /// This doesn't guarantee acceptance until the new session is returned from the receive call, since
+    /// something can still go wrong during final authentication and session setup. The session ID supplied
+    /// here should not be assumed to be in use.
     fn accept_new_session(
         &self,
         receive_context: &ReceiveContext<Self>,

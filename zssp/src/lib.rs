@@ -10,4 +10,4 @@ pub mod constants;
 pub use crate::applicationlayer::ApplicationLayer;
 pub use crate::error::Error;
 pub use crate::sessionid::SessionId;
-pub use crate::zssp::{ReceiveContext, ReceiveResult, Role, Session};
+pub use crate::zssp::{ReceiveContext, ReceiveResult, Session};

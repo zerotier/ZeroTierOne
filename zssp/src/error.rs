@@ -43,6 +43,14 @@ pub enum Error {
     UnexpectedBufferOverrun,
 }
 
+// An I/O error in the parser means an invalid packet.
+impl From<std::io::Error> for Error {
+    #[inline(always)]
+    fn from(_: std::io::Error) -> Self {
+        Self::InvalidPacket
+    }
+}
+
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
