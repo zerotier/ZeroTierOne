@@ -59,11 +59,11 @@ pub(crate) const AES_CTR_NONCE_SIZE: usize = 12;
 /// This is large since some ZeroTier nodes handle huge numbers of links, like roots and controllers.
 pub(crate) const SESSION_ID_SIZE: usize = 6;
 
-/// Maximum difference between out-of-order incoming packet counters, and size of deduplication buffer.
-pub(crate) const COUNTER_WINDOW_MAX_OUT_OF_ORDER: usize = 16;
-
 /// Timeout for a "note to self" that must be returned by a session initiator.
 pub(crate) const BOB_NOTE_TO_SELF_TIMEOUT_MS: i64 = 500;
+
+/// Maximum difference between out-of-order incoming packet counters, and size of deduplication buffer.
+pub(crate) const COUNTER_WINDOW_MAX_OOO: usize = 16;
 
 /// Maximum skip-ahead for counter.
 ///
@@ -72,7 +72,7 @@ pub(crate) const BOB_NOTE_TO_SELF_TIMEOUT_MS: i64 = 500;
 pub(crate) const COUNTER_WINDOW_MAX_SKIP_AHEAD: u64 = 16777216;
 
 // Key usage labels for sub-key derivation using NIST-style KBKDF (basically just HMAC KDF).
-pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_PAYLOAD_ENCRYPTION: u8 = b'X'; // intermediate keys used in key exchanges
+pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION: u8 = b'X'; // intermediate keys used in key exchanges
 pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION: u8 = b'x'; // intermediate keys used in key exchanges
 pub(crate) const KBKDF_KEY_USAGE_LABEL_HEADER_CHECK: u8 = b'H'; // AES-based header check code generation
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A'; // AES-GCM in A->B direction
@@ -88,7 +88,7 @@ pub(crate) const HEADER_CHECK_AES_KEY_SIZE: usize = 16;
 /// the primary algorithm from NIST P-384 or the transport cipher from AES-GCM.
 pub(crate) const INITIAL_KEY: [u8; 64] = [
     // macOS command line to generate:
-    // echo -n 'ZSSP_Noise_XKpsk2_NISTP384_?KYBER1024_AESGCM_SHA512' | shasum -a 512  | cut -d ' ' -f 1 | xxd -r -p | xxd -i
+    // echo -n 'ZSSP_Noiselike_XKpsk2_NISTP384_?KYBER1024_AESGCM_SHA512' | shasum -a 512  | cut -d ' ' -f 1 | xxd -r -p | xxd -i
     0xc7, 0xde, 0xa3, 0xbe, 0x84, 0xe5, 0x91, 0x25, 0x30, 0x59, 0xc1, 0xc9, 0x5d, 0x22, 0xf5, 0x5a, 0xd0, 0x67, 0x9e, 0xf9, 0xf6, 0xbb,
     0xc0, 0x2a, 0x7f, 0xd0, 0x12, 0xb2, 0x0f, 0xed, 0x64, 0x7a, 0x86, 0x9f, 0x82, 0x19, 0xca, 0x84, 0xad, 0xf6, 0x61, 0xda, 0x59, 0xcc,
     0x40, 0xcf, 0x57, 0x68, 0x3e, 0xe4, 0xd6, 0xe7, 0xd1, 0xad, 0xe9, 0x56, 0x50, 0xf2, 0x38, 0x22, 0x88, 0xa3, 0x5c, 0x7f,
