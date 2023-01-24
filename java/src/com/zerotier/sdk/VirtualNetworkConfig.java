@@ -29,6 +29,8 @@ package com.zerotier.sdk;
 
 import android.util.Log;
 
+import com.zerotier.sdk.util.StringUtils;
+
 import java.lang.Comparable;
 import java.lang.Override;
 import java.lang.String;
@@ -88,11 +90,11 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
         boolean routesEqual = rCurrent.equals(rNew);
 
         if (this.nwid != cfg.nwid) {
-            Log.i(TAG, "nwid Changed. Old: " + Long.toHexString(this.nwid) + " (" + Long.toString(this.nwid) + "), " +
-                    "New: " + Long.toHexString(cfg.nwid) + " (" + Long.toString(cfg.nwid) + ")");
+            Log.i(TAG, "nwid Changed. Old: " + StringUtils.networkIdToString(this.nwid) + " (" + this.nwid + "), " +
+                    "New: " + StringUtils.networkIdToString(cfg.nwid) + " (" + cfg.nwid + ")");
         }
         if (this.mac != cfg.mac) {
-            Log.i(TAG, "MAC Changed. Old: " + Long.toHexString(this.mac) + ", New: " + Long.toHexString(cfg.mac));
+            Log.i(TAG, "MAC Changed. Old: " + StringUtils.macAddressToString(this.mac) + ", New: " + StringUtils.macAddressToString(cfg.mac));
         }
 
         if (!this.name.equals(cfg.name)) {
