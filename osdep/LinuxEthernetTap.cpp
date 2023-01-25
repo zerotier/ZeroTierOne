@@ -553,8 +553,11 @@ void LinuxEthernetTap::setMtu(unsigned int mtu)
 		if (sock > 0) {
 			struct ifreq ifr;
 			memset(&ifr,0,sizeof(ifr));
+			strcpy(ifr.ifr_name,_dev.c_str());
 			ifr.ifr_ifru.ifru_mtu = (int)mtu;
-			ioctl(sock,SIOCSIFMTU,(void *)&ifr);
+			if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
+				printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
+			}
 			close(sock);
 		}
 	}
