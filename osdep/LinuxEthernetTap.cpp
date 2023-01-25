@@ -556,7 +556,7 @@ void LinuxEthernetTap::setMtu(unsigned int mtu)
 			strcpy(ifr.ifr_name,_dev.c_str());
 			ifr.ifr_ifru.ifru_mtu = (int)mtu;
 			if (ioctl(sock,SIOCSIFMTU,(void *)&ifr) < 0) {
-				printf("WARNING: ioctl() failed setting up Linux tap device (set MTU)\n");
+				printf("WARNING: ioctl() failed updating existing Linux tap device (set MTU)\n");
 			}
 			close(sock);
 		}
