@@ -1996,6 +1996,7 @@ static void printHelp(const char *cn,FILE *out)
 
 #ifdef __UNIX_LIKE__
 	fprintf(out,"  -d                - Fork and run as daemon (Unix-ish OSes)" ZT_EOL_S);
+	fprintf(out,"  -s<path>          - path to script to execute on network events" ZT_EOL_S);
 #endif // __UNIX_LIKE__
 
 #ifdef __WINDOWS__
@@ -2012,13 +2013,13 @@ static void printHelp(const char *cn,FILE *out)
 class _OneServiceRunner
 {
 public:
-	_OneServiceRunner(const char *pn,const std::string &hd,unsigned int p) : progname(pn),returnValue(0),port(p),homeDir(hd) {}
+	_OneServiceRunner(const char *pn,const std::string &hd,unsigned int p, std::string &sp) : progname(pn),returnValue(0),port(p),homeDir(hd),scriptPath(sp) {}
 	void threadMain()
 		throw()
 	{
 		try {
 			for(;;) {
-				zt1Service = OneService::newInstance(homeDir.c_str(),port);
+				zt1Service = OneService::newInstance(homeDir.c_str(),port,scriptPath.c_str());
 				switch(zt1Service->run()) {
 					case OneService::ONE_STILL_RUNNING: // shouldn't happen, run() won't return until done
 					case OneService::ONE_NORMAL_TERMINATION:
@@ -2053,6 +2054,7 @@ public:
 	unsigned int returnValue;
 	unsigned int port;
 	const std::string &homeDir;
+	const std::string &scriptPath;
 };
 
 #ifdef __WINDOWS__
@@ -2082,6 +2084,7 @@ int main(int argc,char **argv)
 	signal(SIGTERM,&_sighandlerQuit);
 	signal(SIGQUIT,&_sighandlerQuit);
 	signal(SIGINT,&_sighandlerQuit);
+	signal(SIGCHLD, SIG_IGN);
 
 	/* Ensure that there are no inherited file descriptors open from a previous
 	 * incarnation. This is a hack to ensure that GitHub issue #61 or variants
@@ -2115,7 +2118,7 @@ int main(int argc,char **argv)
 	if ((strstr(argv[0],"zerotier-cli"))||(strstr(argv[0],"ZEROTIER-CLI")))
 		return cli(argc,argv);
 
-	std::string homeDir;
+	std::string homeDir, scriptPath;
 	unsigned int port = ZT_DEFAULT_PORT;
 	bool skipRootCheck = false;
 
@@ -2134,6 +2137,11 @@ int main(int argc,char **argv)
 #ifdef __UNIX_LIKE__
 				case 'd': // Run in background as daemon
 					runAsDaemon = true;
+					break;
+				case 's': // script to run on network events
+					if (argv[i][2]) {
+						scriptPath = argv[i] + 2;
+					} else printHelp(argv[0],stdout);
 					break;
 #endif // __UNIX_LIKE__
 
@@ -2306,7 +2314,7 @@ int main(int argc,char **argv)
 	}
 #endif // __UNIX_LIKE__
 
-	_OneServiceRunner thr(argv[0],homeDir,port);
+	_OneServiceRunner thr(argv[0],homeDir,port,scriptPath);
 	thr.threadMain();
 	//Thread::join(Thread::start(&thr));
 

@@ -11,34 +11,34 @@
  */
 /****/
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <sys/stat.h>
-#include <stdlib.h>
-
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
 
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+
 #ifdef __UNIX_LIKE__
-#include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <sys/types.h>
+#include <netdb.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <sys/uio.h>
-#include <dirent.h>
-#include <netdb.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #endif
 
 #ifdef __WINDOWS__
-#include <windows.h>
-#include <wincrypt.h>
-#include <shlobj.h>
-#include <netioapi.h>
 #include <iphlpapi.h>
+#include <netioapi.h>
+#include <shlobj.h>
+#include <wincrypt.h>
+#include <windows.h>
 #endif
 
 #include "OSUtils.hpp"
@@ -549,6 +549,53 @@ std::string OSUtils::jsonBinFromHex(const nlohmann::json &jv)
 		}
 	}
 	return std::string();
+}
+
+void OSUtils::_hookCmd(const char* scriptPath, const uint64_t nwid, const char *homePath, ZT_VirtualNetworkConfigOperation op)
+{
+	if (! scriptPath || ! strlen(scriptPath) || nwid == 0) {
+#ifdef ZT_TRACE
+		fprintf(stderr, "no script path specified\n");
+#endif
+		return;
+	}
+	long p = (long)fork();
+
+	if (p > 0) {
+#ifdef ZT_TRACE
+		fprintf(stderr, "Running network event hook script (%s)\n", scriptPath);
+#endif
+		//int exitcode = -1;
+		//::waitpid(p, &exitcode, 0);
+	}
+	else if (p == 0) {
+		::close(STDOUT_FILENO);
+		::close(STDERR_FILENO);
+		char cmdBuf[128] = { 0 };
+		OSUtils::ztsnprintf(cmdBuf, sizeof(cmdBuf), "%s", scriptPath);
+		char nwidStr[17] = { 0 };
+		OSUtils::ztsnprintf(nwidStr, sizeof(nwidStr), "%.16llx", nwid);
+		std::string cmd;
+		switch (op) {
+			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
+				cmd = std::string(cmdBuf) + " network_up " + std::string(nwidStr) + " " + std::string(homePath) + "";
+				//::execl("/bin/sh", "sh", cmdBuf, "network_up", nwidStr, homePath, "&", (const char*)0);
+				break;
+			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
+				cmd = std::string(cmdBuf) + " network_update " + std::string(nwidStr) + " " + std::string(homePath) + "";
+				//::execl("/bin/sh", "sh", cmdBuf, "network_update", nwidStr, homePath, "&", (const char*)0);
+				break;
+			case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:	 // Same as _DESTROY
+				cmd = std::string(cmdBuf) + " network_down " + std::string(nwidStr) + " " + std::string(homePath) + "";
+				//::execl("/bin/sh", "sh", cmdBuf, "network_down", nwidStr, homePath, "&", (const char*)0);
+				break;
+			default:
+				break;
+		}
+		// Using system instead of execl, because execl blocks connections through cli
+		if (!cmd.empty()) ::system(cmd.c_str());
+		::_exit(-1);
+	}
 }
 
 #endif // OMIT_JSON_SUPPORT

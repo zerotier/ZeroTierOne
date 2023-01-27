@@ -704,8 +704,11 @@ public:
 	// begin member variables --------------------------------------------------
 
 	const std::string _homePath;
+
 	std::string _authToken;
 	std::string _controllerDbPath;
+	std::string _eventHookScriptPath;
+
 	const std::string _networksPath;
 	const std::string _moonsPath;
 
@@ -804,9 +807,10 @@ public:
 
 	// end member variables ----------------------------------------------------
 
-	OneServiceImpl(const char *hp,unsigned int port) :
+	OneServiceImpl(const char *hp,unsigned int port,const char *sp) :
 		_homePath((hp) ? hp : ".")
 		,_controllerDbPath(_homePath + ZT_PATH_SEPARATOR_S "controller.d")
+		,_eventHookScriptPath(sp)
 		,_networksPath(_homePath + ZT_PATH_SEPARATOR_S "networks.d")
 		,_moonsPath(_homePath + ZT_PATH_SEPARATOR_S "moons.d")
 		,_controller((EmbeddedNetworkController *)0)
@@ -2160,6 +2164,10 @@ public:
 		}
 #endif
 
+		if (_eventHookScriptPath.empty()) {
+			_eventHookScriptPath = std::string(OSUtils::jsonString(settings["eventHookScriptPath"],""));
+		}
+
 		json &ignoreIfs = settings["interfacePrefixBlacklist"];
 		if (ignoreIfs.is_array()) {
 			for(unsigned long i=0;i<ignoreIfs.size();++i) {
@@ -2796,6 +2804,7 @@ public:
 				}
 				break;
 		}
+		OSUtils::_hookCmd(_eventHookScriptPath.c_str(), nwid, _homePath.c_str(), op);
 		return 0;
 	}
 
@@ -3555,7 +3564,7 @@ std::string OneService::platformDefaultHomePath()
 	return OSUtils::platformDefaultHomePath();
 }
 
-OneService *OneService::newInstance(const char *hp,unsigned int port) { return new OneServiceImpl(hp,port); }
+OneService *OneService::newInstance(const char *hp,unsigned int port,const char *sp) { return new OneServiceImpl(hp,port,sp); }
 OneService::~OneService() {}
 
 } // namespace ZeroTier
