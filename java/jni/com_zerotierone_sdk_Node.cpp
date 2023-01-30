@@ -26,6 +26,8 @@
  */
 
 #include "com_zerotierone_sdk_Node.h"
+
+#include "ZT_jnicache.h"
 #include "ZT_jniutils.h"
 #include "ZT_jnilookup.h"
 
@@ -737,12 +739,15 @@ extern "C" {
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     lookup.setJavaVM(vm);
+
+    setupJNICache(vm);
+
     return JNI_VERSION_1_6;
 }
 
 JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
 {
-
+    teardownJNICache(vm);
 }
 
 
