@@ -40,10 +40,6 @@
 // global static JNI Lookup Object
 JniLookup lookup;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 namespace {
     struct JniRef
     {
@@ -731,6 +727,10 @@ namespace {
         return NULL;
     }
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {

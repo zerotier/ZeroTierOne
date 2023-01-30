@@ -30,10 +30,6 @@
 
 extern JniLookup lookup;
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
 {
     jclass resultClass = NULL;
@@ -1028,7 +1024,3 @@ jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns)
     }
     return NULL;
 }
-
-#ifdef __cplusplus
-}
-#endif
