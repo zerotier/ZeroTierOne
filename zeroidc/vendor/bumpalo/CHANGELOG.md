@@ -28,6 +28,55 @@ Released YYYY-MM-DD.
 
 --------------------------------------------------------------------------------
 
+## 3.12.0
+
+Released 2023-01-17.
+
+### Added
+
+* Added the `bumpalo::boxed::Box::bump` and `bumpalo::collections::String::bump`
+  getters to get the underlying `Bump` that a string or box was allocated into.
+
+### Changed
+
+* Some uses of `Box` that MIRI did not previously consider as UB are now
+  reported as UB, and `bumpalo`'s internals have been adjusted to avoid the new
+  UB.
+
+--------------------------------------------------------------------------------
+
+## 3.11.1
+
+Released 2022-10-18.
+
+### Security
+
+* Fixed a bug where when `std::vec::IntoIter` was ported to
+  `bumpalo::collections::vec::IntoIter`, it didn't get its underlying `Bump`'s
+  lifetime threaded through. This meant that `rustc` was not checking the
+  borrows for `bumpalo::collections::IntoIter` and this could result in
+  use-after-free bugs.
+
+--------------------------------------------------------------------------------
+
+## 3.11.0
+
+Released 2022-08-17.
+
+### Added
+
+* Added support for per-`Bump` allocation limits. These are enforced only in the
+  slow path when allocating new chunks in the `Bump`, not in the bump allocation
+  hot path, and therefore impose near zero overhead.
+* Added the `bumpalo::boxed::Box::into_inner` method.
+
+### Changed
+
+* Updated to Rust 2021 edition.
+* The minimum supported Rust version (MSRV) is now 1.56.0.
+
+--------------------------------------------------------------------------------
+
 ## 3.10.0
 
 Released 2022-06-01.

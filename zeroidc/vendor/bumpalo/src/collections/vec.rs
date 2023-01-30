@@ -675,6 +675,26 @@ impl<'bump, T: 'bump> Vec<'bump, T> {
         }
     }
 
+    /// Returns a shared reference to the allocator backing this `Vec`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bumpalo::{Bump, collections::Vec};
+    ///
+    /// // uses the same allocator as the provided `Vec`
+    /// fn add_strings<'bump>(vec: &mut Vec<'bump, &'bump str>) {
+    ///     for string in ["foo", "bar", "baz"] {
+    ///         vec.push(vec.bump().alloc_str(string));
+    ///     }
+    /// }
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn bump(&self) -> &'bump Bump {
+        self.buf.bump()
+    }
+
     /// Returns the number of elements the vector can hold without
     /// reallocating.
     ///
@@ -977,6 +997,91 @@ impl<'bump, T: 'bump> Vec<'bump, T> {
         self
     }
 
+    /// Returns a raw pointer to the vector's buffer, or a dangling raw pointer
+    /// valid for zero sized reads if the vector didn't allocate.
+    ///
+    /// The caller must ensure that the vector outlives the pointer this
+    /// function returns, or else it will end up pointing to garbage.
+    /// Modifying the vector may cause its buffer to be reallocated,
+    /// which would also make any pointers to it invalid.
+    ///
+    /// The caller must also ensure that the memory the pointer (non-transitively) points to
+    /// is never written to (except inside an `UnsafeCell`) using this pointer or any pointer
+    /// derived from it. If you need to mutate the contents of the slice, use [`as_mut_ptr`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bumpalo::{Bump, collections::Vec};
+    ///
+    /// let bump = Bump::new();
+    ///
+    /// let x = bumpalo::vec![in &bump; 1, 2, 4];
+    /// let x_ptr = x.as_ptr();
+    ///
+    /// unsafe {
+    ///     for i in 0..x.len() {
+    ///         assert_eq!(*x_ptr.add(i), 1 << i);
+    ///     }
+    /// }
+    /// ```
+    ///
+    /// [`as_mut_ptr`]: Vec::as_mut_ptr
+    #[inline]
+    pub fn as_ptr(&self) -> *const T {
+        // We shadow the slice method of the same name to avoid going through
+        // `deref`, which creates an intermediate reference.
+        let ptr = self.buf.ptr();
+        unsafe {
+            if ptr.is_null() {
+                core::hint::unreachable_unchecked();
+            }
+        }
+        ptr
+    }
+
+    /// Returns an unsafe mutable pointer to the vector's buffer, or a dangling
+    /// raw pointer valid for zero sized reads if the vector didn't allocate.
+    ///
+    /// The caller must ensure that the vector outlives the pointer this
+    /// function returns, or else it will end up pointing to garbage.
+    /// Modifying the vector may cause its buffer to be reallocated,
+    /// which would also make any pointers to it invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bumpalo::{Bump, collections::Vec};
+    ///
+    /// let bump = Bump::new();
+    ///
+    /// // Allocate vector big enough for 4 elements.
+    /// let size = 4;
+    /// let mut x: Vec<i32> = Vec::with_capacity_in(size, &bump);
+    /// let x_ptr = x.as_mut_ptr();
+    ///
+    /// // Initialize elements via raw pointer writes, then set length.
+    /// unsafe {
+    ///     for i in 0..size {
+    ///         x_ptr.add(i).write(i as i32);
+    ///     }
+    ///     x.set_len(size);
+    /// }
+    /// assert_eq!(&*x, &[0, 1, 2, 3]);
+    /// ```
+    #[inline]
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        // We shadow the slice method of the same name to avoid going through
+        // `deref_mut`, which creates an intermediate reference.
+        let ptr = self.buf.ptr();
+        unsafe {
+            if ptr.is_null() {
+                core::hint::unreachable_unchecked();
+            }
+        }
+        ptr
+    }
+
     /// Sets the length of a vector.
     ///
     /// This will explicitly set the size of the vector, without actually
@@ -1026,19 +1131,27 @@ impl<'bump, T: 'bump> Vec<'bump, T> {
     /// ```
     ///
     /// In this example, the vector gets expanded from zero to four items
-    /// without any memory allocations occurring, resulting in vector
-    /// values of unallocated memory:
+    /// but we directly initialize uninitialized memory:
     ///
+    // TODO: rely upon `spare_capacity_mut`
     /// ```
     /// use bumpalo::{Bump, collections::Vec};
     ///
+    /// let len = 4;
     /// let b = Bump::new();
     ///
-    /// let mut vec: Vec<char> = Vec::new_in(&b);
+    /// let mut vec: Vec<u8> = Vec::with_capacity_in(len, &b);
+    ///
+    /// for i in 0..len {
+    ///     // SAFETY: we initialize memory via `pointer::write`
+    ///     unsafe { vec.as_mut_ptr().add(i).write(b'a') }
+    /// }
     ///
     /// unsafe {
-    ///     vec.set_len(4);
+    ///     vec.set_len(len);
     /// }
+    ///
+    /// assert_eq!(b"aaaa", &*vec);
     /// ```
     #[inline]
     pub unsafe fn set_len(&mut self, new_len: usize) {
@@ -1343,7 +1456,7 @@ impl<'bump, T: 'bump> Vec<'bump, T> {
         } else {
             unsafe {
                 self.len -= 1;
-                Some(ptr::read(self.get_unchecked(self.len())))
+                Some(ptr::read(self.as_ptr().add(self.len())))
             }
         }
     }
@@ -1381,7 +1494,7 @@ impl<'bump, T: 'bump> Vec<'bump, T> {
         let count = (*other).len();
         self.reserve(count);
         let len = self.len();
-        ptr::copy_nonoverlapping(other as *const T, self.get_unchecked_mut(len), count);
+        ptr::copy_nonoverlapping(other as *const T, self.as_mut_ptr().add(len), count);
         self.len += count;
     }
 
@@ -1848,7 +1961,7 @@ impl<'bump, T: 'bump> ops::DerefMut for Vec<'bump, T> {
 
 impl<'bump, T: 'bump> IntoIterator for Vec<'bump, T> {
     type Item = T;
-    type IntoIter = IntoIter<T>;
+    type IntoIter = IntoIter<'bump, T>;
 
     /// Creates a consuming iterator, that is, one that moves each value out of
     /// the vector (from start to end). The vector cannot be used after calling
@@ -1868,7 +1981,7 @@ impl<'bump, T: 'bump> IntoIterator for Vec<'bump, T> {
     /// }
     /// ```
     #[inline]
-    fn into_iter(mut self) -> IntoIter<T> {
+    fn into_iter(mut self) -> IntoIter<'bump, T> {
         unsafe {
             let begin = self.as_mut_ptr();
             // assume(!begin.is_null());
@@ -2129,19 +2242,19 @@ impl<'bump, T> Drop for Vec<'bump, T> {
 /// (provided by the [`IntoIterator`] trait).
 ///
 /// [`IntoIterator`]: https://doc.rust-lang.org/std/iter/trait.IntoIterator.html
-pub struct IntoIter<T> {
-    phantom: PhantomData<T>,
+pub struct IntoIter<'bump, T> {
+    phantom: PhantomData<&'bump [T]>,
     ptr: *const T,
     end: *const T,
 }
 
-impl<T: fmt::Debug> fmt::Debug for IntoIter<T> {
+impl<'bump, T: fmt::Debug> fmt::Debug for IntoIter<'bump, T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_tuple("IntoIter").field(&self.as_slice()).finish()
     }
 }
 
-impl<'bump, T: 'bump> IntoIter<T> {
+impl<'bump, T: 'bump> IntoIter<'bump, T> {
     /// Returns the remaining items of this iterator as a slice.
     ///
     /// # Examples
@@ -2183,10 +2296,10 @@ impl<'bump, T: 'bump> IntoIter<T> {
     }
 }
 
-unsafe impl<T: Send> Send for IntoIter<T> {}
-unsafe impl<T: Sync> Sync for IntoIter<T> {}
+unsafe impl<'bump, T: Send> Send for IntoIter<'bump, T> {}
+unsafe impl<'bump, T: Sync> Sync for IntoIter<'bump, T> {}
 
-impl<'bump, T: 'bump> Iterator for IntoIter<T> {
+impl<'bump, T: 'bump> Iterator for IntoIter<'bump, T> {
     type Item = T;
 
     #[inline]
@@ -2227,7 +2340,7 @@ impl<'bump, T: 'bump> Iterator for IntoIter<T> {
     }
 }
 
-impl<'bump, T: 'bump> DoubleEndedIterator for IntoIter<T> {
+impl<'bump, T: 'bump> DoubleEndedIterator for IntoIter<'bump, T> {
     #[inline]
     fn next_back(&mut self) -> Option<T> {
         unsafe {
@@ -2248,9 +2361,16 @@ impl<'bump, T: 'bump> DoubleEndedIterator for IntoIter<T> {
     }
 }
 
-impl<'bump, T: 'bump> ExactSizeIterator for IntoIter<T> {}
+impl<'bump, T: 'bump> ExactSizeIterator for IntoIter<'bump, T> {}
 
-impl<'bump, T: 'bump> FusedIterator for IntoIter<T> {}
+impl<'bump, T: 'bump> FusedIterator for IntoIter<'bump, T> {}
+
+impl<'bump, T> Drop for IntoIter<'bump, T> {
+    fn drop(&mut self) {
+        // drop all remaining elements
+        self.for_each(drop);
+    }
+}
 
 /// A draining iterator for `Vec<'bump, T>`.
 ///
