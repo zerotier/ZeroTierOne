@@ -17,8 +17,8 @@
  */
 
 #include "ZT_jniutils.h"
-#include "ZT_jnilookup.h"
-#include "ZT_jniarray.h"
+
+#include "ZT_jnicache.h"
 
 #include <string>
 #include <cassert>
@@ -30,64 +30,46 @@
 
 #define LOG_TAG "Utils"
 
-extern JniLookup lookup;
-
 jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
 {
-    jclass resultClass = NULL;
-
     jobject resultObject = NULL;
 
-    resultClass = lookup.findClass("com/zerotier/sdk/ResultCode");
-    if(resultClass == NULL)
-    {
-        LOGE("Couldn't find ResultCode class");
-        return NULL; // exception thrown
-    }
-
-    std::string fieldName;
+    jfieldID field;
     switch(code)
     {
     case ZT_RESULT_OK:
     case ZT_RESULT_OK_IGNORED:
         LOGV("ZT_RESULT_OK");
-        fieldName = "RESULT_OK";
+        field = ResultCode_RESULT_OK_field;
         break;
     case ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY:
         LOGV("ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY");
-        fieldName = "RESULT_FATAL_ERROR_OUT_OF_MEMORY";
+        field = ResultCode_RESULT_FATAL_ERROR_OUT_OF_MEMORY_field;
         break;
     case ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED:
         LOGV("ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED");
-        fieldName = "RESULT_FATAL_ERROR_DATA_STORE_FAILED";
+        field = ResultCode_RESULT_FATAL_ERROR_DATA_STORE_FAILED_field;
         break;
     case ZT_RESULT_ERROR_NETWORK_NOT_FOUND:
         LOGV("ZT_RESULT_ERROR_NETWORK_NOT_FOUND");
-        fieldName = "RESULT_ERROR_NETWORK_NOT_FOUND";
+        field = ResultCode_RESULT_ERROR_NETWORK_NOT_FOUND_field;
         break;
     case ZT_RESULT_ERROR_UNSUPPORTED_OPERATION:
         LOGV("ZT_RESULT_ERROR_UNSUPPORTED_OPERATION");
-        fieldName = "RESULT_ERROR_UNSUPPORTED_OPERATION";
+        field = ResultCode_RESULT_ERROR_UNSUPPORTED_OPERATION_field;
         break;
     case ZT_RESULT_ERROR_BAD_PARAMETER:
         LOGV("ZT_RESULT_ERROR_BAD_PARAMETER");
-        fieldName = "RESULT_ERROR_BAD_PARAMETER";
+        field = ResultCode_RESULT_ERROR_BAD_PARAMETER_field;
         break;
     case ZT_RESULT_FATAL_ERROR_INTERNAL:
     default:
         LOGV("ZT_RESULT_FATAL_ERROR_INTERNAL");
-        fieldName = "RESULT_FATAL_ERROR_INTERNAL";
+        field = ResultCode_RESULT_FATAL_ERROR_INTERNAL_field;
         break;
     }
 
-    jfieldID enumField = lookup.findStaticField(resultClass, fieldName.c_str(), "Lcom/zerotier/sdk/ResultCode;");
-    if(env->ExceptionCheck() || enumField == NULL)
-    {
-        LOGE("Error on FindStaticField");
-        return NULL;
-    }
-
-    resultObject = env->GetStaticObjectField(resultClass, enumField);
+    resultObject = env->GetStaticObjectField(ResultCode_class, field);
     if(env->ExceptionCheck() || resultObject == NULL)
     {
         LOGE("Error on GetStaticObjectField");
@@ -100,206 +82,147 @@ jobject createVirtualNetworkStatus(JNIEnv *env, ZT_VirtualNetworkStatus status)
 {
     jobject statusObject = NULL;
 
-    jclass statusClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkStatus");
-    if(statusClass == NULL)
-    {
-        return NULL; // exception thrown
-    }
-
-    std::string fieldName;
+    jfieldID field;
     switch(status)
     {
     case ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION:
-        fieldName = "NETWORK_STATUS_REQUESTING_CONFIGURATION";
+        field = VirtualNetworkStatus_NETWORK_STATUS_REQUESTING_CONFIGURATION_field;
         break;
     case ZT_NETWORK_STATUS_OK:
-        fieldName = "NETWORK_STATUS_OK";
+        field = VirtualNetworkStatus_NETWORK_STATUS_OK_field;
         break;
     case ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED:
-        fieldName = "NETWORK_STATUS_AUTHENTICATION_REQUIRED";
+        field = VirtualNetworkStatus_NETWORK_STATUS_AUTHENTICATION_REQUIRED_field;
         break;
     case ZT_NETWORK_STATUS_ACCESS_DENIED:
-        fieldName = "NETWORK_STATUS_ACCESS_DENIED";
+        field = VirtualNetworkStatus_NETWORK_STATUS_ACCESS_DENIED_field;
         break;
     case ZT_NETWORK_STATUS_NOT_FOUND:
-        fieldName = "NETWORK_STATUS_NOT_FOUND";
+        field = VirtualNetworkStatus_NETWORK_STATUS_NOT_FOUND_field;
         break;
     case ZT_NETWORK_STATUS_PORT_ERROR:
-        fieldName = "NETWORK_STATUS_PORT_ERROR";
+        field = VirtualNetworkStatus_NETWORK_STATUS_PORT_ERROR_field;
         break;
     case ZT_NETWORK_STATUS_CLIENT_TOO_OLD:
-        fieldName = "NETWORK_STATUS_CLIENT_TOO_OLD";
+        field = VirtualNetworkStatus_NETWORK_STATUS_CLIENT_TOO_OLD_field;
         break;
     }
 
-    jfieldID enumField = lookup.findStaticField(statusClass, fieldName.c_str(), "Lcom/zerotier/sdk/VirtualNetworkStatus;");
-
-    statusObject = env->GetStaticObjectField(statusClass, enumField);
+    statusObject = env->GetStaticObjectField(VirtualNetworkStatus_class, field);
 
     return statusObject;
 }
 
 jobject createEvent(JNIEnv *env, ZT_Event event)
 {
-    jclass eventClass = NULL;
     jobject eventObject = NULL;
 
-    eventClass = lookup.findClass("com/zerotier/sdk/Event");
-    if(eventClass == NULL)
-    {
-        return NULL;
-    }
-
-    std::string fieldName;
+    jfieldID field;
     switch(event)
     {
     case ZT_EVENT_UP:
-        fieldName = "EVENT_UP";
+        field = Event_EVENT_UP_field;
         break;
     case ZT_EVENT_OFFLINE:
-        fieldName = "EVENT_OFFLINE";
+        field = Event_EVENT_OFFLINE_field;
         break;
     case ZT_EVENT_ONLINE:
-        fieldName = "EVENT_ONLINE";
+        field = Event_EVENT_ONLINE_field;
         break;
     case ZT_EVENT_DOWN:
-        fieldName = "EVENT_DOWN";
+        field = Event_EVENT_DOWN_field;
         break;
     case ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
-        fieldName = "EVENT_FATAL_ERROR_IDENTITY_COLLISION";
+        field = Event_EVENT_FATAL_ERROR_IDENTITY_COLLISION_field;
         break;
     case ZT_EVENT_TRACE:
-        fieldName = "EVENT_TRACE";
+        field = Event_EVENT_TRACE_field;
         break;
     case ZT_EVENT_USER_MESSAGE:
-        fieldName = "EVENT_USER_MESSAGE";
+        field = Event_EVENT_USER_MESSAGE_field;
         break;
     case ZT_EVENT_REMOTE_TRACE:
-        fieldName = "EVENT_REMOTE_TRACE";
+        field = Event_EVENT_REMOTE_TRACE_field;
         break;
     default:
         break;
     }
 
-    jfieldID enumField = lookup.findStaticField(eventClass, fieldName.c_str(), "Lcom/zerotier/sdk/Event;");
-
-    eventObject = env->GetStaticObjectField(eventClass, enumField);
+    eventObject = env->GetStaticObjectField(Event_class, field);
 
     return eventObject;
 }
 
 jobject createPeerRole(JNIEnv *env, ZT_PeerRole role)
 {
-    jclass peerRoleClass = NULL;
     jobject peerRoleObject = NULL;
 
-    peerRoleClass = lookup.findClass("com/zerotier/sdk/PeerRole");
-    if(peerRoleClass == NULL)
-    {
-        return NULL;
-    }
-
-    std::string fieldName;
+    jfieldID field;
     switch(role)
     {
     case ZT_PEER_ROLE_LEAF:
-        fieldName = "PEER_ROLE_LEAF";
+        field = PeerRole_PEER_ROLE_LEAF_field;
         break;
     case ZT_PEER_ROLE_MOON:
-        fieldName = "PEER_ROLE_MOON";
+        field = PeerRole_PEER_ROLE_MOON_field;
         break;
     case ZT_PEER_ROLE_PLANET:
-        fieldName = "PEER_ROLE_PLANET";
+        field = PeerRole_PEER_ROLE_PLANET_field;
         break;
     }
 
-    jfieldID enumField = lookup.findStaticField(peerRoleClass, fieldName.c_str(), "Lcom/zerotier/sdk/PeerRole;");
-
-    peerRoleObject = env->GetStaticObjectField(peerRoleClass, enumField);
+    peerRoleObject = env->GetStaticObjectField(PeerRole_class, field);
 
     return peerRoleObject;
 }
 
 jobject createVirtualNetworkType(JNIEnv *env, ZT_VirtualNetworkType type)
 {
-    jclass vntypeClass = NULL;
     jobject vntypeObject = NULL;
 
-    vntypeClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkType");
-    if(env->ExceptionCheck() || vntypeClass == NULL)
-    {
-        return NULL;
-    }
-
-    std::string fieldName;
+    jfieldID field;
     switch(type)
     {
     case ZT_NETWORK_TYPE_PRIVATE:
-        fieldName = "NETWORK_TYPE_PRIVATE";
+        field = VirtualNetworkType_NETWORK_TYPE_PRIVATE_field;
         break;
     case ZT_NETWORK_TYPE_PUBLIC:
-        fieldName = "NETWORK_TYPE_PUBLIC";
+        field = VirtualNetworkType_NETWORK_TYPE_PUBLIC_field;
         break;
     }
 
-    jfieldID enumField = lookup.findStaticField(vntypeClass, fieldName.c_str(), "Lcom/zerotier/sdk/VirtualNetworkType;");
-    vntypeObject = env->GetStaticObjectField(vntypeClass, enumField);
+    vntypeObject = env->GetStaticObjectField(VirtualNetworkType_class, field);
     return vntypeObject;
 }
 
 jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT_VirtualNetworkConfigOperation op)
 {
-    jclass vnetConfigOpClass = NULL;
     jobject vnetConfigOpObject = NULL;
 
-    vnetConfigOpClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkConfigOperation");
-    if(env->ExceptionCheck() || vnetConfigOpClass == NULL)
-    {
-        return NULL;
-    }
-
-    std::string fieldName;
+    jfieldID field;
     switch(op)
     {
     case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
-        fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_UP";
+        field = VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_UP_field;
         break;
     case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
-        fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE";
+        field = VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE_field;
         break;
     case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
-        fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN";
+        field = VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN_field;
         break;
     case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
-        fieldName = "VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY";
+        field = VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY_field;
         break;
     }
 
-    jfieldID enumField = lookup.findStaticField(vnetConfigOpClass, fieldName.c_str(), "Lcom/zerotier/sdk/VirtualNetworkConfigOperation;");
-    vnetConfigOpObject = env->GetStaticObjectField(vnetConfigOpClass, enumField);
+    vnetConfigOpObject = env->GetStaticObjectField(VirtualNetworkConfigOperation_class, field);
     return vnetConfigOpObject;
 }
 
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
     LOGV("newInetAddress");
-    jclass inetAddressClass = NULL;
-    jmethodID inetAddress_getByAddress = NULL;
-
-    inetAddressClass = lookup.findClass("java/net/InetAddress");
-    if(env->ExceptionCheck() || inetAddressClass == NULL)
-    {
-        LOGE("Error finding InetAddress class");
-        return NULL;
-    }
-
-    inetAddress_getByAddress = lookup.findStaticMethod(
-        inetAddressClass, "getByAddress", "([B)Ljava/net/InetAddress;");
-    if(env->ExceptionCheck() || inetAddress_getByAddress == NULL)
-    {
-        LOGE("Error finding getByAddress() static method");
-        return NULL;
-    }
 
     jobject inetAddressObj = NULL;
     switch(addr.ss_family)
@@ -316,7 +239,7 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
 
             env->SetByteArrayRegion(buff, 0, 16, (jbyte*)ipv6->sin6_addr.s6_addr);
             inetAddressObj = env->CallStaticObjectMethod(
-                inetAddressClass, inetAddress_getByAddress, buff);
+                InetAddress_class, InetAddress_getByAddress_method, buff);
         }
         break;
         case AF_INET:
@@ -331,7 +254,7 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
 
             env->SetByteArrayRegion(buff, 0, 4, (jbyte*)&ipv4->sin_addr);
             inetAddressObj = env->CallStaticObjectMethod(
-                inetAddressClass, inetAddress_getByAddress, buff);
+                InetAddress_class, InetAddress_getByAddress_method, buff);
         }
         break;
     }
@@ -346,15 +269,6 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
 jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
     LOGV("newInetSocketAddress Called");
-    jclass inetSocketAddressClass = NULL;
-    jmethodID inetSocketAddress_constructor = NULL;
-
-    inetSocketAddressClass = lookup.findClass("java/net/InetSocketAddress");
-    if(env->ExceptionCheck() || inetSocketAddressClass == NULL)
-    {
-        LOGE("Error finding InetSocketAddress Class");
-        return NULL;
-    }
 
     jobject inetAddressObject = NULL;
 
@@ -370,14 +284,6 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
     }
     else
     {
-        return NULL;
-    }
-
-    inetSocketAddress_constructor = lookup.findMethod(
-        inetSocketAddressClass, "<init>", "(Ljava/net/InetAddress;I)V");
-    if(env->ExceptionCheck() || inetSocketAddress_constructor == NULL)
-    {
-        LOGE("Error finding InetSocketAddress constructor");
         return NULL;
     }
 
@@ -407,7 +313,7 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
     }
 
 
-    jobject inetSocketAddressObject = env->NewObject(inetSocketAddressClass, inetSocketAddress_constructor, inetAddressObject, port);
+    jobject inetSocketAddressObject = env->NewObject(InetSocketAddress_class, InetSocketAddress_ctor, inetAddressObject, port);
     if(env->ExceptionCheck() || inetSocketAddressObject == NULL) {
         LOGE("Error creating InetSocketAddress object");
     }
@@ -417,58 +323,8 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
 jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
 {
     LOGV("newPeerPhysicalPath Called");
-    jclass pppClass = NULL;
 
-    jfieldID addressField = NULL;
-    jfieldID lastSendField = NULL;
-    jfieldID lastReceiveField = NULL;
-    jfieldID preferredField = NULL;
-
-    jmethodID ppp_constructor = NULL;
-
-    pppClass = lookup.findClass("com/zerotier/sdk/PeerPhysicalPath");
-    if(env->ExceptionCheck() || pppClass == NULL)
-    {
-        LOGE("Error finding PeerPhysicalPath class");
-        return NULL;
-    }
-
-    addressField = lookup.findField(pppClass, "address", "Ljava/net/InetSocketAddress;");
-    if(env->ExceptionCheck() || addressField == NULL)
-    {
-        LOGE("Error finding address field");
-        return NULL;
-    }
-
-    lastSendField = lookup.findField(pppClass, "lastSend", "J");
-    if(env->ExceptionCheck() || lastSendField == NULL)
-    {
-        LOGE("Error finding lastSend field");
-        return NULL;
-    }
-
-    lastReceiveField = lookup.findField(pppClass, "lastReceive", "J");
-    if(env->ExceptionCheck() || lastReceiveField == NULL)
-    {
-        LOGE("Error finding lastReceive field");
-        return NULL;
-    }
-
-    preferredField = lookup.findField(pppClass, "preferred", "Z");
-    if(env->ExceptionCheck() || preferredField == NULL)
-    {
-        LOGE("Error finding preferred field");
-        return NULL;
-    }
-
-    ppp_constructor = lookup.findMethod(pppClass, "<init>", "()V");
-    if(env->ExceptionCheck() || ppp_constructor == NULL)
-    {
-        LOGE("Error finding PeerPhysicalPath constructor");
-        return NULL;
-    }
-
-    jobject pppObject = env->NewObject(pppClass, ppp_constructor);
+    jobject pppObject = env->NewObject(PeerPhysicalPath_class, PeerPhysicalPath_ctor);
     if(env->ExceptionCheck() || pppObject == NULL)
     {
         LOGE("Error creating PPP object");
@@ -481,10 +337,10 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
         return NULL;
     }
 
-    env->SetObjectField(pppObject, addressField, addressObject);
-    env->SetLongField(pppObject, lastSendField, ppp.lastSend);
-    env->SetLongField(pppObject, lastReceiveField, ppp.lastReceive);
-    env->SetBooleanField(pppObject, preferredField, ppp.preferred);
+    env->SetObjectField(pppObject, PeerPhysicalPath_address_field, addressObject);
+    env->SetLongField(pppObject, PeerPhysicalPath_lastSend_field, ppp.lastSend);
+    env->SetLongField(pppObject, PeerPhysicalPath_lastReceive_field, ppp.lastReceive);
+    env->SetBooleanField(pppObject, PeerPhysicalPath_preferred_field, ppp.preferred);
 
     if(env->ExceptionCheck()) {
         LOGE("Exception assigning fields to PeerPhysicalPath object");
@@ -497,104 +353,22 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
 {
     LOGV("newPeer called");
 
-    jclass peerClass = NULL;
-
-    jfieldID addressField = NULL;
-    jfieldID versionMajorField = NULL;
-    jfieldID versionMinorField = NULL;
-    jfieldID versionRevField = NULL;
-    jfieldID latencyField = NULL;
-    jfieldID roleField = NULL;
-    jfieldID pathsField = NULL;
-
-    jmethodID peer_constructor = NULL;
-
-    peerClass = lookup.findClass("com/zerotier/sdk/Peer");
-    if(env->ExceptionCheck() || peerClass == NULL)
-    {
-        LOGE("Error finding Peer class");
-        return NULL;
-    }
-
-    addressField = lookup.findField(peerClass, "address", "J");
-    if(env->ExceptionCheck() || addressField == NULL)
-    {
-        LOGE("Error finding address field of Peer object");
-        return NULL;
-    }
-
-    versionMajorField = lookup.findField(peerClass, "versionMajor", "I");
-    if(env->ExceptionCheck() || versionMajorField == NULL)
-    {
-        LOGE("Error finding versionMajor field of Peer object");
-        return NULL;
-    }
-
-    versionMinorField = lookup.findField(peerClass, "versionMinor", "I");
-    if(env->ExceptionCheck() || versionMinorField == NULL)
-    {
-        LOGE("Error finding versionMinor field of Peer object");
-        return NULL;
-    }
-
-    versionRevField = lookup.findField(peerClass, "versionRev", "I");
-    if(env->ExceptionCheck() || versionRevField == NULL)
-    {
-        LOGE("Error finding versionRev field of Peer object");
-        return NULL;
-    }
-
-    latencyField = lookup.findField(peerClass, "latency", "I");
-    if(env->ExceptionCheck() || latencyField == NULL)
-    {
-        LOGE("Error finding latency field of Peer object");
-        return NULL;
-    }
-
-    roleField = lookup.findField(peerClass, "role", "Lcom/zerotier/sdk/PeerRole;");
-    if(env->ExceptionCheck() || roleField == NULL)
-    {
-        LOGE("Error finding role field of Peer object");
-        return NULL;
-    }
-
-    pathsField = lookup.findField(peerClass, "paths", "[Lcom/zerotier/sdk/PeerPhysicalPath;");
-    if(env->ExceptionCheck() || pathsField == NULL)
-    {
-        LOGE("Error finding paths field of Peer object");
-        return NULL;
-    }
-
-    peer_constructor = lookup.findMethod(peerClass, "<init>", "()V");
-    if(env->ExceptionCheck() || peer_constructor == NULL)
-    {
-        LOGE("Error finding Peer constructor");
-        return NULL;
-    }
-
-    jobject peerObject = env->NewObject(peerClass, peer_constructor);
+    jobject peerObject = env->NewObject(Peer_class, Peer_ctor);
     if(env->ExceptionCheck() || peerObject == NULL)
     {
         LOGE("Error creating Peer object");
         return NULL; // out of memory
     }
 
-    env->SetLongField(peerObject, addressField, (jlong)peer.address);
-    env->SetIntField(peerObject, versionMajorField, peer.versionMajor);
-    env->SetIntField(peerObject, versionMinorField, peer.versionMinor);
-    env->SetIntField(peerObject, versionRevField, peer.versionRev);
-    env->SetIntField(peerObject, latencyField, peer.latency);
-    env->SetObjectField(peerObject, roleField, createPeerRole(env, peer.role));
-
-    jclass peerPhysicalPathClass = lookup.findClass("com/zerotier/sdk/PeerPhysicalPath");
-    if(env->ExceptionCheck() || peerPhysicalPathClass == NULL)
-    {
-        LOGE("Error finding PeerPhysicalPath class");
-        return NULL;
-    }
+    env->SetLongField(peerObject, Peer_address_field, (jlong)peer.address);
+    env->SetIntField(peerObject, Peer_versionMajor_field, peer.versionMajor);
+    env->SetIntField(peerObject, Peer_versionMinor_field, peer.versionMinor);
+    env->SetIntField(peerObject, Peer_versionRev_field, peer.versionRev);
+    env->SetIntField(peerObject, Peer_latency_field, peer.latency);
+    env->SetObjectField(peerObject, Peer_role_field, createPeerRole(env, peer.role));
 
     jobjectArray arrayObject = env->NewObjectArray(
-        peer.pathCount, peerPhysicalPathClass, NULL);
+        peer.pathCount, PeerPhysicalPath_class, NULL);
     if(env->ExceptionCheck() || arrayObject == NULL)
     {
         LOGE("Error creating PeerPhysicalPath[] array");
@@ -614,190 +388,51 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
         env->DeleteLocalRef(path);
     }
 
-    env->SetObjectField(peerObject, pathsField, arrayObject);
+    env->SetObjectField(peerObject, Peer_paths_field, arrayObject);
 
     return peerObject;
 }
 
 jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
 {
-    jclass vnetConfigClass = NULL;
-    jmethodID vnetConfig_constructor = NULL;
-    jfieldID nwidField = NULL;
-    jfieldID macField = NULL;
-    jfieldID nameField = NULL;
-    jfieldID statusField = NULL;
-    jfieldID typeField = NULL;
-    jfieldID mtuField = NULL;
-    jfieldID dhcpField = NULL;
-    jfieldID bridgeField = NULL;
-    jfieldID broadcastEnabledField = NULL;
-    jfieldID portErrorField = NULL;
-    jfieldID netconfRevisionField = NULL;
-    jfieldID assignedAddressesField = NULL;
-    jfieldID routesField = NULL;
-    jfieldID dnsField = NULL;
-
-    vnetConfigClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkConfig");
-    if(vnetConfigClass == NULL)
-    {
-        LOGE("Couldn't find com.zerotier.sdk.VirtualNetworkConfig");
-        return NULL;
-    }
-
-    vnetConfig_constructor = lookup.findMethod(
-        vnetConfigClass, "<init>", "()V");
-    if(env->ExceptionCheck() || vnetConfig_constructor == NULL)
-    {
-        LOGE("Couldn't find VirtualNetworkConfig Constructor");
-        return NULL;
-    }
-
-    jobject vnetConfigObj = env->NewObject(vnetConfigClass, vnetConfig_constructor);
+    jobject vnetConfigObj = env->NewObject(VirtualNetworkConfig_class, VirtualNetworkConfig_ctor);
     if(env->ExceptionCheck() || vnetConfigObj == NULL)
     {
         LOGE("Error creating new VirtualNetworkConfig object");
         return NULL;
     }
 
-    nwidField = lookup.findField(vnetConfigClass, "nwid", "J");
-    if(env->ExceptionCheck() || nwidField == NULL)
-    {
-        LOGE("Error getting nwid field");
-        return NULL;
-    }
-
-    macField = lookup.findField(vnetConfigClass, "mac", "J");
-    if(env->ExceptionCheck() || macField == NULL)
-    {
-        LOGE("Error getting mac field");
-        return NULL;
-    }
-
-    nameField = lookup.findField(vnetConfigClass, "name", "Ljava/lang/String;");
-    if(env->ExceptionCheck() || nameField == NULL)
-    {
-        LOGE("Error getting name field");
-        return NULL;
-    }
-
-    statusField = lookup.findField(vnetConfigClass, "status", "Lcom/zerotier/sdk/VirtualNetworkStatus;");
-    if(env->ExceptionCheck() || statusField == NULL)
-    {
-        LOGE("Error getting status field");
-        return NULL;
-    }
-
-    typeField = lookup.findField(vnetConfigClass, "type", "Lcom/zerotier/sdk/VirtualNetworkType;");
-    if(env->ExceptionCheck() || typeField == NULL)
-    {
-        LOGE("Error getting type field");
-        return NULL;
-    }
-
-    mtuField = lookup.findField(vnetConfigClass, "mtu", "I");
-    if(env->ExceptionCheck() || mtuField == NULL)
-    {
-        LOGE("Error getting mtu field");
-        return NULL;
-    }
-
-    dhcpField = lookup.findField(vnetConfigClass, "dhcp", "Z");
-    if(env->ExceptionCheck() || dhcpField == NULL)
-    {
-        LOGE("Error getting dhcp field");
-        return NULL;
-    }
-
-    bridgeField = lookup.findField(vnetConfigClass, "bridge", "Z");
-    if(env->ExceptionCheck() || bridgeField == NULL)
-    {
-        LOGE("Error getting bridge field");
-        return NULL;
-    }
-
-    broadcastEnabledField = lookup.findField(vnetConfigClass, "broadcastEnabled", "Z");
-    if(env->ExceptionCheck() || broadcastEnabledField == NULL)
-    {
-        LOGE("Error getting broadcastEnabled field");
-        return NULL;
-    }
-
-    portErrorField = lookup.findField(vnetConfigClass, "portError", "I");
-    if(env->ExceptionCheck() || portErrorField == NULL)
-    {
-        LOGE("Error getting portError field");
-        return NULL;
-    }
-
-    netconfRevisionField = lookup.findField(vnetConfigClass, "netconfRevision", "J");
-    if(env->ExceptionCheck() || netconfRevisionField == NULL)
-    {
-        LOGE("Error getting netconfRevision field");
-        return NULL;
-    }
-
-    assignedAddressesField = lookup.findField(vnetConfigClass, "assignedAddresses",
-        "[Ljava/net/InetSocketAddress;");
-    if(env->ExceptionCheck() || assignedAddressesField == NULL)
-    {
-        LOGE("Error getting assignedAddresses field");
-        return NULL;
-    }
-
-    routesField = lookup.findField(vnetConfigClass, "routes",
-        "[Lcom/zerotier/sdk/VirtualNetworkRoute;");
-    if(env->ExceptionCheck() || routesField == NULL)
-    {
-        LOGE("Error getting routes field");
-        return NULL;
-    }
-
-    dnsField = lookup.findField(vnetConfigClass, "dns", "Lcom/zerotier/sdk/VirtualNetworkDNS;");
-    if(env->ExceptionCheck() || dnsField == NULL)
-    {
-        LOGE("Error getting DNS field");
-        return NULL;
-    }
-
-    env->SetLongField(vnetConfigObj, nwidField, vnetConfig.nwid);
-    env->SetLongField(vnetConfigObj, macField, vnetConfig.mac);
+    env->SetLongField(vnetConfigObj, VirtualNetworkConfig_nwid_field, vnetConfig.nwid);
+    env->SetLongField(vnetConfigObj, VirtualNetworkConfig_mac_field, vnetConfig.mac);
     jstring nameStr = env->NewStringUTF(vnetConfig.name);
     if(env->ExceptionCheck() || nameStr == NULL)
     {
         return NULL; // out of memory
     }
-    env->SetObjectField(vnetConfigObj, nameField, nameStr);
+    env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_name_field, nameStr);
 
     jobject statusObject = createVirtualNetworkStatus(env, vnetConfig.status);
     if(env->ExceptionCheck() || statusObject == NULL)
     {
         return NULL;
     }
-    env->SetObjectField(vnetConfigObj, statusField, statusObject);
+    env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_status_field, statusObject);
 
     jobject typeObject = createVirtualNetworkType(env, vnetConfig.type);
     if(env->ExceptionCheck() || typeObject == NULL)
     {
         return NULL;
     }
-    env->SetObjectField(vnetConfigObj, typeField, typeObject);
+    env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_type_field, typeObject);
 
-    env->SetIntField(vnetConfigObj, mtuField, (int)vnetConfig.mtu);
-    env->SetBooleanField(vnetConfigObj, dhcpField, vnetConfig.dhcp);
-    env->SetBooleanField(vnetConfigObj, bridgeField, vnetConfig.bridge);
-    env->SetBooleanField(vnetConfigObj, broadcastEnabledField, vnetConfig.broadcastEnabled);
-    env->SetIntField(vnetConfigObj, portErrorField, vnetConfig.portError);
-
-    jclass inetSocketAddressClass = lookup.findClass("java/net/InetSocketAddress");
-    if(env->ExceptionCheck() || inetSocketAddressClass == NULL)
-    {
-        LOGE("Error finding InetSocketAddress class");
-        return NULL;
-    }
+    env->SetIntField(vnetConfigObj, VirtualNetworkConfig_mtu_field, (int)vnetConfig.mtu);
+    env->SetBooleanField(vnetConfigObj, VirtualNetworkConfig_dhcp_field, vnetConfig.dhcp);
+    env->SetBooleanField(vnetConfigObj, VirtualNetworkConfig_bridge_field, vnetConfig.bridge);
+    env->SetBooleanField(vnetConfigObj, VirtualNetworkConfig_broadcastEnabled_field, vnetConfig.broadcastEnabled);
+    env->SetIntField(vnetConfigObj, VirtualNetworkConfig_portError_field, vnetConfig.portError);
 
     jobjectArray assignedAddrArrayObj = env->NewObjectArray(
-        vnetConfig.assignedAddressCount, inetSocketAddressClass, NULL);
+        vnetConfig.assignedAddressCount, InetSocketAddress_class, NULL);
     if(env->ExceptionCheck() || assignedAddrArrayObj == NULL)
     {
         LOGE("Error creating InetSocketAddress[] array");
@@ -817,17 +452,10 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
         env->DeleteLocalRef(inetAddrObj);
     }
 
-    env->SetObjectField(vnetConfigObj, assignedAddressesField, assignedAddrArrayObj);
-
-    jclass virtualNetworkRouteClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkRoute");
-    if(env->ExceptionCheck() || virtualNetworkRouteClass == NULL)
-    {
-        LOGE("Error finding VirtualNetworkRoute class");
-        return NULL;
-    }
+    env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_assignedAddresses_field, assignedAddrArrayObj);
 
     jobjectArray routesArrayObj = env->NewObjectArray(
-        vnetConfig.routeCount, virtualNetworkRouteClass, NULL);
+        vnetConfig.routeCount, VirtualNetworkRoute_class, NULL);
     if(env->ExceptionCheck() || routesArrayObj == NULL)
     {
         LOGE("Error creating VirtualNetworkRoute[] array");
@@ -847,120 +475,35 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
         env->DeleteLocalRef(routeObj);
     }
 
-    env->SetObjectField(vnetConfigObj, routesField, routesArrayObj);
+    env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_routes_field, routesArrayObj);
 
     jobject dnsObj = newVirtualNetworkDNS(env, vnetConfig.dns);
     if (dnsObj != NULL) {
-        env->SetObjectField(vnetConfigObj, dnsField, dnsObj);
+        env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_dns_field, dnsObj);
     }
     return vnetConfigObj;
 }
 
 jobject newVersion(JNIEnv *env, int major, int minor, int rev)
 {
-   // create a com.zerotier.sdk.Version object
-    jclass versionClass = NULL;
-    jmethodID versionConstructor = NULL;
-
-    versionClass = lookup.findClass("com/zerotier/sdk/Version");
-    if(env->ExceptionCheck() || versionClass == NULL)
-    {
-        return NULL;
-    }
-
-    versionConstructor = lookup.findMethod(
-        versionClass, "<init>", "()V");
-    if(env->ExceptionCheck() || versionConstructor == NULL)
-    {
-        return NULL;
-    }
-
-    jobject versionObj = env->NewObject(versionClass, versionConstructor);
+    // create a com.zerotier.sdk.Version object
+    jobject versionObj = env->NewObject(Version_class, Version_ctor);
     if(env->ExceptionCheck() || versionObj == NULL)
     {
         return NULL;
     }
 
-    // copy data to Version object
-    jfieldID majorField = NULL;
-    jfieldID minorField = NULL;
-    jfieldID revisionField = NULL;
-
-    majorField = lookup.findField(versionClass, "major", "I");
-    if(env->ExceptionCheck() || majorField == NULL)
-    {
-        return NULL;
-    }
-
-    minorField = lookup.findField(versionClass, "minor", "I");
-    if(env->ExceptionCheck() || minorField == NULL)
-    {
-        return NULL;
-    }
-
-    revisionField = lookup.findField(versionClass, "revision", "I");
-    if(env->ExceptionCheck() || revisionField == NULL)
-    {
-        return NULL;
-    }
-
-    env->SetIntField(versionObj, majorField, (jint)major);
-    env->SetIntField(versionObj, minorField, (jint)minor);
-    env->SetIntField(versionObj, revisionField, (jint)rev);
+    env->SetIntField(versionObj, Version_major_field, (jint)major);
+    env->SetIntField(versionObj, Version_minor_field, (jint)minor);
+    env->SetIntField(versionObj, Version_revision_field, (jint)rev);
 
     return versionObj;
 }
 
 jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
 {
-    jclass virtualNetworkRouteClass = NULL;
-    jmethodID routeConstructor = NULL;
-
-    virtualNetworkRouteClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkRoute");
-    if(env->ExceptionCheck() || virtualNetworkRouteClass == NULL)
-    {
-        return NULL;
-    }
-
-    routeConstructor = lookup.findMethod(virtualNetworkRouteClass, "<init>", "()V");
-    if(env->ExceptionCheck() || routeConstructor == NULL)
-    {
-        return NULL;
-    }
-
-    jobject routeObj = env->NewObject(virtualNetworkRouteClass, routeConstructor);
+    jobject routeObj = env->NewObject(VirtualNetworkRoute_class, VirtualNetworkRoute_ctor);
     if(env->ExceptionCheck() || routeObj == NULL)
-    {
-        return NULL;
-    }
-
-    jfieldID targetField = NULL;
-    jfieldID viaField = NULL;
-    jfieldID flagsField = NULL;
-    jfieldID metricField = NULL;
-
-    targetField = lookup.findField(virtualNetworkRouteClass, "target",
-        "Ljava/net/InetSocketAddress;");
-    if(env->ExceptionCheck() || targetField == NULL)
-    {
-        return NULL;
-    }
-
-    viaField = lookup.findField(virtualNetworkRouteClass, "via",
-        "Ljava/net/InetSocketAddress;");
-    if(env->ExceptionCheck() || targetField == NULL)
-    {
-        return NULL;
-    }
-
-    flagsField = lookup.findField(virtualNetworkRouteClass, "flags", "I");
-    if(env->ExceptionCheck() || flagsField == NULL)
-    {
-        return NULL;
-    }
-
-    metricField = lookup.findField(virtualNetworkRouteClass, "metric", "I");
-    if(env->ExceptionCheck() || metricField == NULL)
     {
         return NULL;
     }
@@ -968,53 +511,26 @@ jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
     jobject targetObj = newInetSocketAddress(env, route.target);
     jobject viaObj = newInetSocketAddress(env, route.via);
 
-    env->SetObjectField(routeObj, targetField, targetObj);
-    env->SetObjectField(routeObj, viaField, viaObj);
-    env->SetIntField(routeObj, flagsField, (jint)route.flags);
-    env->SetIntField(routeObj, metricField, (jint)route.metric);
+    env->SetObjectField(routeObj, VirtualNetworkRoute_target_field, targetObj);
+    env->SetObjectField(routeObj, VirtualNetworkRoute_via_field, viaObj);
+    env->SetIntField(routeObj, VirtualNetworkRoute_flags_field, (jint)route.flags);
+    env->SetIntField(routeObj, VirtualNetworkRoute_metric_field, (jint)route.metric);
 
     return routeObj;
 }
 
 jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns)
 {
-    jclass virtualNetworkDNSClass = NULL;
-    jmethodID dnsConstructor = NULL;
-
-    virtualNetworkDNSClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkDNS");
-    if (env->ExceptionCheck() || virtualNetworkDNSClass == NULL) {
-        return NULL;
-    }
-
-    dnsConstructor = lookup.findMethod(virtualNetworkDNSClass, "<init>", "()V");
-    if(env->ExceptionCheck() || dnsConstructor == NULL) {
-        return NULL;
-    }
-
-    jobject dnsObj = env->NewObject(virtualNetworkDNSClass, dnsConstructor);
+    jobject dnsObj = env->NewObject(VirtualNetworkDNS_class, VirtualNetworkDNS_ctor);
     if(env->ExceptionCheck() || dnsObj == NULL) {
         return NULL;
     }
 
-    jfieldID domainField = NULL;
-    jfieldID serversField = NULL;
-
-    domainField = lookup.findField(virtualNetworkDNSClass, "domain", "Ljava/lang/String;");
-    if(env->ExceptionCheck() || domainField == NULL)
-    {
-        return NULL;
-    }
-
-    serversField = lookup.findField(virtualNetworkDNSClass, "servers", "Ljava/util/ArrayList;");
-    if(env->ExceptionCheck() || serversField == NULL) {
-        return NULL;
-    }
-
     if (strlen(dns.domain) > 0) {
-        InitListJNI(env);
+
         jstring domain = env->NewStringUTF(dns.domain);
 
-        jobject addrArray = env->NewObject(java_util_ArrayList, java_util_ArrayList_, 0);
+        jobject addrArray = env->NewObject(ArrayList_class, ArrayList_ctor, 0);
 
         struct sockaddr_storage nullAddr;
         memset(&nullAddr, 0, sizeof(struct sockaddr_storage));
@@ -1023,13 +539,13 @@ jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns)
 
             if (memcmp(&tmp, &nullAddr, sizeof(struct sockaddr_storage)) != 0) {
                 jobject addr = newInetSocketAddress(env, tmp);
-                env->CallBooleanMethod(addrArray, java_util_ArrayList_add, addr);
+                env->CallBooleanMethod(addrArray, ArrayList_add_method, addr);
                 env->DeleteLocalRef(addr);
             }
         }
 
-        env->SetObjectField(dnsObj, domainField, domain);
-        env->SetObjectField(dnsObj, serversField, addrArray);
+        env->SetObjectField(dnsObj, VirtualNetworkDNS_domain_field, domain);
+        env->SetObjectField(dnsObj, VirtualNetworkDNS_servers_field, addrArray);
 
         return dnsObj;
     }
