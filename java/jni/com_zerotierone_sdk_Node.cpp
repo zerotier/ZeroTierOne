@@ -1126,41 +1126,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_status
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return 0;
-    }
-
-    // create a com.zerotier.sdk.NodeStatus object
-    jobject nodeStatusObj = env->NewObject(NodeStatus_class, NodeStatus_ctor);
-    if(nodeStatusObj == NULL)
-    {
-        return NULL;
-    }
 
     ZT_NodeStatus nodeStatus;
     ZT_Node_status(node, &nodeStatus);
 
-    env->SetLongField(nodeStatusObj, NodeStatus_address_field, nodeStatus.address);
-
-    jstring pubIdentStr = env->NewStringUTF(nodeStatus.publicIdentity);
-    if(pubIdentStr == NULL)
-    {
-        return NULL; // out of memory
-    }
-    env->SetObjectField(nodeStatusObj, NodeStatus_publicIdentity_field, pubIdentStr);
-
-    jstring secIdentStr = env->NewStringUTF(nodeStatus.secretIdentity);
-    if(secIdentStr == NULL)
-    {
-        return NULL; // out of memory
-    }
-    env->SetObjectField(nodeStatusObj, NodeStatus_secretIdentity_field, secIdentStr);
-
-    env->SetBooleanField(nodeStatusObj, NodeStatus_online_field, nodeStatus.online);
-
-    return nodeStatusObj;
+    return newNodeStatus(env, nodeStatus);
 }
 
 /*

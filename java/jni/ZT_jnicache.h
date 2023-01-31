@@ -83,10 +83,6 @@ extern jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-extern jfieldID NodeStatus_address_field;
-extern jfieldID NodeStatus_online_field;
-extern jfieldID NodeStatus_publicIdentity_field;
-extern jfieldID NodeStatus_secretIdentity_field;
 extern jfieldID Node_configListener_field;
 extern jfieldID Node_eventListener_field;
 extern jfieldID Node_frameListener_field;

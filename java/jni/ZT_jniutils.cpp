@@ -428,3 +428,34 @@ jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns)
     }
     return NULL;
 }
+
+jobject newNodeStatus(JNIEnv *env, const ZT_NodeStatus &status) {
+
+    jstring pubIdentStr = env->NewStringUTF(status.publicIdentity);
+    if(env->ExceptionCheck() || pubIdentStr == NULL)
+    {
+        LOGE("Exception creating new string");
+        return NULL;
+    }
+
+    jstring secIdentStr = env->NewStringUTF(status.secretIdentity);
+    if(env->ExceptionCheck() || secIdentStr == NULL)
+    {
+        LOGE("Exception creating new string");
+        return NULL;
+    }
+
+    jobject nodeStatusObj = env->NewObject(
+            NodeStatus_class,
+            NodeStatus_ctor,
+            status.address,
+            pubIdentStr,
+            secIdentStr,
+            status.online);
+    if(env->ExceptionCheck() || nodeStatusObj == NULL) {
+        LOGE("Exception creating new NodeStatus");
+        return NULL;
+    }
+
+    return nodeStatusObj;
+}
