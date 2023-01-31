@@ -102,6 +102,7 @@ jmethodID VirtualNetworkRoute_ctor;
 // Static methods
 //
 
+jmethodID Event_fromInt_method;
 jmethodID InetAddress_getByAddress_method;
 
 //
@@ -158,14 +159,6 @@ jfieldID VirtualNetworkRoute_via_field;
 // Static fields
 //
 
-jfieldID Event_EVENT_DOWN_field;
-jfieldID Event_EVENT_FATAL_ERROR_IDENTITY_COLLISION_field;
-jfieldID Event_EVENT_OFFLINE_field;
-jfieldID Event_EVENT_ONLINE_field;
-jfieldID Event_EVENT_REMOTE_TRACE_field;
-jfieldID Event_EVENT_TRACE_field;
-jfieldID Event_EVENT_UP_field;
-jfieldID Event_EVENT_USER_MESSAGE_field;
 jfieldID PeerRole_PEER_ROLE_LEAF_field;
 jfieldID PeerRole_PEER_ROLE_MOON_field;
 jfieldID PeerRole_PEER_ROLE_PLANET_field;
@@ -265,6 +258,7 @@ void setupJNICache(JavaVM *vm) {
     // Static methods
     //
 
+    EXCEPTIONANDNULLCHECK(Event_fromInt_method = env->GetStaticMethodID(Event_class, "fromInt", "(I)Lcom/zerotier/sdk/Event;"));
     EXCEPTIONANDNULLCHECK(InetAddress_getByAddress_method = env->GetStaticMethodID(InetAddress_class, "getByAddress", "([B)Ljava/net/InetAddress;"));
 
     //
@@ -321,14 +315,6 @@ void setupJNICache(JavaVM *vm) {
     // Static fields
     //
 
-    EXCEPTIONANDNULLCHECK(Event_EVENT_DOWN_field = env->GetStaticFieldID(Event_class, "EVENT_DOWN", "Lcom/zerotier/sdk/Event;"));
-    EXCEPTIONANDNULLCHECK(Event_EVENT_FATAL_ERROR_IDENTITY_COLLISION_field = env->GetStaticFieldID(Event_class, "EVENT_FATAL_ERROR_IDENTITY_COLLISION", "Lcom/zerotier/sdk/Event;"));
-    EXCEPTIONANDNULLCHECK(Event_EVENT_OFFLINE_field = env->GetStaticFieldID(Event_class, "EVENT_OFFLINE", "Lcom/zerotier/sdk/Event;"));
-    EXCEPTIONANDNULLCHECK(Event_EVENT_ONLINE_field = env->GetStaticFieldID(Event_class, "EVENT_ONLINE", "Lcom/zerotier/sdk/Event;"));
-    EXCEPTIONANDNULLCHECK(Event_EVENT_REMOTE_TRACE_field = env->GetStaticFieldID(Event_class, "EVENT_REMOTE_TRACE", "Lcom/zerotier/sdk/Event;"));
-    EXCEPTIONANDNULLCHECK(Event_EVENT_TRACE_field = env->GetStaticFieldID(Event_class, "EVENT_TRACE", "Lcom/zerotier/sdk/Event;"));
-    EXCEPTIONANDNULLCHECK(Event_EVENT_UP_field = env->GetStaticFieldID(Event_class, "EVENT_UP", "Lcom/zerotier/sdk/Event;"));
-    EXCEPTIONANDNULLCHECK(Event_EVENT_USER_MESSAGE_field = env->GetStaticFieldID(Event_class, "EVENT_USER_MESSAGE", "Lcom/zerotier/sdk/Event;"));
     EXCEPTIONANDNULLCHECK(PeerRole_PEER_ROLE_LEAF_field = env->GetStaticFieldID(PeerRole_class, "PEER_ROLE_LEAF", "Lcom/zerotier/sdk/PeerRole;"));
     EXCEPTIONANDNULLCHECK(PeerRole_PEER_ROLE_MOON_field = env->GetStaticFieldID(PeerRole_class, "PEER_ROLE_MOON", "Lcom/zerotier/sdk/PeerRole;"));
     EXCEPTIONANDNULLCHECK(PeerRole_PEER_ROLE_PLANET_field = env->GetStaticFieldID(PeerRole_class, "PEER_ROLE_PLANET", "Lcom/zerotier/sdk/PeerRole;"));

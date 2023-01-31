@@ -27,6 +27,11 @@
 
 package com.zerotier.sdk;
 
+/**
+ * Status codes sent to status update callback when things happen
+ *
+ * Defined in ZeroTierOne.h as ZT_Event
+ */
 public enum Event {
 
     /**
@@ -35,19 +40,19 @@ public enum Event {
      * This is the first event generated, and is always sent. It may occur
      * before Node's constructor returns.
      */
-	EVENT_UP,
+    EVENT_UP(0),
 
     /**
      * Node is offline -- network does not seem to be reachable by any available strategy
      */
-	EVENT_OFFLINE,
+    EVENT_OFFLINE(1),
 
     /**
      * Node is online -- at least one upstream node appears reachable
      *
      * Meta-data: none
      */
-    EVENT_ONLINE,
+    EVENT_ONLINE(2),
 
     /**
      * Node is shutting down
@@ -56,7 +61,7 @@ public enum Event {
      * It's done for convenience, since cleaning up other state in the event
      * handler may appear more idiomatic.</p>
      */
-	EVENT_DOWN,
+    EVENT_DOWN(3),
 
     /**
      * Your identity has collided with another node's ZeroTier address
@@ -86,7 +91,7 @@ public enum Event {
      * condition is a good way to make sure it never arises. It's like how
      * umbrellas prevent rain and smoke detectors prevent fires. They do, right?</p>
      */
-	EVENT_FATAL_ERROR_IDENTITY_COLLISION,
+    EVENT_FATAL_ERROR_IDENTITY_COLLISION(4),
 
     /**
      * Trace (debugging) message
@@ -95,7 +100,7 @@ public enum Event {
      *
      * <p>Meta-data: {@link String}, TRACE message</p>
      */
-    EVENT_TRACE,
+    EVENT_TRACE(5),
 
     /**
      * VERB_USER_MESSAGE received
@@ -103,7 +108,7 @@ public enum Event {
      * These are generated when a VERB_USER_MESSAGE packet is received via
      * ZeroTier VL1.
      */
-    EVENT_USER_MESSAGE,
+    EVENT_USER_MESSAGE(6),
 
     /**
      * Remote trace received
@@ -115,5 +120,35 @@ public enum Event {
      * these, and controllers only save them if they pertain to networks
      * with remote tracing enabled.
      */
-    EVENT_REMOTE_TRACE;
+    EVENT_REMOTE_TRACE(7);
+
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private final int id;
+
+    Event(int id) {
+        this.id = id;
+    }
+
+    public static Event fromInt(int id) {
+        switch (id) {
+            case 0:
+                return EVENT_UP;
+            case 1:
+                return EVENT_OFFLINE;
+            case 2:
+                return EVENT_ONLINE;
+            case 3:
+                return EVENT_DOWN;
+            case 4:
+                return EVENT_FATAL_ERROR_IDENTITY_COLLISION;
+            case 5:
+                return EVENT_TRACE;
+            case 6:
+                return EVENT_USER_MESSAGE;
+            case 7:
+                return EVENT_REMOTE_TRACE;
+            default:
+                throw new RuntimeException("Unhandled value: " + id);
+        }
+    }
 }

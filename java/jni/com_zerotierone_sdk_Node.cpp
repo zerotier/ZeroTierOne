@@ -201,7 +201,7 @@ namespace {
         }
 
         jobject eventObject = createEvent(env, event);
-        if (eventObject == NULL) {
+        if (env->ExceptionCheck() || eventObject == NULL) {
             return;
         }
 

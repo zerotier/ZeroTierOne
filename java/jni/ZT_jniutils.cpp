@@ -115,40 +115,11 @@ jobject createVirtualNetworkStatus(JNIEnv *env, ZT_VirtualNetworkStatus status)
 
 jobject createEvent(JNIEnv *env, ZT_Event event)
 {
-    jobject eventObject = NULL;
-
-    jfieldID field;
-    switch(event)
-    {
-    case ZT_EVENT_UP:
-        field = Event_EVENT_UP_field;
-        break;
-    case ZT_EVENT_OFFLINE:
-        field = Event_EVENT_OFFLINE_field;
-        break;
-    case ZT_EVENT_ONLINE:
-        field = Event_EVENT_ONLINE_field;
-        break;
-    case ZT_EVENT_DOWN:
-        field = Event_EVENT_DOWN_field;
-        break;
-    case ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION:
-        field = Event_EVENT_FATAL_ERROR_IDENTITY_COLLISION_field;
-        break;
-    case ZT_EVENT_TRACE:
-        field = Event_EVENT_TRACE_field;
-        break;
-    case ZT_EVENT_USER_MESSAGE:
-        field = Event_EVENT_USER_MESSAGE_field;
-        break;
-    case ZT_EVENT_REMOTE_TRACE:
-        field = Event_EVENT_REMOTE_TRACE_field;
-        break;
-    default:
-        break;
+    jobject eventObject = env->CallStaticObjectMethod(Event_class, Event_fromInt_method, event);
+    if (env->ExceptionCheck() || eventObject == NULL) {
+        LOGE("Error creating Event object");
+        return NULL;
     }
-
-    eventObject = env->GetStaticObjectField(Event_class, field);
 
     return eventObject;
 }
