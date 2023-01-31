@@ -164,20 +164,10 @@ namespace {
             return;
         }
 
-        jbyteArray dataArray = env->NewByteArray(frameLength);
+        const unsigned char *bytes = static_cast<const unsigned char*>(frameData);
+        jbyteArray dataArray = newByteArray(env, bytes, frameLength);
         if(env->ExceptionCheck() || dataArray == NULL)
         {
-            LOGE("Couldn't create frame data array");
-            return;
-        }
-
-        void *data = env->GetPrimitiveArrayCritical(dataArray, NULL);
-        memcpy(data, frameData, frameLength);
-        env->ReleasePrimitiveArrayCritical(dataArray, data, 0);
-
-        if(env->ExceptionCheck())
-        {
-            LOGE("Error setting frame data to array");
             return;
         }
 
@@ -304,15 +294,12 @@ namespace {
 
         if (bufferLength >= 0) {
             LOGD("JNI: Write file: %s", p);
-            // set operation
-            jbyteArray bufferObj = env->NewByteArray(bufferLength);
+            const unsigned char *bytes = static_cast<const unsigned char *>(buffer);
+            jbyteArray bufferObj = newByteArray(env, bytes, bufferLength);
             if(env->ExceptionCheck() || bufferObj == NULL)
             {
-                LOGE("Error creating byte array buffer!");
                 return;
             }
-
-            env->SetByteArrayRegion(bufferObj, 0, bufferLength, (jbyte*)buffer);
 
             env->CallIntMethod(ref->dataStorePutListener,
                                DataStorePutListener_onDataStorePut_method,
@@ -375,10 +362,9 @@ namespace {
             return -103; // out of memory
         }
 
-        jbyteArray bufferObj = env->NewByteArray(bufferLength);
-        if(bufferObj == NULL)
+        jbyteArray bufferObj = newByteArray(env, bufferLength);
+        if(env->ExceptionCheck() || bufferObj == NULL)
         {
-            LOGE("Error creating byte[] buffer of size: %u", bufferLength);
             return -104;
         }
 
@@ -424,8 +410,13 @@ namespace {
         }
 
         jobject remoteAddressObj = newInetSocketAddress(env, *remoteAddress);
-        jbyteArray bufferObj = env->NewByteArray(bufferSize);
-        env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
+        const unsigned char *bytes = static_cast<const unsigned char *>(buffer);
+        jbyteArray bufferObj = newByteArray(env, bytes, bufferSize);
+        if (env->ExceptionCheck() || bufferObj == NULL)
+        {
+            return -101;
+        }
+        
         int retval = env->CallIntMethod(ref->packetSender, PacketSender_onSendPacketRequested_method, localSocket, remoteAddressObj, bufferObj);
 
         LOGV("JNI Packet Sender returned: %d", retval);
@@ -1207,29 +1198,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
         return NULL;
     }
 
-    jobjectArray peerArrayObj = env->NewObjectArray(
-        peerList->peerCount, Peer_class, NULL);
-
-    if(env->ExceptionCheck() || peerArrayObj == NULL)
-    {
-        LOGE("Error creating Peer[] array");
-        ZT_Node_freeQueryResult(node, peerList);
-        return NULL;
-    }
-
-
-    for(unsigned int i = 0; i < peerList->peerCount; ++i)
-    {
-        jobject peerObj = newPeer(env, peerList->peers[i]);
-        env->SetObjectArrayElement(peerArrayObj, i, peerObj);
-        if(env->ExceptionCheck())
-        {
-            LOGE("Error assigning Peer object to array");
-            break;
-        }
-
-        env->DeleteLocalRef(peerObj);
-    }
+    jobjectArray peerArrayObj = newPeerArray(env, peerList->peers, peerList->peerCount);
 
     ZT_Node_freeQueryResult(node, peerList);
     peerList = NULL;
@@ -1254,27 +1223,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networks(
         return NULL;
     }
 
-    jobjectArray networkListObject = env->NewObjectArray(
-        networkList->networkCount, VirtualNetworkConfig_class, NULL);
-    if(env->ExceptionCheck() || networkListObject == NULL)
-    {
-        LOGE("Error creating VirtualNetworkConfig[] array");
-        ZT_Node_freeQueryResult(node, networkList);
-        return NULL;
-    }
-
-    for(unsigned int i = 0; i < networkList->networkCount; ++i)
-    {
-        jobject networkObject = newNetworkConfig(env, networkList->networks[i]);
-        env->SetObjectArrayElement(networkListObject, i, networkObject);
-        if(env->ExceptionCheck())
-        {
-            LOGE("Error assigning VirtualNetworkConfig object to array");
-            break;
-        }
-
-        env->DeleteLocalRef(networkObject);
-    }
+    jobjectArray networkListObject = newVirtualNetworkConfigArray(env, networkList->networks, networkList->networkCount);
 
     ZT_Node_freeQueryResult(node, networkList);
 

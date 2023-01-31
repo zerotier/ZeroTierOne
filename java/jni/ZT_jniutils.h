@@ -22,6 +22,8 @@
 #include <jni.h>
 #include <ZeroTierOne.h>
 
+#include <limits> // for numeric_limits
+
 #if defined(__ANDROID__)
 
 #include <android/log.h>
@@ -75,6 +77,8 @@
     } while (false)
 
 
+const jsize JSIZE_MAX = std::numeric_limits<jsize>::max();
+
 jobject createResultObject(JNIEnv *env, ZT_ResultCode code);
 jobject createVirtualNetworkStatus(JNIEnv *env, ZT_VirtualNetworkStatus status);
 jobject createVirtualNetworkType(JNIEnv *env, ZT_VirtualNetworkType type);
@@ -97,5 +101,63 @@ jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
 jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns);
 
 jobject newNodeStatus(JNIEnv *env, const ZT_NodeStatus &status);
+
+jobjectArray newPeerArray(JNIEnv *env, const ZT_Peer *peers, size_t count);
+
+jobjectArray newVirtualNetworkConfigArray(JNIEnv *env, const ZT_VirtualNetworkConfig *networks, size_t count);
+
+jobjectArray newPeerPhysicalPathArray(JNIEnv *env, const ZT_PeerPhysicalPath *paths, size_t count);
+
+jobjectArray newInetSocketAddressArray(JNIEnv *env, const sockaddr_storage *addresses, size_t count);
+
+jobjectArray newVirtualNetworkRouteArray(JNIEnv *env, const ZT_VirtualNetworkRoute *routes, size_t count);
+
+//
+// log functions only for newArrayObject below
+//
+void newArrayObject_logCount(size_t count);
+void newArrayObject_log(const char *msg);
+
+//
+// function template for creating array objects
+//
+template <typename T, jobject (*F)(JNIEnv *, const T &)>
+jobjectArray newArrayObject(JNIEnv *env, const T *buffer, size_t count, jclass clazz) {
+
+    if (count > JSIZE_MAX) {
+        newArrayObject_logCount(count);
+        return NULL;
+    }
+
+    jsize jCount = static_cast<jsize>(count);
+
+    jobjectArray arrayObj = env->NewObjectArray(jCount, clazz, NULL);
+    if (env->ExceptionCheck() || arrayObj == NULL) {
+        newArrayObject_log("Error creating array object");
+        return NULL;
+    }
+
+    for (jsize i = 0; i < jCount; i++) {
+
+        jobject obj = F(env, buffer[i]);
+        if(env->ExceptionCheck() || obj == NULL) {
+            return NULL;
+        }
+
+        env->SetObjectArrayElement(arrayObj, i, obj);
+        if(env->ExceptionCheck()) {
+            newArrayObject_log("Error assigning object to array");
+            return NULL;
+        }
+
+        env->DeleteLocalRef(obj);
+    }
+
+    return arrayObj;
+}
+
+jbyteArray newByteArray(JNIEnv *env, const unsigned char *bytes, size_t count);
+
+jbyteArray newByteArray(JNIEnv *env, size_t count);
 
 #endif // ZT_jniutils_h_

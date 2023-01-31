@@ -107,14 +107,14 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
         case AF_INET6:
         {
             sockaddr_in6 *ipv6 = (sockaddr_in6*)&addr;
-            jbyteArray buff = env->NewByteArray(16);
-            if(buff == NULL)
+            const unsigned char *bytes = reinterpret_cast<const unsigned char *>(&ipv6->sin6_addr.s6_addr);
+
+            jbyteArray buff = newByteArray(env, bytes, 16);
+            if(env->ExceptionCheck() || buff == NULL)
             {
-                LOGE("Error creating IPV6 byte array");
                 return NULL;
             }
 
-            env->SetByteArrayRegion(buff, 0, 16, (jbyte*)ipv6->sin6_addr.s6_addr);
             inetAddressObj = env->CallStaticObjectMethod(
                 InetAddress_class, InetAddress_getByAddress_method, buff);
         }
@@ -122,14 +122,13 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
         case AF_INET:
         {
             sockaddr_in *ipv4 = (sockaddr_in*)&addr;
-            jbyteArray buff = env->NewByteArray(4);
-            if(buff == NULL)
+            const unsigned char *bytes = reinterpret_cast<const unsigned char *>(&ipv4->sin_addr.s_addr);
+            jbyteArray buff = newByteArray(env, bytes, 4);
+            if(env->ExceptionCheck() || buff == NULL)
             {
-                LOGE("Error creating IPV4 byte array");
                 return NULL;
             }
 
-            env->SetByteArrayRegion(buff, 0, 4, (jbyte*)&ipv4->sin_addr);
             inetAddressObj = env->CallStaticObjectMethod(
                 InetAddress_class, InetAddress_getByAddress_method, buff);
         }
@@ -241,26 +240,7 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
     env->SetIntField(peerObject, Peer_latency_field, peer.latency);
     env->SetObjectField(peerObject, Peer_role_field, createPeerRole(env, peer.role));
 
-    jobjectArray arrayObject = env->NewObjectArray(
-        peer.pathCount, PeerPhysicalPath_class, NULL);
-    if(env->ExceptionCheck() || arrayObject == NULL)
-    {
-        LOGE("Error creating PeerPhysicalPath[] array");
-        return NULL;
-    }
-
-    for(unsigned int i = 0; i < peer.pathCount; ++i)
-    {
-        jobject path = newPeerPhysicalPath(env, peer.paths[i]);
-
-        env->SetObjectArrayElement(arrayObject, i, path);
-        if(env->ExceptionCheck()) {
-            LOGE("exception assigning PeerPhysicalPath to array");
-            break;
-        }
-
-        env->DeleteLocalRef(path);
-    }
+    jobjectArray arrayObject = newPeerPhysicalPathArray(env, peer.paths, peer.pathCount);
 
     env->SetObjectField(peerObject, Peer_paths_field, arrayObject);
 
@@ -305,49 +285,11 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
     env->SetBooleanField(vnetConfigObj, VirtualNetworkConfig_broadcastEnabled_field, vnetConfig.broadcastEnabled);
     env->SetIntField(vnetConfigObj, VirtualNetworkConfig_portError_field, vnetConfig.portError);
 
-    jobjectArray assignedAddrArrayObj = env->NewObjectArray(
-        vnetConfig.assignedAddressCount, InetSocketAddress_class, NULL);
-    if(env->ExceptionCheck() || assignedAddrArrayObj == NULL)
-    {
-        LOGE("Error creating InetSocketAddress[] array");
-        return NULL;
-    }
-
-    for(unsigned int i = 0; i < vnetConfig.assignedAddressCount; ++i)
-    {
-        jobject inetAddrObj = newInetSocketAddress(env, vnetConfig.assignedAddresses[i]);
-        env->SetObjectArrayElement(assignedAddrArrayObj, i, inetAddrObj);
-        if(env->ExceptionCheck())
-        {
-            LOGE("Error assigning InetSocketAddress to array");
-            return NULL;
-        }
-
-        env->DeleteLocalRef(inetAddrObj);
-    }
+    jobjectArray assignedAddrArrayObj = newInetSocketAddressArray(env, vnetConfig.assignedAddresses, vnetConfig.assignedAddressCount);
 
     env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_assignedAddresses_field, assignedAddrArrayObj);
 
-    jobjectArray routesArrayObj = env->NewObjectArray(
-        vnetConfig.routeCount, VirtualNetworkRoute_class, NULL);
-    if(env->ExceptionCheck() || routesArrayObj == NULL)
-    {
-        LOGE("Error creating VirtualNetworkRoute[] array");
-        return NULL;
-    }
-
-    for(unsigned int i = 0; i < vnetConfig.routeCount; ++i)
-    {
-        jobject routeObj = newVirtualNetworkRoute(env, vnetConfig.routes[i]);
-        env->SetObjectArrayElement(routesArrayObj, i, routeObj);
-        if(env->ExceptionCheck())
-        {
-            LOGE("Error assigning VirtualNetworkRoute to array");
-            return NULL;
-        }
-
-        env->DeleteLocalRef(routeObj);
-    }
+    jobjectArray routesArrayObj = newVirtualNetworkRouteArray(env, vnetConfig.routes, vnetConfig.routeCount);
 
     env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_routes_field, routesArrayObj);
 
@@ -455,4 +397,77 @@ jobject newNodeStatus(JNIEnv *env, const ZT_NodeStatus &status) {
     }
 
     return nodeStatusObj;
+}
+
+jobjectArray newPeerArray(JNIEnv *env, const ZT_Peer *peers, size_t count) {
+    return newArrayObject<ZT_Peer, newPeer>(env, peers, count, Peer_class);
+}
+
+jobjectArray newVirtualNetworkConfigArray(JNIEnv *env, const ZT_VirtualNetworkConfig *networks, size_t count) {
+    return newArrayObject<ZT_VirtualNetworkConfig, newNetworkConfig>(env, networks, count, VirtualNetworkConfig_class);
+}
+
+jobjectArray newPeerPhysicalPathArray(JNIEnv *env, const ZT_PeerPhysicalPath *paths, size_t count) {
+    return newArrayObject<ZT_PeerPhysicalPath, newPeerPhysicalPath>(env, paths, count, PeerPhysicalPath_class);
+}
+
+jobjectArray newInetSocketAddressArray(JNIEnv *env, const sockaddr_storage *addresses, size_t count) {
+    return newArrayObject<sockaddr_storage, newInetSocketAddress>(env, addresses, count, InetSocketAddress_class);
+}
+
+jobjectArray newVirtualNetworkRouteArray(JNIEnv *env, const ZT_VirtualNetworkRoute *routes, size_t count) {
+    return newArrayObject<ZT_VirtualNetworkRoute, newVirtualNetworkRoute>(env, routes, count, VirtualNetworkRoute_class);
+}
+
+void newArrayObject_logCount(size_t count) {
+    LOGE("count > JSIZE_MAX: %zu", count);
+}
+
+void newArrayObject_log(const char *msg) {
+    LOGE("%s", msg);
+}
+
+jbyteArray newByteArray(JNIEnv *env, const unsigned char *bytes, size_t count) {
+
+    if (count > JSIZE_MAX) {
+        LOGE("count > JSIZE_MAX: %zu", count);
+        return NULL;
+    }
+
+    jsize jCount = static_cast<jsize>(count);
+    const jbyte *jBytes = reinterpret_cast<const jbyte *>(bytes);
+
+    jbyteArray byteArrayObj = env->NewByteArray(jCount);
+    if(byteArrayObj == NULL)
+    {
+        LOGE("NewByteArray returned NULL");
+        return NULL;
+    }
+
+    env->SetByteArrayRegion(byteArrayObj, 0, jCount, jBytes);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception when calling SetByteArrayRegion");
+        return NULL;
+    }
+
+    return byteArrayObj;
+}
+
+jbyteArray newByteArray(JNIEnv *env, size_t count) {
+
+    if (count > JSIZE_MAX) {
+        LOGE("count > JSIZE_MAX: %zu", count);
+        return NULL;
+    }
+
+    jsize jCount = static_cast<jsize>(count);
+
+    jbyteArray byteArrayObj = env->NewByteArray(jCount);
+    if(byteArrayObj == NULL)
+    {
+        LOGE("NewByteArray returned NULL");
+        return NULL;
+    }
+
+    return byteArrayObj;
 }
