@@ -130,6 +130,11 @@ public class Node {
         close();
     }
 
+    @Override
+    public String toString() {
+        return "Node(" + nodeId + ")";
+    }
+
     /**
      * Process a frame from a virtual network port
      *
