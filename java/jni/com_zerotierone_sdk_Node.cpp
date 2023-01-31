@@ -656,6 +656,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
     {
         LOGE("Error creating Node: %d", rc);
         resultObject = createResultObject(env, rc);
+        if (env->ExceptionCheck() || resultObject == NULL) {
+            return NULL;
+        }
+
         if(node)
         {
             ZT_Node_delete(node);

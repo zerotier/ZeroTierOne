@@ -74,6 +74,7 @@ extern jmethodID VirtualNetworkRoute_ctor;
 extern jmethodID Event_fromInt_method;
 extern jmethodID InetAddress_getByAddress_method;
 extern jmethodID PeerRole_fromInt_method;
+extern jmethodID ResultCode_fromInt_method;
 
 //
 // Instance fields
@@ -129,13 +130,6 @@ extern jfieldID VirtualNetworkRoute_via_field;
 // Static fields
 //
 
-extern jfieldID ResultCode_RESULT_ERROR_BAD_PARAMETER_field;
-extern jfieldID ResultCode_RESULT_ERROR_NETWORK_NOT_FOUND_field;
-extern jfieldID ResultCode_RESULT_ERROR_UNSUPPORTED_OPERATION_field;
-extern jfieldID ResultCode_RESULT_FATAL_ERROR_DATA_STORE_FAILED_field;
-extern jfieldID ResultCode_RESULT_FATAL_ERROR_INTERNAL_field;
-extern jfieldID ResultCode_RESULT_FATAL_ERROR_OUT_OF_MEMORY_field;
-extern jfieldID ResultCode_RESULT_OK_field;
 extern jfieldID VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE_field;
 extern jfieldID VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY_field;
 extern jfieldID VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN_field;

@@ -32,48 +32,12 @@
 
 jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
 {
-    jobject resultObject = NULL;
-
-    jfieldID field;
-    switch(code)
-    {
-    case ZT_RESULT_OK:
-    case ZT_RESULT_OK_IGNORED:
-        LOGV("ZT_RESULT_OK");
-        field = ResultCode_RESULT_OK_field;
-        break;
-    case ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY:
-        LOGV("ZT_RESULT_FATAL_ERROR_OUT_OF_MEMORY");
-        field = ResultCode_RESULT_FATAL_ERROR_OUT_OF_MEMORY_field;
-        break;
-    case ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED:
-        LOGV("ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED");
-        field = ResultCode_RESULT_FATAL_ERROR_DATA_STORE_FAILED_field;
-        break;
-    case ZT_RESULT_ERROR_NETWORK_NOT_FOUND:
-        LOGV("ZT_RESULT_ERROR_NETWORK_NOT_FOUND");
-        field = ResultCode_RESULT_ERROR_NETWORK_NOT_FOUND_field;
-        break;
-    case ZT_RESULT_ERROR_UNSUPPORTED_OPERATION:
-        LOGV("ZT_RESULT_ERROR_UNSUPPORTED_OPERATION");
-        field = ResultCode_RESULT_ERROR_UNSUPPORTED_OPERATION_field;
-        break;
-    case ZT_RESULT_ERROR_BAD_PARAMETER:
-        LOGV("ZT_RESULT_ERROR_BAD_PARAMETER");
-        field = ResultCode_RESULT_ERROR_BAD_PARAMETER_field;
-        break;
-    case ZT_RESULT_FATAL_ERROR_INTERNAL:
-    default:
-        LOGV("ZT_RESULT_FATAL_ERROR_INTERNAL");
-        field = ResultCode_RESULT_FATAL_ERROR_INTERNAL_field;
-        break;
+    jobject resultObject = env->CallStaticObjectMethod(ResultCode_class, ResultCode_fromInt_method, code);
+    if(env->ExceptionCheck() || resultObject == NULL) {
+        LOGE("Error creating ResultCode object");
+        return NULL;
     }
 
-    resultObject = env->GetStaticObjectField(ResultCode_class, field);
-    if(env->ExceptionCheck() || resultObject == NULL)
-    {
-        LOGE("Error on GetStaticObjectField");
-    }
     return resultObject;
 }
 
