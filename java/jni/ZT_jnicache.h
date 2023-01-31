@@ -71,6 +71,7 @@ extern jmethodID VirtualNetworkRoute_ctor;
 // Static methods
 //
 
+extern jmethodID Event_fromInt_method;
 extern jmethodID InetAddress_getByAddress_method;
 
 //
@@ -127,14 +128,6 @@ extern jfieldID VirtualNetworkRoute_via_field;
 // Static fields
 //
 
-extern jfieldID Event_EVENT_DOWN_field;
-extern jfieldID Event_EVENT_FATAL_ERROR_IDENTITY_COLLISION_field;
-extern jfieldID Event_EVENT_OFFLINE_field;
-extern jfieldID Event_EVENT_ONLINE_field;
-extern jfieldID Event_EVENT_REMOTE_TRACE_field;
-extern jfieldID Event_EVENT_TRACE_field;
-extern jfieldID Event_EVENT_UP_field;
-extern jfieldID Event_EVENT_USER_MESSAGE_field;
 extern jfieldID PeerRole_PEER_ROLE_LEAF_field;
 extern jfieldID PeerRole_PEER_ROLE_MOON_field;
 extern jfieldID PeerRole_PEER_ROLE_PLANET_field;
