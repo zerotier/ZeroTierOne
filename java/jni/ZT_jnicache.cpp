@@ -105,6 +105,7 @@ jmethodID VirtualNetworkRoute_ctor;
 jmethodID Event_fromInt_method;
 jmethodID InetAddress_getByAddress_method;
 jmethodID PeerRole_fromInt_method;
+jmethodID ResultCode_fromInt_method;
 
 //
 // Instance fields
@@ -160,13 +161,6 @@ jfieldID VirtualNetworkRoute_via_field;
 // Static fields
 //
 
-jfieldID ResultCode_RESULT_ERROR_BAD_PARAMETER_field;
-jfieldID ResultCode_RESULT_ERROR_NETWORK_NOT_FOUND_field;
-jfieldID ResultCode_RESULT_ERROR_UNSUPPORTED_OPERATION_field;
-jfieldID ResultCode_RESULT_FATAL_ERROR_DATA_STORE_FAILED_field;
-jfieldID ResultCode_RESULT_FATAL_ERROR_INTERNAL_field;
-jfieldID ResultCode_RESULT_FATAL_ERROR_OUT_OF_MEMORY_field;
-jfieldID ResultCode_RESULT_OK_field;
 jfieldID VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE_field;
 jfieldID VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY_field;
 jfieldID VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN_field;
@@ -259,6 +253,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(Event_fromInt_method = env->GetStaticMethodID(Event_class, "fromInt", "(I)Lcom/zerotier/sdk/Event;"));
     EXCEPTIONANDNULLCHECK(InetAddress_getByAddress_method = env->GetStaticMethodID(InetAddress_class, "getByAddress", "([B)Ljava/net/InetAddress;"));
     EXCEPTIONANDNULLCHECK(PeerRole_fromInt_method = env->GetStaticMethodID(PeerRole_class, "fromInt", "(I)Lcom/zerotier/sdk/PeerRole;"));
+    EXCEPTIONANDNULLCHECK(ResultCode_fromInt_method = env->GetStaticMethodID(ResultCode_class, "fromInt", "(I)Lcom/zerotier/sdk/ResultCode;"));
 
     //
     // Instance fields
@@ -314,13 +309,6 @@ void setupJNICache(JavaVM *vm) {
     // Static fields
     //
 
-    EXCEPTIONANDNULLCHECK(ResultCode_RESULT_ERROR_BAD_PARAMETER_field = env->GetStaticFieldID(ResultCode_class, "RESULT_ERROR_BAD_PARAMETER", "Lcom/zerotier/sdk/ResultCode;"));
-    EXCEPTIONANDNULLCHECK(ResultCode_RESULT_ERROR_NETWORK_NOT_FOUND_field = env->GetStaticFieldID(ResultCode_class, "RESULT_ERROR_NETWORK_NOT_FOUND", "Lcom/zerotier/sdk/ResultCode;"));
-    EXCEPTIONANDNULLCHECK(ResultCode_RESULT_ERROR_UNSUPPORTED_OPERATION_field = env->GetStaticFieldID(ResultCode_class, "RESULT_ERROR_UNSUPPORTED_OPERATION", "Lcom/zerotier/sdk/ResultCode;"));
-    EXCEPTIONANDNULLCHECK(ResultCode_RESULT_FATAL_ERROR_DATA_STORE_FAILED_field = env->GetStaticFieldID(ResultCode_class, "RESULT_FATAL_ERROR_DATA_STORE_FAILED", "Lcom/zerotier/sdk/ResultCode;"));
-    EXCEPTIONANDNULLCHECK(ResultCode_RESULT_FATAL_ERROR_INTERNAL_field = env->GetStaticFieldID(ResultCode_class, "RESULT_FATAL_ERROR_INTERNAL", "Lcom/zerotier/sdk/ResultCode;"));
-    EXCEPTIONANDNULLCHECK(ResultCode_RESULT_FATAL_ERROR_OUT_OF_MEMORY_field = env->GetStaticFieldID(ResultCode_class, "RESULT_FATAL_ERROR_OUT_OF_MEMORY", "Lcom/zerotier/sdk/ResultCode;"));
-    EXCEPTIONANDNULLCHECK(ResultCode_RESULT_OK_field = env->GetStaticFieldID(ResultCode_class, "RESULT_OK", "Lcom/zerotier/sdk/ResultCode;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE_field = env->GetStaticFieldID(VirtualNetworkConfigOperation_class, "VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE", "Lcom/zerotier/sdk/VirtualNetworkConfigOperation;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY_field = env->GetStaticFieldID(VirtualNetworkConfigOperation_class, "VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY", "Lcom/zerotier/sdk/VirtualNetworkConfigOperation;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN_field = env->GetStaticFieldID(VirtualNetworkConfigOperation_class, "VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN", "Lcom/zerotier/sdk/VirtualNetworkConfigOperation;"));
