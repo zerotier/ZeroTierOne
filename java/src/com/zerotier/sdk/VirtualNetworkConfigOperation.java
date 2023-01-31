@@ -37,22 +37,22 @@ public enum VirtualNetworkConfigOperation {
     /**
      * Network is coming up (either for the first time or after service restart)
      */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_UP(0),
+    VIRTUAL_NETWORK_CONFIG_OPERATION_UP(1),
 
     /**
      * Network configuration has been updated
      */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE(1),
+    VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE(2),
 
     /**
      * Network is going down (not permanently)
      */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN(2),
+    VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN(3),
 
     /**
      * Network is going down permanently (leave/delete)
      */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY(3);
+    VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY(4);
 
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private final int id;
@@ -63,13 +63,13 @@ public enum VirtualNetworkConfigOperation {
 
     public static VirtualNetworkConfigOperation fromInt(int id) {
         switch (id) {
-            case 0:
-                return VIRTUAL_NETWORK_CONFIG_OPERATION_UP;
             case 1:
-                return VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE;
+                return VIRTUAL_NETWORK_CONFIG_OPERATION_UP;
             case 2:
-                return VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN;
+                return VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE;
             case 3:
+                return VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN;
+            case 4:
                 return VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY;
             default:
                 throw new RuntimeException("Unhandled value: " + id);
