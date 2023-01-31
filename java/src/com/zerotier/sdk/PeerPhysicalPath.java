@@ -42,11 +42,9 @@ public class PeerPhysicalPath {
 
     private final long lastReceive;
 
-    private final boolean fixed;
-
     private final boolean preferred;
 
-    public PeerPhysicalPath(InetSocketAddress address, long lastSend, long lastReceive, boolean fixed, boolean preferred) {
+    public PeerPhysicalPath(InetSocketAddress address, long lastSend, long lastReceive, boolean preferred) {
         this.address = address;
         if (lastSend < 0) {
             throw new RuntimeException("lastSend < 0: " + lastSend);
@@ -56,13 +54,12 @@ public class PeerPhysicalPath {
             throw new RuntimeException("lastReceive < 0: " + lastReceive);
         }
         this.lastReceive = lastReceive;
-        this.fixed = fixed;
         this.preferred = preferred;
     }
 
     @Override
     public String toString() {
-        return "PeerPhysicalPath(" + address + ", " + lastSend + ", " + lastReceive + ", " + fixed + ", " + preferred + ")";
+        return "PeerPhysicalPath(" + address + ", " + lastSend + ", " + lastReceive + ", " + preferred + ")";
     }
 
     /**
@@ -84,13 +81,6 @@ public class PeerPhysicalPath {
      */
     public long getLastReceive() {
         return lastReceive;
-    }
-
-    /**
-     * Is path fixed? (i.e. not learned, static)
-     */
-    public boolean isFixed() {
-        return fixed;
     }
 
     /**
