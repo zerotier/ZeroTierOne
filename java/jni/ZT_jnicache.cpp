@@ -207,7 +207,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(PacketSender_onSendPacketRequested_method = env->GetMethodID(PacketSender_class, "onSendPacketRequested", "(JLjava/net/InetSocketAddress;[BI)I"));
     EXCEPTIONANDNULLCHECK(PathChecker_onPathCheck_method = env->GetMethodID(PathChecker_class, "onPathCheck", "(JJLjava/net/InetSocketAddress;)Z"));
     EXCEPTIONANDNULLCHECK(PathChecker_onPathLookup_method = env->GetMethodID(PathChecker_class, "onPathLookup", "(JI)Ljava/net/InetSocketAddress;"));
-    EXCEPTIONANDNULLCHECK(PeerPhysicalPath_ctor = env->GetMethodID(PeerPhysicalPath_class, "<init>", "(Ljava/net/InetSocketAddress;JJZZ)V"));
+    EXCEPTIONANDNULLCHECK(PeerPhysicalPath_ctor = env->GetMethodID(PeerPhysicalPath_class, "<init>", "(Ljava/net/InetSocketAddress;JJZ)V"));
     EXCEPTIONANDNULLCHECK(Peer_ctor = env->GetMethodID(Peer_class, "<init>", "()V"));
     EXCEPTIONANDNULLCHECK(Version_ctor = env->GetMethodID(Version_class, "<init>", "()V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigListener_onNetworkConfigurationUpdated_method = env->GetMethodID(VirtualNetworkConfigListener_class, "onNetworkConfigurationUpdated", "(JLcom/zerotier/sdk/VirtualNetworkConfigOperation;Lcom/zerotier/sdk/VirtualNetworkConfig;)I"));
