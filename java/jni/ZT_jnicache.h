@@ -77,6 +77,7 @@ extern jmethodID PeerRole_fromInt_method;
 extern jmethodID ResultCode_fromInt_method;
 extern jmethodID VirtualNetworkConfigOperation_fromInt_method;
 extern jmethodID VirtualNetworkStatus_fromInt_method;
+extern jmethodID VirtualNetworkType_fromInt_method;
 
 //
 // Instance fields
@@ -127,13 +128,6 @@ extern jfieldID VirtualNetworkRoute_flags_field;
 extern jfieldID VirtualNetworkRoute_metric_field;
 extern jfieldID VirtualNetworkRoute_target_field;
 extern jfieldID VirtualNetworkRoute_via_field;
-
-//
-// Static fields
-//
-
-extern jfieldID VirtualNetworkType_NETWORK_TYPE_PRIVATE_field;
-extern jfieldID VirtualNetworkType_NETWORK_TYPE_PUBLIC_field;
 
 //
 // Enums

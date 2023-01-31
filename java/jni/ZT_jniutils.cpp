@@ -77,20 +77,12 @@ jobject createPeerRole(JNIEnv *env, ZT_PeerRole role)
 
 jobject createVirtualNetworkType(JNIEnv *env, ZT_VirtualNetworkType type)
 {
-    jobject vntypeObject = NULL;
-
-    jfieldID field;
-    switch(type)
-    {
-    case ZT_NETWORK_TYPE_PRIVATE:
-        field = VirtualNetworkType_NETWORK_TYPE_PRIVATE_field;
-        break;
-    case ZT_NETWORK_TYPE_PUBLIC:
-        field = VirtualNetworkType_NETWORK_TYPE_PUBLIC_field;
-        break;
+    jobject vntypeObject = env->CallStaticObjectMethod(VirtualNetworkType_class, VirtualNetworkType_fromInt_method, type);
+    if (env->ExceptionCheck() || vntypeObject == NULL) {
+        LOGE("Error creating VirtualNetworkType object");
+        return NULL;
     }
 
-    vntypeObject = env->GetStaticObjectField(VirtualNetworkType_class, field);
     return vntypeObject;
 }
 

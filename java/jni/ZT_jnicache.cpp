@@ -108,6 +108,7 @@ jmethodID PeerRole_fromInt_method;
 jmethodID ResultCode_fromInt_method;
 jmethodID VirtualNetworkConfigOperation_fromInt_method;
 jmethodID VirtualNetworkStatus_fromInt_method;
+jmethodID VirtualNetworkType_fromInt_method;
 
 //
 // Instance fields
@@ -158,13 +159,6 @@ jfieldID VirtualNetworkRoute_flags_field;
 jfieldID VirtualNetworkRoute_metric_field;
 jfieldID VirtualNetworkRoute_target_field;
 jfieldID VirtualNetworkRoute_via_field;
-
-//
-// Static fields
-//
-
-jfieldID VirtualNetworkType_NETWORK_TYPE_PRIVATE_field;
-jfieldID VirtualNetworkType_NETWORK_TYPE_PUBLIC_field;
 
 //
 // Enums
@@ -247,6 +241,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(ResultCode_fromInt_method = env->GetStaticMethodID(ResultCode_class, "fromInt", "(I)Lcom/zerotier/sdk/ResultCode;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigOperation_fromInt_method = env->GetStaticMethodID(VirtualNetworkConfigOperation_class, "fromInt", "(I)Lcom/zerotier/sdk/VirtualNetworkConfigOperation;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkStatus_fromInt_method = env->GetStaticMethodID(VirtualNetworkStatus_class, "fromInt", "(I)Lcom/zerotier/sdk/VirtualNetworkStatus;"));
+    EXCEPTIONANDNULLCHECK(VirtualNetworkType_fromInt_method = env->GetStaticMethodID(VirtualNetworkType_class, "fromInt", "(I)Lcom/zerotier/sdk/VirtualNetworkType;"));
 
     //
     // Instance fields
@@ -297,13 +292,6 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_metric_field = env->GetFieldID(VirtualNetworkRoute_class, "metric", "I"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_target_field = env->GetFieldID(VirtualNetworkRoute_class, "target", "Ljava/net/InetSocketAddress;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_via_field = env->GetFieldID(VirtualNetworkRoute_class, "via", "Ljava/net/InetSocketAddress;"));
-
-    //
-    // Static fields
-    //
-
-    EXCEPTIONANDNULLCHECK(VirtualNetworkType_NETWORK_TYPE_PRIVATE_field = env->GetStaticFieldID(VirtualNetworkType_class, "NETWORK_TYPE_PRIVATE", "Lcom/zerotier/sdk/VirtualNetworkType;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkType_NETWORK_TYPE_PUBLIC_field = env->GetStaticFieldID(VirtualNetworkType_class, "NETWORK_TYPE_PUBLIC", "Lcom/zerotier/sdk/VirtualNetworkType;"));
 
     //
     // Enums
