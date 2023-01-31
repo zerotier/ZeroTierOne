@@ -114,9 +114,8 @@ namespace {
         }
 
         jobject operationObject = createVirtualNetworkConfigOperation(env, operation);
-        if(operationObject == NULL)
+        if(env->ExceptionCheck() || operationObject == NULL)
         {
-            LOGE("Error creating VirtualNetworkConfigOperation object");
             return -101;
         }
 
