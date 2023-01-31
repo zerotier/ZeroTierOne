@@ -170,8 +170,11 @@ jobject createEvent(JNIEnv *env, ZT_Event event)
         fieldName = "EVENT_TRACE";
         break;
     case ZT_EVENT_USER_MESSAGE:
+        fieldName = "EVENT_USER_MESSAGE";
         break;
     case ZT_EVENT_REMOTE_TRACE:
+        fieldName = "EVENT_REMOTE_TRACE";
+        break;
     default:
         break;
     }
