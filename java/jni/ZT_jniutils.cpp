@@ -69,7 +69,7 @@ jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
         break;
     case ZT_RESULT_ERROR_BAD_PARAMETER:
         LOGV("ZT_RESULT_ERROR_BAD_PARAMETER");
-        fieldName = "ZT_RESULT_ERROR_BAD_PARAMETER";
+        fieldName = "RESULT_ERROR_BAD_PARAMETER";
         break;
     case ZT_RESULT_FATAL_ERROR_INTERNAL:
     default:
