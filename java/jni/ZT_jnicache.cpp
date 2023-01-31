@@ -107,6 +107,7 @@ jmethodID InetAddress_getByAddress_method;
 jmethodID PeerRole_fromInt_method;
 jmethodID ResultCode_fromInt_method;
 jmethodID VirtualNetworkConfigOperation_fromInt_method;
+jmethodID VirtualNetworkStatus_fromInt_method;
 
 //
 // Instance fields
@@ -162,13 +163,6 @@ jfieldID VirtualNetworkRoute_via_field;
 // Static fields
 //
 
-jfieldID VirtualNetworkStatus_NETWORK_STATUS_ACCESS_DENIED_field;
-jfieldID VirtualNetworkStatus_NETWORK_STATUS_AUTHENTICATION_REQUIRED_field;
-jfieldID VirtualNetworkStatus_NETWORK_STATUS_CLIENT_TOO_OLD_field;
-jfieldID VirtualNetworkStatus_NETWORK_STATUS_NOT_FOUND_field;
-jfieldID VirtualNetworkStatus_NETWORK_STATUS_OK_field;
-jfieldID VirtualNetworkStatus_NETWORK_STATUS_PORT_ERROR_field;
-jfieldID VirtualNetworkStatus_NETWORK_STATUS_REQUESTING_CONFIGURATION_field;
 jfieldID VirtualNetworkType_NETWORK_TYPE_PRIVATE_field;
 jfieldID VirtualNetworkType_NETWORK_TYPE_PUBLIC_field;
 
@@ -252,6 +246,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(PeerRole_fromInt_method = env->GetStaticMethodID(PeerRole_class, "fromInt", "(I)Lcom/zerotier/sdk/PeerRole;"));
     EXCEPTIONANDNULLCHECK(ResultCode_fromInt_method = env->GetStaticMethodID(ResultCode_class, "fromInt", "(I)Lcom/zerotier/sdk/ResultCode;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigOperation_fromInt_method = env->GetStaticMethodID(VirtualNetworkConfigOperation_class, "fromInt", "(I)Lcom/zerotier/sdk/VirtualNetworkConfigOperation;"));
+    EXCEPTIONANDNULLCHECK(VirtualNetworkStatus_fromInt_method = env->GetStaticMethodID(VirtualNetworkStatus_class, "fromInt", "(I)Lcom/zerotier/sdk/VirtualNetworkStatus;"));
 
     //
     // Instance fields
@@ -307,13 +302,6 @@ void setupJNICache(JavaVM *vm) {
     // Static fields
     //
 
-    EXCEPTIONANDNULLCHECK(VirtualNetworkStatus_NETWORK_STATUS_ACCESS_DENIED_field = env->GetStaticFieldID(VirtualNetworkStatus_class, "NETWORK_STATUS_ACCESS_DENIED", "Lcom/zerotier/sdk/VirtualNetworkStatus;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkStatus_NETWORK_STATUS_AUTHENTICATION_REQUIRED_field = env->GetStaticFieldID(VirtualNetworkStatus_class, "NETWORK_STATUS_AUTHENTICATION_REQUIRED", "Lcom/zerotier/sdk/VirtualNetworkStatus;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkStatus_NETWORK_STATUS_CLIENT_TOO_OLD_field = env->GetStaticFieldID(VirtualNetworkStatus_class, "NETWORK_STATUS_CLIENT_TOO_OLD", "Lcom/zerotier/sdk/VirtualNetworkStatus;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkStatus_NETWORK_STATUS_NOT_FOUND_field = env->GetStaticFieldID(VirtualNetworkStatus_class, "NETWORK_STATUS_NOT_FOUND", "Lcom/zerotier/sdk/VirtualNetworkStatus;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkStatus_NETWORK_STATUS_OK_field = env->GetStaticFieldID(VirtualNetworkStatus_class, "NETWORK_STATUS_OK", "Lcom/zerotier/sdk/VirtualNetworkStatus;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkStatus_NETWORK_STATUS_PORT_ERROR_field = env->GetStaticFieldID(VirtualNetworkStatus_class, "NETWORK_STATUS_PORT_ERROR", "Lcom/zerotier/sdk/VirtualNetworkStatus;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkStatus_NETWORK_STATUS_REQUESTING_CONFIGURATION_field = env->GetStaticFieldID(VirtualNetworkStatus_class, "NETWORK_STATUS_REQUESTING_CONFIGURATION", "Lcom/zerotier/sdk/VirtualNetworkStatus;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkType_NETWORK_TYPE_PRIVATE_field = env->GetStaticFieldID(VirtualNetworkType_class, "NETWORK_TYPE_PRIVATE", "Lcom/zerotier/sdk/VirtualNetworkType;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkType_NETWORK_TYPE_PUBLIC_field = env->GetStaticFieldID(VirtualNetworkType_class, "NETWORK_TYPE_PUBLIC", "Lcom/zerotier/sdk/VirtualNetworkType;"));
 
