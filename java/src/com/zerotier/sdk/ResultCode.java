@@ -42,7 +42,12 @@ public enum ResultCode {
     /**
      * Operation completed normally
      */
-	RESULT_OK(0),
+    RESULT_OK(0),
+
+    /**
+     * Call produced no error but no action was taken
+     */
+    RESULT_OK_IGNORED(1),
 
     // Fatal errors (>=100, <1000)
     /**
@@ -81,6 +86,8 @@ public enum ResultCode {
         switch (id) {
             case 0:
                 return RESULT_OK;
+            case 1:
+                return RESULT_OK_IGNORED;
             case 100:
                 return RESULT_FATAL_ERROR_OUT_OF_MEMORY;
             case 101:
@@ -98,7 +105,7 @@ public enum ResultCode {
         }
     }
 
-    public boolean isFatal(int id) {
-    	return (id > 100 && id < 1000);
+    public boolean isFatal() {
+        return (id >= 100 && id < 1000);
     }
 }
