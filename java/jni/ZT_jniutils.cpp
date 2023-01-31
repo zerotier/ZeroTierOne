@@ -201,26 +201,23 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
 {
     LOGV("newPeerPhysicalPath Called");
 
-    jobject pppObject = env->NewObject(PeerPhysicalPath_class, PeerPhysicalPath_ctor);
-    if(env->ExceptionCheck() || pppObject == NULL)
-    {
-        LOGE("Error creating PPP object");
-        return NULL; // out of memory
-    }
-
     jobject addressObject = newInetSocketAddress(env, ppp.address);
     if(env->ExceptionCheck() || addressObject == NULL) {
         LOGE("Error creating InetSocketAddress object");
         return NULL;
     }
 
-    env->SetObjectField(pppObject, PeerPhysicalPath_address_field, addressObject);
-    env->SetLongField(pppObject, PeerPhysicalPath_lastSend_field, ppp.lastSend);
-    env->SetLongField(pppObject, PeerPhysicalPath_lastReceive_field, ppp.lastReceive);
-    env->SetBooleanField(pppObject, PeerPhysicalPath_preferred_field, ppp.preferred);
-
-    if(env->ExceptionCheck()) {
-        LOGE("Exception assigning fields to PeerPhysicalPath object");
+    jobject pppObject = env->NewObject(
+            PeerPhysicalPath_class,
+            PeerPhysicalPath_ctor,
+            addressObject,
+            ppp.lastSend,
+            ppp.lastReceive,
+            ppp.preferred);
+    if(env->ExceptionCheck() || pppObject == NULL)
+    {
+        LOGE("Error creating PPP object");
+        return NULL;
     }
 
     return pppObject;

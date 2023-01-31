@@ -31,48 +31,72 @@ import java.net.InetSocketAddress;
 
 /**
  * Physical network path to a peer
+ *
+ * Defined in ZeroTierOne.h as ZT_PeerPhysicalPath
  */
-public final class PeerPhysicalPath {
-    private InetSocketAddress address;
-    private long lastSend;
-    private long lastReceive;
-    private boolean fixed;
-    private boolean preferred;
+public class PeerPhysicalPath {
 
-    private PeerPhysicalPath() {}
+    private final InetSocketAddress address;
+
+    private final long lastSend;
+
+    private final long lastReceive;
+
+    private final boolean fixed;
+
+    private final boolean preferred;
+
+    public PeerPhysicalPath(InetSocketAddress address, long lastSend, long lastReceive, boolean fixed, boolean preferred) {
+        this.address = address;
+        if (lastSend < 0) {
+            throw new RuntimeException("lastSend < 0: " + lastSend);
+        }
+        this.lastSend = lastSend;
+        if (lastReceive < 0) {
+            throw new RuntimeException("lastReceive < 0: " + lastReceive);
+        }
+        this.lastReceive = lastReceive;
+        this.fixed = fixed;
+        this.preferred = preferred;
+    }
+
+    @Override
+    public String toString() {
+        return "PeerPhysicalPath(" + address + ", " + lastSend + ", " + lastReceive + ", " + fixed + ", " + preferred + ")";
+    }
 
     /**
      * Address of endpoint
      */
-    public final InetSocketAddress address() {
+    public InetSocketAddress getAddress() {
         return address;
     }
 
     /**
      * Time of last send in milliseconds or 0 for never
      */
-    public final long lastSend() {
+    public long getLastSend() {
         return lastSend;
     }
 
     /**
      * Time of last receive in milliseconds or 0 for never
      */
-    public final long lastReceive() {
+    public long getLastReceive() {
         return lastReceive;
     }
 
     /**
      * Is path fixed? (i.e. not learned, static)
      */
-    public final boolean isFixed() {
+    public boolean isFixed() {
         return fixed;
     }
 
     /**
      * Is path preferred?
      */
-    public final boolean isPreferred() {
+    public boolean isPreferred() {
         return preferred;
     }
 }

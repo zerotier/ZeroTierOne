@@ -114,10 +114,6 @@ jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-jfieldID PeerPhysicalPath_address_field;
-jfieldID PeerPhysicalPath_lastReceive_field;
-jfieldID PeerPhysicalPath_lastSend_field;
-jfieldID PeerPhysicalPath_preferred_field;
 jfieldID Peer_address_field;
 jfieldID Peer_latency_field;
 jfieldID Peer_paths_field;
@@ -211,7 +207,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(PacketSender_onSendPacketRequested_method = env->GetMethodID(PacketSender_class, "onSendPacketRequested", "(JLjava/net/InetSocketAddress;[BI)I"));
     EXCEPTIONANDNULLCHECK(PathChecker_onPathCheck_method = env->GetMethodID(PathChecker_class, "onPathCheck", "(JJLjava/net/InetSocketAddress;)Z"));
     EXCEPTIONANDNULLCHECK(PathChecker_onPathLookup_method = env->GetMethodID(PathChecker_class, "onPathLookup", "(JI)Ljava/net/InetSocketAddress;"));
-    EXCEPTIONANDNULLCHECK(PeerPhysicalPath_ctor = env->GetMethodID(PeerPhysicalPath_class, "<init>", "()V"));
+    EXCEPTIONANDNULLCHECK(PeerPhysicalPath_ctor = env->GetMethodID(PeerPhysicalPath_class, "<init>", "(Ljava/net/InetSocketAddress;JJZZ)V"));
     EXCEPTIONANDNULLCHECK(Peer_ctor = env->GetMethodID(Peer_class, "<init>", "()V"));
     EXCEPTIONANDNULLCHECK(Version_ctor = env->GetMethodID(Version_class, "<init>", "()V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigListener_onNetworkConfigurationUpdated_method = env->GetMethodID(VirtualNetworkConfigListener_class, "onNetworkConfigurationUpdated", "(JLcom/zerotier/sdk/VirtualNetworkConfigOperation;Lcom/zerotier/sdk/VirtualNetworkConfig;)I"));
@@ -236,10 +232,6 @@ void setupJNICache(JavaVM *vm) {
     // Instance fields
     //
 
-    EXCEPTIONANDNULLCHECK(PeerPhysicalPath_address_field = env->GetFieldID(PeerPhysicalPath_class, "address", "Ljava/net/InetSocketAddress;"));
-    EXCEPTIONANDNULLCHECK(PeerPhysicalPath_lastReceive_field = env->GetFieldID(PeerPhysicalPath_class, "lastReceive", "J"));
-    EXCEPTIONANDNULLCHECK(PeerPhysicalPath_lastSend_field = env->GetFieldID(PeerPhysicalPath_class, "lastSend", "J"));
-    EXCEPTIONANDNULLCHECK(PeerPhysicalPath_preferred_field = env->GetFieldID(PeerPhysicalPath_class, "preferred", "Z"));
     EXCEPTIONANDNULLCHECK(Peer_address_field = env->GetFieldID(Peer_class, "address", "J"));
     EXCEPTIONANDNULLCHECK(Peer_latency_field = env->GetFieldID(Peer_class, "latency", "I"));
     EXCEPTIONANDNULLCHECK(Peer_paths_field = env->GetFieldID(Peer_class, "paths", "[Lcom/zerotier/sdk/PeerPhysicalPath;"));
