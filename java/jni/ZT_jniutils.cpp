@@ -44,35 +44,11 @@ jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
 
 jobject createVirtualNetworkStatus(JNIEnv *env, ZT_VirtualNetworkStatus status)
 {
-    jobject statusObject = NULL;
-
-    jfieldID field;
-    switch(status)
-    {
-    case ZT_NETWORK_STATUS_REQUESTING_CONFIGURATION:
-        field = VirtualNetworkStatus_NETWORK_STATUS_REQUESTING_CONFIGURATION_field;
-        break;
-    case ZT_NETWORK_STATUS_OK:
-        field = VirtualNetworkStatus_NETWORK_STATUS_OK_field;
-        break;
-    case ZT_NETWORK_STATUS_AUTHENTICATION_REQUIRED:
-        field = VirtualNetworkStatus_NETWORK_STATUS_AUTHENTICATION_REQUIRED_field;
-        break;
-    case ZT_NETWORK_STATUS_ACCESS_DENIED:
-        field = VirtualNetworkStatus_NETWORK_STATUS_ACCESS_DENIED_field;
-        break;
-    case ZT_NETWORK_STATUS_NOT_FOUND:
-        field = VirtualNetworkStatus_NETWORK_STATUS_NOT_FOUND_field;
-        break;
-    case ZT_NETWORK_STATUS_PORT_ERROR:
-        field = VirtualNetworkStatus_NETWORK_STATUS_PORT_ERROR_field;
-        break;
-    case ZT_NETWORK_STATUS_CLIENT_TOO_OLD:
-        field = VirtualNetworkStatus_NETWORK_STATUS_CLIENT_TOO_OLD_field;
-        break;
+    jobject statusObject = env->CallStaticObjectMethod(VirtualNetworkStatus_class, VirtualNetworkStatus_fromInt_method, status);
+    if (env->ExceptionCheck() || statusObject == NULL) {
+        LOGE("Error creating VirtualNetworkStatus object");
+        return NULL;
     }
-
-    statusObject = env->GetStaticObjectField(VirtualNetworkStatus_class, field);
 
     return statusObject;
 }

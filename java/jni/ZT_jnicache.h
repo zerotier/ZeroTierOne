@@ -76,6 +76,7 @@ extern jmethodID InetAddress_getByAddress_method;
 extern jmethodID PeerRole_fromInt_method;
 extern jmethodID ResultCode_fromInt_method;
 extern jmethodID VirtualNetworkConfigOperation_fromInt_method;
+extern jmethodID VirtualNetworkStatus_fromInt_method;
 
 //
 // Instance fields
@@ -131,13 +132,6 @@ extern jfieldID VirtualNetworkRoute_via_field;
 // Static fields
 //
 
-extern jfieldID VirtualNetworkStatus_NETWORK_STATUS_ACCESS_DENIED_field;
-extern jfieldID VirtualNetworkStatus_NETWORK_STATUS_AUTHENTICATION_REQUIRED_field;
-extern jfieldID VirtualNetworkStatus_NETWORK_STATUS_CLIENT_TOO_OLD_field;
-extern jfieldID VirtualNetworkStatus_NETWORK_STATUS_NOT_FOUND_field;
-extern jfieldID VirtualNetworkStatus_NETWORK_STATUS_OK_field;
-extern jfieldID VirtualNetworkStatus_NETWORK_STATUS_PORT_ERROR_field;
-extern jfieldID VirtualNetworkStatus_NETWORK_STATUS_REQUESTING_CONFIGURATION_field;
 extern jfieldID VirtualNetworkType_NETWORK_TYPE_PRIVATE_field;
 extern jfieldID VirtualNetworkType_NETWORK_TYPE_PUBLIC_field;
 
