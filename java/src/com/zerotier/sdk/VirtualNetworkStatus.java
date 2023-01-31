@@ -45,29 +45,29 @@ public enum VirtualNetworkStatus {
     NETWORK_STATUS_OK(1),
 
     /**
-     * Netconf master said SSO auth required.
-     */
-    NETWORK_STATUS_AUTHENTICATION_REQUIRED(2),
-
-    /**
      * Netconf master told us 'nope'
      */
-    NETWORK_STATUS_ACCESS_DENIED(3),
+    NETWORK_STATUS_ACCESS_DENIED(2),
 
     /**
      * Netconf master exists, but this virtual network does not
      */
-    NETWORK_STATUS_NOT_FOUND(4),
+    NETWORK_STATUS_NOT_FOUND(3),
 
     /**
      * Initialization of network failed or other internal error
      */
-    NETWORK_STATUS_PORT_ERROR(5),
+    NETWORK_STATUS_PORT_ERROR(4),
 
     /**
      * ZeroTier One version too old
      */
-    NETWORK_STATUS_CLIENT_TOO_OLD(6);
+    NETWORK_STATUS_CLIENT_TOO_OLD(5),
+
+    /**
+     * External authentication is required (e.g. SSO)
+     */
+    NETWORK_STATUS_AUTHENTICATION_REQUIRED(6);
 
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private final int id;
@@ -83,15 +83,15 @@ public enum VirtualNetworkStatus {
             case 1:
                 return NETWORK_STATUS_OK;
             case 2:
-                return NETWORK_STATUS_AUTHENTICATION_REQUIRED;
-            case 3:
                 return NETWORK_STATUS_ACCESS_DENIED;
-            case 4:
+            case 3:
                 return NETWORK_STATUS_NOT_FOUND;
-            case 5:
+            case 4:
                 return NETWORK_STATUS_PORT_ERROR;
-            case 6:
+            case 5:
                 return NETWORK_STATUS_CLIENT_TOO_OLD;
+            case 6:
+                return NETWORK_STATUS_AUTHENTICATION_REQUIRED;
             default:
                 throw new RuntimeException("Unhandled value: " + id);
         }
