@@ -56,7 +56,7 @@ jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
         fieldName = "RESULT_FATAL_ERROR_OUT_OF_MEMORY";
         break;
     case ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED:
-        LOGV("RESULT_FATAL_ERROR_DATA_STORE_FAILED");
+        LOGV("ZT_RESULT_FATAL_ERROR_DATA_STORE_FAILED");
         fieldName = "RESULT_FATAL_ERROR_DATA_STORE_FAILED";
         break;
     case ZT_RESULT_ERROR_NETWORK_NOT_FOUND:
