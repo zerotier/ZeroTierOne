@@ -114,10 +114,6 @@ jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-jfieldID NodeStatus_address_field;
-jfieldID NodeStatus_online_field;
-jfieldID NodeStatus_publicIdentity_field;
-jfieldID NodeStatus_secretIdentity_field;
 jfieldID Node_configListener_field;
 jfieldID Node_eventListener_field;
 jfieldID Node_frameListener_field;
@@ -218,7 +214,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(InetSocketAddress_ctor = env->GetMethodID(InetSocketAddress_class, "<init>", "(Ljava/net/InetAddress;I)V"));
     EXCEPTIONANDNULLCHECK(InetSocketAddress_getAddress_method = env->GetMethodID(InetSocketAddress_class, "getAddress", "()Ljava/net/InetAddress;"));
     EXCEPTIONANDNULLCHECK(InetSocketAddress_getPort_method = env->GetMethodID(InetSocketAddress_class, "getPort", "()I"));
-    EXCEPTIONANDNULLCHECK(NodeStatus_ctor = env->GetMethodID(NodeStatus_class, "<init>", "()V"));
+    EXCEPTIONANDNULLCHECK(NodeStatus_ctor = env->GetMethodID(NodeStatus_class, "<init>", "(JLjava/lang/String;Ljava/lang/String;Z)V"));
     EXCEPTIONANDNULLCHECK(PacketSender_onSendPacketRequested_method = env->GetMethodID(PacketSender_class, "onSendPacketRequested", "(JLjava/net/InetSocketAddress;[BI)I"));
     EXCEPTIONANDNULLCHECK(PathChecker_onPathCheck_method = env->GetMethodID(PathChecker_class, "onPathCheck", "(JJLjava/net/InetSocketAddress;)Z"));
     EXCEPTIONANDNULLCHECK(PathChecker_onPathLookup_method = env->GetMethodID(PathChecker_class, "onPathLookup", "(JI)Ljava/net/InetSocketAddress;"));
@@ -247,10 +243,6 @@ void setupJNICache(JavaVM *vm) {
     // Instance fields
     //
 
-    EXCEPTIONANDNULLCHECK(NodeStatus_address_field = env->GetFieldID(NodeStatus_class, "address", "J"));
-    EXCEPTIONANDNULLCHECK(NodeStatus_online_field = env->GetFieldID(NodeStatus_class, "online", "Z"));
-    EXCEPTIONANDNULLCHECK(NodeStatus_publicIdentity_field = env->GetFieldID(NodeStatus_class, "publicIdentity", "Ljava/lang/String;"));
-    EXCEPTIONANDNULLCHECK(NodeStatus_secretIdentity_field = env->GetFieldID(NodeStatus_class, "secretIdentity", "Ljava/lang/String;"));
     EXCEPTIONANDNULLCHECK(Node_configListener_field = env->GetFieldID(Node_class, "configListener", "Lcom/zerotier/sdk/VirtualNetworkConfigListener;"));
     EXCEPTIONANDNULLCHECK(Node_eventListener_field = env->GetFieldID(Node_class, "eventListener", "Lcom/zerotier/sdk/EventListener;"));
     EXCEPTIONANDNULLCHECK(Node_frameListener_field = env->GetFieldID(Node_class, "frameListener", "Lcom/zerotier/sdk/VirtualNetworkFrameListener;"));

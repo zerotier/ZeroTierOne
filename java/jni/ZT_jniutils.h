@@ -96,4 +96,6 @@ jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
 
 jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns);
 
+jobject newNodeStatus(JNIEnv *env, const ZT_NodeStatus &status);
+
 #endif // ZT_jniutils_h_
