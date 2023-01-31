@@ -27,25 +27,52 @@
 
 package com.zerotier.sdk;
 
+/**
+ * Virtual network configuration update type
+ *
+ * Defined in ZeroTierOne.h as ZT_VirtualNetworkConfigOperation
+ */
 public enum VirtualNetworkConfigOperation {
 
     /**
      * Network is coming up (either for the first time or after service restart)
      */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_UP,
+    VIRTUAL_NETWORK_CONFIG_OPERATION_UP(0),
 
     /**
      * Network configuration has been updated
      */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE,
+    VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE(1),
 
     /**
      * Network is going down (not permanently)
      */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN,
+    VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN(2),
 
     /**
      * Network is going down permanently (leave/delete)
      */
-    VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY
+    VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY(3);
+
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private final int id;
+
+    VirtualNetworkConfigOperation(int id) {
+        this.id = id;
+    }
+
+    public static VirtualNetworkConfigOperation fromInt(int id) {
+        switch (id) {
+            case 0:
+                return VIRTUAL_NETWORK_CONFIG_OPERATION_UP;
+            case 1:
+                return VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE;
+            case 2:
+                return VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN;
+            case 3:
+                return VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY;
+            default:
+                throw new RuntimeException("Unhandled value: " + id);
+        }
+    }
 }

@@ -120,26 +120,12 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT_VirtualNetworkType type)
 
 jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT_VirtualNetworkConfigOperation op)
 {
-    jobject vnetConfigOpObject = NULL;
-
-    jfieldID field;
-    switch(op)
-    {
-    case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP:
-        field = VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_UP_field;
-        break;
-    case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE:
-        field = VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE_field;
-        break;
-    case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN:
-        field = VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN_field;
-        break;
-    case ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY:
-        field = VirtualNetworkConfigOperation_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY_field;
-        break;
+    jobject vnetConfigOpObject = env->CallStaticObjectMethod(VirtualNetworkConfigOperation_class, VirtualNetworkConfigOperation_fromInt_method, op);
+    if (env->ExceptionCheck() || vnetConfigOpObject == NULL) {
+        LOGE("Error creating VirtualNetworkConfigOperation object");
+        return NULL;
     }
 
-    vnetConfigOpObject = env->GetStaticObjectField(VirtualNetworkConfigOperation_class, field);
     return vnetConfigOpObject;
 }
 
