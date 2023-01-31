@@ -95,5 +95,25 @@ public enum Event {
      *
      * <p>Meta-data: {@link String}, TRACE message</p>
      */
-	EVENT_TRACE
+    EVENT_TRACE,
+
+    /**
+     * VERB_USER_MESSAGE received
+     *
+     * These are generated when a VERB_USER_MESSAGE packet is received via
+     * ZeroTier VL1.
+     */
+    EVENT_USER_MESSAGE,
+
+    /**
+     * Remote trace received
+     *
+     * These are generated when a VERB_REMOTE_TRACE is received. Note
+     * that any node can fling one of these at us. It is your responsibility
+     * to filter and determine if it's worth paying attention to. If it's
+     * not just drop it. Most nodes that are not active controllers ignore
+     * these, and controllers only save them if they pertain to networks
+     * with remote tracing enabled.
+     */
+    EVENT_REMOTE_TRACE;
 }
