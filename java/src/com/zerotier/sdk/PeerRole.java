@@ -27,20 +27,45 @@
 
 package com.zerotier.sdk;
 
+/**
+ * What trust hierarchy role does this peer have?
+ *
+ * Defined in ZeroTierOne.h as ZT_PeerRole
+ */
 public enum PeerRole {
 
     /**
      * An ordinary node
      */
-    PEER_ROLE_LEAF,
+    PEER_ROLE_LEAF(0),
 
     /**
      * moon root
      */
-    PEER_ROLE_MOON,
+    PEER_ROLE_MOON(1),
 
     /**
      * planetary root
      */
-    PEER_ROLE_PLANET
+    PEER_ROLE_PLANET(2);
+
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private final int id;
+
+    PeerRole(int id) {
+        this.id = id;
+    }
+
+    public static PeerRole fromInt(int id) {
+        switch (id) {
+            case 0:
+                return PEER_ROLE_LEAF;
+            case 1:
+                return PEER_ROLE_MOON;
+            case 2:
+                return PEER_ROLE_PLANET;
+            default:
+                throw new RuntimeException("Unhandled value: " + id);
+        }
+    }
 }

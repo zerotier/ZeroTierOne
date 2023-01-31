@@ -73,6 +73,7 @@ extern jmethodID VirtualNetworkRoute_ctor;
 
 extern jmethodID Event_fromInt_method;
 extern jmethodID InetAddress_getByAddress_method;
+extern jmethodID PeerRole_fromInt_method;
 
 //
 // Instance fields
@@ -128,9 +129,6 @@ extern jfieldID VirtualNetworkRoute_via_field;
 // Static fields
 //
 
-extern jfieldID PeerRole_PEER_ROLE_LEAF_field;
-extern jfieldID PeerRole_PEER_ROLE_MOON_field;
-extern jfieldID PeerRole_PEER_ROLE_PLANET_field;
 extern jfieldID ResultCode_RESULT_ERROR_BAD_PARAMETER_field;
 extern jfieldID ResultCode_RESULT_ERROR_NETWORK_NOT_FOUND_field;
 extern jfieldID ResultCode_RESULT_ERROR_UNSUPPORTED_OPERATION_field;

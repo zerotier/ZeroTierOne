@@ -104,6 +104,7 @@ jmethodID VirtualNetworkRoute_ctor;
 
 jmethodID Event_fromInt_method;
 jmethodID InetAddress_getByAddress_method;
+jmethodID PeerRole_fromInt_method;
 
 //
 // Instance fields
@@ -159,9 +160,6 @@ jfieldID VirtualNetworkRoute_via_field;
 // Static fields
 //
 
-jfieldID PeerRole_PEER_ROLE_LEAF_field;
-jfieldID PeerRole_PEER_ROLE_MOON_field;
-jfieldID PeerRole_PEER_ROLE_PLANET_field;
 jfieldID ResultCode_RESULT_ERROR_BAD_PARAMETER_field;
 jfieldID ResultCode_RESULT_ERROR_NETWORK_NOT_FOUND_field;
 jfieldID ResultCode_RESULT_ERROR_UNSUPPORTED_OPERATION_field;
@@ -260,6 +258,7 @@ void setupJNICache(JavaVM *vm) {
 
     EXCEPTIONANDNULLCHECK(Event_fromInt_method = env->GetStaticMethodID(Event_class, "fromInt", "(I)Lcom/zerotier/sdk/Event;"));
     EXCEPTIONANDNULLCHECK(InetAddress_getByAddress_method = env->GetStaticMethodID(InetAddress_class, "getByAddress", "([B)Ljava/net/InetAddress;"));
+    EXCEPTIONANDNULLCHECK(PeerRole_fromInt_method = env->GetStaticMethodID(PeerRole_class, "fromInt", "(I)Lcom/zerotier/sdk/PeerRole;"));
 
     //
     // Instance fields
@@ -315,9 +314,6 @@ void setupJNICache(JavaVM *vm) {
     // Static fields
     //
 
-    EXCEPTIONANDNULLCHECK(PeerRole_PEER_ROLE_LEAF_field = env->GetStaticFieldID(PeerRole_class, "PEER_ROLE_LEAF", "Lcom/zerotier/sdk/PeerRole;"));
-    EXCEPTIONANDNULLCHECK(PeerRole_PEER_ROLE_MOON_field = env->GetStaticFieldID(PeerRole_class, "PEER_ROLE_MOON", "Lcom/zerotier/sdk/PeerRole;"));
-    EXCEPTIONANDNULLCHECK(PeerRole_PEER_ROLE_PLANET_field = env->GetStaticFieldID(PeerRole_class, "PEER_ROLE_PLANET", "Lcom/zerotier/sdk/PeerRole;"));
     EXCEPTIONANDNULLCHECK(ResultCode_RESULT_ERROR_BAD_PARAMETER_field = env->GetStaticFieldID(ResultCode_class, "RESULT_ERROR_BAD_PARAMETER", "Lcom/zerotier/sdk/ResultCode;"));
     EXCEPTIONANDNULLCHECK(ResultCode_RESULT_ERROR_NETWORK_NOT_FOUND_field = env->GetStaticFieldID(ResultCode_class, "RESULT_ERROR_NETWORK_NOT_FOUND", "Lcom/zerotier/sdk/ResultCode;"));
     EXCEPTIONANDNULLCHECK(ResultCode_RESULT_ERROR_UNSUPPORTED_OPERATION_field = env->GetStaticFieldID(ResultCode_class, "RESULT_ERROR_UNSUPPORTED_OPERATION", "Lcom/zerotier/sdk/ResultCode;"));

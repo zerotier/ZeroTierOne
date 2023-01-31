@@ -126,23 +126,11 @@ jobject createEvent(JNIEnv *env, ZT_Event event)
 
 jobject createPeerRole(JNIEnv *env, ZT_PeerRole role)
 {
-    jobject peerRoleObject = NULL;
-
-    jfieldID field;
-    switch(role)
-    {
-    case ZT_PEER_ROLE_LEAF:
-        field = PeerRole_PEER_ROLE_LEAF_field;
-        break;
-    case ZT_PEER_ROLE_MOON:
-        field = PeerRole_PEER_ROLE_MOON_field;
-        break;
-    case ZT_PEER_ROLE_PLANET:
-        field = PeerRole_PEER_ROLE_PLANET_field;
-        break;
+    jobject peerRoleObject = env->CallStaticObjectMethod(PeerRole_class, PeerRole_fromInt_method, role);
+    if (env->ExceptionCheck() || peerRoleObject == NULL) {
+        LOGE("Error creating PeerRole object");
+        return NULL;
     }
-
-    peerRoleObject = env->GetStaticObjectField(PeerRole_class, field);
 
     return peerRoleObject;
 }
