@@ -80,15 +80,6 @@ extern jmethodID VirtualNetworkStatus_fromInt_method;
 extern jmethodID VirtualNetworkType_fromInt_method;
 
 //
-// Instance fields
-//
-
-extern jfieldID VirtualNetworkRoute_flags_field;
-extern jfieldID VirtualNetworkRoute_metric_field;
-extern jfieldID VirtualNetworkRoute_target_field;
-extern jfieldID VirtualNetworkRoute_via_field;
-
-//
 // Enums
 //
 

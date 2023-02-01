@@ -111,15 +111,6 @@ jmethodID VirtualNetworkStatus_fromInt_method;
 jmethodID VirtualNetworkType_fromInt_method;
 
 //
-// Instance fields
-//
-
-jfieldID VirtualNetworkRoute_flags_field;
-jfieldID VirtualNetworkRoute_metric_field;
-jfieldID VirtualNetworkRoute_target_field;
-jfieldID VirtualNetworkRoute_via_field;
-
-//
 // Enums
 //
 
@@ -188,7 +179,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_ctor = env->GetMethodID(VirtualNetworkConfig_class, "<init>", "(JJLjava/lang/String;Lcom/zerotier/sdk/VirtualNetworkStatus;Lcom/zerotier/sdk/VirtualNetworkType;IZZZIJ[Ljava/net/InetSocketAddress;[Lcom/zerotier/sdk/VirtualNetworkRoute;Lcom/zerotier/sdk/VirtualNetworkDNS;)V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkDNS_ctor = env->GetMethodID(VirtualNetworkDNS_class, "<init>", "(Ljava/lang/String;Ljava/util/ArrayList;)V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkFrameListener_onVirtualNetworkFrame_method = env->GetMethodID(VirtualNetworkFrameListener_class, "onVirtualNetworkFrame", "(JJJJJ[B)V"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_ctor = env->GetMethodID(VirtualNetworkRoute_class, "<init>", "()V"));
+    EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_ctor = env->GetMethodID(VirtualNetworkRoute_class, "<init>", "(Ljava/net/InetSocketAddress;Ljava/net/InetSocketAddress;II)V"));
 
     //
     // Static methods
@@ -201,15 +192,6 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigOperation_fromInt_method = env->GetStaticMethodID(VirtualNetworkConfigOperation_class, "fromInt", "(I)Lcom/zerotier/sdk/VirtualNetworkConfigOperation;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkStatus_fromInt_method = env->GetStaticMethodID(VirtualNetworkStatus_class, "fromInt", "(I)Lcom/zerotier/sdk/VirtualNetworkStatus;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkType_fromInt_method = env->GetStaticMethodID(VirtualNetworkType_class, "fromInt", "(I)Lcom/zerotier/sdk/VirtualNetworkType;"));
-
-    //
-    // Instance fields
-    //
-
-    EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_flags_field = env->GetFieldID(VirtualNetworkRoute_class, "flags", "I"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_metric_field = env->GetFieldID(VirtualNetworkRoute_class, "metric", "I"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_target_field = env->GetFieldID(VirtualNetworkRoute_class, "target", "Ljava/net/InetSocketAddress;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_via_field = env->GetFieldID(VirtualNetworkRoute_class, "via", "Ljava/net/InetSocketAddress;"));
 
     //
     // Enums

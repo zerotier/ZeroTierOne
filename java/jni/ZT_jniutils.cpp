@@ -336,19 +336,34 @@ jobject newVersion(JNIEnv *env, int major, int minor, int rev)
 
 jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
 {
-    jobject routeObj = env->NewObject(VirtualNetworkRoute_class, VirtualNetworkRoute_ctor);
-    if(env->ExceptionCheck() || routeObj == NULL)
-    {
+    //
+    // may be NULL
+    //
+    jobject targetObj = newInetSocketAddress(env, route.target);
+    if (env->ExceptionCheck()) {
         return NULL;
     }
 
-    jobject targetObj = newInetSocketAddress(env, route.target);
+    //
+    // may be NULL
+    //
     jobject viaObj = newInetSocketAddress(env, route.via);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
 
-    env->SetObjectField(routeObj, VirtualNetworkRoute_target_field, targetObj);
-    env->SetObjectField(routeObj, VirtualNetworkRoute_via_field, viaObj);
-    env->SetIntField(routeObj, VirtualNetworkRoute_flags_field, (jint)route.flags);
-    env->SetIntField(routeObj, VirtualNetworkRoute_metric_field, (jint)route.metric);
+    jobject routeObj = env->NewObject(
+            VirtualNetworkRoute_class,
+            VirtualNetworkRoute_ctor,
+            targetObj,
+            viaObj,
+            route.flags,
+            route.metric);
+    if(env->ExceptionCheck() || routeObj == NULL)
+    {
+        LOGE("Exception creating VirtualNetworkRoute");
+        return NULL;
+    }
 
     return routeObj;
 }

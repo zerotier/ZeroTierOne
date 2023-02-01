@@ -29,34 +29,39 @@ package com.zerotier.sdk;
 
 import java.net.InetSocketAddress;
 
-public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute>
+/**
+ * A route to be pushed on a virtual network
+ *
+ * Defined in ZeroTierOne.h as ZT_VirtualNetworkRoute
+ */
+public class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute>
 {
-	private VirtualNetworkRoute() {
-        target = null;
-        via = null;
-        flags = 0;
-        metric = 0;
-    }
-
 	/**
 	 * Target network / netmask bits (in port field) or NULL or 0.0.0.0/0 for default
 	 */
-	public InetSocketAddress target;
-
+    private final InetSocketAddress target;
+    
 	/**
 	 * Gateway IP address (port ignored) or NULL (family == 0) for LAN-local (no gateway)
 	 */
-	public InetSocketAddress via;
+    private final InetSocketAddress via;
 
 	/**
 	 * Route flags
 	 */
-	public int flags;
+    private final int flags;
 
 	/**
 	 * Route metric (not currently used)
 	 */
-	public int metric;
+    private final int metric;
+
+    public VirtualNetworkRoute(InetSocketAddress target, InetSocketAddress via, int flags, int metric) {
+        this.target = target;
+        this.via = via;
+        this.flags = flags;
+        this.metric = metric;
+    }
 
     @Override
     public String toString() {
@@ -138,5 +143,21 @@ public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute
         result = 37 * result + metric;
 
         return result;
+    }
+
+    public InetSocketAddress getTarget() {
+        return target;
+    }
+
+    public InetSocketAddress getVia() {
+        return via;
+    }
+
+    public int getFlags() {
+        return flags;
+    }
+
+    public int getMetric() {
+        return metric;
     }
 }
