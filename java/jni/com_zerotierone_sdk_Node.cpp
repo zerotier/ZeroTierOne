@@ -1002,7 +1002,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    processWirePacket
- * Signature: (JJJLjava/net/InetSocketAddress;I[B[J)Lcom/zerotier/sdk/ResultCode;
+ * Signature: (JJJLjava/net/InetSocketAddress;[B[J)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     JNIEnv *env, jobject obj,
@@ -1466,7 +1466,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_status
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    networkConfig
- * Signature: (J)Lcom/zerotier/sdk/VirtualNetworkConfig;
+ * Signature: (JJ)Lcom/zerotier/sdk/VirtualNetworkConfig;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networkConfig(
     JNIEnv *env, jobject obj, jlong id, jlong nwid)
@@ -1491,7 +1491,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networkConfig(
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    version
- * Signature: (J)Lcom/zerotier/sdk/Version;
+ * Signature: ()Lcom/zerotier/sdk/Version;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_version(
     JNIEnv *env, jobject obj)
