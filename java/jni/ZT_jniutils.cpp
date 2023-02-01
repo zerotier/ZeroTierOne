@@ -132,6 +132,10 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
                 InetAddress_class, InetAddress_getByAddress_method, buff);
         }
         break;
+        default:
+        {
+            assert(false && "addr.ss_family is neither AF_INET6 nor AF_INET");
+        }
     }
     if(env->ExceptionCheck() || inetAddressObj == NULL) {
         LOGE("Error creating InetAddress object");
@@ -171,11 +175,16 @@ int addressPort(const sockaddr_storage addr) {
     return port;
 }
 
+//
+// addr may be empty
+//
+// may return NULL
+//
 jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
     LOGV("newInetSocketAddress Called");
 
-    if(addr.ss_family == 0)
+    if(isSocketAddressEmpty(addr))
     {
         return NULL;
     }
@@ -184,39 +193,15 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
 
     if(env->ExceptionCheck() || inetAddressObject == NULL)
     {
-        LOGE("Error creating new inet address");
         return NULL;
     }
 
-    int port = 0;
-    switch(addr.ss_family)
-    {
-        case AF_INET6:
-        {
-            LOGV("IPV6 Address");
-            sockaddr_in6 *ipv6 = (sockaddr_in6*)&addr;
-            port = ntohs(ipv6->sin6_port);
-            LOGV("Port %d", port);
-        }
-        break;
-        case AF_INET:
-        {
-            LOGV("IPV4 Address");
-            sockaddr_in *ipv4 = (sockaddr_in*)&addr;
-            port = ntohs(ipv4->sin_port);
-            LOGV("Port: %d", port);
-        }
-        break;
-        default:
-        {
-            break;
-        }
-    }
-
+    int port = addressPort(addr);
 
     jobject inetSocketAddressObject = env->NewObject(InetSocketAddress_class, InetSocketAddress_ctor, inetAddressObject, port);
     if(env->ExceptionCheck() || inetSocketAddressObject == NULL) {
         LOGE("Error creating InetSocketAddress object");
+        return NULL;
     }
     return inetSocketAddressObject;
 }
@@ -225,9 +210,11 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
 {
     LOGV("newPeerPhysicalPath Called");
 
+    //
+    // may be NULL
+    //
     jobject addressObject = newInetSocketAddress(env, ppp.address);
-    if(env->ExceptionCheck() || addressObject == NULL) {
-        LOGE("Error creating InetSocketAddress object");
+    if(env->ExceptionCheck()) {
         return NULL;
     }
 

@@ -414,12 +414,18 @@ namespace {
             return -100;
         }
 
+        //
+        // may be NULL
+        //
         jobject remoteAddressObj = newInetSocketAddress(env, *remoteAddress);
+        if (env->ExceptionCheck()) {
+            return -101;
+        }
         const unsigned char *bytes = static_cast<const unsigned char *>(buffer);
         jbyteArray bufferObj = newByteArray(env, bytes, bufferSize);
         if (env->ExceptionCheck() || bufferObj == NULL)
         {
-            return -101;
+            return -102;
         }
         
         int retval = env->CallIntMethod(ref->packetSender, PacketSender_onSendPacketRequested_method, localSocket, remoteAddressObj, bufferObj);
@@ -446,30 +452,11 @@ namespace {
         ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
 
         //
-        // was:
-        // struct sockaddr_storage nullAddress = {0};
+        // may be NULL
         //
-        // but was getting this warning:
-        // warning: suggest braces around initialization of subobject
-        //
-        // when building ZeroTierOne
-        //
-        struct sockaddr_storage nullAddress;
-
-        //
-        // It is possible to assume knowledge about internals of sockaddr_storage and construct
-        // correct 0-initializer, but it is simpler to just treat sockaddr_storage as opaque and
-        // use memset here to fill with 0
-        //
-        // This is also done in InetAddress.hpp for InetAddress
-        //
-        memset(&nullAddress, 0, sizeof(sockaddr_storage));
-
-        jobject remoteAddressObj = NULL;
-
-        if(memcmp(remoteAddress, &nullAddress, sizeof(sockaddr_storage)) != 0)
-        {
-            remoteAddressObj = newInetSocketAddress(env, *remoteAddress);
+        jobject remoteAddressObj = newInetSocketAddress(env, *remoteAddress);
+        if (env->ExceptionCheck()) {
+            return true;
         }
 
         return env->CallBooleanMethod(ref->pathChecker, PathChecker_onPathCheck_method, address, localSocket, remoteAddressObj);
