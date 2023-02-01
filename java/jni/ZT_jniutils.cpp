@@ -608,6 +608,8 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
             LOGE("exception assigning PeerPhysicalPath to array");
             break;
         }
+
+        env->DeleteLocalRef(path);
     }
 
     env->SetObjectField(peerObject, pathsField, arrayObject);
@@ -809,6 +811,8 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
             LOGE("Error assigning InetSocketAddress to array");
             return NULL;
         }
+
+        env->DeleteLocalRef(inetAddrObj);
     }
 
     env->SetObjectField(vnetConfigObj, assignedAddressesField, assignedAddrArrayObj);
@@ -837,6 +841,8 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
             LOGE("Error assigning VirtualNetworkRoute to array");
             return NULL;
         }
+
+        env->DeleteLocalRef(routeObj);
     }
 
     env->SetObjectField(vnetConfigObj, routesField, routesArrayObj);
