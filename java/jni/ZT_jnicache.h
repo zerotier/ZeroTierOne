@@ -83,20 +83,6 @@ extern jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-extern jfieldID VirtualNetworkConfig_assignedAddresses_field;
-extern jfieldID VirtualNetworkConfig_bridge_field;
-extern jfieldID VirtualNetworkConfig_broadcastEnabled_field;
-extern jfieldID VirtualNetworkConfig_dhcp_field;
-extern jfieldID VirtualNetworkConfig_dns_field;
-extern jfieldID VirtualNetworkConfig_enabled_field;
-extern jfieldID VirtualNetworkConfig_mac_field;
-extern jfieldID VirtualNetworkConfig_mtu_field;
-extern jfieldID VirtualNetworkConfig_name_field;
-extern jfieldID VirtualNetworkConfig_nwid_field;
-extern jfieldID VirtualNetworkConfig_portError_field;
-extern jfieldID VirtualNetworkConfig_routes_field;
-extern jfieldID VirtualNetworkConfig_status_field;
-extern jfieldID VirtualNetworkConfig_type_field;
 extern jfieldID VirtualNetworkDNS_domain_field;
 extern jfieldID VirtualNetworkDNS_servers_field;
 extern jfieldID VirtualNetworkRoute_flags_field;

@@ -114,20 +114,6 @@ jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-jfieldID VirtualNetworkConfig_assignedAddresses_field;
-jfieldID VirtualNetworkConfig_bridge_field;
-jfieldID VirtualNetworkConfig_broadcastEnabled_field;
-jfieldID VirtualNetworkConfig_dhcp_field;
-jfieldID VirtualNetworkConfig_dns_field;
-jfieldID VirtualNetworkConfig_enabled_field;
-jfieldID VirtualNetworkConfig_mac_field;
-jfieldID VirtualNetworkConfig_mtu_field;
-jfieldID VirtualNetworkConfig_name_field;
-jfieldID VirtualNetworkConfig_nwid_field;
-jfieldID VirtualNetworkConfig_portError_field;
-jfieldID VirtualNetworkConfig_routes_field;
-jfieldID VirtualNetworkConfig_status_field;
-jfieldID VirtualNetworkConfig_type_field;
 jfieldID VirtualNetworkDNS_domain_field;
 jfieldID VirtualNetworkDNS_servers_field;
 jfieldID VirtualNetworkRoute_flags_field;
@@ -201,7 +187,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(Peer_ctor = env->GetMethodID(Peer_class, "<init>", "(JIIIILcom/zerotier/sdk/PeerRole;[Lcom/zerotier/sdk/PeerPhysicalPath;)V"));
     EXCEPTIONANDNULLCHECK(Version_ctor = env->GetMethodID(Version_class, "<init>", "(III)V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigListener_onNetworkConfigurationUpdated_method = env->GetMethodID(VirtualNetworkConfigListener_class, "onNetworkConfigurationUpdated", "(JLcom/zerotier/sdk/VirtualNetworkConfigOperation;Lcom/zerotier/sdk/VirtualNetworkConfig;)I"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_ctor = env->GetMethodID(VirtualNetworkConfig_class, "<init>", "()V"));
+    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_ctor = env->GetMethodID(VirtualNetworkConfig_class, "<init>", "(JJLjava/lang/String;Lcom/zerotier/sdk/VirtualNetworkStatus;Lcom/zerotier/sdk/VirtualNetworkType;IZZZIZJ[Ljava/net/InetSocketAddress;[Lcom/zerotier/sdk/VirtualNetworkRoute;Lcom/zerotier/sdk/VirtualNetworkDNS;)V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkDNS_ctor = env->GetMethodID(VirtualNetworkDNS_class, "<init>", "()V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkFrameListener_onVirtualNetworkFrame_method = env->GetMethodID(VirtualNetworkFrameListener_class, "onVirtualNetworkFrame", "(JJJJJ[B)V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_ctor = env->GetMethodID(VirtualNetworkRoute_class, "<init>", "()V"));
@@ -222,20 +208,6 @@ void setupJNICache(JavaVM *vm) {
     // Instance fields
     //
 
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_assignedAddresses_field = env->GetFieldID(VirtualNetworkConfig_class, "assignedAddresses", "[Ljava/net/InetSocketAddress;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_bridge_field = env->GetFieldID(VirtualNetworkConfig_class, "bridge", "Z"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_broadcastEnabled_field = env->GetFieldID(VirtualNetworkConfig_class, "broadcastEnabled", "Z"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_dhcp_field = env->GetFieldID(VirtualNetworkConfig_class, "dhcp", "Z"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_dns_field = env->GetFieldID(VirtualNetworkConfig_class, "dns", "Lcom/zerotier/sdk/VirtualNetworkDNS;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_enabled_field = env->GetFieldID(VirtualNetworkConfig_class, "enabled", "Z"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_mac_field = env->GetFieldID(VirtualNetworkConfig_class, "mac", "J"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_mtu_field = env->GetFieldID(VirtualNetworkConfig_class, "mtu", "I"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_name_field = env->GetFieldID(VirtualNetworkConfig_class, "name", "Ljava/lang/String;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_nwid_field = env->GetFieldID(VirtualNetworkConfig_class, "nwid", "J"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_portError_field = env->GetFieldID(VirtualNetworkConfig_class, "portError", "I"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_routes_field = env->GetFieldID(VirtualNetworkConfig_class, "routes", "[Lcom/zerotier/sdk/VirtualNetworkRoute;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_status_field = env->GetFieldID(VirtualNetworkConfig_class, "status", "Lcom/zerotier/sdk/VirtualNetworkStatus;"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_type_field = env->GetFieldID(VirtualNetworkConfig_class, "type", "Lcom/zerotier/sdk/VirtualNetworkType;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkDNS_domain_field = env->GetFieldID(VirtualNetworkDNS_class, "domain", "Ljava/lang/String;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkDNS_servers_field = env->GetFieldID(VirtualNetworkDNS_class, "servers", "Ljava/util/ArrayList;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_flags_field = env->GetFieldID(VirtualNetworkRoute_class, "flags", "I"));

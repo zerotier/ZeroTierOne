@@ -36,30 +36,75 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 
-public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
+/**
+ * Virtual network configuration
+ *
+ * Defined in ZeroTierOne.h as ZT_VirtualNetworkConfig
+ */
+public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
+
     private final static String TAG = "VirtualNetworkConfig";
 
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
     public static final int ZT_MAX_ZT_ASSIGNED_ADDRESSES = 16;
 
-    private long nwid;
-    private long mac;
-    private String name;
-    private VirtualNetworkStatus status;
-    private VirtualNetworkType type;
-    private int mtu;
-    private boolean dhcp;
-    private boolean bridge;
-    private boolean broadcastEnabled;
-    private int portError;
-    private boolean enabled;
-    private long netconfRevision;
-    private InetSocketAddress[] assignedAddresses;
-    private VirtualNetworkRoute[] routes;
-    private VirtualNetworkDNS dns;
+    private final long nwid;
 
-    private VirtualNetworkConfig() {
+    private final long mac;
 
+    private final String name;
+
+    private final VirtualNetworkStatus status;
+
+    private final VirtualNetworkType type;
+
+    private final int mtu;
+
+    private final boolean dhcp;
+
+    private final boolean bridge;
+
+    private final boolean broadcastEnabled;
+
+    private final int portError;
+
+    private final boolean enabled;
+
+    private final long netconfRevision;
+
+    private final InetSocketAddress[] assignedAddresses;
+
+    private final VirtualNetworkRoute[] routes;
+
+    private final VirtualNetworkDNS dns;
+
+    public VirtualNetworkConfig(long nwid, long mac, String name, VirtualNetworkStatus status, VirtualNetworkType type, int mtu, boolean dhcp, boolean bridge, boolean broadcastEnabled, int portError, boolean enabled, long netconfRevision, InetSocketAddress[] assignedAddresses, VirtualNetworkRoute[] routes, VirtualNetworkDNS dns) {
+        this.nwid = nwid;
+        this.mac = mac;
+        this.name = name;
+        this.status = status;
+        this.type = type;
+        if (mtu < 0) {
+            throw new RuntimeException("mtu < 0: " + mtu);
+        }
+        this.mtu = mtu;
+        this.dhcp = dhcp;
+        this.bridge = bridge;
+        this.broadcastEnabled = broadcastEnabled;
+        this.portError = portError;
+        if (netconfRevision < 0) {
+            throw new RuntimeException("netconfRevision < 0: " + netconfRevision);
+        }
+        this.enabled = enabled;
+        this.netconfRevision = netconfRevision;
+        this.assignedAddresses = assignedAddresses;
+        this.routes = routes;
+        this.dns = dns;
+    }
+
+    @Override
+    public String toString() {
+        return "VirtualNetworkConfig(" + StringUtils.networkIdToString(nwid) + ", " + StringUtils.macAddressToString(mac) + ", " + name + ", " + status + ", " + type + ", " + mtu + ", " + dhcp + ", " + bridge + ", " + broadcastEnabled + ", " + portError + ", " + enabled + ", " + netconfRevision + ", " + Arrays.toString(assignedAddresses) + ", " + Arrays.toString(routes) + ", " + dns + ")";
     }
 
     @Override
@@ -254,42 +299,42 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
     /**
      * 64-bit ZeroTier network ID
      */
-    public final long networkId() {
+    public long getNwid() {
         return nwid;
     }
 
     /**
      * Ethernet MAC (48 bits) that should be assigned to port
      */
-    public final long macAddress() {
+    public long getMac() {
         return mac;
     }
 
     /**
      * Network name (from network configuration master)
      */
-    public final String name() {
+    public String getName() {
         return name;
     }
 
     /**
      * Network configuration request status
      */
-    public final VirtualNetworkStatus networkStatus() {
+    public VirtualNetworkStatus getStatus() {
         return status;
     }
 
     /**
      * Network type
      */
-    public final VirtualNetworkType networkType() {
+    public VirtualNetworkType getType() {
         return type;
     }
 
     /**
      * Maximum interface MTU
      */
-    public final int mtu() {
+    public int getMtu() {
         return mtu;
     }
 
@@ -300,7 +345,7 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
      * for security or other reasons. This is simply a netconf parameter that
      * means 'DHCP is available on this network.'</p>
      */
-    public final boolean isDhcpAvailable() {
+    public boolean isDhcp() {
         return dhcp;
     }
 
@@ -310,21 +355,21 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
      * <p>This is informational. If this is false, bridged packets will simply
      * be dropped and bridging won't work.</p>
      */
-    public final boolean isBridgeEnabled() {
+    public boolean isBridge() {
         return bridge;
     }
 
     /**
      * If true, this network supports and allows broadcast (ff:ff:ff:ff:ff:ff) traffic
      */
-    public final boolean broadcastEnabled() {
+    public boolean isBroadcastEnabled() {
         return broadcastEnabled;
     }
 
     /**
      * If the network is in PORT_ERROR state, this is the error most recently returned by the port config callback
      */
-    public final int portError() {
+    public int getPortError() {
         return portError;
     }
 
@@ -333,7 +378,7 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
      *
      * <p>If this is zero, it means we're still waiting for our netconf.</p>
      */
-    public final long netconfRevision() {
+    public long getNetconfRevision() {
         return netconfRevision;
     }
 
@@ -347,7 +392,7 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
      * This is only used for ZeroTier-managed address assignments sent by the
      * virtual network's configuration master.
      */
-    public final InetSocketAddress[] assignedAddresses() {
+    public InetSocketAddress[] getAssignedAddresses() {
         return assignedAddresses;
     }
 
@@ -356,7 +401,14 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
      *
      * @return
      */
-    public final VirtualNetworkRoute[] routes() { return routes; }
+    public VirtualNetworkRoute[] getRoutes() {
+        return routes;
+    }
 
-    public final VirtualNetworkDNS dns() { return dns; }
+    /**
+     * Network specific DNS configuration
+     */
+    public VirtualNetworkDNS getDns() {
+        return dns;
+    }
 }
