@@ -258,54 +258,66 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
 
 jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
 {
-    jobject vnetConfigObj = env->NewObject(VirtualNetworkConfig_class, VirtualNetworkConfig_ctor);
-    if(env->ExceptionCheck() || vnetConfigObj == NULL)
-    {
-        LOGE("Error creating new VirtualNetworkConfig object");
-        return NULL;
-    }
-
-    env->SetLongField(vnetConfigObj, VirtualNetworkConfig_nwid_field, vnetConfig.nwid);
-    env->SetLongField(vnetConfigObj, VirtualNetworkConfig_mac_field, vnetConfig.mac);
     jstring nameStr = env->NewStringUTF(vnetConfig.name);
     if(env->ExceptionCheck() || nameStr == NULL)
     {
+        LOGE("Exception creating new string");
         return NULL; // out of memory
     }
-    env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_name_field, nameStr);
 
     jobject statusObject = createVirtualNetworkStatus(env, vnetConfig.status);
     if(env->ExceptionCheck() || statusObject == NULL)
     {
         return NULL;
     }
-    env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_status_field, statusObject);
 
     jobject typeObject = createVirtualNetworkType(env, vnetConfig.type);
     if(env->ExceptionCheck() || typeObject == NULL)
     {
         return NULL;
     }
-    env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_type_field, typeObject);
-
-    env->SetIntField(vnetConfigObj, VirtualNetworkConfig_mtu_field, (int)vnetConfig.mtu);
-    env->SetBooleanField(vnetConfigObj, VirtualNetworkConfig_dhcp_field, vnetConfig.dhcp);
-    env->SetBooleanField(vnetConfigObj, VirtualNetworkConfig_bridge_field, vnetConfig.bridge);
-    env->SetBooleanField(vnetConfigObj, VirtualNetworkConfig_broadcastEnabled_field, vnetConfig.broadcastEnabled);
-    env->SetIntField(vnetConfigObj, VirtualNetworkConfig_portError_field, vnetConfig.portError);
 
     jobjectArray assignedAddrArrayObj = newInetSocketAddressArray(env, vnetConfig.assignedAddresses, vnetConfig.assignedAddressCount);
-
-    env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_assignedAddresses_field, assignedAddrArrayObj);
+    if (env->ExceptionCheck() || assignedAddrArrayObj == NULL) {
+        return NULL;
+    }
 
     jobjectArray routesArrayObj = newVirtualNetworkRouteArray(env, vnetConfig.routes, vnetConfig.routeCount);
-
-    env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_routes_field, routesArrayObj);
-
-    jobject dnsObj = newVirtualNetworkDNS(env, vnetConfig.dns);
-    if (dnsObj != NULL) {
-        env->SetObjectField(vnetConfigObj, VirtualNetworkConfig_dns_field, dnsObj);
+    if (env->ExceptionCheck() || routesArrayObj == NULL) {
+        return NULL;
     }
+
+    //
+    // may be NULL
+    //
+    jobject dnsObj = newVirtualNetworkDNS(env, vnetConfig.dns);
+    if(env->ExceptionCheck()) {
+        return NULL;
+    }
+
+    jobject vnetConfigObj = env->NewObject(
+            VirtualNetworkConfig_class,
+            VirtualNetworkConfig_ctor,
+            vnetConfig.nwid,
+            vnetConfig.mac,
+            nameStr,
+            statusObject,
+            typeObject,
+            vnetConfig.mtu,
+            vnetConfig.dhcp,
+            vnetConfig.bridge,
+            vnetConfig.broadcastEnabled,
+            vnetConfig.portError,
+            vnetConfig.netconfRevision,
+            assignedAddrArrayObj,
+            routesArrayObj,
+            dnsObj);
+    if(env->ExceptionCheck() || vnetConfigObj == NULL)
+    {
+        LOGE("Error creating new VirtualNetworkConfig object");
+        return NULL;
+    }
+
     return vnetConfigObj;
 }
 
