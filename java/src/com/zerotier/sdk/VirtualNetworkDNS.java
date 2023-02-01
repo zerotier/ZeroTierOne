@@ -8,11 +8,25 @@ package com.zerotier.sdk;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
+/**
+ * DNS configuration to be pushed on a virtual network
+ *
+ * Defined in ZeroTierOne.h as ZT_VirtualNetworkDNS
+ */
 public class VirtualNetworkDNS implements Comparable<VirtualNetworkDNS> {
-    private String domain;
-    private ArrayList<InetSocketAddress> servers;
 
-    public VirtualNetworkDNS() {}
+    private final String domain;
+    private final ArrayList<InetSocketAddress> servers;
+
+    public VirtualNetworkDNS(String domain, ArrayList<InetSocketAddress> servers) {
+        this.domain = domain;
+        this.servers = servers;
+    }
+
+    @Override
+    public String toString() {
+        return "VirtualNetworkDNS(" + domain + ", " + servers + ")";
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -53,7 +67,11 @@ public class VirtualNetworkDNS implements Comparable<VirtualNetworkDNS> {
         return result;
     }
 
-    public String getSearchDomain() { return domain; }
+    public String getDomain() {
+        return domain;
+    }
 
-    public ArrayList<InetSocketAddress> getServers() { return servers; }
+    public ArrayList<InetSocketAddress> getServers() {
+        return servers;
+    }
 }

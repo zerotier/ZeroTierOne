@@ -353,37 +353,64 @@ jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
     return routeObj;
 }
 
+//
+// may return NULL
+//
 jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns)
 {
-    jobject dnsObj = env->NewObject(VirtualNetworkDNS_class, VirtualNetworkDNS_ctor);
-    if(env->ExceptionCheck() || dnsObj == NULL) {
+    if (strlen(dns.domain) == 0) {
+        LOGD("dns.domain is empty; returning NULL");
         return NULL;
     }
 
-    if (strlen(dns.domain) > 0) {
+    jstring domain = env->NewStringUTF(dns.domain);
+    if (env->ExceptionCheck() || domain == NULL) {
+        LOGE("Exception creating new string");
+        return NULL;
+    }
 
-        jstring domain = env->NewStringUTF(dns.domain);
+    jobject addrList = env->NewObject(ArrayList_class, ArrayList_ctor, 0);
+    if (env->ExceptionCheck() || addrList == NULL) {
+        LOGE("Exception creating new ArrayList");
+        return NULL;
+    }
 
-        jobject addrArray = env->NewObject(ArrayList_class, ArrayList_ctor, 0);
+    for (int i = 0; i < ZT_MAX_DNS_SERVERS; ++i) { //NOLINT
 
-        struct sockaddr_storage nullAddr;
-        memset(&nullAddr, 0, sizeof(struct sockaddr_storage));
-        for(int i = 0; i < ZT_MAX_DNS_SERVERS; ++i) {
-            struct sockaddr_storage tmp = dns.server_addr[i];
+        struct sockaddr_storage tmp = dns.server_addr[i];
 
-            if (memcmp(&tmp, &nullAddr, sizeof(struct sockaddr_storage)) != 0) {
-                jobject addr = newInetSocketAddress(env, tmp);
-                env->CallBooleanMethod(addrArray, ArrayList_add_method, addr);
-                env->DeleteLocalRef(addr);
-            }
+        //
+        // may be NULL
+        //
+        jobject addr = newInetSocketAddress(env, tmp);
+        if (env->ExceptionCheck()) {
+            return NULL;
         }
 
-        env->SetObjectField(dnsObj, VirtualNetworkDNS_domain_field, domain);
-        env->SetObjectField(dnsObj, VirtualNetworkDNS_servers_field, addrArray);
+        if (addr == NULL) {
+            continue;
+        }
 
-        return dnsObj;
+        env->CallBooleanMethod(addrList, ArrayList_add_method, addr);
+        if(env->ExceptionCheck())
+        {
+            LOGE("Exception calling add");
+            return NULL;
+        }
+
+        env->DeleteLocalRef(addr);
     }
-    return NULL;
+
+    jobject dnsObj = env->NewObject(
+            VirtualNetworkDNS_class,
+            VirtualNetworkDNS_ctor,
+            domain,
+            addrList);
+    if (env->ExceptionCheck() || dnsObj == NULL) {
+        LOGE("Exception creating new VirtualNetworkDNS");
+        return NULL;
+    }
+    return dnsObj;
 }
 
 jobject newNodeStatus(JNIEnv *env, const ZT_NodeStatus &status) {
