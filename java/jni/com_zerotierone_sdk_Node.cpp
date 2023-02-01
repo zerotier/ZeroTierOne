@@ -992,6 +992,8 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
         frameLength,
         &nextBackgroundTaskDeadline);
 
+    free(localData);
+
     jlong *outDeadline = (jlong*)env->GetPrimitiveArrayCritical(out_nextBackgroundTaskDeadline, NULL);
     outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
     env->ReleasePrimitiveArrayCritical(out_nextBackgroundTaskDeadline, outDeadline, 0);
