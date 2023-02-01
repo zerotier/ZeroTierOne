@@ -34,8 +34,8 @@
 
 #include <map>
 #include <string>
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
 
 // global static JNI Lookup Object
 JniLookup lookup;
