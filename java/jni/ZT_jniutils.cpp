@@ -226,23 +226,32 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
 {
     LOGV("newPeer called");
 
-    jobject peerObject = env->NewObject(Peer_class, Peer_ctor);
-    if(env->ExceptionCheck() || peerObject == NULL)
+    jobject peerRoleObj = createPeerRole(env, peer.role);
+    if(env->ExceptionCheck() || peerRoleObj == NULL)
     {
-        LOGE("Error creating Peer object");
         return NULL; // out of memory
     }
 
-    env->SetLongField(peerObject, Peer_address_field, (jlong)peer.address);
-    env->SetIntField(peerObject, Peer_versionMajor_field, peer.versionMajor);
-    env->SetIntField(peerObject, Peer_versionMinor_field, peer.versionMinor);
-    env->SetIntField(peerObject, Peer_versionRev_field, peer.versionRev);
-    env->SetIntField(peerObject, Peer_latency_field, peer.latency);
-    env->SetObjectField(peerObject, Peer_role_field, createPeerRole(env, peer.role));
-
     jobjectArray arrayObject = newPeerPhysicalPathArray(env, peer.paths, peer.pathCount);
+    if (env->ExceptionCheck() || arrayObject == NULL) {
+        return NULL;
+    }
 
-    env->SetObjectField(peerObject, Peer_paths_field, arrayObject);
+    jobject peerObject = env->NewObject(
+            Peer_class,
+            Peer_ctor,
+            peer.address,
+            peer.versionMajor,
+            peer.versionMinor,
+            peer.versionRev,
+            peer.latency,
+            peerRoleObj,
+            arrayObject);
+    if(env->ExceptionCheck() || peerObject == NULL)
+    {
+        LOGE("Error creating Peer object");
+        return NULL;
+    }
 
     return peerObject;
 }

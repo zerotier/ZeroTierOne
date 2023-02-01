@@ -114,13 +114,6 @@ jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-jfieldID Peer_address_field;
-jfieldID Peer_latency_field;
-jfieldID Peer_paths_field;
-jfieldID Peer_role_field;
-jfieldID Peer_versionMajor_field;
-jfieldID Peer_versionMinor_field;
-jfieldID Peer_versionRev_field;
 jfieldID Version_major_field;
 jfieldID Version_minor_field;
 jfieldID Version_revision_field;
@@ -208,7 +201,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(PathChecker_onPathCheck_method = env->GetMethodID(PathChecker_class, "onPathCheck", "(JJLjava/net/InetSocketAddress;)Z"));
     EXCEPTIONANDNULLCHECK(PathChecker_onPathLookup_method = env->GetMethodID(PathChecker_class, "onPathLookup", "(JI)Ljava/net/InetSocketAddress;"));
     EXCEPTIONANDNULLCHECK(PeerPhysicalPath_ctor = env->GetMethodID(PeerPhysicalPath_class, "<init>", "(Ljava/net/InetSocketAddress;JJZ)V"));
-    EXCEPTIONANDNULLCHECK(Peer_ctor = env->GetMethodID(Peer_class, "<init>", "()V"));
+    EXCEPTIONANDNULLCHECK(Peer_ctor = env->GetMethodID(Peer_class, "<init>", "(JIIIILcom/zerotier/sdk/PeerRole;[Lcom/zerotier/sdk/PeerPhysicalPath;)V"));
     EXCEPTIONANDNULLCHECK(Version_ctor = env->GetMethodID(Version_class, "<init>", "()V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigListener_onNetworkConfigurationUpdated_method = env->GetMethodID(VirtualNetworkConfigListener_class, "onNetworkConfigurationUpdated", "(JLcom/zerotier/sdk/VirtualNetworkConfigOperation;Lcom/zerotier/sdk/VirtualNetworkConfig;)I"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_ctor = env->GetMethodID(VirtualNetworkConfig_class, "<init>", "()V"));
@@ -232,13 +225,6 @@ void setupJNICache(JavaVM *vm) {
     // Instance fields
     //
 
-    EXCEPTIONANDNULLCHECK(Peer_address_field = env->GetFieldID(Peer_class, "address", "J"));
-    EXCEPTIONANDNULLCHECK(Peer_latency_field = env->GetFieldID(Peer_class, "latency", "I"));
-    EXCEPTIONANDNULLCHECK(Peer_paths_field = env->GetFieldID(Peer_class, "paths", "[Lcom/zerotier/sdk/PeerPhysicalPath;"));
-    EXCEPTIONANDNULLCHECK(Peer_role_field = env->GetFieldID(Peer_class, "role", "Lcom/zerotier/sdk/PeerRole;"));
-    EXCEPTIONANDNULLCHECK(Peer_versionMajor_field = env->GetFieldID(Peer_class, "versionMajor", "I"));
-    EXCEPTIONANDNULLCHECK(Peer_versionMinor_field = env->GetFieldID(Peer_class, "versionMinor", "I"));
-    EXCEPTIONANDNULLCHECK(Peer_versionRev_field = env->GetFieldID(Peer_class, "versionRev", "I"));
     EXCEPTIONANDNULLCHECK(Version_major_field = env->GetFieldID(Version_class, "major", "I"));
     EXCEPTIONANDNULLCHECK(Version_minor_field = env->GetFieldID(Version_class, "minor", "I"));
     EXCEPTIONANDNULLCHECK(Version_revision_field = env->GetFieldID(Version_class, "revision", "I"));
