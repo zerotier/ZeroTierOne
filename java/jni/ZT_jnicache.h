@@ -83,9 +83,6 @@ extern jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-extern jfieldID Version_major_field;
-extern jfieldID Version_minor_field;
-extern jfieldID Version_revision_field;
 extern jfieldID VirtualNetworkConfig_assignedAddresses_field;
 extern jfieldID VirtualNetworkConfig_bridge_field;
 extern jfieldID VirtualNetworkConfig_broadcastEnabled_field;
