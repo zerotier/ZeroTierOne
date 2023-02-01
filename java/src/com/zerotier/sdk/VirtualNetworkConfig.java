@@ -68,8 +68,6 @@ public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
 
     private final int portError;
 
-    private final boolean enabled;
-
     private final long netconfRevision;
 
     private final InetSocketAddress[] assignedAddresses;
@@ -78,7 +76,7 @@ public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
 
     private final VirtualNetworkDNS dns;
 
-    public VirtualNetworkConfig(long nwid, long mac, String name, VirtualNetworkStatus status, VirtualNetworkType type, int mtu, boolean dhcp, boolean bridge, boolean broadcastEnabled, int portError, boolean enabled, long netconfRevision, InetSocketAddress[] assignedAddresses, VirtualNetworkRoute[] routes, VirtualNetworkDNS dns) {
+    public VirtualNetworkConfig(long nwid, long mac, String name, VirtualNetworkStatus status, VirtualNetworkType type, int mtu, boolean dhcp, boolean bridge, boolean broadcastEnabled, int portError, long netconfRevision, InetSocketAddress[] assignedAddresses, VirtualNetworkRoute[] routes, VirtualNetworkDNS dns) {
         this.nwid = nwid;
         this.mac = mac;
         this.name = name;
@@ -95,7 +93,6 @@ public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
         if (netconfRevision < 0) {
             throw new RuntimeException("netconfRevision < 0: " + netconfRevision);
         }
-        this.enabled = enabled;
         this.netconfRevision = netconfRevision;
         this.assignedAddresses = assignedAddresses;
         this.routes = routes;
@@ -104,7 +101,7 @@ public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
 
     @Override
     public String toString() {
-        return "VirtualNetworkConfig(" + StringUtils.networkIdToString(nwid) + ", " + StringUtils.macAddressToString(mac) + ", " + name + ", " + status + ", " + type + ", " + mtu + ", " + dhcp + ", " + bridge + ", " + broadcastEnabled + ", " + portError + ", " + enabled + ", " + netconfRevision + ", " + Arrays.toString(assignedAddresses) + ", " + Arrays.toString(routes) + ", " + dns + ")";
+        return "VirtualNetworkConfig(" + StringUtils.networkIdToString(nwid) + ", " + StringUtils.macAddressToString(mac) + ", " + name + ", " + status + ", " + type + ", " + mtu + ", " + dhcp + ", " + bridge + ", " + broadcastEnabled + ", " + portError + ", " + netconfRevision + ", " + Arrays.toString(assignedAddresses) + ", " + Arrays.toString(routes) + ", " + dns + ")";
     }
 
     @Override
@@ -173,12 +170,6 @@ public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
 
         if (this.portError != cfg.portError) {
             Log.i(TAG, "Port Error Changed. Old: " + this.portError + ", New: " + cfg.portError);
-
-            return false;
-        }
-
-        if (this.enabled != cfg.enabled) {
-            Log.i(TAG, "Enabled Changed. Old: " + this.enabled + ", New: " + cfg.enabled);
 
             return false;
         }
@@ -287,7 +278,6 @@ public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
         result = 37 * result + (bridge ? 1 : 0);
         result = 37 * result + (broadcastEnabled ? 1 : 0);
         result = 37 * result + portError;
-        result = 37 * result + (enabled ? 1 : 0);
         result = 37 * result + (int) (netconfRevision ^ (netconfRevision >>> 32));
         result = 37 * result + Arrays.hashCode(assignedAddresses);
         result = 37 * result + Arrays.hashCode(routes);

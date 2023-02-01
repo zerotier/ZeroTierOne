@@ -187,7 +187,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(Peer_ctor = env->GetMethodID(Peer_class, "<init>", "(JIIIILcom/zerotier/sdk/PeerRole;[Lcom/zerotier/sdk/PeerPhysicalPath;)V"));
     EXCEPTIONANDNULLCHECK(Version_ctor = env->GetMethodID(Version_class, "<init>", "(III)V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigListener_onNetworkConfigurationUpdated_method = env->GetMethodID(VirtualNetworkConfigListener_class, "onNetworkConfigurationUpdated", "(JLcom/zerotier/sdk/VirtualNetworkConfigOperation;Lcom/zerotier/sdk/VirtualNetworkConfig;)I"));
-    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_ctor = env->GetMethodID(VirtualNetworkConfig_class, "<init>", "(JJLjava/lang/String;Lcom/zerotier/sdk/VirtualNetworkStatus;Lcom/zerotier/sdk/VirtualNetworkType;IZZZIZJ[Ljava/net/InetSocketAddress;[Lcom/zerotier/sdk/VirtualNetworkRoute;Lcom/zerotier/sdk/VirtualNetworkDNS;)V"));
+    EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_ctor = env->GetMethodID(VirtualNetworkConfig_class, "<init>", "(JJLjava/lang/String;Lcom/zerotier/sdk/VirtualNetworkStatus;Lcom/zerotier/sdk/VirtualNetworkType;IZZZIJ[Ljava/net/InetSocketAddress;[Lcom/zerotier/sdk/VirtualNetworkRoute;Lcom/zerotier/sdk/VirtualNetworkDNS;)V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkDNS_ctor = env->GetMethodID(VirtualNetworkDNS_class, "<init>", "()V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkFrameListener_onVirtualNetworkFrame_method = env->GetMethodID(VirtualNetworkFrameListener_class, "onVirtualNetworkFrame", "(JJJJJ[B)V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkRoute_ctor = env->GetMethodID(VirtualNetworkRoute_class, "<init>", "()V"));
