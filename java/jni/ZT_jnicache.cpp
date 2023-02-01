@@ -114,9 +114,6 @@ jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-jfieldID Version_major_field;
-jfieldID Version_minor_field;
-jfieldID Version_revision_field;
 jfieldID VirtualNetworkConfig_assignedAddresses_field;
 jfieldID VirtualNetworkConfig_bridge_field;
 jfieldID VirtualNetworkConfig_broadcastEnabled_field;
@@ -202,7 +199,7 @@ void setupJNICache(JavaVM *vm) {
     EXCEPTIONANDNULLCHECK(PathChecker_onPathLookup_method = env->GetMethodID(PathChecker_class, "onPathLookup", "(JI)Ljava/net/InetSocketAddress;"));
     EXCEPTIONANDNULLCHECK(PeerPhysicalPath_ctor = env->GetMethodID(PeerPhysicalPath_class, "<init>", "(Ljava/net/InetSocketAddress;JJZ)V"));
     EXCEPTIONANDNULLCHECK(Peer_ctor = env->GetMethodID(Peer_class, "<init>", "(JIIIILcom/zerotier/sdk/PeerRole;[Lcom/zerotier/sdk/PeerPhysicalPath;)V"));
-    EXCEPTIONANDNULLCHECK(Version_ctor = env->GetMethodID(Version_class, "<init>", "()V"));
+    EXCEPTIONANDNULLCHECK(Version_ctor = env->GetMethodID(Version_class, "<init>", "(III)V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfigListener_onNetworkConfigurationUpdated_method = env->GetMethodID(VirtualNetworkConfigListener_class, "onNetworkConfigurationUpdated", "(JLcom/zerotier/sdk/VirtualNetworkConfigOperation;Lcom/zerotier/sdk/VirtualNetworkConfig;)I"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_ctor = env->GetMethodID(VirtualNetworkConfig_class, "<init>", "()V"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkDNS_ctor = env->GetMethodID(VirtualNetworkDNS_class, "<init>", "()V"));
@@ -225,9 +222,6 @@ void setupJNICache(JavaVM *vm) {
     // Instance fields
     //
 
-    EXCEPTIONANDNULLCHECK(Version_major_field = env->GetFieldID(Version_class, "major", "I"));
-    EXCEPTIONANDNULLCHECK(Version_minor_field = env->GetFieldID(Version_class, "minor", "I"));
-    EXCEPTIONANDNULLCHECK(Version_revision_field = env->GetFieldID(Version_class, "revision", "I"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_assignedAddresses_field = env->GetFieldID(VirtualNetworkConfig_class, "assignedAddresses", "[Ljava/net/InetSocketAddress;"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_bridge_field = env->GetFieldID(VirtualNetworkConfig_class, "bridge", "Z"));
     EXCEPTIONANDNULLCHECK(VirtualNetworkConfig_broadcastEnabled_field = env->GetFieldID(VirtualNetworkConfig_class, "broadcastEnabled", "Z"));

@@ -312,15 +312,12 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
 jobject newVersion(JNIEnv *env, int major, int minor, int rev)
 {
     // create a com.zerotier.sdk.Version object
-    jobject versionObj = env->NewObject(Version_class, Version_ctor);
+    jobject versionObj = env->NewObject(Version_class, Version_ctor, major, minor, rev);
     if(env->ExceptionCheck() || versionObj == NULL)
     {
+        LOGE("Error creating new Version object");
         return NULL;
     }
-
-    env->SetIntField(versionObj, Version_major_field, (jint)major);
-    env->SetIntField(versionObj, Version_minor_field, (jint)minor);
-    env->SetIntField(versionObj, Version_revision_field, (jint)rev);
 
     return versionObj;
 }
