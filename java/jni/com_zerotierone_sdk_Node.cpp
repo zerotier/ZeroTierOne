@@ -498,40 +498,8 @@ namespace {
             return false;
         }
 
-        jint port = env->CallIntMethod(sockAddressObject, InetSocketAddress_getPort_method);
-        jobject addressObject = env->CallObjectMethod(sockAddressObject, InetSocketAddress_getAddress_method);
-
-        jbyteArray addressBytes = (jbyteArray)env->CallObjectMethod(addressObject, InetAddress_getAddress_method);
-        if(addressBytes == NULL)
-        {
-            LOGE("Unable to call InetAddress.getBytes()");
-            return false;
-        }
-
-        int addressSize = env->GetArrayLength(addressBytes);
-        if(addressSize == 4)
-        {
-            // IPV4
-            sockaddr_in *addr = (sockaddr_in*)result;
-            addr->sin_family = AF_INET;
-            addr->sin_port = htons(port);
-            
-            void *data = env->GetPrimitiveArrayCritical(addressBytes, NULL);
-            memcpy(&addr->sin_addr, data, 4);
-            env->ReleasePrimitiveArrayCritical(addressBytes, data, 0);
-        }
-        else if (addressSize == 16)
-        {
-            // IPV6
-            sockaddr_in6 *addr = (sockaddr_in6*)result;
-            addr->sin6_family = AF_INET6;
-            addr->sin6_port = htons(port);
-            void *data = env->GetPrimitiveArrayCritical(addressBytes, NULL);
-            memcpy(&addr->sin6_addr, data, 16);
-            env->ReleasePrimitiveArrayCritical(addressBytes, data, 0);
-        }
-        else
-        {
+        *result = fromSocketAddressObject(env, sockAddressObject);
+        if (env->ExceptionCheck() || isSocketAddressEmpty(*result)) {
             return false;
         }
 
@@ -863,63 +831,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
 
     int64_t now = (int64_t)in_now;
 
-    jobject remoteAddrObject = env->CallObjectMethod(in_remoteAddress, InetSocketAddress_getAddress_method);
-
-    if(remoteAddrObject == NULL)
-    {
-        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    sockaddr_storage remoteAddress = fromSocketAddressObject(env, in_remoteAddress);
+    if (env->ExceptionCheck() || isSocketAddressEmpty(remoteAddress)) {
+        return NULL;
     }
-
-    // call InetSocketAddress.getPort()
-    int remotePort = env->CallIntMethod(in_remoteAddress, InetSocketAddress_getPort_method);
-    if(env->ExceptionCheck())
-    {
-        LOGE("Exception calling InetSocketAddress.getPort()");
-        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
-    }
-
-    // Call InetAddress.getAddress()
-    jbyteArray remoteAddressArray = (jbyteArray)env->CallObjectMethod(remoteAddrObject, InetAddress_getAddress_method);
-    if(remoteAddressArray == NULL)
-    {
-        LOGE("Unable to call getAddress()");
-        // unable to call getAddress()
-        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
-    }
-
-    unsigned int addrSize = env->GetArrayLength(remoteAddressArray);
-
-
-    // get the address bytes
-    jbyte *addr = (jbyte*)env->GetPrimitiveArrayCritical(remoteAddressArray, NULL);
-    sockaddr_storage remoteAddress = {};
-
-    if(addrSize == 16)
-    {
-        // IPV6 address
-        sockaddr_in6 ipv6 = {};
-        ipv6.sin6_family = AF_INET6;
-        ipv6.sin6_port = htons(remotePort);
-        memcpy(ipv6.sin6_addr.s6_addr, addr, 16);
-        memcpy(&remoteAddress, &ipv6, sizeof(sockaddr_in6));
-    }
-    else if(addrSize == 4)
-    {
-        // IPV4 address
-        sockaddr_in ipv4 = {};
-        ipv4.sin_family = AF_INET;
-        ipv4.sin_port = htons(remotePort);
-        memcpy(&ipv4.sin_addr, addr, 4);
-        memcpy(&remoteAddress, &ipv4, sizeof(sockaddr_in));
-    }
-    else
-    {
-        LOGE("Unknown IP version");
-        // unknown address type
-        env->ReleasePrimitiveArrayCritical(remoteAddressArray, addr, 0);
-        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
-    }
-    env->ReleasePrimitiveArrayCritical(remoteAddressArray, addr, 0);
 
     unsigned int packetLength = (unsigned int)env->GetArrayLength(in_packetData);
     if(packetLength == 0)
