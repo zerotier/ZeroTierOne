@@ -233,11 +233,12 @@ namespace {
             case ZT_EVENT_TRACE: {
                 LOGV("Trace Event");
                 // call onTrace()
-                if (data != NULL) {
-                    const char *message = (const char *) data;
-                    jstring messageStr = env->NewStringUTF(message);
-                    env->CallVoidMethod(ref->eventListener, EventListener_onTrace_method, messageStr);
+                if (data == NULL) {
+                    break;
                 }
+                const char *message = (const char *) data;
+                jstring messageStr = env->NewStringUTF(message);
+                env->CallVoidMethod(ref->eventListener, EventListener_onTrace_method, messageStr);
             }
                 break;
             case ZT_EVENT_USER_MESSAGE:

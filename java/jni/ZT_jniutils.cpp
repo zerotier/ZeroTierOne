@@ -175,20 +175,16 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
     LOGV("newInetSocketAddress Called");
 
-    jobject inetAddressObject = NULL;
-
-    if(addr.ss_family != 0)
+    if(addr.ss_family == 0)
     {
-        inetAddressObject = newInetAddress(env, addr);
-
-        if(env->ExceptionCheck() || inetAddressObject == NULL)
-        {
-            LOGE("Error creating new inet address");
-            return NULL;
-        }
+        return NULL;
     }
-    else
+
+    jobject inetAddressObject = newInetAddress(env, addr);
+
+    if(env->ExceptionCheck() || inetAddressObject == NULL)
     {
+        LOGE("Error creating new inet address");
         return NULL;
     }
 
