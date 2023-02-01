@@ -83,8 +83,6 @@ extern jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-extern jfieldID VirtualNetworkDNS_domain_field;
-extern jfieldID VirtualNetworkDNS_servers_field;
 extern jfieldID VirtualNetworkRoute_flags_field;
 extern jfieldID VirtualNetworkRoute_metric_field;
 extern jfieldID VirtualNetworkRoute_target_field;
