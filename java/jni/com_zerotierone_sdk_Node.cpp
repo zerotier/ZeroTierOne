@@ -1531,15 +1531,6 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
         return NULL;
     }
 
-    int peerCount = peerList->peerCount * 100;
-    LOGV("Ensure Local Capacity: %d", peerCount);
-    if(env->EnsureLocalCapacity(peerCount))
-    {
-        LOGE("EnsureLocalCapacity failed!!");
-        ZT_Node_freeQueryResult(node, peerList);
-        return NULL;
-    }
-
     jclass peerClass = lookup.findClass("com/zerotier/sdk/Peer");
     if(env->ExceptionCheck() || peerClass == NULL)
     {
@@ -1568,6 +1559,8 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
             LOGE("Error assigning Peer object to array");
             break;
         }
+
+        env->DeleteLocalRef(peerObj);
     }
 
     ZT_Node_freeQueryResult(node, peerList);
@@ -1624,6 +1617,8 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networks(
             LOGE("Error assigning VirtualNetworkConfig object to array");
             break;
         }
+
+        env->DeleteLocalRef(networkObject);
     }
 
     ZT_Node_freeQueryResult(node, networkList);
