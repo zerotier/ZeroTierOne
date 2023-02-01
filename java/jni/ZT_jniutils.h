@@ -18,7 +18,7 @@
  
 #ifndef ZT_jniutils_h_
 #define ZT_jniutils_h_
-#include <stdio.h>
+
 #include <jni.h>
 #include <ZeroTierOne.h>
 

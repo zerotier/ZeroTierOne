@@ -21,7 +21,7 @@
 #include "ZT_jniarray.h"
 
 #include <string>
-#include <assert.h>
+#include <cassert>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
