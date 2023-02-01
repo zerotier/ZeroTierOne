@@ -23,6 +23,7 @@
 #include <ZeroTierOne.h>
 
 #include <limits> // for numeric_limits
+#include <sys/socket.h> // for sockaddr_storage
 
 #if defined(__ANDROID__)
 
@@ -162,5 +163,7 @@ jbyteArray newByteArray(JNIEnv *env, const unsigned char *bytes, size_t count);
 jbyteArray newByteArray(JNIEnv *env, size_t count);
 
 bool isSocketAddressEmpty(const sockaddr_storage addr);
+
+sockaddr_storage fromSocketAddressObject(JNIEnv *env, jobject sockAddressObject);
 
 #endif // ZT_jniutils_h_

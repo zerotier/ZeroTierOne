@@ -26,7 +26,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 
 #define LOG_TAG "Utils"
 
@@ -585,4 +584,71 @@ bool isSocketAddressEmpty(const sockaddr_storage addr) {
     memset(&emptyAddress, 0, sizeof(sockaddr_storage));
 
     return (memcmp(&addr, &emptyAddress, sizeof(sockaddr_storage)) == 0); //NOLINT
+}
+
+//
+// returns empty sockaddr_storage on error
+//
+sockaddr_storage fromSocketAddressObject(JNIEnv *env, jobject sockAddressObject) {
+
+    sockaddr_storage emptyAddress; //NOLINT
+
+    memset(&emptyAddress, 0, sizeof(sockaddr_storage));
+
+    jint port = env->CallIntMethod(sockAddressObject, InetSocketAddress_getPort_method);
+    if(env->ExceptionCheck())
+    {
+        LOGE("Exception calling getPort");
+        return emptyAddress;
+    }
+
+    jobject addressObject = env->CallObjectMethod(sockAddressObject, InetSocketAddress_getAddress_method);
+    if(env->ExceptionCheck() || addressObject == NULL)
+    {
+        LOGE("Exception calling getAddress");
+        return emptyAddress;
+    }
+
+    jbyteArray addressArrayObj = reinterpret_cast<jbyteArray>(env->CallObjectMethod(addressObject, InetAddress_getAddress_method));
+    if(env->ExceptionCheck() || addressArrayObj == NULL)
+    {
+        LOGE("Exception calling getAddress");
+        return emptyAddress;
+    }
+
+    sockaddr_storage addr = {};
+
+    if (env->IsInstanceOf(addressObject, Inet4Address_class)) {
+
+        // IPV4
+
+        assert(env->GetArrayLength(addressArrayObj) == 4);
+
+        sockaddr_in *addr_4 = reinterpret_cast<sockaddr_in *>(&addr);
+        addr_4->sin_family = AF_INET;
+        addr_4->sin_port = htons(port);
+
+        void *data = env->GetPrimitiveArrayCritical(addressArrayObj, NULL);
+        memcpy(&addr_4->sin_addr.s_addr, data, 4);
+        env->ReleasePrimitiveArrayCritical(addressArrayObj, data, 0);
+
+    } else if (env->IsInstanceOf(addressObject, Inet6Address_class)) {
+
+        // IPV6
+
+        assert(env->GetArrayLength(addressArrayObj) == 16);
+
+        sockaddr_in6 *addr_6 = reinterpret_cast<sockaddr_in6 *>(&addr);
+        addr_6->sin6_family = AF_INET6;
+        addr_6->sin6_port = htons(port);
+
+        void *data = env->GetPrimitiveArrayCritical(addressArrayObj, NULL);
+        memcpy(&addr_6->sin6_addr.s6_addr, data, 16);
+        env->ReleasePrimitiveArrayCritical(addressArrayObj, data, 0);
+
+    } else {
+        assert(false && "addressObject is neither Inet4Address nor Inet6Address");
+    }
+
+    return addr;
 }
