@@ -223,12 +223,9 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
         return true;
     }
 
+    @Override
     public int compareTo(VirtualNetworkConfig cfg) {
-        if(cfg.nwid == this.nwid) {
-            return 0;
-        } else {
-            return this.nwid > cfg.nwid ? 1 : -1;
-        }
+        return Long.compare(this.nwid, cfg.nwid);
     }
 
     /**
