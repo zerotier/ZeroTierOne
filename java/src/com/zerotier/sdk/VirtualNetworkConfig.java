@@ -228,6 +228,29 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
         return Long.compare(this.nwid, cfg.nwid);
     }
 
+    @Override
+    public int hashCode() {
+
+        int result = 17;
+        result = 37 * result + (int) (nwid ^ (nwid >>> 32));
+        result = 37 * result + (int) (mac ^ (mac >>> 32));
+        result = 37 * result + name.hashCode();
+        result = 37 * result + status.hashCode();
+        result = 37 * result + type.hashCode();
+        result = 37 * result + mtu;
+        result = 37 * result + (dhcp ? 1 : 0);
+        result = 37 * result + (bridge ? 1 : 0);
+        result = 37 * result + (broadcastEnabled ? 1 : 0);
+        result = 37 * result + portError;
+        result = 37 * result + (enabled ? 1 : 0);
+        result = 37 * result + (int) (netconfRevision ^ (netconfRevision >>> 32));
+        result = 37 * result + Arrays.hashCode(assignedAddresses);
+        result = 37 * result + Arrays.hashCode(routes);
+        result = 37 * result + (dns == null ? 0 : dns.hashCode());
+
+        return result;
+    }
+
     /**
      * 64-bit ZeroTier network ID
      */
