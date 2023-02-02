@@ -14,9 +14,28 @@ public class VirtualNetworkDNS implements Comparable<VirtualNetworkDNS> {
 
     public VirtualNetworkDNS() {}
 
-    public boolean equals(VirtualNetworkDNS o) {
-        if (o == null) return false;
-        return domain.equals(o.domain) && servers.equals(o.servers);
+    @Override
+    public boolean equals(Object o) {
+
+        if (o == null) {
+            return false;
+        }
+
+        if (!(o instanceof VirtualNetworkDNS)) {
+            return false;
+        }
+
+        VirtualNetworkDNS d = (VirtualNetworkDNS) o;
+
+        if (!domain.equals(d.domain)) {
+            return false;
+        }
+
+        if (!servers.equals(d.servers)) {
+            return false;
+        }
+
+        return true;
     }
 
     @Override
