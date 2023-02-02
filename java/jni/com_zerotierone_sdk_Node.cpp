@@ -43,22 +43,39 @@
 namespace {
     struct JniRef
     {
-        JniRef()
-            : jvm(NULL)
-            , node(NULL)
-            , dataStoreGetListener(NULL)
-            , dataStorePutListener(NULL)
-            , packetSender(NULL)
-            , eventListener(NULL)
-            , frameListener(NULL)
-            , configListener(NULL)
-            , pathChecker(NULL)
-            , callbacks(NULL)
-            , inited()
-        {
-            callbacks = (ZT_Node_Callbacks*)malloc(sizeof(ZT_Node_Callbacks));
-            memset(callbacks, 0, sizeof(ZT_Node_Callbacks));
-        }
+        JniRef(
+            int64_t id,
+            JavaVM *jvm,
+            jobject dataStoreGetListenerLocalIn,
+            jobject dataStorePutListenerLocalIn,
+            jobject packetSenderLocalIn,
+            jobject eventListenerLocalIn,
+            jobject frameListenerLocalIn,
+            jobject configListenerLocalIn,
+            jobject pathCheckerLocalIn)
+            : id(id)
+            , jvm(jvm)
+            , node()
+            , dataStoreGetListener()
+            , dataStorePutListener()
+            , packetSender()
+            , eventListener()
+            , frameListener()
+            , configListener()
+            , pathChecker()
+            , inited() {
+
+            JNIEnv *env;
+            GETENV(env, jvm);
+
+            dataStoreGetListener = env->NewGlobalRef(dataStoreGetListenerLocalIn);
+            dataStorePutListener = env->NewGlobalRef(dataStorePutListenerLocalIn);
+            packetSender = env->NewGlobalRef(packetSenderLocalIn);
+            eventListener = env->NewGlobalRef(eventListenerLocalIn);
+            frameListener = env->NewGlobalRef(frameListenerLocalIn);
+            configListener = env->NewGlobalRef(configListenerLocalIn);
+            pathChecker = env->NewGlobalRef(pathCheckerLocalIn);
+        };
 
         ~JniRef()
         {
@@ -72,9 +89,6 @@ namespace {
             env->DeleteGlobalRef(frameListener);
             env->DeleteGlobalRef(configListener);
             env->DeleteGlobalRef(pathChecker);
-
-            free(callbacks);
-            callbacks = NULL;
         }
 
         int64_t id;
@@ -90,8 +104,6 @@ namespace {
         jobject frameListener;
         jobject configListener;
         jobject pathChecker;
-
-        ZT_Node_Callbacks *callbacks;
 
         bool inited;
 
@@ -603,66 +615,50 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
     LOGV("Creating ZT_Node struct");
     jobject resultObject = ResultCode_RESULT_OK_enum;
 
+    JavaVM *vm;
+    GETJAVAVM(env, vm);
+
+    assert(dataStoreGetListener != NULL);
+    assert(dataStorePutListener != NULL);
+    assert(packetSender != NULL);
+    assert(frameListener != NULL);
+    assert(configListener != NULL);
+    assert(eventListener != NULL);
+    //
+    // OPTIONAL, pathChecker may be NULL
+    //
+//    assert(pathChecker != NULL);
+
+    ZT_Node_Callbacks callbacks{};
+    callbacks.stateGetFunction = &StateGetFunction;
+    callbacks.statePutFunction = &StatePutFunction;
+    callbacks.wirePacketSendFunction = &WirePacketSendFunction;
+    callbacks.virtualNetworkFrameFunction = &VirtualNetworkFrameFunctionCallback;
+    callbacks.virtualNetworkConfigFunction = &VirtualNetworkConfigFunctionCallback;
+    callbacks.eventCallback = &EventCallback;
+    callbacks.pathCheckFunction = &PathCheckFunction;
+    callbacks.pathLookupFunction = &PathLookupFunction;
+
+    //
+    // a bit of a confusing dance here where ref and node both know about each other
+    //
+    JniRef *ref = new JniRef(
+            now,
+            vm,
+            dataStoreGetListener,
+            dataStorePutListener,
+            packetSender,
+            eventListener,
+            frameListener,
+            configListener,
+            pathChecker);
+
     ZT_Node *node;
-    JniRef *ref = new JniRef;
-    ref->id = (int64_t)now;
-    GETJAVAVM(env, ref->jvm);
-
-    if(dataStoreGetListener == NULL)
-    {
-        return NULL;
-    }
-    ref->dataStoreGetListener = env->NewGlobalRef(dataStoreGetListener);
-
-    if(dataStorePutListener == NULL)
-    {
-        return NULL;
-    }
-    ref->dataStorePutListener = env->NewGlobalRef(dataStorePutListener);
-
-    if(packetSender == NULL)
-    {
-        return NULL;
-    }
-    ref->packetSender = env->NewGlobalRef(packetSender);
-
-    if(frameListener == NULL)
-    {
-        return NULL;
-    }
-    ref->frameListener = env->NewGlobalRef(frameListener);
-
-    if(configListener == NULL)
-    {
-        return NULL;
-    }
-    ref->configListener = env->NewGlobalRef(configListener);
-
-    if(eventListener == NULL)
-    {
-        return NULL;
-    }
-    ref->eventListener = env->NewGlobalRef(eventListener);
-
-    if(pathChecker != NULL)
-    {
-        ref->pathChecker = env->NewGlobalRef(pathChecker);
-    }
-
-    ref->callbacks->stateGetFunction = &StateGetFunction;
-    ref->callbacks->statePutFunction = &StatePutFunction;
-    ref->callbacks->wirePacketSendFunction = &WirePacketSendFunction;
-    ref->callbacks->virtualNetworkFrameFunction = &VirtualNetworkFrameFunctionCallback;
-    ref->callbacks->virtualNetworkConfigFunction = &VirtualNetworkConfigFunctionCallback;
-    ref->callbacks->eventCallback = &EventCallback;
-    ref->callbacks->pathCheckFunction = &PathCheckFunction;
-    ref->callbacks->pathLookupFunction = &PathLookupFunction;
-
     ZT_ResultCode rc = ZT_Node_new(
         &node,
         ref,
         NULL,
-        ref->callbacks,
+        &callbacks,
         (int64_t)now);
 
     if(rc != ZT_RESULT_OK)
