@@ -51,6 +51,32 @@
     #define LOGE(...) fprintf(stdout, __VA_ARGS__)
 #endif
 
+//
+// Call GetEnv and assert if there is an error
+//
+#define GETENV(env, vm) \
+    do { \
+        jint getEnvRet; \
+        assert(vm); \
+        if ((getEnvRet = vm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6)) != JNI_OK) { \
+            LOGE("Error calling GetEnv: %d", getEnvRet); \
+            assert(false && "Error calling GetEnv"); \
+        } \
+    } while (false)
+
+//
+// Call GetJavaVM and assert if there is an error
+//
+#define GETJAVAVM(env, vm) \
+    do { \
+        jint getJavaVMRet; \
+        if ((getJavaVMRet = env->GetJavaVM(&vm)) != 0) { \
+            LOGE("Error calling GetJavaVM: %d", getJavaVMRet); \
+            assert(false && "Error calling GetJavaVM"); \
+        } \
+    } while (false)
+
+
 jobject createResultObject(JNIEnv *env, ZT_ResultCode code);
 jobject createVirtualNetworkStatus(JNIEnv *env, ZT_VirtualNetworkStatus status);
 jobject createVirtualNetworkType(JNIEnv *env, ZT_VirtualNetworkType type);
