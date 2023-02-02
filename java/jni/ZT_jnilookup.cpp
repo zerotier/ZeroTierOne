@@ -28,6 +28,8 @@
 #include "ZT_jnilookup.h"
 #include "ZT_jniutils.h"
 
+#define LOG_TAG "Lookup"
+
 JniLookup::JniLookup()
     : m_jvm(NULL)
 {

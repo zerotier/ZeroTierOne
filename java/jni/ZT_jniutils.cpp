@@ -28,6 +28,8 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+#define LOG_TAG "Utils"
+
 extern JniLookup lookup;
 
 jobject createResultObject(JNIEnv *env, ZT_ResultCode code)

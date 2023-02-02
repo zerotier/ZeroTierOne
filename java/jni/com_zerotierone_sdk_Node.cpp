@@ -37,6 +37,8 @@
 #include <cassert>
 #include <cstring>
 
+#define LOG_TAG "Node"
+
 // global static JNI Lookup Object
 JniLookup lookup;
 
