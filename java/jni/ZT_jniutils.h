@@ -22,8 +22,6 @@
 #include <jni.h>
 #include <ZeroTierOne.h>
 
-#define LOG_TAG "ZeroTierOneJNI"
-
 #if defined(__ANDROID__)
 
 #include <android/log.h>
