@@ -27,9 +27,7 @@
 
 package com.zerotier.sdk;
 
-import java.lang.RuntimeException;
-
-public class NodeException extends RuntimeException {
+public class NodeException extends Exception {
     public NodeException(String message) {
         super(message);
     }
