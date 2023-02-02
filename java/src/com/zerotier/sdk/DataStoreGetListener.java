@@ -49,7 +49,7 @@ public interface DataStoreGetListener {
      * @param out_buffer buffer to put the object in
      * @return size of the object
      */
-    public long onDataStoreGet(
+    long onDataStoreGet(
             String name,
             byte[] out_buffer);
 }
