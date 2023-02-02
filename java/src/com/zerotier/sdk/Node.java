@@ -126,11 +126,6 @@ public class Node {
     }
 
     @Override
-    protected void finalize() {
-        close();
-    }
-
-    @Override
     public String toString() {
         return "Node(" + nodeId + ")";
     }
