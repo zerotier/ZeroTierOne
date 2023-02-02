@@ -28,6 +28,9 @@
 package com.zerotier.sdk;
 
 public class NodeException extends Exception {
+
+    private static final long serialVersionUID = 6268040509883125819L;
+    
     public NodeException(String message) {
         super(message);
     }
