@@ -128,35 +128,47 @@ namespace {
     {
         LOGV("VirtualNetworkConfigFunctionCallback");
         JniRef *ref = (JniRef*)userData;
+        assert(ref);
         JNIEnv *env;
         GETENV(env, ref->jvm);
 
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return -100;
+        }
+
         if (ref->configListener == NULL) {
             LOGE("configListener is NULL");
-            return -100;
+            return -101;
         }
 
         jobject operationObject = createVirtualNetworkConfigOperation(env, operation);
         if(env->ExceptionCheck() || operationObject == NULL)
         {
-            return -101;
+            return -102;
         }
 
         if (config == NULL) {
             LOGE("Config is NULL");
-            return -102;
+            return -103;
         }
 
         jobject networkConfigObject = newNetworkConfig(env, *config);
         if(env->ExceptionCheck() || networkConfigObject == NULL)
         {
-            return -103;
+            return -104;
         }
 
-        return env->CallIntMethod(
+        jint ret = env->CallIntMethod(
             ref->configListener,
             VirtualNetworkConfigListener_onNetworkConfigurationUpdated_method,
             (jlong)nwid, operationObject, networkConfigObject);
+        if (env->ExceptionCheck()) {
+            LOGE("Exception calling onNetworkConfigurationUpdated");
+            return -105;
+        }
+
+        return ret;
     }
 
     void VirtualNetworkFrameFunctionCallback(ZT_Node *node,
@@ -173,13 +185,21 @@ namespace {
     {
         LOGV("VirtualNetworkFrameFunctionCallback");
 #ifndef NDEBUG
-        unsigned char* local = (unsigned char*)frameData;
-        LOGV("Type Bytes: 0x%02x%02x", local[12], local[13]);
+        if (frameLength >= 14) {
+            unsigned char* local = (unsigned char*)frameData;
+            LOGV("Type Bytes: 0x%02x%02x", local[12], local[13]);
+        }
 #endif
         JniRef *ref = (JniRef*)userData;
+        assert(ref);
         assert(ref->node == node);
         JNIEnv *env;
         GETENV(env, ref->jvm);
+
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return;
+        }
 
         if (ref->frameListener == NULL) {
             LOGE("frameListener is NULL");
@@ -194,6 +214,10 @@ namespace {
         }
 
         env->CallVoidMethod(ref->frameListener, VirtualNetworkFrameListener_onVirtualNetworkFrame_method, (jlong)nwid, (jlong)sourceMac, (jlong)destMac, (jlong)etherType, (jlong)vlanid, dataArray);
+        if (env->ExceptionCheck()) {
+            LOGE("Exception calling onVirtualNetworkFrame");
+            return;
+        }
     }
 
 
@@ -204,12 +228,18 @@ namespace {
         const void *data) {
         LOGV("EventCallback");
         JniRef *ref = (JniRef *) userData;
+        assert(ref);
         if (ref->node != node && event != ZT_EVENT_UP) {
             LOGE("Nodes not equal. ref->node %p, node %p. Event: %d", ref->node, node, event);
             return;
         }
         JNIEnv *env;
         GETENV(env, ref->jvm);
+
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return;
+        }
 
         if (ref->eventListener == NULL) {
             LOGE("eventListener is NULL");
@@ -225,27 +255,47 @@ namespace {
             case ZT_EVENT_UP: {
                 LOGD("Event Up");
                 env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onEvent");
+                    return;
+                }
                 break;
             }
             case ZT_EVENT_OFFLINE: {
                 LOGD("Event Offline");
                 env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onEvent");
+                    return;
+                }
                 break;
             }
             case ZT_EVENT_ONLINE: {
                 LOGD("Event Online");
                 env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onEvent");
+                    return;
+                }
                 break;
             }
             case ZT_EVENT_DOWN: {
                 LOGD("Event Down");
                 env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onEvent");
+                    return;
+                }
                 break;
             }
             case ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION: {
                 LOGV("Identity Collision");
                 // call onEvent()
                 env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onEvent");
+                    return;
+                }
             }
                 break;
             case ZT_EVENT_TRACE: {
@@ -256,7 +306,16 @@ namespace {
                 }
                 const char *message = (const char *) data;
                 jstring messageStr = env->NewStringUTF(message);
+                if (env->ExceptionCheck() || messageStr == NULL) {
+                    LOGE("Exception creating new string");
+                    return;
+                }
+
                 env->CallVoidMethod(ref->eventListener, EventListener_onTrace_method, messageStr);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onTrace");
+                    return;
+                }
             }
                 break;
             case ZT_EVENT_USER_MESSAGE:
@@ -277,37 +336,45 @@ namespace {
         
         char p[4096] = {0};
         bool secure = false;
+        int res = 0;
         switch (type) {
             case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
-                snprintf(p, sizeof(p), "identity.public");
+                res = snprintf(p, sizeof(p), "identity.public");
                 break;
             case ZT_STATE_OBJECT_IDENTITY_SECRET:
-                snprintf(p, sizeof(p), "identity.secret");
+                res = snprintf(p, sizeof(p), "identity.secret");
                 secure = true;
                 break;
             case ZT_STATE_OBJECT_PLANET:
-                snprintf(p, sizeof(p), "planet");
+                res = snprintf(p, sizeof(p), "planet");
                 break;
             case ZT_STATE_OBJECT_MOON:
-                snprintf(p, sizeof(p), "moons.d/%.16" PRIx64 ".moon", id[0]);
+                res = snprintf(p, sizeof(p), "moons.d/%.16" PRIx64 ".moon", id[0]);
                 break;
             case ZT_STATE_OBJECT_NETWORK_CONFIG:
-                snprintf(p, sizeof(p), "networks.d/%.16" PRIx64 ".conf", id[0]);
+                res = snprintf(p, sizeof(p), "networks.d/%.16" PRIx64 ".conf", id[0]);
                 break;
             case ZT_STATE_OBJECT_PEER:
-                snprintf(p, sizeof(p), "peers.d/%.10" PRIx64, id[0]);
+                res = snprintf(p, sizeof(p), "peers.d/%.10" PRIx64, id[0]);
                 break;
             case ZT_STATE_OBJECT_NULL:
                 return;
         }
 
-        if (strlen(p) < 1) {
+        if (!(0 <= res && res < sizeof(p))) {
+            LOGE("snprintf error: %d", res);
             return;
         }
 
         JniRef *ref = (JniRef*)userData;
+        assert(ref);
         JNIEnv *env;
         GETENV(env, ref->jvm);
+
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return;
+        }
 
         if (ref->dataStorePutListener == NULL) {
             LOGE("dataStorePutListener is NULL");
@@ -315,6 +382,10 @@ namespace {
         }
 
         jstring nameStr = env->NewStringUTF(p);
+        if (env->ExceptionCheck() || nameStr == NULL) {
+            LOGE("Exception creating new string");
+            return;
+        }
 
         if (bufferLength >= 0) {
             LOGD("JNI: Write file: %s", p);
@@ -325,12 +396,29 @@ namespace {
                 return;
             }
 
-            env->CallIntMethod(ref->dataStorePutListener,
+            int retval = env->CallIntMethod(ref->dataStorePutListener,
                                DataStorePutListener_onDataStorePut_method,
                                nameStr, bufferObj, secure);
+            if (env->ExceptionCheck()) {
+                LOGE("Exception calling onDataStorePut");
+                return;
+            }
+
+            if (retval != 0) {
+                LOGE("onDataStorePut error: %d", retval);
+            }
+
         } else {
             LOGD("JNI: Delete file: %s", p);
-            env->CallIntMethod(ref->dataStorePutListener, DataStorePutListener_onDelete_method, nameStr);
+            int retval = env->CallIntMethod(ref->dataStorePutListener, DataStorePutListener_onDelete_method, nameStr);
+            if (env->ExceptionCheck()) {
+                LOGE("Exception calling onDelete");
+                return;
+            }
+
+            if (retval != 0) {
+                LOGE("onDelete error: %d", retval);
+            }
         }
     }
 
@@ -350,53 +438,61 @@ namespace {
         LOGV("StateGetFunction");
 
         char p[4096] = {0};
+        int res = 0;
         switch (type) {
             case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
-                snprintf(p, sizeof(p), "identity.public");
+                res = snprintf(p, sizeof(p), "identity.public");
                 break;
             case ZT_STATE_OBJECT_IDENTITY_SECRET:
-                snprintf(p, sizeof(p), "identity.secret");
+                res = snprintf(p, sizeof(p), "identity.secret");
                 break;
             case ZT_STATE_OBJECT_PLANET:
-                snprintf(p, sizeof(p), "planet");
+                res = snprintf(p, sizeof(p), "planet");
                 break;
             case ZT_STATE_OBJECT_MOON:
-                snprintf(p, sizeof(p), "moons.d/%.16" PRIx64 ".moon", id[0]);
+                res = snprintf(p, sizeof(p), "moons.d/%.16" PRIx64 ".moon", id[0]);
                 break;
             case ZT_STATE_OBJECT_NETWORK_CONFIG:
-                snprintf(p, sizeof(p), "networks.d/%.16" PRIx64 ".conf", id[0]);
+                res = snprintf(p, sizeof(p), "networks.d/%.16" PRIx64 ".conf", id[0]);
                 break;
             case ZT_STATE_OBJECT_PEER:
-                snprintf(p, sizeof(p), "peers.d/%.10" PRIx64, id[0]);
+                res = snprintf(p, sizeof(p), "peers.d/%.10" PRIx64, id[0]);
                 break;
             case ZT_STATE_OBJECT_NULL:
                 return -100;
         }
 
-        if (strlen(p) < 1) {
+        if (!(0 <= res && res < sizeof(p))) {
+            LOGE("snprintf error: %d", res);
             return -101;
         }
 
         JniRef *ref = (JniRef*)userData;
+        assert(ref);
         JNIEnv *env;
         GETENV(env, ref->jvm);
 
-        if (ref->dataStoreGetListener == NULL) {
-            LOGE("dataStoreGetListener is NULL");
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
             return -102;
         }
 
+        if (ref->dataStoreGetListener == NULL) {
+            LOGE("dataStoreGetListener is NULL");
+            return -103;
+        }
+
         jstring nameStr = env->NewStringUTF(p);
-        if(nameStr == NULL)
+        if(env->ExceptionCheck() || nameStr == NULL)
         {
             LOGE("Error creating name string object");
-            return -103; // out of memory
+            return -104; // out of memory
         }
 
         jbyteArray bufferObj = newByteArray(env, bufferLength);
         if(env->ExceptionCheck() || bufferObj == NULL)
         {
-            return -104;
+            return -105;
         }
 
         LOGV("Calling onDataStoreGet(%s, %p)", p, buffer);
@@ -406,11 +502,20 @@ namespace {
                 DataStoreGetListener_onDataStoreGet_method,
                 nameStr,
                 bufferObj);
+        if (env->ExceptionCheck()) {
+            LOGE("Exception calling onDataStoreGet");
+            return -106;
+        }
 
         LOGV("onDataStoreGet returned %d", retval);
 
         if(retval > 0)
         {
+            if (retval > bufferLength) {
+                LOGE("retval > bufferLength. retval: %d, bufferLength: %u", retval, bufferLength);
+                return -107;
+            }
+
             void *data = env->GetPrimitiveArrayCritical(bufferObj, NULL);
             memcpy(buffer, data, retval);
             env->ReleasePrimitiveArrayCritical(bufferObj, data, 0);
@@ -435,14 +540,20 @@ namespace {
     {
         LOGV("WirePacketSendFunction(%" PRId64 ", %p, %p, %u, %u)", localSocket, remoteAddress, buffer, bufferSize, ttl);
         JniRef *ref = (JniRef*)userData;
+        assert(ref);
         assert(ref->node == node);
 
         JNIEnv *env;
         GETENV(env, ref->jvm);
 
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return -100;
+        }
+
         if (ref->packetSender == NULL) {
             LOGE("packetSender is NULL");
-            return -100;
+            return -101;
         }
 
         //
@@ -450,16 +561,20 @@ namespace {
         //
         jobject remoteAddressObj = newInetSocketAddress(env, *remoteAddress);
         if (env->ExceptionCheck()) {
-            return -101;
+            return -102;
         }
         const unsigned char *bytes = static_cast<const unsigned char *>(buffer);
         jbyteArray bufferObj = newByteArray(env, bytes, bufferSize);
         if (env->ExceptionCheck() || bufferObj == NULL)
         {
-            return -102;
+            return -103;
         }
         
         int retval = env->CallIntMethod(ref->packetSender, PacketSender_onSendPacketRequested_method, localSocket, remoteAddressObj, bufferObj, 0);
+        if (env->ExceptionCheck()) {
+            LOGE("Exception calling onSendPacketRequested");
+            return -104;
+        }
 
         LOGV("JNI Packet Sender returned: %d", retval);
         return retval;
@@ -478,6 +593,7 @@ namespace {
         LOGV("PathCheckFunction");
 
         JniRef *ref = (JniRef*)userPtr;
+        assert(ref);
         assert(ref->node == node);
 
         if(ref->pathChecker == NULL) {
@@ -487,6 +603,11 @@ namespace {
         JNIEnv *env;
         GETENV(env, ref->jvm);
 
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return true;
+        }
+
         //
         // may be NULL
         //
@@ -495,7 +616,13 @@ namespace {
             return true;
         }
 
-        return env->CallBooleanMethod(ref->pathChecker, PathChecker_onPathCheck_method, address, localSocket, remoteAddressObj);
+        jboolean ret = env->CallBooleanMethod(ref->pathChecker, PathChecker_onPathCheck_method, address, localSocket, remoteAddressObj);
+        if (env->ExceptionCheck()) {
+            LOGE("Exception calling onPathCheck");
+            return true;
+        }
+
+        return ret;
     }
 
     /**
@@ -511,6 +638,7 @@ namespace {
         LOGV("PathLookupFunction");
 
         JniRef *ref = (JniRef*)userPtr;
+        assert(ref);
         assert(ref->node == node);
 
         if(ref->pathChecker == NULL) {
@@ -520,10 +648,20 @@ namespace {
         JNIEnv *env;
         GETENV(env, ref->jvm);
 
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return false;
+        }
+        
         //
         // may be NULL
         //
         jobject sockAddressObject = env->CallObjectMethod(ref->pathChecker, PathChecker_onPathLookup_method, address, ss_family);
+        if (env->ExceptionCheck()) {
+            LOGE("Unable to call onPathLookup implementation");
+            return false;
+        }
+
         if(sockAddressObject == NULL)
         {
             LOGE("Unable to call onPathLookup implementation");
@@ -692,7 +830,18 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
         NULL,
         &callbacks,
         (int64_t)now);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception creating Node");
 
+        if(node)
+        {
+            ZT_Node_delete(node);
+            node = NULL;
+        }
+        delete ref;
+        ref = NULL;
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
     if(rc != ZT_RESULT_OK)
     {
         LOGE("Error creating Node: %d", rc);
@@ -814,6 +963,14 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
         (const void*)localData,
         frameLength,
         &nextBackgroundTaskDeadline);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_processVirtualNetworkFrame");
+        free(localData);
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
+    if (rc != ZT_RESULT_OK) {
+        LOGE("ZT_Node_processVirtualNetworkFrame returned: %d", rc);
+    }
 
     free(localData);
 
@@ -880,6 +1037,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         localData,
         packetLength,
         &nextBackgroundTaskDeadline);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_processWirePacket");
+        free(localData);
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
     if(rc != ZT_RESULT_OK)
     {
         LOGE("ZT_Node_processWirePacket returned: %d", rc);
@@ -918,6 +1080,13 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processBackgroundTasks(
     int64_t nextBackgroundTaskDeadline = 0;
 
     ZT_ResultCode rc = ZT_Node_processBackgroundTasks(node, NULL, now, &nextBackgroundTaskDeadline);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_processBackgroundTasks");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
+    if (rc != ZT_RESULT_OK) {
+        LOGE("ZT_Node_processBackgroundTasks returned: %d", rc);
+    }
 
     jlong *outDeadline = (jlong*)env->GetPrimitiveArrayCritical(out_nextBackgroundTaskDeadline, NULL);
     outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
@@ -939,6 +1108,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_join(
     uint64_t nwid = (uint64_t)in_nwid;
 
     ZT_ResultCode rc = ZT_Node_join(node, nwid, NULL, NULL);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_join");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
 
     return createResultObject(env, rc);
 }
@@ -957,6 +1130,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_leave(
     uint64_t nwid = (uint64_t)in_nwid;
 
     ZT_ResultCode rc = ZT_Node_leave(node, nwid, NULL, NULL);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_leave");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
 
     return createResultObject(env, rc);
 }
@@ -982,6 +1159,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastSubscribe(
 
     ZT_ResultCode rc = ZT_Node_multicastSubscribe(
         node, NULL, nwid, multicastGroup, multicastAdi);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_multicastSubscribe");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
 
     return createResultObject(env, rc);
 }
@@ -1007,6 +1188,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastUnsubscribe(
 
     ZT_ResultCode rc = ZT_Node_multicastUnsubscribe(
         node, nwid, multicastGroup, multicastAdi);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_multicastUnsubscribe");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
 
     return createResultObject(env, rc);
 }
@@ -1029,6 +1214,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_orbit(
     uint64_t moonSeed = (uint64_t)in_moonSeed;
 
     ZT_ResultCode rc = ZT_Node_orbit(node, NULL, moonWorldId, moonSeed);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_orbit");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
+
     return createResultObject(env, rc);
 }
 
@@ -1048,6 +1238,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_deorbit(
     uint64_t moonWorldId = (uint64_t)in_moonWorldId;
 
     ZT_ResultCode rc = ZT_Node_deorbit(node, NULL, moonWorldId);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_deorbit");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
+
     return createResultObject(env, rc);
 }
 
@@ -1095,6 +1290,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networkConfig(
     ZT_Node *node = findNode(nodeId);
 
     ZT_VirtualNetworkConfig *vnetConfig = ZT_Node_networkConfig(node, nwid);
+    if (vnetConfig == NULL) {
+        LOGE("vnetConfig == NULL");
+        return NULL;
+    }
 
     jobject vnetConfigObject = newNetworkConfig(env, *vnetConfig);
 
@@ -1161,6 +1360,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networks(
     ZT_VirtualNetworkList *networkList = ZT_Node_networks(node);
     if(networkList == NULL)
     {
+        LOGE("ZT_Node_networks returned NULL");
         return NULL;
     }
 
