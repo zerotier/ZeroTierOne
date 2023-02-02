@@ -112,12 +112,17 @@ namespace {
     };
 
 
+    /*
+    * This must return 0 on success. It can return any OS-dependent error code
+    * on failure, and this results in the network being placed into the
+    * PORT_ERROR state.
+    */
     int VirtualNetworkConfigFunctionCallback(
         ZT_Node *node,
         void *userData,
         void *threadData,
         uint64_t nwid,
-        void **,
+        void **nuptr,
         enum ZT_VirtualNetworkConfigOperation operation,
         const ZT_VirtualNetworkConfig *config)
     {
@@ -158,7 +163,7 @@ namespace {
         void *userData,
         void *threadData,
         uint64_t nwid,
-        void**,
+        void** nuptr,
         uint64_t sourceMac,
         uint64_t destMac,
         unsigned int etherType,
@@ -268,6 +273,8 @@ namespace {
             const uint64_t id[2],
             const void *buffer,
             int bufferLength) {
+        LOGV("StatePutFunction");
+        
         char p[4096] = {0};
         bool secure = false;
         switch (type) {
@@ -327,6 +334,11 @@ namespace {
         }
     }
 
+    /**
+     * This function should return the number of bytes actually stored to the
+     * buffer or -1 if the state object was not found or the buffer was too
+     * small to store it.
+     */
     int StateGetFunction(
             ZT_Node *node,
             void *userData,
@@ -335,6 +347,8 @@ namespace {
             const uint64_t id[2],
             void *buffer,
             unsigned int bufferLength) {
+        LOGV("StateGetFunction");
+
         char p[4096] = {0};
         switch (type) {
             case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
@@ -405,6 +419,11 @@ namespace {
         return retval;
     }
 
+    /**
+     * The function must return zero on success and may return any error code
+     * on failure. Note that success does not (of course) guarantee packet
+     * delivery. It only means that the packet appears to have been sent.
+     */
     int WirePacketSendFunction(ZT_Node *node,
         void *userData,
         void *threadData,
@@ -414,7 +433,7 @@ namespace {
         unsigned int bufferSize,
         unsigned int ttl)
     {
-        LOGV("WirePacketSendFunction(%" PRId64 ", %p, %p, %d, %u)", localSocket, remoteAddress, buffer, bufferSize, ttl);
+        LOGV("WirePacketSendFunction(%" PRId64 ", %p, %p, %u, %u)", localSocket, remoteAddress, buffer, bufferSize, ttl);
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
@@ -446,6 +465,9 @@ namespace {
         return retval;
     }
 
+    /**
+     * This function must return nonzero (true) if the path should be used.
+     */
     int PathCheckFunction(ZT_Node *node,
         void *userPtr,
         void *threadPtr,
@@ -453,6 +475,8 @@ namespace {
         int64_t localSocket,
         const struct sockaddr_storage *remoteAddress)
     {
+        LOGV("PathCheckFunction");
+
         JniRef *ref = (JniRef*)userPtr;
         assert(ref->node == node);
 
@@ -474,6 +498,9 @@ namespace {
         return env->CallBooleanMethod(ref->pathChecker, PathChecker_onPathCheck_method, address, localSocket, remoteAddressObj);
     }
 
+    /**
+     * It must return a nonzero (true) value if the result buffer has been filled with an address.
+     */
     int PathLookupFunction(ZT_Node *node,
         void *userPtr,
         void *threadPtr,
@@ -481,6 +508,8 @@ namespace {
         int ss_family,
         struct sockaddr_storage *result)
     {
+        LOGV("PathLookupFunction");
+
         JniRef *ref = (JniRef*)userPtr;
         assert(ref->node == node);
 
@@ -491,6 +520,9 @@ namespace {
         JNIEnv *env;
         GETENV(env, ref->jvm);
 
+        //
+        // may be NULL
+        //
         jobject sockAddressObject = env->CallObjectMethod(ref->pathChecker, PathChecker_onPathLookup_method, address, ss_family);
         if(sockAddressObject == NULL)
         {
@@ -761,6 +793,9 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
 
     unsigned int frameLength = env->GetArrayLength(in_frameData);
     void *frameData = env->GetPrimitiveArrayCritical(in_frameData, NULL);
+    //
+    // need local copy of frameData because arbitrary code may run in ZT_Node_processVirtualNetworkFrame and no other JNI work may happen between GetPrimitiveArrayCritical / ReleasePrimitiveArrayCritical
+    //
     void *localData = malloc(frameLength);
     memcpy(localData, frameData, frameLength);
     env->ReleasePrimitiveArrayCritical(in_frameData, frameData, 0);
@@ -827,6 +862,9 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
     }
     void *packetData = env->GetPrimitiveArrayCritical(in_packetData, NULL);
+    //
+    // need local copy of packetData because arbitrary code may run in ZT_Node_processWirePacket and no other JNI work may happen between GetPrimitiveArrayCritical / ReleasePrimitiveArrayCritical
+    //
     void *localData = malloc(packetLength);
     memcpy(localData, packetData, packetLength);
     env->ReleasePrimitiveArrayCritical(in_packetData, packetData, 0);

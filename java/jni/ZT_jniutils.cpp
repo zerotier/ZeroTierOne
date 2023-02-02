@@ -98,8 +98,6 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT_VirtualNetworkConfig
 
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
-    LOGV("newInetAddress");
-
     jobject inetAddressObj = NULL;
     switch(addr.ss_family)
     {
@@ -152,18 +150,14 @@ int addressPort(const sockaddr_storage addr) {
     {
         case AF_INET6:
         {
-            LOGV("IPV6 Address");
             sockaddr_in6 *ipv6 = (sockaddr_in6*)&addr;
             port = ntohs(ipv6->sin6_port);
-            LOGV("Port %d", port);
         }
             break;
         case AF_INET:
         {
-            LOGV("IPV4 Address");
             sockaddr_in *ipv4 = (sockaddr_in*)&addr;
             port = ntohs(ipv4->sin_port);
-            LOGV("Port: %d", port);
         }
             break;
         default:
@@ -182,8 +176,6 @@ int addressPort(const sockaddr_storage addr) {
 //
 jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
-    LOGV("newInetSocketAddress Called");
-
     if(isSocketAddressEmpty(addr))
     {
         return NULL;
@@ -208,8 +200,6 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
 
 jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
 {
-    LOGV("newPeerPhysicalPath Called");
-
     //
     // may be NULL
     //
@@ -236,8 +226,6 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
 
 jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
 {
-    LOGV("newPeer called");
-
     jobject peerRoleObj = createPeerRole(env, peer.role);
     if(env->ExceptionCheck() || peerRoleObj == NULL)
     {

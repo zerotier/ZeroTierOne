@@ -166,6 +166,7 @@ public class Node {
      * Process a packet received from the physical wire
      *
      * @param now Current clock in milliseconds
+     * @param localSocket Local socket or -1
      * @param remoteAddress Origin of packet
      * @param packetData Packet data
      * @param nextBackgroundTaskDeadline Value/result: set to deadline for next call to processBackgroundTasks()
