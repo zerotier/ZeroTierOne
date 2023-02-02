@@ -402,7 +402,7 @@ namespace {
         unsigned int bufferSize,
         unsigned int ttl)
     {
-        LOGV("WirePacketSendFunction(%lld, %p, %p, %d)", (long long)localSocket, remoteAddress, buffer, bufferSize);
+        LOGV("WirePacketSendFunction(%lld, %p, %p, %d, %u)", (long long)localSocket, remoteAddress, buffer, bufferSize, ttl);
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
@@ -428,7 +428,7 @@ namespace {
             return -102;
         }
         
-        int retval = env->CallIntMethod(ref->packetSender, PacketSender_onSendPacketRequested_method, localSocket, remoteAddressObj, bufferObj);
+        int retval = env->CallIntMethod(ref->packetSender, PacketSender_onSendPacketRequested_method, localSocket, remoteAddressObj, bufferObj, 0);
 
         LOGV("JNI Packet Sender returned: %d", retval);
         return retval;
