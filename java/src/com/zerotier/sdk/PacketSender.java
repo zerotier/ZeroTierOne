@@ -42,6 +42,7 @@ public interface PacketSender {
      * @param localSocket socket file descriptor to send from.  Set to -1 if not specified.
      * @param remoteAddr {@link InetSocketAddress} to send to
      * @param packetData data to send
+     * @param ttl TTL is ignored
      * @return 0 on success, any error code on failure.
      */
     public int onSendPacketRequested(
