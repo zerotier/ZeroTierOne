@@ -58,14 +58,9 @@ public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute
 	 */
 	public int metric;
 
-	@Override
+    @Override
     public String toString() {
-	    StringBuilder sb = new StringBuilder();
-	    sb.append(target.toString());
-        if (via != null) {
-            sb.append(via.toString());
-        }
-        return sb.toString();
+        return "VirtualNetworkRoute(" + target + ", " + via + ", " + flags + ", " + metric + ")";
     }
 
     @Override
