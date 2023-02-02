@@ -69,9 +69,9 @@ public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute
     }
 
     @Override
-	public int compareTo(VirtualNetworkRoute other) {
-        return this.toString().compareTo(other.toString());
-	}
+    public int compareTo(VirtualNetworkRoute other) {
+        throw new RuntimeException("Unimplemented");
+    }
 
     @Override
     public boolean equals(Object o) {
