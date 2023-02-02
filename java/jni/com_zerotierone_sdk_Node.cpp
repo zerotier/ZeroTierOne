@@ -62,8 +62,8 @@ namespace {
 
         ~JniRef()
         {
-            JNIEnv *env = NULL;
-            jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+            JNIEnv *env;
+            GETENV(env, jvm);
 
             env->DeleteGlobalRef(dataStoreGetListener);
             env->DeleteGlobalRef(dataStorePutListener);
@@ -110,8 +110,8 @@ namespace {
     {
         LOGV("VirtualNetworkConfigFunctionCallback");
         JniRef *ref = (JniRef*)userData;
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
 
         if (ref->configListener == NULL) {
             LOGE("configListener is NULL");
@@ -160,8 +160,8 @@ namespace {
 #endif
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
 
         if (ref->frameListener == NULL) {
             LOGE("frameListener is NULL");
@@ -190,8 +190,8 @@ namespace {
             LOGE("Nodes not equal. ref->node %p, node %p. Event: %d", ref->node, node, event);
             return;
         }
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void **) &env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
 
         if (ref->eventListener == NULL) {
             LOGE("eventListener is NULL");
@@ -287,8 +287,8 @@ namespace {
         }
 
         JniRef *ref = (JniRef*)userData;
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
 
         if (ref->dataStorePutListener == NULL) {
             LOGE("dataStorePutListener is NULL");
@@ -352,8 +352,8 @@ namespace {
         }
 
         JniRef *ref = (JniRef*)userData;
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
 
         if (ref->dataStoreGetListener == NULL) {
             LOGE("dataStoreGetListener is NULL");
@@ -406,8 +406,8 @@ namespace {
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
 
         if (ref->packetSender == NULL) {
             LOGE("packetSender is NULL");
@@ -448,8 +448,8 @@ namespace {
             return true;
         }
 
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
 
         //
         // may be NULL
@@ -476,8 +476,8 @@ namespace {
             return false;
         }
 
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
 
         jobject sockAddressObject = env->CallObjectMethod(ref->pathChecker, PathChecker_onPathLookup_method, address, ss_family);
         if(sockAddressObject == NULL)
@@ -606,7 +606,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
     ZT_Node *node;
     JniRef *ref = new JniRef;
     ref->id = (int64_t)now;
-    env->GetJavaVM(&ref->jvm);
+    GETJAVAVM(env, ref->jvm);
 
     if(dataStoreGetListener == NULL)
     {
