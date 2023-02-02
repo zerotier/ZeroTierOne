@@ -127,4 +127,16 @@ public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute
 
         return true;
     }
+
+    @Override
+    public int hashCode() {
+
+        int result = 17;
+        result = 37 * result + (target == null ? 0 : target.hashCode());
+        result = 37 * result + (via == null ? 0 : via.hashCode());
+        result = 37 * result + flags;
+        result = 37 * result + metric;
+
+        return result;
+    }
 }
