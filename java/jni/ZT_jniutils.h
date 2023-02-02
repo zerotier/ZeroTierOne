@@ -88,6 +88,7 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT_VirtualNetworkConfig
 
 jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr);
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr);
+int addressPort(const sockaddr_storage addr);
 
 jobject newPeer(JNIEnv *env, const ZT_Peer &peer);
 jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp);

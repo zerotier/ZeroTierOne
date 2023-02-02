@@ -142,6 +142,36 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
     return inetAddressObj;
 }
 
+int addressPort(const sockaddr_storage addr) {
+
+    int port = 0;
+    switch(addr.ss_family)
+    {
+        case AF_INET6:
+        {
+            LOGV("IPV6 Address");
+            sockaddr_in6 *ipv6 = (sockaddr_in6*)&addr;
+            port = ntohs(ipv6->sin6_port);
+            LOGV("Port %d", port);
+        }
+            break;
+        case AF_INET:
+        {
+            LOGV("IPV4 Address");
+            sockaddr_in *ipv4 = (sockaddr_in*)&addr;
+            port = ntohs(ipv4->sin_port);
+            LOGV("Port: %d", port);
+        }
+            break;
+        default:
+        {
+            assert(false && "addr.ss_family is neither AF_INET6 nor AF_INET");
+        }
+    }
+
+    return port;
+}
+
 jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
 {
     LOGV("newInetSocketAddress Called");
