@@ -37,6 +37,7 @@
 #include <string>
 #include <cassert>
 #include <cstring>
+#include <cinttypes> // for PRId64
 
 #define LOG_TAG "Node"
 
@@ -282,13 +283,13 @@ namespace {
                 snprintf(p, sizeof(p), "planet");
                 break;
             case ZT_STATE_OBJECT_MOON:
-                snprintf(p, sizeof(p), "moons.d/%.16llx.moon", (unsigned long long)id[0]);
+                snprintf(p, sizeof(p), "moons.d/%.16" PRIx64 ".moon", id[0]);
                 break;
             case ZT_STATE_OBJECT_NETWORK_CONFIG:
-                snprintf(p, sizeof(p), "networks.d/%.16llx.conf", (unsigned long long)id[0]);
+                snprintf(p, sizeof(p), "networks.d/%.16" PRIx64 ".conf", id[0]);
                 break;
             case ZT_STATE_OBJECT_PEER:
-                snprintf(p, sizeof(p), "peers.d/%.10llx", (unsigned long long)id[0]);
+                snprintf(p, sizeof(p), "peers.d/%.10" PRIx64, id[0]);
                 break;
             default:
                 return;
@@ -347,13 +348,13 @@ namespace {
                 snprintf(p, sizeof(p), "planet");
                 break;
             case ZT_STATE_OBJECT_MOON:
-                snprintf(p, sizeof(p), "moons.d/%.16llx.moon", (unsigned long long)id[0]);
+                snprintf(p, sizeof(p), "moons.d/%.16" PRIx64 ".moon", id[0]);
                 break;
             case ZT_STATE_OBJECT_NETWORK_CONFIG:
-                snprintf(p, sizeof(p), "networks.d/%.16llx.conf", (unsigned long long)id[0]);
+                snprintf(p, sizeof(p), "networks.d/%.16" PRIx64 ".conf", id[0]);
                 break;
             case ZT_STATE_OBJECT_PEER:
-                snprintf(p, sizeof(p), "peers.d/%.10llx", (unsigned long long)id[0]);
+                snprintf(p, sizeof(p), "peers.d/%.10" PRIx64, id[0]);
                 break;
             default:
                 return -100;
@@ -414,7 +415,7 @@ namespace {
         unsigned int bufferSize,
         unsigned int ttl)
     {
-        LOGV("WirePacketSendFunction(%lld, %p, %p, %d, %u)", (long long)localSocket, remoteAddress, buffer, bufferSize, ttl);
+        LOGV("WirePacketSendFunction(%" PRId64 ", %p, %p, %d, %u)", localSocket, remoteAddress, buffer, bufferSize, ttl);
         JniRef *ref = (JniRef*)userData;
         assert(ref->node == node);
 
