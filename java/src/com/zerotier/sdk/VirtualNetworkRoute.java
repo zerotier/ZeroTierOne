@@ -73,36 +73,63 @@ public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute
         return this.toString().compareTo(other.toString());
 	}
 
-    public boolean equals(VirtualNetworkRoute other) {
-        boolean targetEquals = false;
-        if (target == null && other.target == null) {
-            targetEquals = true;
-        }
-        else if (target == null && other.target != null) {
-            targetEquals = false;
-        }
-        else if (target != null && other.target == null) {
-            targetEquals = false;
-        }
-        else {
-            targetEquals = target.toString().equals(other.target.toString());
+    @Override
+    public boolean equals(Object o) {
+
+        if (!(o instanceof VirtualNetworkRoute)) {
+            return false;
         }
 
+        VirtualNetworkRoute other = (VirtualNetworkRoute) o;
+
+        boolean targetEquals;
+        if (target == null) {
+            //noinspection RedundantIfStatement
+            if (other.target == null) {
+                targetEquals = true;
+            } else {
+                targetEquals = false;
+            }
+        } else {
+            if (other.target == null) {
+                targetEquals = false;
+            } else {
+                targetEquals = target.equals(other.target);
+            }
+        }
+
+        if (!targetEquals) {
+            return false;
+        }
 
         boolean viaEquals;
-        if (via == null && other.via == null) {
-            viaEquals = true;
-        }
-        else if (via == null && other.via != null) {
-            viaEquals = false;
-        }
-        else if (via != null && other.via == null) {
-            viaEquals = false;
-        }
-        else {
-            viaEquals = via.toString().equals(other.via.toString());
+        if (via == null) {
+            //noinspection RedundantIfStatement
+            if (other.via == null) {
+                viaEquals = true;
+            } else {
+                viaEquals = false;
+            }
+        } else {
+            if (other.via == null) {
+                viaEquals = false;
+            } else {
+                viaEquals = via.equals(other.via);
+            }
         }
 
-        return viaEquals && targetEquals;
+        if (!viaEquals) {
+            return false;
+        }
+
+        if (flags != other.flags) {
+            return false;
+        }
+
+        if (metric != other.metric) {
+            return false;
+        }
+
+        return true;
     }
 }
