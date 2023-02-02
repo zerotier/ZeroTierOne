@@ -27,13 +27,11 @@
 
 package com.zerotier.sdk;
 
-import java.net.InetSocketAddress;
-import java.lang.String;
-
 /**
  * Interface to handle callbacks for ZeroTier One events.
  */
 public interface EventListener {
+
     /**
      * Callback for events with no other associated metadata
      * 

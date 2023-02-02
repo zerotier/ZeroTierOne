@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
- 
+
 #ifndef ZT_jniutils_h_
 #define ZT_jniutils_h_
 
@@ -61,8 +61,6 @@ jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT_VirtualNetworkConfig
 jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr);
 jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr);
 
-jobject newMulticastGroup(JNIEnv *env, const ZT_MulticastGroup &mc);
-
 jobject newPeer(JNIEnv *env, const ZT_Peer &peer);
 jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp);
 
@@ -74,4 +72,4 @@ jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
 
 jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns);
 
-#endif
+#endif // ZT_jniutils_h_

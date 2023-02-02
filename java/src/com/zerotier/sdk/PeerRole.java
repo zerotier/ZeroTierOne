@@ -28,6 +28,7 @@
 package com.zerotier.sdk;
 
 public enum PeerRole {
+
     /**
      * An ordinary node
      */

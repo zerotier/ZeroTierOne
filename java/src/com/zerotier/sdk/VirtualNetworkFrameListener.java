@@ -28,6 +28,7 @@
 package com.zerotier.sdk;
 
 public interface VirtualNetworkFrameListener {
+
     /**
      * Function to send a frame out to a virtual network port
      * 

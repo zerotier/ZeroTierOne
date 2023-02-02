@@ -28,6 +28,7 @@
 package com.zerotier.sdk;
 
 public enum Event {
+
     /**
      * Node has been initialized
      *

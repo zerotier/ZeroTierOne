@@ -24,12 +24,14 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
+
 package com.zerotier.sdk;
 
 import java.net.InetSocketAddress;
 
 
 public interface PacketSender {
+
     /**
      * Function to send a ZeroTier packet out over the wire
      *

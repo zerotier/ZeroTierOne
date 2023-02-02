@@ -25,11 +25,11 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-
 package com.zerotier.sdk;
 
 
 public interface VirtualNetworkConfigListener {
+
     /**
      * Callback called to update virtual network port configuration
      *

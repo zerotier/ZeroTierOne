@@ -36,6 +36,7 @@ package com.zerotier.sdk;
  * problem.</p>
  */
 public enum ResultCode {
+
     /**
      * Operation completed normally
      */
