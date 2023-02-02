@@ -63,60 +63,58 @@ public class Node {
     /**
      * Node ID for JNI purposes.
      * Currently set to the now value passed in at the constructor
-     * 
-     * -1 if the node has already been closed
      */
-    private long nodeId;
-
-    private final DataStoreGetListener getListener;
-    private final DataStorePutListener putListener;
-    private final PacketSender sender;
-    private final EventListener eventListener;
-    private final VirtualNetworkFrameListener frameListener;
-    private final VirtualNetworkConfigListener configListener;
-    private final PathChecker pathChecker;
+    private final long nodeId;
     
     /**
      * Create a new ZeroTier One node
      *
+     * @param now Current clock in milliseconds
+     */
+    public Node(long now) {
+        this.nodeId = now;
+    }
+
+    /**
+     * Init a new ZeroTier One node
+     *
      * <p>Note that this can take a few seconds the first time it's called, as it
      * will generate an identity.</p>
      *
-     * @param now Current clock in milliseconds
      * @param getListener User written instance of the {@link DataStoreGetListener} interface called to get objects from persistent storage.  This instance must be unique per Node object.
      * @param putListener User written instance of the {@link DataStorePutListener} interface called to put objects in persistent storage.  This instance must be unique per Node object.
-     * @param sender
+     * @param sender User written instance of the {@link PacketSender} interface to send ZeroTier packets out over the wire.
      * @param eventListener User written instance of the {@link EventListener} interface to receive status updates and non-fatal error notices.  This instance must be unique per Node object.
-     * @param frameListener 
+     * @param frameListener User written instance of the {@link VirtualNetworkFrameListener} interface to send a frame out to a virtual network port.
      * @param configListener User written instance of the {@link VirtualNetworkConfigListener} interface to be called when virtual LANs are created, deleted, or their config parameters change.  This instance must be unique per Node object.
      * @param pathChecker User written instance of the {@link PathChecker} interface. Not required and can be null.
      */
-	public Node(long now,
-                DataStoreGetListener getListener,
-                DataStorePutListener putListener,
-                PacketSender sender,
-                EventListener eventListener,
-                VirtualNetworkFrameListener frameListener,
-                VirtualNetworkConfigListener configListener,
-                PathChecker pathChecker) throws NodeException
-	{
-        this.nodeId = now;
-
-        this.getListener = getListener;
-        this.putListener = putListener;
-        this.sender = sender;
-        this.eventListener = eventListener;
-        this.frameListener = frameListener;
-        this.configListener = configListener;
-        this.pathChecker = pathChecker;
-
-        ResultCode rc = node_init(now);
-        if(rc != ResultCode.RESULT_OK)
-        {
-            // TODO: Throw Exception
+    public ResultCode init(
+            DataStoreGetListener getListener,
+            DataStorePutListener putListener,
+            PacketSender sender,
+            EventListener eventListener,
+            VirtualNetworkFrameListener frameListener,
+            VirtualNetworkConfigListener configListener,
+            PathChecker pathChecker) throws NodeException {
+        ResultCode rc = node_init(
+                nodeId,
+                getListener,
+                putListener,
+                sender,
+                eventListener,
+                frameListener,
+                configListener,
+                pathChecker);
+        if(rc != ResultCode.RESULT_OK) {
             throw new NodeException(rc.toString());
         }
-	}
+        return rc;
+    }
+
+    public boolean isInited() {
+        return node_isInited(nodeId);
+    }
 
     /**
       * Close this Node.
@@ -124,10 +122,7 @@ public class Node {
       * <p>The Node object can no longer be used once this method is called.</p>
       */
     public void close() {
-        if(nodeId != -1) {
-            node_delete(nodeId);
-            nodeId = -1;
-        }
+        node_delete(nodeId);
     }
 
     @Override
@@ -408,7 +403,17 @@ public class Node {
     //
     // function declarations for JNI
     //
-    private native ResultCode node_init(long now);
+    private native ResultCode node_init(
+            long nodeId,
+            DataStoreGetListener dataStoreGetListener,
+            DataStorePutListener dataStorePutListener,
+            PacketSender packetSender,
+            EventListener eventListener,
+            VirtualNetworkFrameListener virtualNetworkFrameListener,
+            VirtualNetworkConfigListener virtualNetworkConfigListener,
+            PathChecker pathChecker);
+
+    private native boolean node_isInited(long nodeId);
 
     private native void node_delete(long nodeId);
 

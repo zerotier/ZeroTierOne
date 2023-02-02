@@ -83,13 +83,6 @@ extern jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-extern jfieldID Node_configListener_field;
-extern jfieldID Node_eventListener_field;
-extern jfieldID Node_frameListener_field;
-extern jfieldID Node_getListener_field;
-extern jfieldID Node_pathChecker_field;
-extern jfieldID Node_putListener_field;
-extern jfieldID Node_sender_field;
 extern jfieldID PeerPhysicalPath_address_field;
 extern jfieldID PeerPhysicalPath_lastReceive_field;
 extern jfieldID PeerPhysicalPath_lastSend_field;

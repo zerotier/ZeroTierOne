@@ -114,13 +114,6 @@ jmethodID VirtualNetworkType_fromInt_method;
 // Instance fields
 //
 
-jfieldID Node_configListener_field;
-jfieldID Node_eventListener_field;
-jfieldID Node_frameListener_field;
-jfieldID Node_getListener_field;
-jfieldID Node_pathChecker_field;
-jfieldID Node_putListener_field;
-jfieldID Node_sender_field;
 jfieldID PeerPhysicalPath_address_field;
 jfieldID PeerPhysicalPath_lastReceive_field;
 jfieldID PeerPhysicalPath_lastSend_field;
@@ -243,13 +236,6 @@ void setupJNICache(JavaVM *vm) {
     // Instance fields
     //
 
-    EXCEPTIONANDNULLCHECK(Node_configListener_field = env->GetFieldID(Node_class, "configListener", "Lcom/zerotier/sdk/VirtualNetworkConfigListener;"));
-    EXCEPTIONANDNULLCHECK(Node_eventListener_field = env->GetFieldID(Node_class, "eventListener", "Lcom/zerotier/sdk/EventListener;"));
-    EXCEPTIONANDNULLCHECK(Node_frameListener_field = env->GetFieldID(Node_class, "frameListener", "Lcom/zerotier/sdk/VirtualNetworkFrameListener;"));
-    EXCEPTIONANDNULLCHECK(Node_getListener_field = env->GetFieldID(Node_class, "getListener", "Lcom/zerotier/sdk/DataStoreGetListener;"));
-    EXCEPTIONANDNULLCHECK(Node_pathChecker_field = env->GetFieldID(Node_class, "pathChecker", "Lcom/zerotier/sdk/PathChecker;"));
-    EXCEPTIONANDNULLCHECK(Node_putListener_field = env->GetFieldID(Node_class, "putListener", "Lcom/zerotier/sdk/DataStorePutListener;"));
-    EXCEPTIONANDNULLCHECK(Node_sender_field = env->GetFieldID(Node_class, "sender", "Lcom/zerotier/sdk/PacketSender;"));
     EXCEPTIONANDNULLCHECK(PeerPhysicalPath_address_field = env->GetFieldID(PeerPhysicalPath_class, "address", "Ljava/net/InetSocketAddress;"));
     EXCEPTIONANDNULLCHECK(PeerPhysicalPath_lastReceive_field = env->GetFieldID(PeerPhysicalPath_class, "lastReceive", "J"));
     EXCEPTIONANDNULLCHECK(PeerPhysicalPath_lastSend_field = env->GetFieldID(PeerPhysicalPath_class, "lastSend", "J"));
