@@ -31,11 +31,9 @@ import android.util.Log;
 
 import com.zerotier.sdk.util.StringUtils;
 
-import java.lang.Comparable;
-import java.lang.Override;
-import java.lang.String;
-import java.util.ArrayList;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
@@ -64,115 +62,165 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
 
     }
 
-    public boolean equals(VirtualNetworkConfig cfg) {
-        ArrayList<String> aaCurrent = new ArrayList<>();
-        ArrayList<String> aaNew = new ArrayList<>();
-        for (InetSocketAddress s : assignedAddresses) {
-            aaCurrent.add(s.toString());
-        }
-        for (InetSocketAddress s : cfg.assignedAddresses) {
-            aaNew.add(s.toString());
-        }
-        Collections.sort(aaCurrent);
-        Collections.sort(aaNew);
-        boolean aaEqual = aaCurrent.equals(aaNew);
+    @Override
+    public boolean equals(Object o) {
 
-        ArrayList<String> rCurrent = new ArrayList<>();
-        ArrayList<String> rNew = new ArrayList<>();
-        for (VirtualNetworkRoute r : routes) {
-            rCurrent.add(r.toString());
+        if (!(o instanceof VirtualNetworkConfig)) {
+            return false;
         }
-        for (VirtualNetworkRoute r : cfg.routes) {
-            rNew.add(r.toString());
-        }
-        Collections.sort(rCurrent);
-        Collections.sort(rNew);
-        boolean routesEqual = rCurrent.equals(rNew);
+
+        VirtualNetworkConfig cfg = (VirtualNetworkConfig) o;
 
         if (this.nwid != cfg.nwid) {
-            Log.i(TAG, "nwid Changed. Old: " + StringUtils.networkIdToString(this.nwid) + " (" + this.nwid + "), " +
+            Log.i(TAG, "NetworkID Changed. Old: " + StringUtils.networkIdToString(this.nwid) + " (" + this.nwid + "), " +
                     "New: " + StringUtils.networkIdToString(cfg.nwid) + " (" + cfg.nwid + ")");
+
+            return false;
         }
+
         if (this.mac != cfg.mac) {
             Log.i(TAG, "MAC Changed. Old: " + StringUtils.macAddressToString(this.mac) + ", New: " + StringUtils.macAddressToString(cfg.mac));
+
+            return false;
         }
 
         if (!this.name.equals(cfg.name)) {
-            Log.i(TAG, "Name Changed.  Old: " + this.name + " New: "+ cfg.name);
+            Log.i(TAG, "Name Changed. Old: " + this.name + ", New: " + cfg.name);
+
+            return false;
         }
 
-        if (!this.type.equals(cfg.type)) {
-            Log.i(TAG, "TYPE changed.  Old " + this.type + ", New: " + cfg.type);
+        if (this.status != cfg.status) {
+            Log.i(TAG, "Status Changed. Old: " + this.status + ", New: " + cfg.status);
+
+            return false;
+        }
+
+        if (this.type != cfg.type) {
+            Log.i(TAG, "Type changed. Old " + this.type + ", New: " + cfg.type);
+
+            return false;
         }
 
         if (this.mtu != cfg.mtu) {
-            Log.i(TAG, "MTU Changed.  Old: " + this.mtu + ", New: " + cfg.mtu);
+            Log.i(TAG, "MTU Changed. Old: " + this.mtu + ", New: " + cfg.mtu);
+
+            return false;
         }
 
         if (this.dhcp != cfg.dhcp) {
             Log.i(TAG, "DHCP Flag Changed. Old: " + this.dhcp + ", New: " + cfg.dhcp);
+
+            return false;
         }
 
         if (this.bridge != cfg.bridge) {
             Log.i(TAG, "Bridge Flag Changed. Old: " + this.bridge + ", New: " + cfg.bridge);
+
+            return false;
         }
 
         if (this.broadcastEnabled != cfg.broadcastEnabled) {
-            Log.i(TAG, "Broadcast Flag Changed. Old: "+ this.broadcastEnabled +", New: " + cfg.broadcastEnabled);
+            Log.i(TAG, "Broadcast Flag Changed. Old: "+ this.broadcastEnabled + ", New: " + cfg.broadcastEnabled);
+
+            return false;
         }
 
         if (this.portError != cfg.portError) {
             Log.i(TAG, "Port Error Changed. Old: " + this.portError + ", New: " + cfg.portError);
+
+            return false;
         }
 
         if (this.enabled != cfg.enabled) {
             Log.i(TAG, "Enabled Changed. Old: " + this.enabled + ", New: " + cfg.enabled);
+
+            return false;
         }
 
-        if (!aaEqual) {
+        if (this.netconfRevision != cfg.netconfRevision) {
+            Log.i(TAG, "NetConfRevision Changed. Old: " + this.netconfRevision + ", New: " + cfg.netconfRevision);
+
+            return false;
+        }
+
+        if (!Arrays.equals(assignedAddresses, cfg.assignedAddresses)) {
+
+            ArrayList<String> aaCurrent = new ArrayList<>();
+            ArrayList<String> aaNew = new ArrayList<>();
+            for (InetSocketAddress s : assignedAddresses) {
+                aaCurrent.add(s.toString());
+            }
+            for (InetSocketAddress s : cfg.assignedAddresses) {
+                aaNew.add(s.toString());
+            }
+            Collections.sort(aaCurrent);
+            Collections.sort(aaNew);
+
             Log.i(TAG, "Assigned Addresses Changed");
             Log.i(TAG, "Old:");
             for (String s : aaCurrent) {
                 Log.i(TAG, "    " + s);
             }
+            Log.i(TAG, "");
             Log.i(TAG, "New:");
             for (String s : aaNew) {
                 Log.i(TAG, "    " +s);
             }
+            Log.i(TAG, "");
+
+            return false;
         }
 
-        if (!routesEqual) {
+        if (!Arrays.equals(routes, cfg.routes)) {
+
+            ArrayList<String> rCurrent = new ArrayList<>();
+            ArrayList<String> rNew = new ArrayList<>();
+            for (VirtualNetworkRoute r : routes) {
+                rCurrent.add(r.toString());
+            }
+            for (VirtualNetworkRoute r : cfg.routes) {
+                rNew.add(r.toString());
+            }
+            Collections.sort(rCurrent);
+            Collections.sort(rNew);
+
             Log.i(TAG, "Managed Routes Changed");
             Log.i(TAG, "Old:");
             for (String s : rCurrent) {
                 Log.i(TAG, "    " + s);
             }
+            Log.i(TAG, "");
             Log.i(TAG, "New:");
             for (String s : rNew) {
                 Log.i(TAG, "    " + s);
             }
+            Log.i(TAG, "");
+
+            return false;
         }
 
-        boolean dnsEquals = false;
-        if (this.dns == null && cfg.dns == null) {
-            dnsEquals = true;
-        } else if (this.dns != null) {
-            dnsEquals = this.dns.equals(cfg.dns);
+        boolean dnsEquals;
+        if (this.dns == null) {
+            //noinspection RedundantIfStatement
+            if (cfg.dns == null) {
+                dnsEquals = true;
+            } else {
+                dnsEquals = false;
+            }
+        } else {
+            if (cfg.dns == null) {
+                dnsEquals = false;
+            } else {
+                dnsEquals = this.dns.equals(cfg.dns);
+            }
         }
 
-        return this.nwid == cfg.nwid &&
-               this.mac == cfg.mac &&
-               this.name.equals(cfg.name) &&
-               this.status.equals(cfg.status) &&
-               this.type.equals(cfg.type) &&
-               this.mtu == cfg.mtu &&
-               this.dhcp == cfg.dhcp &&
-               this.bridge == cfg.bridge &&
-               this.broadcastEnabled == cfg.broadcastEnabled &&
-               this.portError == cfg.portError &&
-               this.enabled == cfg.enabled &&
-               dnsEquals &&
-               aaEqual && routesEqual;
+        if (!dnsEquals) {
+            return false;
+        }
+
+        return true;
     }
 
     public int compareTo(VirtualNetworkConfig cfg) {
