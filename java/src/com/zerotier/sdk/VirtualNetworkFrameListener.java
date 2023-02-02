@@ -35,8 +35,8 @@ public interface VirtualNetworkFrameListener {
      * @param nwid ZeroTier One network ID
      * @param srcMac source MAC address
      * @param destMac destination MAC address
-     * @param ethertype
-     * @param vlanId
+     * @param etherType EtherType
+     * @param vlanId VLAN ID
      * @param frameData data to send
      */
     public void onVirtualNetworkFrame(

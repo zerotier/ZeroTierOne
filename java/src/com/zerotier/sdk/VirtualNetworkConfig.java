@@ -373,7 +373,7 @@ public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
     }
 
     /**
-     * ZeroTier-assigned addresses (in {@link java.net.InetSocketAddress} objects)
+     * ZeroTier-assigned addresses (in {@link InetSocketAddress} objects)
      *
      * For IP, the port number of the sockaddr_XX structure contains the number
      * of bits in the address netmask. Only the IP address and port are used.
@@ -387,9 +387,7 @@ public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
     }
 
     /**
-     * ZeroTier-assigned routes (in {@link com.zerotier.sdk.VirtualNetworkRoute} objects)
-     *
-     * @return
+     * ZeroTier-assigned routes (in {@link VirtualNetworkRoute} objects)
      */
     public VirtualNetworkRoute[] getRoutes() {
         return routes;
