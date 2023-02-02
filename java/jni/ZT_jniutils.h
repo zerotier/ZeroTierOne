@@ -160,4 +160,6 @@ jbyteArray newByteArray(JNIEnv *env, const unsigned char *bytes, size_t count);
 
 jbyteArray newByteArray(JNIEnv *env, size_t count);
 
+bool isSocketAddressEmpty(const sockaddr_storage addr);
+
 #endif // ZT_jniutils_h_
