@@ -43,6 +43,16 @@ public class VirtualNetworkDNS implements Comparable<VirtualNetworkDNS> {
         return domain.compareTo(o.domain);
     }
 
+    @Override
+    public int hashCode() {
+
+        int result = 17;
+        result = 37 * result + domain.hashCode();
+        result = 37 * result + servers.hashCode();
+
+        return result;
+    }
+
     public String getSearchDomain() { return domain; }
 
     public ArrayList<InetSocketAddress> getServers() { return servers; }
