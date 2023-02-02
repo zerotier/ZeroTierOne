@@ -44,7 +44,7 @@ public interface DataStorePutListener {
      * @param secure set to user read/write only.
      * @return 0 on success.
      */
-    public int onDataStorePut(
+    int onDataStorePut(
         String name,
         byte[] buffer,
         boolean secure);
@@ -55,6 +55,6 @@ public interface DataStorePutListener {
      * @param name Object name
      * @return 0 on success.
      */
-    public int onDelete(
+    int onDelete(
         String name);
 }

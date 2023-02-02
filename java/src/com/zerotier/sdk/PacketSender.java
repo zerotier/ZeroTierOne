@@ -45,7 +45,7 @@ public interface PacketSender {
      * @param ttl TTL is ignored
      * @return 0 on success, any error code on failure.
      */
-    public int onSendPacketRequested(
+    int onSendPacketRequested(
             long localSocket,
             InetSocketAddress remoteAddr,
             byte[] packetData,

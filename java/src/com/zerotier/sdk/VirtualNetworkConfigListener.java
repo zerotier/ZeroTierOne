@@ -53,7 +53,7 @@ public interface VirtualNetworkConfigListener {
      * @param config {@link VirtualNetworkConfig} object with the new configuration
      * @return 0 on success
      */
-    public int onNetworkConfigurationUpdated(
+    int onNetworkConfigurationUpdated(
             long nwid,
             VirtualNetworkConfigOperation op,
             VirtualNetworkConfig config);
