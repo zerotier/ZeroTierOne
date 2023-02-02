@@ -24,9 +24,11 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
+
 package com.zerotier.sdk;
 
 public enum VirtualNetworkConfigOperation {
+
     /**
      * Network is coming up (either for the first time or after service restart)
      */

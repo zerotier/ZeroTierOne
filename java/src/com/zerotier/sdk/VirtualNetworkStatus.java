@@ -24,9 +24,11 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
+
 package com.zerotier.sdk;
 
 public enum VirtualNetworkStatus {
+
     /**
      * Waiting for network configuration (also means revision == 0)
      */
