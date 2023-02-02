@@ -256,7 +256,6 @@ namespace {
                 break;
             case ZT_EVENT_USER_MESSAGE:
             case ZT_EVENT_REMOTE_TRACE:
-            default:
                 break;
         }
     }
@@ -291,7 +290,7 @@ namespace {
             case ZT_STATE_OBJECT_PEER:
                 snprintf(p, sizeof(p), "peers.d/%.10" PRIx64, id[0]);
                 break;
-            default:
+            case ZT_STATE_OBJECT_NULL:
                 return;
         }
 
@@ -356,7 +355,7 @@ namespace {
             case ZT_STATE_OBJECT_PEER:
                 snprintf(p, sizeof(p), "peers.d/%.10" PRIx64, id[0]);
                 break;
-            default:
+            case ZT_STATE_OBJECT_NULL:
                 return -100;
         }
 
