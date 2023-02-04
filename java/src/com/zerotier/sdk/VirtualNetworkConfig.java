@@ -191,7 +191,7 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
     }
 
     /**
-     * Ethernet MAC (40 bits) that should be assigned to port
+     * Ethernet MAC (48 bits) that should be assigned to port
      */
     public final long macAddress() {
         return mac;
