@@ -110,14 +110,14 @@ namespace {
 
         if (ref->configListener == NULL) {
             LOGE("configListener is NULL");
-            return -1;
+            return -100;
         }
 
         jclass configListenerClass = env->GetObjectClass(ref->configListener);
         if(configListenerClass == NULL)
         {
             LOGE("Couldn't find class for VirtualNetworkConfigListener instance");
-            return -1;
+            return -101;
         }
 
         jmethodID configListenerCallbackMethod = lookup.findMethod(configListenerClass,
@@ -126,21 +126,21 @@ namespace {
         if(configListenerCallbackMethod == NULL)
         {
             LOGE("Couldn't find onVirtualNetworkFrame() method");
-            return -2;
+            return -102;
         }
 
         jobject operationObject = createVirtualNetworkConfigOperation(env, operation);
         if(operationObject == NULL)
         {
             LOGE("Error creating VirtualNetworkConfigOperation object");
-            return -3;
+            return -103;
         }
 
         jobject networkConfigObject = newNetworkConfig(env, *config);
         if(networkConfigObject == NULL)
         {
             LOGE("Error creating VirtualNetworkConfig object");
-            return -4;
+            return -104;
         }
 
         return env->CallIntMethod(
@@ -425,11 +425,11 @@ namespace {
                 snprintf(p, sizeof(p), "peers.d/%.10llx", (unsigned long long)id[0]);
                 break;
             default:
-                return -1;
+                return -100;
         }
 
         if (strlen(p) < 1) {
-            return -1;
+            return -101;
         }
 
         JniRef *ref = (JniRef*)userData;
@@ -438,14 +438,14 @@ namespace {
 
         if (ref->dataStoreGetListener == NULL) {
             LOGE("dataStoreGetListener is NULL");
-            return -2;
+            return -102;
         }
 
         jclass dataStoreGetClass = env->GetObjectClass(ref->dataStoreGetListener);
         if(dataStoreGetClass == NULL)
         {
             LOGE("Couldn't find class for DataStoreGetListener instance");
-            return -2;
+            return -103;
         }
 
         jmethodID dataStoreGetCallbackMethod = lookup.findMethod(
@@ -455,21 +455,21 @@ namespace {
         if(dataStoreGetCallbackMethod == NULL)
         {
             LOGE("Couldn't find onDataStoreGet method");
-            return -2;
+            return -104;
         }
 
         jstring nameStr = env->NewStringUTF(p);
         if(nameStr == NULL)
         {
             LOGE("Error creating name string object");
-            return -2; // out of memory
+            return -105; // out of memory
         }
 
         jbyteArray bufferObj = env->NewByteArray(bufferLength);
         if(bufferObj == NULL)
         {
             LOGE("Error creating byte[] buffer of size: %u", bufferLength);
-            return -2;
+            return -106;
         }
 
         LOGV("Calling onDataStoreGet(%s, %p)", p, buffer);
@@ -510,14 +510,14 @@ namespace {
 
         if (ref->packetSender == NULL) {
             LOGE("packetSender is NULL");
-            return -1;
+            return -100;
         }
 
         jclass packetSenderClass = env->GetObjectClass(ref->packetSender);
         if(packetSenderClass == NULL)
         {
             LOGE("Couldn't find class for PacketSender instance");
-            return -1;
+            return -101;
         }
 
         jmethodID packetSenderCallbackMethod = lookup.findMethod(packetSenderClass,
@@ -525,7 +525,7 @@ namespace {
         if(packetSenderCallbackMethod == NULL)
         {
             LOGE("Couldn't find onSendPacketRequested method");
-            return -2;
+            return -102;
         }
 
         jobject remoteAddressObj = newInetSocketAddress(env, *remoteAddress);
