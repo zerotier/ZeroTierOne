@@ -118,15 +118,15 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
         }
 
         if (this.broadcastEnabled != cfg.broadcastEnabled) {
-            Log.i(TAG, "Broadcast Flag Changed. Old: "+ this.broadcastEnabled +", New: " + this.broadcastEnabled);
+            Log.i(TAG, "Broadcast Flag Changed. Old: "+ this.broadcastEnabled +", New: " + cfg.broadcastEnabled);
         }
 
         if (this.portError != cfg.portError) {
-            Log.i(TAG, "Port Error Changed. Old: " + this.portError + ", New: " + this.portError);
+            Log.i(TAG, "Port Error Changed. Old: " + this.portError + ", New: " + cfg.portError);
         }
 
         if (this.enabled != cfg.enabled) {
-            Log.i(TAG, "Enabled Changed. Old: " + this.enabled + ", New: " + this.enabled);
+            Log.i(TAG, "Enabled Changed. Old: " + this.enabled + ", New: " + cfg.enabled);
         }
 
         if (!aaEqual) {
