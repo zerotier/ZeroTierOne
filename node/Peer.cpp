@@ -543,7 +543,6 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 		else break;
 	}
 
-	unsigned int j = 0;
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 			// Clean expired and reduced priority paths
@@ -553,9 +552,8 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 					_paths[i].p->sent(now);
 					sent |= (_paths[i].p->address().ss_family == AF_INET) ? 0x1 : 0x2;
 				}
-				if (i != j)
-					_paths[j] = _paths[i];
-				++j;
+			} else {
+				_paths[i] = _PeerPath();
 			}
 		} else break;
 	}

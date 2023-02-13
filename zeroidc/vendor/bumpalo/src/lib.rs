@@ -252,10 +252,46 @@ impl<E: Display> Display for AllocOrInitError<E> {
 /// [`Result`]: https://doc.rust-lang.org/std/result/enum.Result.html
 /// [`Ok`]: https://doc.rust-lang.org/std/result/enum.Result.html#variant.Ok
 /// [`Err`]: https://doc.rust-lang.org/std/result/enum.Result.html#variant.Err
+///
+/// ### `Bump` Allocation Limits
+///
+/// `bumpalo` supports setting a limit on the maximum bytes of memory that can
+/// be allocated for use in a particular `Bump` arena. This limit can be set and removed with
+/// [`set_allocation_limit`][Bump::set_allocation_limit].
+/// The allocation limit is only enforced when allocating new backing chunks for
+/// a `Bump`. Updating the allocation limit will not affect existing allocations
+/// or any future allocations within the `Bump`'s current chunk.
+///
+/// #### Example
+///
+/// ```
+/// let bump = bumpalo::Bump::new();
+///
+/// assert_eq!(bump.allocation_limit(), None);
+/// bump.set_allocation_limit(Some(0));
+///
+/// assert!(bump.try_alloc(5).is_err());
+///
+/// bump.set_allocation_limit(Some(6));
+///
+/// assert_eq!(bump.allocation_limit(), Some(6));
+///
+/// bump.set_allocation_limit(None);
+///
+/// assert_eq!(bump.allocation_limit(), None);
+/// ```
+///
+/// #### Warning
+///
+/// Because of backwards compatibility, allocations that fail
+/// due to allocation limits will not present differently than
+/// errors due to resource exhaustion.
+
 #[derive(Debug)]
 pub struct Bump {
     // The current chunk we are bump allocating within.
     current_chunk_footer: Cell<NonNull<ChunkFooter>>,
+    allocation_limit: Cell<Option<usize>>,
 }
 
 #[repr(C)]
@@ -276,6 +312,12 @@ struct ChunkFooter {
 
     // Bump allocation finger that is always in the range `self.data..=self`.
     ptr: Cell<NonNull<u8>>,
+
+    // The bytes allocated in all chunks so far, the canonical empty chunk has
+    // a size of 0 and for all other chunks, `allocated_bytes` will be
+    // the allocated_bytes of the current chunk plus the allocated bytes
+    // of the `prev` chunk.
+    allocated_bytes: usize,
 }
 
 /// A wrapper type for the canonical, statically allocated empty chunk.
@@ -305,6 +347,9 @@ static EMPTY_CHUNK: EmptyChunkFooter = EmptyChunkFooter(ChunkFooter {
     prev: Cell::new(unsafe {
         NonNull::new_unchecked(&EMPTY_CHUNK as *const EmptyChunkFooter as *mut ChunkFooter)
     }),
+
+    // Empty chunks count as 0 allocated bytes in an arena.
+    allocated_bytes: 0,
 });
 
 impl EmptyChunkFooter {
@@ -407,6 +452,15 @@ const FIRST_ALLOCATION_GOAL: usize = 1 << 9;
 // take the alignment into account.
 const DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER: usize = FIRST_ALLOCATION_GOAL - OVERHEAD;
 
+/// The memory size and alignment details for a potential new chunk
+/// allocation.
+#[derive(Debug, Clone, Copy)]
+struct NewChunkMemoryDetails {
+    new_size_without_footer: usize,
+    align: usize,
+    size: usize,
+}
+
 /// Wrapper around `Layout::from_size_align` that adds debug assertions.
 #[inline]
 unsafe fn layout_from_size_align(size: usize, align: usize) -> Layout {
@@ -420,6 +474,12 @@ unsafe fn layout_from_size_align(size: usize, align: usize) -> Layout {
 #[inline(never)]
 fn allocation_size_overflow<T>() -> T {
     panic!("requested allocation size overflowed")
+}
+
+// This can be migrated to directly use `usize::abs_diff` when the MSRV
+// reaches `1.60`
+fn abs_diff(a: usize, b: usize) -> usize {
+    usize::max(a, b) - usize::min(a, b)
 }
 
 impl Bump {
@@ -471,18 +531,138 @@ impl Bump {
         if capacity == 0 {
             return Ok(Bump {
                 current_chunk_footer: Cell::new(EMPTY_CHUNK.get()),
+                allocation_limit: Cell::new(None),
             });
         }
 
-        let chunk_footer = Self::new_chunk(
-            None,
-            unsafe { layout_from_size_align(capacity, 1) },
-            EMPTY_CHUNK.get(),
-        )
-        .ok_or(AllocErr)?;
+        let layout = unsafe { layout_from_size_align(capacity, 1) };
+
+        let chunk_footer = unsafe {
+            Self::new_chunk(
+                Bump::new_chunk_memory_details(None, layout).ok_or(AllocErr)?,
+                layout,
+                EMPTY_CHUNK.get(),
+            )
+            .ok_or(AllocErr)?
+        };
 
         Ok(Bump {
             current_chunk_footer: Cell::new(chunk_footer),
+            allocation_limit: Cell::new(None),
+        })
+    }
+
+    /// The allocation limit for this arena in bytes.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// let bump = bumpalo::Bump::with_capacity(0);
+    ///
+    /// assert_eq!(bump.allocation_limit(), None);
+    ///
+    /// bump.set_allocation_limit(Some(6));
+    ///
+    /// assert_eq!(bump.allocation_limit(), Some(6));
+    ///
+    /// bump.set_allocation_limit(None);
+    ///
+    /// assert_eq!(bump.allocation_limit(), None);
+    /// ```
+    pub fn allocation_limit(&self) -> Option<usize> {
+        self.allocation_limit.get()
+    }
+
+    /// Set the allocation limit in bytes for this arena.
+    ///
+    /// The allocation limit is only enforced when allocating new backing chunks for
+    /// a `Bump`. Updating the allocation limit will not affect existing allocations
+    /// or any future allocations within the `Bump`'s current chunk.
+    ///
+    /// ## Example
+    ///
+    /// ```
+    /// let bump = bumpalo::Bump::with_capacity(0);
+    ///
+    /// bump.set_allocation_limit(Some(0));
+    ///
+    /// assert!(bump.try_alloc(5).is_err());
+    /// ```
+    pub fn set_allocation_limit(&self, limit: Option<usize>) {
+        self.allocation_limit.set(limit)
+    }
+
+    /// How much headroom an arena has before it hits its allocation
+    /// limit.
+    fn allocation_limit_remaining(&self) -> Option<usize> {
+        self.allocation_limit.get().and_then(|allocation_limit| {
+            let allocated_bytes = self.allocated_bytes();
+            if allocated_bytes > allocation_limit {
+                None
+            } else {
+                Some(abs_diff(allocation_limit, allocated_bytes))
+            }
+        })
+    }
+
+    /// Whether a request to allocate a new chunk with a given size for a given
+    /// requested layout will fit under the allocation limit set on a `Bump`.
+    fn chunk_fits_under_limit(
+        allocation_limit_remaining: Option<usize>,
+        new_chunk_memory_details: NewChunkMemoryDetails,
+    ) -> bool {
+        allocation_limit_remaining
+            .map(|allocation_limit_left| {
+                allocation_limit_left >= new_chunk_memory_details.new_size_without_footer
+            })
+            .unwrap_or(true)
+    }
+
+    /// Determine the memory details including final size, alignment and
+    /// final size without footer for a new chunk that would be allocated
+    /// to fulfill an allocation request.
+    fn new_chunk_memory_details(
+        new_size_without_footer: Option<usize>,
+        requested_layout: Layout,
+    ) -> Option<NewChunkMemoryDetails> {
+        let mut new_size_without_footer =
+            new_size_without_footer.unwrap_or(DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER);
+
+        // We want to have CHUNK_ALIGN or better alignment
+        let mut align = CHUNK_ALIGN;
+
+        // If we already know we need to fulfill some request,
+        // make sure we allocate at least enough to satisfy it
+        align = align.max(requested_layout.align());
+        let requested_size =
+            round_up_to(requested_layout.size(), align).unwrap_or_else(allocation_size_overflow);
+        new_size_without_footer = new_size_without_footer.max(requested_size);
+
+        // We want our allocations to play nice with the memory allocator,
+        // and waste as little memory as possible.
+        // For small allocations, this means that the entire allocation
+        // including the chunk footer and mallocs internal overhead is
+        // as close to a power of two as we can go without going over.
+        // For larger allocations, we only need to get close to a page
+        // boundary without going over.
+        if new_size_without_footer < PAGE_STRATEGY_CUTOFF {
+            new_size_without_footer =
+                (new_size_without_footer + OVERHEAD).next_power_of_two() - OVERHEAD;
+        } else {
+            new_size_without_footer =
+                round_up_to(new_size_without_footer + OVERHEAD, 0x1000)? - OVERHEAD;
+        }
+
+        debug_assert_eq!(align % CHUNK_ALIGN, 0);
+        debug_assert_eq!(new_size_without_footer % CHUNK_ALIGN, 0);
+        let size = new_size_without_footer
+            .checked_add(FOOTER_SIZE)
+            .unwrap_or_else(allocation_size_overflow);
+
+        Some(NewChunkMemoryDetails {
+            new_size_without_footer,
+            size,
+            align,
         })
     }
 
@@ -491,74 +671,50 @@ impl Bump {
     /// If given, `layouts` is a tuple of the current chunk size and the
     /// layout of the allocation request that triggered us to fall back to
     /// allocating a new chunk of memory.
-    fn new_chunk(
-        new_size_without_footer: Option<usize>,
+    unsafe fn new_chunk(
+        new_chunk_memory_details: NewChunkMemoryDetails,
         requested_layout: Layout,
         prev: NonNull<ChunkFooter>,
     ) -> Option<NonNull<ChunkFooter>> {
-        unsafe {
-            let mut new_size_without_footer =
-                new_size_without_footer.unwrap_or(DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER);
+        let NewChunkMemoryDetails {
+            new_size_without_footer,
+            align,
+            size,
+        } = new_chunk_memory_details;
 
-            // We want to have CHUNK_ALIGN or better alignment
-            let mut align = CHUNK_ALIGN;
+        let layout = layout_from_size_align(size, align);
 
-            // If we already know we need to fulfill some request,
-            // make sure we allocate at least enough to satisfy it
-            align = align.max(requested_layout.align());
-            let requested_size = round_up_to(requested_layout.size(), align)
-                .unwrap_or_else(allocation_size_overflow);
-            new_size_without_footer = new_size_without_footer.max(requested_size);
+        debug_assert!(size >= requested_layout.size());
 
-            // We want our allocations to play nice with the memory allocator,
-            // and waste as little memory as possible.
-            // For small allocations, this means that the entire allocation
-            // including the chunk footer and mallocs internal overhead is
-            // as close to a power of two as we can go without going over.
-            // For larger allocations, we only need to get close to a page
-            // boundary without going over.
-            if new_size_without_footer < PAGE_STRATEGY_CUTOFF {
-                new_size_without_footer =
-                    (new_size_without_footer + OVERHEAD).next_power_of_two() - OVERHEAD;
-            } else {
-                new_size_without_footer =
-                    round_up_to(new_size_without_footer + OVERHEAD, 0x1000)? - OVERHEAD;
-            }
+        let data = alloc(layout);
+        let data = NonNull::new(data)?;
 
-            debug_assert_eq!(align % CHUNK_ALIGN, 0);
-            debug_assert_eq!(new_size_without_footer % CHUNK_ALIGN, 0);
-            let size = new_size_without_footer
-                .checked_add(FOOTER_SIZE)
-                .unwrap_or_else(allocation_size_overflow);
-            let layout = layout_from_size_align(size, align);
+        // The `ChunkFooter` is at the end of the chunk.
+        let footer_ptr = data.as_ptr().add(new_size_without_footer);
+        debug_assert_eq!((data.as_ptr() as usize) % align, 0);
+        debug_assert_eq!(footer_ptr as usize % CHUNK_ALIGN, 0);
+        let footer_ptr = footer_ptr as *mut ChunkFooter;
 
-            debug_assert!(size >= requested_layout.size());
+        // The bump pointer is initialized to the end of the range we will
+        // bump out of.
+        let ptr = Cell::new(NonNull::new_unchecked(footer_ptr as *mut u8));
 
-            let data = alloc(layout);
-            let data = NonNull::new(data)?;
+        // The `allocated_bytes` of a new chunk counts the total size
+        // of the chunks, not how much of the chunks are used.
+        let allocated_bytes = prev.as_ref().allocated_bytes + new_size_without_footer;
 
-            // The `ChunkFooter` is at the end of the chunk.
-            let footer_ptr = data.as_ptr().add(new_size_without_footer);
-            debug_assert_eq!((data.as_ptr() as usize) % align, 0);
-            debug_assert_eq!(footer_ptr as usize % CHUNK_ALIGN, 0);
-            let footer_ptr = footer_ptr as *mut ChunkFooter;
+        ptr::write(
+            footer_ptr,
+            ChunkFooter {
+                data,
+                layout,
+                prev: Cell::new(prev),
+                ptr,
+                allocated_bytes,
+            },
+        );
 
-            // The bump pointer is initialized to the end of the range we will
-            // bump out of.
-            let ptr = Cell::new(NonNull::new_unchecked(footer_ptr as *mut u8));
-
-            ptr::write(
-                footer_ptr,
-                ChunkFooter {
-                    data,
-                    layout,
-                    prev: Cell::new(prev),
-                    ptr,
-                },
-            );
-
-            Some(NonNull::new_unchecked(footer_ptr))
-        }
+        Some(NonNull::new_unchecked(footer_ptr))
     }
 
     /// Reset this bump allocator.
@@ -600,7 +756,7 @@ impl Bump {
                 return;
             }
 
-            let cur_chunk = self.current_chunk_footer.get();
+            let mut cur_chunk = self.current_chunk_footer.get();
 
             // Deallocate all chunks except the current one
             let prev_chunk = cur_chunk.as_ref().prev.replace(EMPTY_CHUNK.get());
@@ -608,6 +764,9 @@ impl Bump {
 
             // Reset the bump finger to the end of the chunk.
             cur_chunk.as_ref().ptr.set(cur_chunk.cast());
+
+            // Reset the allocated size of the chunk.
+            cur_chunk.as_mut().allocated_bytes = cur_chunk.as_ref().layout.size();
 
             debug_assert!(
                 self.current_chunk_footer
@@ -820,7 +979,6 @@ impl Bump {
         let rewind_footer = self.current_chunk_footer.get();
         let rewind_ptr = unsafe { rewind_footer.as_ref() }.ptr.get();
         let mut inner_result_ptr = NonNull::from(self.alloc_with(f));
-        let inner_result_address = inner_result_ptr.as_ptr() as usize;
         match unsafe { inner_result_ptr.as_mut() } {
             Ok(t) => Ok(unsafe {
                 //SAFETY:
@@ -842,7 +1000,7 @@ impl Bump {
                 // reclaim any alignment padding we might have added (which
                 // `dealloc` cannot do) if we didn't allocate a new chunk for
                 // this result.
-                if self.is_last_allocation(NonNull::new_unchecked(inner_result_address as *mut _)) {
+                if self.is_last_allocation(inner_result_ptr.cast()) {
                     let current_footer_p = self.current_chunk_footer.get();
                     let current_ptr = &current_footer_p.as_ref().ptr;
                     if current_footer_p == rewind_footer {
@@ -930,7 +1088,6 @@ impl Bump {
         let rewind_footer = self.current_chunk_footer.get();
         let rewind_ptr = unsafe { rewind_footer.as_ref() }.ptr.get();
         let mut inner_result_ptr = NonNull::from(self.try_alloc_with(f)?);
-        let inner_result_address = inner_result_ptr.as_ptr() as usize;
         match unsafe { inner_result_ptr.as_mut() } {
             Ok(t) => Ok(unsafe {
                 //SAFETY:
@@ -952,7 +1109,7 @@ impl Bump {
                 // reclaim any alignment padding we might have added (which
                 // `dealloc` cannot do) if we didn't allocate a new chunk for
                 // this result.
-                if self.is_last_allocation(NonNull::new_unchecked(inner_result_address as *mut _)) {
+                if self.is_last_allocation(inner_result_ptr.cast()) {
                     let current_footer_p = self.current_chunk_footer.get();
                     let current_ptr = &current_footer_p.as_ref().ptr;
                     if current_footer_p == rewind_footer {
@@ -1316,6 +1473,7 @@ impl Bump {
     fn alloc_layout_slow(&self, layout: Layout) -> Option<NonNull<u8>> {
         unsafe {
             let size = layout.size();
+            let allocation_limit_remaining = self.allocation_limit_remaining();
 
             // Get a new chunk from the global allocator.
             let current_footer = self.current_chunk_footer.get();
@@ -1329,18 +1487,39 @@ impl Bump {
             let mut base_size = (current_layout.size() - FOOTER_SIZE)
                 .checked_mul(2)?
                 .max(min_new_chunk_size);
-            let sizes = iter::from_fn(|| {
-                if base_size >= min_new_chunk_size {
+            let chunk_memory_details = iter::from_fn(|| {
+                let bypass_min_chunk_size_for_small_limits = match self.allocation_limit() {
+                    Some(limit)
+                        if layout.size() < limit
+                            && base_size >= layout.size()
+                            && limit < DEFAULT_CHUNK_SIZE_WITHOUT_FOOTER
+                            && self.allocated_bytes() == 0 =>
+                    {
+                        true
+                    }
+                    _ => false,
+                };
+
+                if base_size >= min_new_chunk_size || bypass_min_chunk_size_for_small_limits {
                     let size = base_size;
                     base_size = base_size / 2;
-                    Some(size)
+                    Bump::new_chunk_memory_details(Some(size), layout)
                 } else {
                     None
                 }
             });
 
-            let new_footer = sizes
-                .filter_map(|size| Bump::new_chunk(Some(size), layout, current_footer))
+            let new_footer = chunk_memory_details
+                .filter_map(|chunk_memory_details| {
+                    if Bump::chunk_fits_under_limit(
+                        allocation_limit_remaining,
+                        chunk_memory_details,
+                    ) {
+                        Bump::new_chunk(chunk_memory_details, layout, current_footer)
+                    } else {
+                        None
+                    }
+                })
                 .next()?;
 
             debug_assert_eq!(
@@ -1499,6 +1678,10 @@ impl Bump {
     /// on it only counting the sum of the sizes of the things
     /// you've allocated in the arena.
     ///
+    /// The allocated bytes do not include the size of bumpalo's metadata,
+    /// so the amount of memory requested from the Rust allocator is higher
+    /// than the returned value.
+    ///
     /// ## Example
     ///
     /// ```
@@ -1508,24 +1691,9 @@ impl Bump {
     /// assert!(bytes >= core::mem::size_of::<u32>() * 5);
     /// ```
     pub fn allocated_bytes(&self) -> usize {
-        let mut footer = self.current_chunk_footer.get();
+        let footer = self.current_chunk_footer.get();
 
-        let mut bytes = 0;
-
-        unsafe {
-            while !footer.as_ref().is_empty() {
-                let foot = footer.as_ref();
-
-                let ptr = foot.ptr.get().as_ptr() as usize;
-                debug_assert!(ptr <= foot as *const _ as usize);
-
-                bytes += foot as *const _ as usize - ptr;
-
-                footer = foot.prev.get();
-            }
-        }
-
-        bytes
+        unsafe { footer.as_ref().allocated_bytes }
     }
 
     #[inline]
@@ -1770,15 +1938,20 @@ unsafe impl<'a> Allocator for &'a Bump {
     }
 }
 
+// NB: Only tests which require private types, fields, or methods should be in
+// here. Anything that can just be tested via public API surface should be in
+// `bumpalo/tests/all/*`.
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    // Uses private type `ChunkFooter`.
     #[test]
     fn chunk_footer_is_five_words() {
-        assert_eq!(mem::size_of::<ChunkFooter>(), mem::size_of::<usize>() * 5);
+        assert_eq!(mem::size_of::<ChunkFooter>(), mem::size_of::<usize>() * 6);
     }
 
+    // Uses private `alloc` module.
     #[test]
     #[allow(clippy::cognitive_complexity)]
     fn test_realloc() {
@@ -1828,6 +2001,7 @@ mod tests {
         }
     }
 
+    // Uses our private `alloc` module.
     #[test]
     fn invalid_read() {
         use alloc::Alloc;

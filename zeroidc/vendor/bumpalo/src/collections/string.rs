@@ -228,9 +228,9 @@ macro_rules! format {
 ///
 /// let b = Bump::new();
 ///
-/// let story = String::from_str_in("Once upon a time...", &b);
+/// let mut story = String::from_str_in("Once upon a time...", &b);
 ///
-/// let ptr = story.as_ptr();
+/// let ptr = story.as_mut_ptr();
 /// let len = story.len();
 /// let capacity = story.capacity();
 ///
@@ -243,7 +243,7 @@ macro_rules! format {
 /// // We can re-build a String out of ptr, len, and capacity. This is all
 /// // unsafe because we are responsible for making sure the components are
 /// // valid:
-/// let s = unsafe { String::from_raw_parts_in(ptr as *mut _, len, capacity, &b) } ;
+/// let s = unsafe { String::from_raw_parts_in(ptr, len, capacity, &b) } ;
 ///
 /// assert_eq!(String::from_str_in("Once upon a time...", &b), s);
 /// ```
@@ -737,14 +737,14 @@ impl<'bump> String<'bump> {
     /// let b = Bump::new();
     ///
     /// unsafe {
-    ///     let s = String::from_str_in("hello", &b);
-    ///     let ptr = s.as_ptr();
+    ///     let mut s = String::from_str_in("hello", &b);
+    ///     let ptr = s.as_mut_ptr();
     ///     let len = s.len();
     ///     let capacity = s.capacity();
     ///
     ///     mem::forget(s);
     ///
-    ///     let s = String::from_raw_parts_in(ptr as *mut _, len, capacity, &b);
+    ///     let s = String::from_raw_parts_in(ptr, len, capacity, &b);
     ///
     ///     assert_eq!(s, "hello");
     /// }
@@ -796,6 +796,24 @@ impl<'bump> String<'bump> {
     #[inline]
     pub unsafe fn from_utf8_unchecked(bytes: Vec<'bump, u8>) -> String<'bump> {
         String { vec: bytes }
+    }
+
+    /// Returns a shared reference to the allocator backing this `String`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use bumpalo::{Bump, collections::String};
+    ///
+    /// // uses the same allocator as the provided `String`
+    /// fn copy_string<'bump>(s: &String<'bump>) -> &'bump str {
+    ///     s.bump().alloc_str(s.as_str())
+    /// }
+    /// ```
+    #[inline]
+    #[must_use]
+    pub fn bump(&self) -> &'bump Bump {
+        self.vec.bump()
     }
 
     /// Converts a `String` into a byte vector.
@@ -1550,7 +1568,7 @@ impl<'bump> String<'bump> {
     /// assert_eq!(s, "β is beta");
     ///
     /// // A full range clears the string
-    /// s.drain(..);
+    /// drop(s.drain(..));
     /// assert_eq!(s, "");
     /// ```
     pub fn drain<'a, R>(&'a mut self, range: R) -> Drain<'a, 'bump>
@@ -2097,6 +2115,8 @@ impl<'a, 'bump> Drop for Drain<'a, 'bump> {
         }
     }
 }
+
+// TODO: implement `AsRef<str/[u8]>` and `as_str`
 
 impl<'a, 'bump> Iterator for Drain<'a, 'bump> {
     type Item = char;
