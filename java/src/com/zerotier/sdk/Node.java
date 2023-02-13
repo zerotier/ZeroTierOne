@@ -28,35 +28,14 @@
 package com.zerotier.sdk;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.io.IOException;
 
 /**
  * A ZeroTier One node
  */
 public class Node {
-	static {
-        try {
-    		System.loadLibrary("ZeroTierOneJNI");
-        } catch (UnsatisfiedLinkError e) {
-            try { 
-                if(System.getProperty("os.name").startsWith("Windows")) {
-                    System.out.println("Arch: " + System.getProperty("sun.arch.data.model"));
-                    if(System.getProperty("sun.arch.data.model").equals("64")) {
-                        NativeUtils.loadLibraryFromJar("/lib/ZeroTierOneJNI_win64.dll");
-                    } else {
-                        NativeUtils.loadLibraryFromJar("/lib/ZeroTierOneJNI_win32.dll");
-                    }
-                } else if(System.getProperty("os.name").startsWith("Mac")) {
-                    NativeUtils.loadLibraryFromJar("/lib/libZeroTierOneJNI.jnilib");
-                } else {
-                    // TODO: Linux
-                }
-            } catch (IOException ioe) {
-                ioe.printStackTrace();
-            }
-        }
-	}
+    static {
+        System.loadLibrary("ZeroTierOneJNI");
+    }
 
     private static final String TAG = "NODE";
 
