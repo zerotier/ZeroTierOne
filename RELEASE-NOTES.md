@@ -1,6 +1,18 @@
 ZeroTier Release Notes
 ======
 
+# 2023-XX-XX -- Version 1.10.3
+
+ * Fix for duplicate paths in client. Could cause connectivity issues. Affects all platforms.
+ * Fix for Ethernet Tap MTU setting, would not properly apply on Linux.
+ * Fix default route bugs (macOS.)
+ * Enable Ping automatically for ZeroTier Adapters (Windows.)
+ * SSO updates and minor bugfixes.
+ * Add low-bandwidth mode.
+ * Add forceTcpRelay mode (optionally enabled.)
+ * Fix bug that prevented setting of custom TCP relay address.
+ * Build script improvements and bug fixes.
+
 # 2022-11-01 -- Version 1.10.2
 
  * Fix another SSO "stuck client" issue in zeroidc.
