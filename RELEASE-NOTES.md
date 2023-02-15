@@ -1,7 +1,7 @@
 ZeroTier Release Notes
 ======
 
-# 2023-XX-XX -- Version 1.10.3
+# 2023-02-15 -- Version 1.10.3
 
  * Fix for duplicate paths in client. Could cause connectivity issues. Affects all platforms.
  * Fix for Ethernet Tap MTU setting, would not properly apply on Linux.
