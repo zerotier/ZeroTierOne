@@ -367,8 +367,8 @@ public class Node {
      *
      * @return List of networks or NULL on failure
      */
-    public VirtualNetworkConfig[] networks() {
-        return networks(nodeId);
+    public VirtualNetworkConfig[] networkConfigs() {
+        return networkConfigs(nodeId);
     }
 
     /**
@@ -456,5 +456,5 @@ public class Node {
 
     private native Peer[] peers(long nodeId);
 
-    private native VirtualNetworkConfig[] networks(long nodeId);
+    private native VirtualNetworkConfig[] networkConfigs(long nodeId);
 }
