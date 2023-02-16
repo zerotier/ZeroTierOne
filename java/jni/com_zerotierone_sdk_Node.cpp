@@ -1348,10 +1348,10 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
 
 /*
  * Class:     com_zerotier_sdk_Node
- * Method:    networks
+ * Method:    networkConfigs
  * Signature: (J)[Lcom/zerotier/sdk/VirtualNetworkConfig;
  */
-JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networks(
+JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networkConfigs(
     JNIEnv *env, jobject obj, jlong id)
 {
     int64_t nodeId = (int64_t) id;

@@ -129,10 +129,10 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers
 
 /*
  * Class:     com_zerotier_sdk_Node
- * Method:    networks
+ * Method:    networkConfigs
  * Signature: (J)[Lcom/zerotier/sdk/VirtualNetworkConfig;
  */
-JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networks
+JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networkConfigs
   (JNIEnv *, jobject, jlong);
 
 #ifdef __cplusplus
