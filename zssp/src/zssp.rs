@@ -1235,8 +1235,10 @@ fn hmac_sha384_2(key: &[u8], a: &[u8], b: &[u8]) -> [u8; 48] {
     hmac.finish()
 }
 
-/// HMAC-SHA512 key derivation based on: https://csrc.nist.gov/publications/detail/sp/800-108/final (page 12)
+/// HMAC-SHA512 key derivation based on: https://csrc.nist.gov/publications/detail/sp/800-108/final (page 7)
 /// Cryptographically this isn't meaningfully different from HMAC(key, [label]) but this is how NIST rolls.
 fn kbkdf512(key: &[u8], label: u8) -> Secret<64> {
-    Secret(hmac_sha512(key, &[0, 0, 0, 0, b'Z', b'T', label, 0, 0, 0, 0, 0x02, 0x00]))
+    //These are the values we have assigned to the 5 variables involved in https://csrc.nist.gov/publications/detail/sp/800-108/final:
+    // K_in = key, [i]_2 = 0x01, Label = 'Z'||'T'||label, Context = 0x00, L = 0x0200
+    Secret(hmac_sha512(key, &[1, b'Z', b'T', label, 0x00, 0, 0x02, 0x00]))
 }
