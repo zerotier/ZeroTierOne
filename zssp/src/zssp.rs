@@ -1240,7 +1240,7 @@ fn hmac_sha384_2(key: &[u8], a: &[u8], b: &[u8]) -> [u8; 48] {
 /// Cryptographically this isn't meaningfully different from HMAC(key, [label]) but this is how NIST rolls.
 fn kbkdf<const OUTPUT_BYTES: usize, const LABEL: u8>(key: &[u8]) -> Secret<OUTPUT_BYTES> {
     //These are the values we have assigned to the 5 variables involved in https://csrc.nist.gov/publications/detail/sp/800-108/final:
-    // K_in = key, i = 0x01, Label = 'Z'||'T'||label, Context = 0x00, L = (OUTPUT_BYTES * 8)
+    // K_in = key, i = 0x01, Label = 'Z'||'T'||LABEL, Context = 0x00, L = (OUTPUT_BYTES * 8)
     Secret::<OUTPUT_BYTES>::from_bytes(
         &hmac_sha512(
             key,
