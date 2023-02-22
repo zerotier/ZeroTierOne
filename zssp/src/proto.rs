@@ -1,96 +1,100 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
+
 use std::mem::size_of;
 
 use pqc_kyber::{KYBER_CIPHERTEXTBYTES, KYBER_PUBLICKEYBYTES};
 use zerotier_crypto::hash::{HMAC_SHA384_SIZE, SHA384_HASH_SIZE};
-use zerotier_crypto::p384::{P384_PUBLIC_KEY_SIZE, P384_SECRET_KEY_SIZE};
+use zerotier_crypto::p384::P384_PUBLIC_KEY_SIZE;
 
 use crate::applicationlayer::ApplicationLayer;
-use crate::constants::{AES_GCM_TAG_SIZE, HEADER_SIZE, MIN_PACKET_SIZE, SESSION_ID_SIZE};
+use crate::constants::*;
 use crate::error::Error;
+use crate::sessionid::SessionId;
+
+pub(crate) const SESSION_PROTOCOL_VERSION: u8 = 0x00;
+
+pub(crate) const COUNTER_WINDOW_MAX_OOO: usize = 16;
+pub(crate) const COUNTER_WINDOW_MAX_SKIP_AHEAD: u64 = 16777216;
 
 pub(crate) const NOISE_MAX_HANDSHAKE_PACKET_SIZE: usize = 2048;
 
 pub(crate) const PACKET_TYPE_DATA: u8 = 0;
-pub(crate) const PACKET_TYPE_ALICE_EPHEMERAL_OFFER: u8 = 1;
-pub(crate) const PACKET_TYPE_BOB_EPHEMERAL_COUNTER_OFFER: u8 = 2;
-pub(crate) const PACKET_TYPE_ALICE_STATIC_ACK: u8 = 3;
+pub(crate) const PACKET_TYPE_ALICE_NOISE_XK_INIT: u8 = 1;
+pub(crate) const PACKET_TYPE_BOB_NOISE_XK_ACK: u8 = 2;
+pub(crate) const PACKET_TYPE_ALICE_NOISE_XK_ACK: u8 = 3;
 pub(crate) const PACKET_TYPE_ALICE_REKEY_INIT: u8 = 4;
 pub(crate) const PACKET_TYPE_BOB_REKEY_ACK: u8 = 5;
 
+pub(crate) const HEADER_SIZE: usize = 16;
+pub(crate) const HEADER_CHECK_ENCRYPT_START: usize = 6;
+pub(crate) const HEADER_CHECK_ENCRYPT_END: usize = 22;
+
+pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION: u8 = b'X'; // intermediate keys used in key exchanges
+pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION: u8 = b'x'; // intermediate keys used in key exchanges
+pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A'; // AES-GCM in A->B direction
+pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE: u8 = b'B'; // AES-GCM in B->A direction
+
+pub(crate) const MAX_FRAGMENTS: usize = 48; // hard protocol max: 63
+pub(crate) const KEY_EXCHANGE_MAX_FRAGMENTS: usize = 8; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
+
+pub(crate) const AES_KEY_SIZE: usize = 32;
+pub(crate) const AES_HEADER_CHECK_KEY_SIZE: usize = 16;
+pub(crate) const AES_GCM_TAG_SIZE: usize = 16;
+pub(crate) const AES_GCM_NONCE_SIZE: usize = 12;
+pub(crate) const AES_CTR_NONCE_SIZE: usize = 12;
+
 #[allow(unused)]
 #[repr(C, packed)]
-pub(crate) struct NoiseXKAliceEphemeralOffer {
+pub(crate) struct AliceNoiseXKInit {
     pub header: [u8; HEADER_SIZE],
     pub session_protocol_version: u8,
-    pub reserved: [u8; 8],
     pub alice_noise_e: [u8; P384_PUBLIC_KEY_SIZE],
-    // -- start AES-CTR(es) encrypted section (IV is first 12 bytes of SHA384(alice_noise_e))
-    pub alice_session_id: [u8; SESSION_ID_SIZE],
+    // -- start AES-CTR(es) encrypted section (IV is last 12 bytes of alice_noise_e))
+    pub alice_session_id: [u8; SessionId::SIZE],
     pub alice_hk_public: [u8; KYBER_PUBLICKEYBYTES],
-    pub salt: [u8; 8],
+    pub header_check_cipher_key: [u8; AES_HEADER_CHECK_KEY_SIZE],
     // -- end encrypted section
     pub hmac_es: [u8; HMAC_SHA384_SIZE],
 }
 
-impl NoiseXKAliceEphemeralOffer {
-    pub const ENC_START: usize = HEADER_SIZE + 1 + 8 + P384_PUBLIC_KEY_SIZE;
-    pub const AUTH_START: usize = size_of::<NoiseXKAliceEphemeralOffer>() - HMAC_SHA384_SIZE;
+impl AliceNoiseXKInit {
+    pub const ENC_START: usize = HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE;
+    pub const AUTH_START: usize = Self::ENC_START + SessionId::SIZE + KYBER_PUBLICKEYBYTES + AES_HEADER_CHECK_KEY_SIZE;
+    pub const SIZE: usize = Self::AUTH_START + HMAC_SHA384_SIZE;
 }
 
 #[allow(unused)]
 #[repr(C, packed)]
-pub(crate) struct NoiseXKBobEphemeralCounterOffer {
+pub(crate) struct BobNoiseXKAck {
     pub header: [u8; HEADER_SIZE],
     pub session_protocol_version: u8,
     pub bob_noise_e: [u8; P384_PUBLIC_KEY_SIZE],
-    // -- start AES-CTR(es_ee) encrypted section (IV is first 12 bytes of SHA384(bob_noise_e))
+    // -- start AES-CTR(es_ee) encrypted section (IV is last 12 bytes of bob_noise_e)
+    pub bob_session_id: [u8; SessionId::SIZE],
     pub bob_hk_ciphertext: [u8; KYBER_CIPHERTEXTBYTES],
-    pub bob_note_to_self: [u8; size_of::<BobNoteToSelf>()],
     // -- end encrypted sectiion
     pub hmac_es_ee: [u8; HMAC_SHA384_SIZE],
+    pub hmac_es_ee_se_hk_psk: [u8; HMAC_SHA384_SIZE],
 }
 
-impl NoiseXKBobEphemeralCounterOffer {
+impl BobNoiseXKAck {
     pub const ENC_START: usize = HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE;
-    pub const AUTH_START: usize = size_of::<NoiseXKBobEphemeralCounterOffer>() - HMAC_SHA384_SIZE;
+    pub const AUTH_START: usize = Self::ENC_START + SessionId::SIZE + KYBER_CIPHERTEXTBYTES;
+    pub const SIZE: usize = Self::AUTH_START + HMAC_SHA384_SIZE + HMAC_SHA384_SIZE;
 }
-
-#[allow(unused)]
-#[repr(C, packed)]
-pub(crate) struct BobNoteToSelf {
-    pub iv: [u8; 16],
-    // -- start AES-GCM encrypted section using ephemeral secret known only to Bob
-    pub timestamp: [u8; 8],
-    pub alice_session_id: [u8; SESSION_ID_SIZE],
-    pub bob_noise_e: [u8; P384_PUBLIC_KEY_SIZE],
-    pub bob_noise_e_secret: [u8; P384_SECRET_KEY_SIZE],
-    pub hk: [u8; 32],
-    pub noise_es_ee: [u8; 64],
-    // -- end encrypted sectiion
-    pub gcm_mac: [u8; AES_GCM_TAG_SIZE],
-}
-
-impl BobNoteToSelf {
-    pub const IV_SIZE: usize = 16;
-    pub const ENC_START: usize = Self::IV_SIZE;
-    pub const AUTH_START: usize = size_of::<BobNoteToSelf>() - AES_GCM_TAG_SIZE;
-}
-
-// These are variable length and so they're only here for documentation purposes.
-
-pub(crate) const NOISE_XK_ALICE_STATIC_ACK_BOB_NOTE_TO_SELF_START: usize = HEADER_SIZE + 1;
-pub(crate) const NOISE_XK_ALICE_STATIC_ACK_BOB_NOTE_TO_SELF_END: usize = HEADER_SIZE + 1 + size_of::<BobNoteToSelf>();
-pub(crate) const NOISE_XK_ALICE_STATIC_ACK_ENCRYPTED_SECTION_START: usize = NOISE_XK_ALICE_STATIC_ACK_BOB_NOTE_TO_SELF_END;
-pub(crate) const NOISE_XK_ALICE_STATIC_ACK_MIN_SIZE: usize =
-    NOISE_XK_ALICE_STATIC_ACK_BOB_NOTE_TO_SELF_END + 2 + 2 + HMAC_SHA384_SIZE + HMAC_SHA384_SIZE;
 
 /*
 #[allow(unused)]
 #[repr(C, packed)]
-pub(crate) struct NoiseXKAliceStaticAck {
+pub(crate) struct AliceNoiseXKAck {
     pub header: [u8; HEADER_SIZE],
     pub session_protocol_version: u8,
-    pub bob_note_to_self: [u8; size_of::<BobNoteToSelf>()],
     // -- start AES-CTR(es_ee) encrypted section (IV is first 12 bytes of SHA384(hk))
     pub alice_static_blob_length: [u8; 2],
     pub alice_static_blob: [u8; ???],
@@ -148,9 +152,8 @@ pub(crate) fn assemble_fragments_into<A: ApplicationLayer>(fragments: &[A::Incom
 // are packed flat buffers containing only byte or byte array fields, making them safe to treat
 // this way even on architectures that require type size aligned access.
 pub(crate) trait ProtocolFlatBuffer {}
-impl ProtocolFlatBuffer for NoiseXKAliceEphemeralOffer {}
-impl ProtocolFlatBuffer for NoiseXKBobEphemeralCounterOffer {}
-impl ProtocolFlatBuffer for BobNoteToSelf {}
+impl ProtocolFlatBuffer for AliceNoiseXKInit {}
+impl ProtocolFlatBuffer for BobNoiseXKAck {}
 //impl ProtocolFlatBuffer for NoiseXKAliceStaticAck {}
 impl ProtocolFlatBuffer for AliceRekeyInit {}
 impl ProtocolFlatBuffer for BobRekeyAck {}
@@ -170,5 +173,16 @@ pub(crate) fn byte_array_as_proto_buffer_mut<B: ProtocolFlatBuffer>(b: &mut [u8]
         Ok(unsafe { &mut *b.as_mut_ptr().cast() })
     } else {
         Err(Error::InvalidPacket)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_packed_struct_sizing() {
+        assert_eq!(size_of::<AliceNoiseXKInit>(), AliceNoiseXKInit::SIZE);
+        assert_eq!(size_of::<BobNoiseXKAck>(), BobNoiseXKAck::SIZE);
     }
 }
