@@ -250,12 +250,12 @@ impl<Application: ApplicationLayer> Context<Application> {
             init.alice_hk_public = alice_hk_secret.public;
             init.header_check_cipher_key = header_check_cipher_key;
 
-            let mut ctr = AesCtr::new(&kbkdf512(noise_es.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION).as_bytes()[..AES_KEY_SIZE]);
+            let mut ctr = AesCtr::new(kbkdf::<AES_KEY_SIZE>(noise_es.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION).as_bytes());
             ctr.reset_set_iv(&alice_noise_e[P384_PUBLIC_KEY_SIZE - AES_CTR_NONCE_SIZE..]);
             ctr.crypt_in_place(&mut init_buffer[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START]);
 
             let hmac = hmac_sha384_2(
-                &kbkdf512(noise_es.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION).as_bytes()[..HMAC_SHA384_SIZE],
+                kbkdf::<HMAC_SHA384_SIZE>(noise_es.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION).as_bytes(),
                 &create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_INIT, 1),
                 &init_buffer[HEADER_SIZE..AliceNoiseXKInit::AUTH_START],
             );
@@ -552,7 +552,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     if !secure_eq(
                         &pkt.hmac_es,
                         &hmac_sha384_2(
-                            &kbkdf512(noise_es.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION).as_bytes()[..HMAC_SHA384_SIZE],
+                            kbkdf::<HMAC_SHA384_SIZE>(noise_es.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION).as_bytes(),
                             &message_nonce,
                             &pkt_assembled[HEADER_SIZE..AliceNoiseXKInit::AUTH_START],
                         ),
@@ -561,8 +561,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     }
 
                     // Decrypt encrypted part of payload (already authenticated above).
-                    let mut ctr =
-                        AesCtr::new(&kbkdf512(noise_es.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION).as_bytes()[..AES_KEY_SIZE]);
+                    let mut ctr = AesCtr::new(kbkdf::<AES_KEY_SIZE>(noise_es.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION).as_bytes());
                     ctr.reset_set_iv(&SHA384::hash(&pkt.alice_noise_e)[..AES_CTR_NONCE_SIZE]);
                     ctr.crypt_in_place(&mut pkt_assembled[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START]);
                     let pkt: &AliceNoiseXKInit = byte_array_as_proto_buffer(pkt_assembled)?;
@@ -637,13 +636,13 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                     // Encrypt main section of reply. Technically we could get away without this but why not?
                     let mut ctr =
-                        AesCtr::new(&kbkdf512(noise_es_ee.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION).as_bytes()[..AES_KEY_SIZE]);
+                        AesCtr::new(kbkdf::<AES_KEY_SIZE>(noise_es_ee.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION).as_bytes());
                     ctr.reset_set_iv(&bob_noise_e[P384_PUBLIC_KEY_SIZE - AES_CTR_NONCE_SIZE..]);
                     ctr.crypt_in_place(&mut reply_buffer[BobNoiseXKAck::ENC_START..BobNoiseXKAck::AUTH_START]);
 
                     // Add HMAC-SHA384 to reply packet, allowing Alice to derive noise_es_ee and authenticate.
                     let reply_hmac = hmac_sha384_2(
-                        &kbkdf512(noise_es_ee.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION).as_bytes()[..HMAC_SHA384_SIZE],
+                        kbkdf::<HMAC_SHA384_SIZE>(noise_es_ee.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION).as_bytes(),
                         &create_message_nonce(PACKET_TYPE_BOB_NOISE_XK_ACK, 1),
                         &reply_buffer[HEADER_SIZE..BobNoiseXKAck::AUTH_START],
                     );
@@ -687,15 +686,16 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         noise_es.as_bytes(),
                                         alice_e_secret.agree(&bob_noise_e).ok_or(Error::FailedAuthentication)?.as_bytes(),
                                     ));
-                                    let noise_es_ee_kex_enc_key = kbkdf512(noise_es_ee.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION);
+                                    let noise_es_ee_kex_enc_key =
+                                        kbkdf::<AES_KEY_SIZE>(noise_es_ee.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION);
                                     let noise_es_ee_kex_hmac_key =
-                                        kbkdf512(noise_es_ee.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION);
+                                        kbkdf::<HMAC_SHA384_SIZE>(noise_es_ee.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION);
 
                                     // Authenticate Bob's reply and the validity of bob_noise_e.
                                     if !secure_eq(
                                         &pkt.hmac_es_ee,
                                         &hmac_sha384_2(
-                                            &noise_es_ee_kex_hmac_key.as_bytes()[..HMAC_SHA384_SIZE],
+                                            noise_es_ee_kex_hmac_key.as_bytes(),
                                             &message_nonce,
                                             &pkt_assembled[HEADER_SIZE..BobNoiseXKAck::AUTH_START],
                                         ),
@@ -704,7 +704,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     }
 
                                     // Decrypt encrypted portion of message.
-                                    let mut ctr = AesCtr::new(&noise_es_ee_kex_enc_key.as_bytes()[..AES_KEY_SIZE]);
+                                    let mut ctr = AesCtr::new(noise_es_ee_kex_enc_key.as_bytes());
                                     ctr.reset_set_iv(&SHA384::hash(&pkt.bob_noise_e)[..AES_CTR_NONCE_SIZE]);
                                     ctr.crypt_in_place(&mut pkt_assembled[BobNoiseXKAck::ENC_START..BobNoiseXKAck::AUTH_START]);
                                     let pkt: &BobNoiseXKAck = byte_array_as_proto_buffer(pkt_assembled)?;
@@ -727,14 +727,16 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         &hmac_sha512(session.psk.as_bytes(), hk.as_bytes()),
                                     ));
 
-                                    let noise_es_ee_se_hk_psk_hmac_key =
-                                        kbkdf512(noise_es_ee_se_hk_psk.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION);
+                                    let noise_es_ee_se_hk_psk_hmac_key = kbkdf::<HMAC_SHA384_SIZE>(
+                                        noise_es_ee_se_hk_psk.as_bytes(),
+                                        KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION,
+                                    );
 
                                     // Authenticate entire key exchange.
                                     if !secure_eq(
                                         &pkt.hmac_es_ee_se_hk_psk,
                                         &hmac_sha384_2(
-                                            &noise_es_ee_se_hk_psk_hmac_key.as_bytes()[..HMAC_SHA384_SIZE],
+                                            noise_es_ee_se_hk_psk_hmac_key.as_bytes(),
                                             &message_nonce,
                                             &pkt_assembled[HEADER_SIZE..BobNoiseXKAck::AUTH_START + HMAC_SHA384_SIZE],
                                         ),
@@ -769,14 +771,14 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     // Encrypt Alice's static identity and other inner payload items. The IV here
                                     // is a hash of 'hk' making it actually a secret and "borrowing" a little PQ
                                     // forward secrecy for Alice's identity.
-                                    let mut ctr = AesCtr::new(&noise_es_ee_kex_enc_key.as_bytes()[..AES_KEY_SIZE]);
+                                    let mut ctr = AesCtr::new(noise_es_ee_kex_enc_key.as_bytes());
                                     ctr.reset_set_iv(&SHA384::hash(hk.as_bytes())[..AES_CTR_NONCE_SIZE]);
                                     ctr.crypt_in_place(&mut reply_buffer[HEADER_SIZE + 1..reply_len]);
 
                                     // First attach HMAC allowing Bob to verify that this is from the same Alice and to
                                     // verify the authenticity of encrypted data.
                                     let hmac_es_ee = hmac_sha384_2(
-                                        &noise_es_ee_kex_hmac_key.as_bytes()[..HMAC_SHA384_SIZE],
+                                        noise_es_ee_kex_hmac_key.as_bytes(),
                                         &reply_message_nonce,
                                         &reply_buffer[HEADER_SIZE..reply_len],
                                     );
@@ -787,7 +789,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     // key exchange. Bob won't be able to do this until he decrypts and parses Alice's
                                     // identity, so the first HMAC is to let him authenticate that first.
                                     let hmac_es_ee_se_hk_psk = hmac_sha384_2(
-                                        &noise_es_ee_se_hk_psk_hmac_key.as_bytes()[..HMAC_SHA384_SIZE],
+                                        noise_es_ee_se_hk_psk_hmac_key.as_bytes(),
                                         &reply_message_nonce,
                                         &reply_buffer[HEADER_SIZE..reply_len],
                                     );
@@ -1167,8 +1169,8 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
 
 impl SessionKey {
     fn new(key: Secret<64>, current_time: i64, current_counter: u64, confirmed: bool, role_is_bob: bool) -> Self {
-        let a2b: Secret<AES_KEY_SIZE> = kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB).first_n_clone();
-        let b2a: Secret<AES_KEY_SIZE> = kbkdf512(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE).first_n_clone();
+        let a2b = kbkdf::<AES_KEY_SIZE>(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB);
+        let b2a = kbkdf::<AES_KEY_SIZE>(key.as_bytes(), KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE);
         let (receive_key, send_key) = if role_is_bob {
             (a2b, b2a)
         } else {
@@ -1237,8 +1239,22 @@ fn hmac_sha384_2(key: &[u8], a: &[u8], b: &[u8]) -> [u8; 48] {
 
 /// HMAC-SHA512 key derivation based on: https://csrc.nist.gov/publications/detail/sp/800-108/final (page 7)
 /// Cryptographically this isn't meaningfully different from HMAC(key, [label]) but this is how NIST rolls.
-fn kbkdf512(key: &[u8], label: u8) -> Secret<64> {
+fn kbkdf<const OUTPUT_BYTES: usize>(key: &[u8], label: u8) -> Secret<OUTPUT_BYTES> {
     //These are the values we have assigned to the 5 variables involved in https://csrc.nist.gov/publications/detail/sp/800-108/final:
     // K_in = key, [i]_2 = 0x01, Label = 'Z'||'T'||label, Context = 0x00, L = 0x0200
-    Secret(hmac_sha512(key, &[1, b'Z', b'T', label, 0x00, 0, 0x02, 0x00]))
+    Secret::<OUTPUT_BYTES>::from_bytes(
+        &hmac_sha512(
+            key,
+            &[
+                1,
+                b'Z',
+                b'T',
+                label,
+                0x00,
+                0,
+                (((OUTPUT_BYTES * 8) >> 8) & 0xff) as u8,
+                ((OUTPUT_BYTES * 8) & 0xff) as u8,
+            ],
+        )[..OUTPUT_BYTES],
+    )
 }
