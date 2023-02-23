@@ -3,6 +3,7 @@
 pub mod aes;
 pub mod aes_gmac_siv;
 pub mod hash;
+pub mod mimcvdf;
 pub mod p384;
 pub mod poly1305;
 pub mod random;

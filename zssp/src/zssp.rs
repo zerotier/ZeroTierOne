@@ -23,7 +23,6 @@ use zerotier_crypto::{random, secure_eq};
 use zerotier_utils::gatherarray::GatherArray;
 use zerotier_utils::memory;
 use zerotier_utils::ringbuffermap::RingBufferMap;
-use zerotier_utils::unlikely_branch;
 
 use pqc_kyber::{KYBER_SECRETKEYBYTES, KYBER_SSBYTES};
 
@@ -38,7 +37,8 @@ use crate::sessionid::SessionId;
 /// Each application using ZSSP must create an instance of this to own sessions and
 /// defragment incoming packets that are not yet associated with a session.
 pub struct Context<Application: ApplicationLayer> {
-    initial_offer_defrag: Mutex<RingBufferMap<u64, GatherArray<Application::IncomingPacketBuffer, KEY_EXCHANGE_MAX_FRAGMENTS>, 1024, 1024>>,
+    initial_offer_defrag:
+        Mutex<RingBufferMap<u64, GatherArray<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>, 1024, 1024>>,
     sessions: RwLock<SessionMaps<Application>>,
 }
 
@@ -87,6 +87,7 @@ struct SessionMaps<Application: ApplicationLayer> {
     incomplete: HashMap<SessionId, Arc<NoiseXKIncoming>>,
 }
 
+/// State for an incoming incomplete Noise_XK session that isn't fully negotiated yet.
 struct NoiseXKIncoming {
     timestamp: i64,
     alice_session_id: SessionId,
@@ -308,7 +309,6 @@ impl<Application: ApplicationLayer> Context<Application> {
     ) -> Result<ReceiveResult<'b, Application>, Error> {
         let incoming_packet: &mut [u8] = incoming_packet_buf.as_mut();
         if incoming_packet.len() < MIN_PACKET_SIZE {
-            unlikely_branch();
             return Err(Error::InvalidPacket);
         }
 
@@ -345,7 +345,6 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 return Ok(ReceiveResult::Ok);
                             }
                         } else {
-                            unlikely_branch();
                             return Err(Error::InvalidPacket);
                         }
                     } else {
@@ -365,11 +364,9 @@ impl<Application: ApplicationLayer> Context<Application> {
                         );
                     }
                 } else {
-                    unlikely_branch();
                     return Ok(ReceiveResult::Ignored);
                 }
             } else {
-                unlikely_branch();
                 if let Some(p) = self.sessions.read().unwrap().incomplete.get(&local_session_id).cloned() {
                     Aes::new(p.header_check_cipher_key.as_bytes())
                         .decrypt_block_in_place(&mut incoming_packet[HEADER_CHECK_ENCRYPT_START..HEADER_CHECK_ENCRYPT_END]);
@@ -378,12 +375,12 @@ impl<Application: ApplicationLayer> Context<Application> {
                     return Err(Error::UnknownLocalSessionId(local_session_id));
                 }
             }
-        } else {
-            unlikely_branch();
         }
 
-        let (key_index, packet_type, fragment_count, fragment_no, counter) = parse_packet_header(&incoming_packet);
+        // If we make it here the packet is not associated with a session or is associated with an
+        // incomplete session (Noise_XK mid-negotiation).
 
+        let (key_index, packet_type, fragment_count, fragment_no, counter) = parse_packet_header(&incoming_packet);
         if fragment_count > 1 {
             let mut defrag = self.initial_offer_defrag.lock().unwrap();
             let fragment_gather_array = defrag.get_or_create_mut(&counter, || GatherArray::new(fragment_count));
@@ -424,10 +421,6 @@ impl<Application: ApplicationLayer> Context<Application> {
         return Ok(ReceiveResult::Ok);
     }
 
-    /// Called internally when all fragments of a packet are received.
-    ///
-    /// NOTE: header check codes will already have been validated on receipt of each fragment. AEAD authentication
-    /// and decryption has NOT yet been performed, and is done here.
     fn receive_complete<
         'b,
         SendFunction: FnMut(Option<&Arc<Session<Application>>>, &mut [u8]),
@@ -466,7 +459,6 @@ impl<Application: ApplicationLayer> Context<Application> {
                         let current_frag_data_start = data_len;
                         data_len += f.len() - HEADER_SIZE;
                         if data_len > data_buf.len() {
-                            unlikely_branch();
                             session_key.return_receive_cipher(c);
                             return Err(Error::DataBufferTooSmall);
                         }
@@ -477,12 +469,10 @@ impl<Application: ApplicationLayer> Context<Application> {
                     let current_frag_data_start = data_len;
                     let last_fragment = fragments.last().unwrap().as_ref();
                     if last_fragment.len() < (HEADER_SIZE + AES_GCM_TAG_SIZE) {
-                        unlikely_branch();
                         return Err(Error::InvalidPacket);
                     }
                     data_len += last_fragment.len() - (HEADER_SIZE + AES_GCM_TAG_SIZE);
                     if data_len > data_buf.len() {
-                        unlikely_branch();
                         session_key.return_receive_cipher(c);
                         return Err(Error::DataBufferTooSmall);
                     }
@@ -492,8 +482,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         &mut data_buf[current_frag_data_start..data_len],
                     );
 
-                    let gcm_tag = &last_fragment[payload_end..];
-                    let aead_authentication_ok = c.finish_decrypt(gcm_tag);
+                    let aead_authentication_ok = c.finish_decrypt(&last_fragment[payload_end..]);
                     session_key.return_receive_cipher(c);
 
                     if aead_authentication_ok {
@@ -504,7 +493,6 @@ impl<Application: ApplicationLayer> Context<Application> {
                             if session_key.confirmed {
                                 drop(state);
                             } else {
-                                unlikely_branch();
                                 let key_created_at_counter = session_key.created_at_counter;
                                 drop(state);
 
@@ -523,21 +511,18 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                             return Ok(ReceiveResult::OkData(session, &mut data_buf[..data_len]));
                         } else {
-                            unlikely_branch();
                             return Ok(ReceiveResult::Ignored);
                         }
                     }
                 }
+
                 return Err(Error::FailedAuthentication);
             } else {
-                unlikely_branch();
                 return Err(Error::SessionNotEstablished);
             }
         } else {
-            unlikely_branch();
-
-            // For KEX packets go ahead and pre-assemble all fragments to simplify the code below.
-            let mut pkt_assembly_buffer = [0u8; NOISE_MAX_HANDSHAKE_PACKET_SIZE];
+            // For Noise setup/KEX packets go ahead and pre-assemble all fragments to simplify the code below.
+            let mut pkt_assembly_buffer = [0u8; MAX_NOISE_HANDSHAKE_SIZE];
             let pkt_assembled_size = assemble_fragments_into::<Application>(fragments, &mut pkt_assembly_buffer)?;
             if pkt_assembled_size < MIN_PACKET_SIZE {
                 return Err(Error::InvalidPacket);
@@ -572,7 +557,6 @@ impl<Application: ApplicationLayer> Context<Application> {
                     }
 
                     let pkt: &AliceNoiseXKInit = byte_array_as_proto_buffer(pkt_assembled)?;
-
                     let alice_noise_e = P384PublicKey::from_bytes(&pkt.alice_noise_e).ok_or(Error::FailedAuthentication)?;
                     let noise_es = app.get_local_s_keypair().agree(&alice_noise_e).ok_or(Error::FailedAuthentication)?;
 
@@ -596,8 +580,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                     let mut ctr = AesCtr::new(kbkdf::<AES_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION>(noise_es.as_bytes()).as_bytes());
                     ctr.reset_set_iv(&SHA384::hash(&pkt.alice_noise_e)[..AES_CTR_NONCE_SIZE]);
                     ctr.crypt_in_place(&mut pkt_assembled[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START]);
-                    let pkt: &AliceNoiseXKInit = byte_array_as_proto_buffer(pkt_assembled)?;
 
+                    let pkt: &AliceNoiseXKInit = byte_array_as_proto_buffer(pkt_assembled)?;
                     let alice_session_id = SessionId::new_from_bytes(&pkt.alice_session_id).ok_or(Error::InvalidPacket)?;
 
                     // Create Bob's ephemeral keys and derive noise_es_ee by agreeing with Alice's. Also create
@@ -639,7 +623,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     newest_id = Some(*id);
                                 }
                             }
-                            sessions.incomplete.remove(newest_id.as_ref().unwrap());
+                            let _ = sessions.incomplete.remove(newest_id.as_ref().unwrap());
                         }
 
                         sessions.incomplete.insert(
@@ -672,7 +656,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     ctr.reset_set_iv(&bob_noise_e[P384_PUBLIC_KEY_SIZE - AES_CTR_NONCE_SIZE..]);
                     ctr.crypt_in_place(&mut reply_buffer[BobNoiseXKAck::ENC_START..BobNoiseXKAck::AUTH_START]);
 
-                    // Add HMAC-SHA384 to reply packet, allowing Alice to derive noise_es_ee and authenticate.
+                    // Add HMAC-SHA384 to reply packet.
                     let reply_hmac = hmac_sha384_2(
                         kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION>(noise_es_ee.as_bytes()).as_bytes(),
                         &create_message_nonce(PACKET_TYPE_BOB_NOISE_XK_ACK, 1),
@@ -763,28 +747,17 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         noise_es_ee_se_hk_psk.as_bytes(),
                                     );
 
-                                    // Authenticate entire key exchange.
-                                    if !secure_eq(
-                                        &pkt.hmac_es_ee_se_hk_psk,
-                                        &hmac_sha384_2(
-                                            noise_es_ee_se_hk_psk_hmac_key.as_bytes(),
-                                            &message_nonce,
-                                            &pkt_assembled[HEADER_SIZE..BobNoiseXKAck::AUTH_START + HMAC_SHA384_SIZE],
-                                        ),
-                                    ) {
-                                        return Err(Error::FailedAuthentication);
-                                    }
-
                                     let reply_counter = session.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?;
                                     let reply_message_nonce = create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_ACK, reply_counter.get());
 
                                     // Create reply informing Bob of our static identity now that we've verified Bob and set
                                     // up forward secrecy. Also return Bob's opaque note.
-                                    let mut reply_buffer = [0u8; NOISE_MAX_HANDSHAKE_PACKET_SIZE];
+                                    let mut reply_buffer = [0u8; MAX_NOISE_HANDSHAKE_SIZE];
                                     reply_buffer[HEADER_SIZE] = SESSION_PROTOCOL_VERSION;
                                     let mut reply_len = HEADER_SIZE + 1;
                                     let mut reply_buffer_append = |b: &[u8]| {
                                         let reply_len_new = reply_len + b.len();
+                                        debug_assert!(reply_len_new <= MAX_NOISE_HANDSHAKE_SIZE);
                                         reply_buffer[reply_len..reply_len_new].copy_from_slice(b);
                                         reply_len = reply_len_new;
                                     };
@@ -1040,7 +1013,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                         u64::from(remote_session_id),
                         state.current_key,
                         counter,
-                    )?;
+                    );
                     c.crypt(&data[..chunk_size], &mut mtu_sized_buffer[HEADER_SIZE..fragment_size]);
                     data = &data[chunk_size..];
                     if fragment_no == last_fragment_no {
@@ -1058,8 +1031,6 @@ impl<Application: ApplicationLayer> Session<Application> {
                 session_key.return_send_cipher(c);
 
                 return Ok(());
-            } else {
-                unlikely_branch();
             }
         }
         return Err(Error::SessionNotEstablished);
@@ -1101,34 +1072,30 @@ fn set_packet_header(
     recipient_session_id: u64,
     key_index: usize,
     counter: u64,
-) -> Result<(), Error> {
+) {
     debug_assert!(packet.len() >= MIN_PACKET_SIZE);
     debug_assert!(fragment_count > 0);
+    debug_assert!(fragment_count <= MAX_FRAGMENTS);
     debug_assert!(fragment_no < MAX_FRAGMENTS);
     debug_assert!(packet_type <= 0x0f); // packet type is 4 bits
-    if fragment_count <= MAX_FRAGMENTS {
-        // [0-47]            recipient session ID
-        // -- start of header check cipher single block encrypt --
-        // [48-48]           key index (least significant bit)
-        // [49-51]           packet type (0-15)
-        // [52-57]           fragment count (1..64 - 1, so 0 means 1 fragment)
-        // [58-63]           fragment number (0..63)
-        // [64-127]          64-bit counter
-        memory::store_raw(
-            (u64::from(recipient_session_id)
-                | ((key_index & 1) as u64).wrapping_shl(48)
-                | (packet_type as u64).wrapping_shl(49)
-                | ((fragment_count - 1) as u64).wrapping_shl(52)
-                | (fragment_no as u64).wrapping_shl(58))
-            .to_le(),
-            packet,
-        );
-        memory::store_raw(counter.to_le(), &mut packet[8..]);
-        Ok(())
-    } else {
-        unlikely_branch();
-        Err(Error::DataTooLarge)
-    }
+
+    // [0-47]            recipient session ID
+    // -- start of header check cipher single block encrypt --
+    // [48-48]           key index (least significant bit)
+    // [49-51]           packet type (0-15)
+    // [52-57]           fragment count (1..64 - 1, so 0 means 1 fragment)
+    // [58-63]           fragment number (0..63)
+    // [64-127]          64-bit counter
+    memory::store_raw(
+        (u64::from(recipient_session_id)
+            | ((key_index & 1) as u64).wrapping_shl(48)
+            | (packet_type as u64).wrapping_shl(49)
+            | ((fragment_count - 1) as u64).wrapping_shl(52)
+            | (fragment_no as u64).wrapping_shl(58))
+        .to_le(),
+        packet,
+    );
+    memory::store_raw(counter.to_le(), &mut packet[8..]);
 }
 
 #[inline(always)]
@@ -1187,7 +1154,7 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
             recipient_session_id,
             key_index,
             counter,
-        )?;
+        );
         if let Some(hcc) = header_check_cipher {
             hcc.encrypt_block_in_place(&mut fragment[6..22]);
         }
@@ -1232,8 +1199,6 @@ impl SessionKey {
                 .pop()
                 .unwrap_or_else(|| Box::new(AesGcm::new(self.send_key.as_bytes(), true))))
         } else {
-            unlikely_branch();
-
             // Not only do we return an error, but we also destroy the key.
             let mut scp = self.send_cipher_pool.lock().unwrap();
             scp.clear();

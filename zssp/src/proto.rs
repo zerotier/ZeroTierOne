@@ -22,8 +22,6 @@ pub(crate) const SESSION_PROTOCOL_VERSION: u8 = 0x00;
 pub(crate) const COUNTER_WINDOW_MAX_OOO: usize = 16;
 pub(crate) const COUNTER_WINDOW_MAX_SKIP_AHEAD: u64 = 16777216;
 
-pub(crate) const NOISE_MAX_HANDSHAKE_PACKET_SIZE: usize = 2048;
-
 pub(crate) const PACKET_TYPE_DATA: u8 = 0;
 pub(crate) const PACKET_TYPE_ALICE_NOISE_XK_INIT: u8 = 1;
 pub(crate) const PACKET_TYPE_BOB_NOISE_XK_ACK: u8 = 2;
@@ -41,7 +39,8 @@ pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A'; // AES-G
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE: u8 = b'B'; // AES-GCM in B->A direction
 
 pub(crate) const MAX_FRAGMENTS: usize = 48; // hard protocol max: 63
-pub(crate) const KEY_EXCHANGE_MAX_FRAGMENTS: usize = 8; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
+pub(crate) const MAX_NOISE_HANDSHAKE_FRAGMENTS: usize = 16; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
+pub(crate) const MAX_NOISE_HANDSHAKE_SIZE: usize = MAX_NOISE_HANDSHAKE_FRAGMENTS * MIN_TRANSPORT_MTU;
 
 pub(crate) const AES_KEY_SIZE: usize = 32;
 pub(crate) const AES_HEADER_CHECK_KEY_SIZE: usize = 16;
@@ -80,13 +79,12 @@ pub(crate) struct BobNoiseXKAck {
     pub bob_hk_ciphertext: [u8; KYBER_CIPHERTEXTBYTES],
     // -- end encrypted sectiion
     pub hmac_es_ee: [u8; HMAC_SHA384_SIZE],
-    pub hmac_es_ee_se_hk_psk: [u8; HMAC_SHA384_SIZE],
 }
 
 impl BobNoiseXKAck {
     pub const ENC_START: usize = HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE;
     pub const AUTH_START: usize = Self::ENC_START + SessionId::SIZE + KYBER_CIPHERTEXTBYTES;
-    pub const SIZE: usize = Self::AUTH_START + HMAC_SHA384_SIZE + HMAC_SHA384_SIZE;
+    pub const SIZE: usize = Self::AUTH_START + HMAC_SHA384_SIZE;
 }
 
 /*
