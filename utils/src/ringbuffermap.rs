@@ -108,8 +108,8 @@ struct Entry<K: Eq + PartialEq + Hash + Clone, V> {
 /// buckets in the hash table. The maximum for both these parameters is 65535. This could be
 /// increased by making the index variables larger (e.g. u32 instead of u16).
 pub struct RingBufferMap<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> {
-    salt: u32,
     entries: [Entry<K, V>; C],
+    salt: u32,
     buckets: [u16; B],
     entry_ptr: u16,
 }
