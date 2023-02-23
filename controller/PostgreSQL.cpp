@@ -517,7 +517,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 
 		_pool->unborrow(c);
 	} catch (std::exception &e) {
-		fprintf(stderr, "ERROR: Error updating member on load: %s\n", e.what());
+		fprintf(stderr, "ERROR: Error updating member on load for network %s: %s\n", networkId.c_str(), e.what());
 	}
 
 	return info; //std::string(authenticationURL);
