@@ -1,0 +1,14 @@
+[Unit]
+Description=ZeroTier TCP Proxy sample unit
+
+[Service]
+ExecStart=/var/lib/zerotier-one/tcp-proxy
+Restart=on-failure
+
+# The zerotier-one install script creates this user/group
+User=zerotier-one
+Group=zerotier-one
+
+
+[Install]
+WantedBy=multi-user.target
