@@ -38,7 +38,7 @@ use crate::sessionid::SessionId;
 /// Each application using ZSSP must create an instance of this to own sessions and
 /// defragment incoming packets that are not yet associated with a session.
 pub struct Context<Application: ApplicationLayer> {
-    initial_offer_defrag: Mutex<RingBufferMap<u64, GatherArray<Application::IncomingPacketBuffer, KEY_EXCHANGE_MAX_FRAGMENTS>, 1024, 256>>,
+    initial_offer_defrag: Mutex<RingBufferMap<u64, GatherArray<Application::IncomingPacketBuffer, KEY_EXCHANGE_MAX_FRAGMENTS>, 1024, 1024>>,
     sessions: RwLock<SessionMaps<Application>>,
 }
 
@@ -55,6 +55,9 @@ pub enum ReceiveResult<'b, Application: ApplicationLayer> {
 
     /// Packet appears valid but was ignored e.g. as a duplicate.
     Ignored,
+
+    /// Packet appears valid but new session was rejected by application layer.
+    Rejected,
 }
 
 /// ZeroTier Secure Session Protocol (ZSSP) Session
@@ -140,10 +143,9 @@ impl<Application: ApplicationLayer> Context<Application> {
         }
     }
 
-    /// Perform periodic background service tasks.
+    /// Perform periodic background service and cleanup tasks.
     ///
-    /// This returns the number of milliseconds until it should be called again. It performs
-    /// tasks like cleaning up internal data structures.
+    /// This returns the number of milliseconds until it should be called again.
     pub fn service(&self, current_time: i64) -> i64 {
         let mut dead_active = Vec::new();
         let mut dead_pending = Vec::new();
@@ -271,16 +273,33 @@ impl<Application: ApplicationLayer> Context<Application> {
 
     /// Receive, authenticate, decrypt, and process a physical wire packet.
     ///
+    /// The send function may be called one or more times to send packets. If the packet is associated
+    /// wtth an active session this session is supplied, otherwise this parameter is None. The size
+    /// of packets to be sent will not exceed the supplied mtu.
+    ///
+    /// New sessions can be accepted or rejected at both the initial negotiation phase and the final
+    /// negotiation phase using the incoming session filter function. For the initial phase of Noise_XK
+    /// the function will be called with None as a parameter since we do not yet know the static identity
+    /// or meta-data associated with the connection attempt. In the final phase the function will be called
+    /// again with the static public identity blob of the initiating endpoint and optionally any meta-data
+    /// that was supplied. In both cases a return value of false causes abandonment of the session.
+    ///
     /// * `app` - Interface to application using ZSSP
-    /// * `remote_address` - Remote physical address of source endpoint
+    /// * `incoming_session_filter` - Function to call to check whether new sessions should be accepted
+    /// * `send` - Function to call to send packets
     /// * `data_buf` - Buffer to receive decrypted and authenticated object data (an error is returned if too small)
     /// * `incoming_packet_buf` - Buffer containing incoming wire packet (receive() takes ownership)
     /// * `mtu` - Physical wire MTU for sending packets
     /// * `current_time` - Current monotonic time in milliseconds
     #[inline]
-    pub fn receive<'b, SendFunction: FnMut(&mut [u8])>(
+    pub fn receive<
+        'b,
+        SendFunction: FnMut(Option<&Arc<Session<Application>>>, &mut [u8]),
+        PermitIncomingSession: FnMut(Option<&[u8]>, Option<&[u8]>) -> bool,
+    >(
         &self,
         app: &Application,
+        mut incoming_session_filter: PermitIncomingSession,
         mut send: SendFunction,
         data_buf: &'b mut [u8],
         mut incoming_packet_buf: Application::IncomingPacketBuffer,
@@ -311,6 +330,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 return self.receive_complete(
                                     app,
                                     &mut send,
+                                    &mut incoming_session_filter,
                                     data_buf,
                                     counter,
                                     assembled_packet.as_ref(),
@@ -332,6 +352,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         return self.receive_complete(
                             app,
                             &mut send,
+                            &mut incoming_session_filter,
                             data_buf,
                             counter,
                             &[incoming_packet_buf],
@@ -371,6 +392,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 return self.receive_complete(
                     app,
                     &mut send,
+                    &mut incoming_session_filter,
                     data_buf,
                     counter,
                     assembled_packet.as_ref(),
@@ -386,6 +408,7 @@ impl<Application: ApplicationLayer> Context<Application> {
             return self.receive_complete(
                 app,
                 &mut send,
+                &mut incoming_session_filter,
                 data_buf,
                 counter,
                 &[incoming_packet_buf],
@@ -405,10 +428,15 @@ impl<Application: ApplicationLayer> Context<Application> {
     ///
     /// NOTE: header check codes will already have been validated on receipt of each fragment. AEAD authentication
     /// and decryption has NOT yet been performed, and is done here.
-    fn receive_complete<'b, SendFunction: FnMut(&mut [u8])>(
+    fn receive_complete<
+        'b,
+        SendFunction: FnMut(Option<&Arc<Session<Application>>>, &mut [u8]),
+        PermitIncomingSession: FnMut(Option<&[u8]>, Option<&[u8]>) -> bool,
+    >(
         &self,
         app: &Application,
         send: &mut SendFunction,
+        incoming_session_filter: &mut PermitIncomingSession,
         data_buf: &'b mut [u8],
         counter: u64,
         fragments: &[Application::IncomingPacketBuffer],
@@ -560,6 +588,10 @@ impl<Application: ApplicationLayer> Context<Application> {
                         return Err(Error::FailedAuthentication);
                     }
 
+                    if !incoming_session_filter(None, None) {
+                        return Ok(ReceiveResult::Rejected);
+                    }
+
                     // Decrypt encrypted part of payload (already authenticated above).
                     let mut ctr = AesCtr::new(kbkdf::<AES_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION>(noise_es.as_bytes()).as_bytes());
                     ctr.reset_set_iv(&SHA384::hash(&pkt.alice_noise_e)[..AES_CTR_NONCE_SIZE]);
@@ -649,7 +681,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     reply_buffer[BobNoiseXKAck::AUTH_START..].copy_from_slice(&reply_hmac);
 
                     send_with_fragmentation(
-                        send,
+                        |b| send(None, b),
                         &mut reply_buffer,
                         mtu,
                         PACKET_TYPE_BOB_NOISE_XK_ACK,
@@ -810,7 +842,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     }
 
                                     send_with_fragmentation(
-                                        send,
+                                        |b| send(Some(&session), b),
                                         &mut reply_buffer[..reply_len],
                                         mtu,
                                         PACKET_TYPE_ALICE_NOISE_XK_ACK,
@@ -1131,7 +1163,7 @@ fn create_message_nonce(packet_type: u8, counter: u64) -> [u8; AES_GCM_NONCE_SIZ
 /// Break a packet into fragments and send them all.
 /// The contents of packet[] are mangled during this operation, so it should be discarded after.
 fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
-    send: &mut SendFunction,
+    mut send: SendFunction,
     packet: &mut [u8],
     mtu: usize,
     packet_type: u8,

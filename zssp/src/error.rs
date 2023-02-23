@@ -23,9 +23,6 @@ pub enum Error {
     /// There is a safe way to reply if absolutely necessary, by sending the reply back after a constant amount of time, but this is difficult to get correct.
     FailedAuthentication,
 
-    /// New session was rejected by the application layer.
-    NewSessionRejected,
-
     /// Rekeying failed and session secret has reached its hard usage count limit
     MaxKeyLifetimeExceeded,
 
@@ -66,7 +63,6 @@ impl std::fmt::Display for Error {
             Self::InvalidPacket => f.write_str("InvalidPacket"),
             Self::InvalidParameter => f.write_str("InvalidParameter"),
             Self::FailedAuthentication => f.write_str("FailedAuthentication"),
-            Self::NewSessionRejected => f.write_str("NewSessionRejected"),
             Self::MaxKeyLifetimeExceeded => f.write_str("MaxKeyLifetimeExceeded"),
             Self::SessionNotEstablished => f.write_str("SessionNotEstablished"),
             Self::RateLimited => f.write_str("RateLimited"),
