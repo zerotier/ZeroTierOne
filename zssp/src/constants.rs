@@ -36,6 +36,3 @@ pub(crate) const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10; // 10 min
 
 /// Timeout for incoming sessions in incomplete state in milliseconds.
 pub(crate) const INCOMPLETE_SESSION_TIMEOUT: i64 = 1000;
-
-/// Maximum number of pending incomplete sessions.
-pub(crate) const INCOMPLETE_SESSION_MAX_QUEUE_SIZE: usize = 256;

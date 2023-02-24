@@ -37,10 +37,13 @@ pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION: u8 = b'X'; // intermediat
 pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION: u8 = b'x'; // intermediate keys used in key exchanges
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A'; // AES-GCM in A->B direction
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE: u8 = b'B'; // AES-GCM in B->A direction
+pub(crate) const KBKDF_KEY_USAGE_LABEL_RATCHET: u8 = b'R'; // Key used in derivatin of next session key
 
 pub(crate) const MAX_FRAGMENTS: usize = 48; // hard protocol max: 63
 pub(crate) const MAX_NOISE_HANDSHAKE_FRAGMENTS: usize = 16; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
 pub(crate) const MAX_NOISE_HANDSHAKE_SIZE: usize = MAX_NOISE_HANDSHAKE_FRAGMENTS * MIN_TRANSPORT_MTU;
+
+pub(crate) const BASE_KEY_SIZE: usize = 64;
 
 pub(crate) const AES_KEY_SIZE: usize = 32;
 pub(crate) const AES_HEADER_CHECK_KEY_SIZE: usize = 16;
@@ -48,6 +51,8 @@ pub(crate) const AES_GCM_TAG_SIZE: usize = 16;
 pub(crate) const AES_GCM_NONCE_SIZE: usize = 12;
 pub(crate) const AES_CTR_NONCE_SIZE: usize = 12;
 
+/// The first packet in Noise_XK exchange containing Alice's ephemeral keys, session ID, and a random
+/// symmetric key to protect header fragmentation fields for this session.
 #[allow(unused)]
 #[repr(C, packed)]
 pub(crate) struct AliceNoiseXKInit {
@@ -68,6 +73,7 @@ impl AliceNoiseXKInit {
     pub const SIZE: usize = Self::AUTH_START + HMAC_SHA384_SIZE;
 }
 
+/// The response to AliceNoiceXKInit containing Bob's ephemeral keys.
 #[allow(unused)]
 #[repr(C, packed)]
 pub(crate) struct BobNoiseXKAck {
@@ -87,6 +93,7 @@ impl BobNoiseXKAck {
     pub const SIZE: usize = Self::AUTH_START + HMAC_SHA384_SIZE;
 }
 
+/// Alice's final response containing her identity (she already knows Bob's) and meta-data.
 /*
 #[allow(unused)]
 #[repr(C, packed)]

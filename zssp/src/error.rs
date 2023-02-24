@@ -32,6 +32,9 @@ pub enum Error {
     /// Packet ignored by rate limiter.
     RateLimited,
 
+    /// Packet counter is too far outside window.
+    OutOfCounterWindow,
+
     /// The other peer specified an unrecognized protocol version
     UnknownProtocolVersion,
 
@@ -66,6 +69,7 @@ impl std::fmt::Display for Error {
             Self::MaxKeyLifetimeExceeded => f.write_str("MaxKeyLifetimeExceeded"),
             Self::SessionNotEstablished => f.write_str("SessionNotEstablished"),
             Self::RateLimited => f.write_str("RateLimited"),
+            Self::OutOfCounterWindow => f.write_str("OutOfCounterWindow"),
             Self::UnknownProtocolVersion => f.write_str("UnknownProtocolVersion"),
             Self::DataBufferTooSmall => f.write_str("DataBufferTooSmall"),
             Self::DataTooLarge => f.write_str("DataTooLarge"),

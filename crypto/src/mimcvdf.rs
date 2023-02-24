@@ -7,81 +7,71 @@
  */
 
 /*
+ * MIMC is a hash function originally designed for use with STARK and SNARK proofs. It's based
+ * on modular multiplication and exponentiation instead of the usual bit twiddling or ARX
+ * operations that underpin more common hash algorithms.
+ *
+ * It's useful as a verifiable delay function because it can be computed in both directions with
+ * one direction taking orders of magnitude longer than the other. The "backward" direction is
+ * used as the delay function as it requires modular exponentiation which is inherently more
+ * compute intensive. The "forward" direction simply requires modular cubing which is two modular
+ * multiplications and is much faster.
+ *
+ * It's also nice because it's incredibly simple with a tiny code footprint.
+ *
+ * This is used for anti-DOS and anti-spamming delay functions. It's not used for anything
+ * really "cryptographically hard," and if it were broken cryptographically it would still be
+ * useful as a VDF as long as the break didn't yield a significantly faster way of computing a
+ * delay proof than the straightforward iterative way implemented here.
+ *
+ * Here are two references on MIMC with the first being the original paper and the second being
+ * a blog post describing its use as a VDF.
+ *
  * https://eprint.iacr.org/2016/492.pdf
  * https://vitalik.ca/general/2018/07/21/starks_part_3.html
  */
 
-// 2^127 - 39
+// p = 2^127 - 39, the largest 127-bit prime of the form 6k + 5
 const PRIME: u128 = 170141183460469231731687303715884105689;
-// 2p-1/3
+
+// (2p - 1) / 3
 const PRIME_2P_MINUS_1_DIV_3: u128 = 113427455640312821154458202477256070459;
 
-const K_COUNT_MASK: usize = 63;
-const K: [u64; 64] = [
-    0x921cdfd99022340f,
-    0xe7c65f78c70afaa8,
-    0x72793744494c4fda,
-    0x67759e2688bc9c0a,
-    0x7681a224661f0ac0,
-    0xa7b81b099925a2bf,
-    0x16d43792e66b030a,
-    0x841bd90742d26ee9,
-    0xb1346ec08db97053,
-    0xd044229c1173d972,
-    0xf4813498dfdead0e,
-    0xe46dca4c237d2c28,
-    0xac64872778089599,
-    0x67be75af74416e74,
-    0xb9dec3aefd3ae012,
-    0xf0497147953c4276,
-    0xf6ac07fd3944177d,
-    0xccf1c28813eb589b,
-    0x49abb5e2b0bff5bd,
-    0xd5c15eeb39587d69,
-    0x9c6ff50ee6898649,
-    0x763f3b25524a0fbf,
-    0xa6029c37f715c02c,
-    0xe458a5902b2b5629,
-    0x8e4d6be6a1ba32c5,
-    0x052aba0b61738f20,
-    0xc18a6901fa026b12,
-    0x137df11cf1dbe811,
-    0x5da0310e419be602,
-    0xc66ddec578f52891,
-    0xe4eae4efc0f0d54f,
-    0xf9d488269f118012,
-    0xcf9b5108f66e77d1,
-    0x443ba29939f5a657,
-    0xa4e4b7d28c51e5c2,
-    0xe030d1772f112c01,
-    0xe136f0cf8da5e172,
-    0x3e9ee638f9663dc2,
-    0xbc5c1db73e639dfd,
-    0xa9fbbaa873fedf73,
-    0xffb2a5247d10ab8f,
-    0x06e6f3b5ae4b67ac,
-    0x475e7d427d331282,
-    0xcac6237c40a9d653,
-    0xe9a15c1d177beefa,
-    0xa14ef2111c2175a3,
-    0x8427d4b68982fc21,
-    0x12171e2a55d43343,
-    0x37715fdea87a0a60,
-    0x24bc5d28cff8ecad,
-    0x92276e4118304e62,
-    0x824b66792f58dd45,
-    0xe43973cf253b6947,
-    0xd0db2c5a2a4f064d,
-    0x734cdb241520ad04,
-    0xcec4f2ce5013069e,
-    0x2741c83c07bbf9e0,
-    0x284be707dcbda1a4,
-    0xd602f3d8545799b2,
-    0xea3977f56573b4d2,
-    0x0723fda64d57d0c6,
-    0x04dc344d0dde863a,
-    0x7584143462914be4,
-    0x111307f7823dfcc6,
+// Randomly generated round constants, each modulo PRIME.
+const K_COUNT_MASK: usize = 31;
+const K: [u128; 32] = [
+    0x1fdd07a761b611bb1ab9419a70599a7c,
+    0x23056b05d5c6b925e333d7418047650a,
+    0x77a638f9b437a307f8866fbd2672c705,
+    0x60213dab83bab91d1c310bd87e9da332,
+    0xf56bc883301ab373179e46b098b7a7,
+    0x7914a0dbd2f971344173b350c28a838,
+    0x44bb64af5e446e6ebdc068d10d318f26,
+    0x1bca1921fd328bb725ae0cbcbc20a263,
+    0xafa963242f5216a7da1cd5328b23659,
+    0x7fe17c43782b883a63ee0a790e0b2b77,
+    0x23bb62abf728bf453200ee528f902c33,
+    0x75ec0c055be14955db6878567e3c0465,
+    0x7902bb57876e0b08b4de02a66755e5d7,
+    0xe5d7094f37b615f5a1e1594b0390de8,
+    0x12d4ddee90653a26f5de63ff4651f2d,
+    0xce4a15bc35633b5ed8bcae2c93d739c,
+    0x23f25b935e52df87255db8c608ef9ab4,
+    0x611a08d7464fb984c98104d77f1609a7,
+    0x7aa825876a7f6acde5efa57992da9c43,
+    0x2be9686f630fa28a0a0e1081a59755b4,
+    0x50060dac9ac4656ba3f8ee7592f4e28a,
+    0x4113abff6f5bb303eac2ca809d4d529d,
+    0x2af9d01d4e753feb5834c14ca0543397,
+    0x73c2d764691ced2b823dda887e22ae85,
+    0x5b53dcd4750ff888dca2497cec4dacb7,
+    0x5d8984a52c2d8f3cc9bcf61ef29f8a1,
+    0x588d8cc99533d649aabb5f0f552140e,
+    0x4dae04985fde8c8464ba08aaa7d8761e,
+    0x53f0c4740b8c3bda3fc05109b9a2b71,
+    0x3e918c88a6795e3bf840e0b74d91b9d7,
+    0x1dbcb30d724f11200aebb1dff87def91,
+    0x6086b0af0e1e68558170239d23be9780,
 ];
 
 fn mulmod<const M: u128>(mut a: u128, mut b: u128) -> u128 {
@@ -116,21 +106,23 @@ fn powmod<const M: u128>(mut base: u128, mut exp: u128) -> u128 {
     }
 }
 
+/// Compute MIMC for the given number of iterations and return a proof that can be checked much more quickly.
 pub fn delay(mut input: u128, rounds: usize) -> u128 {
     debug_assert!(rounds > 0);
     input %= PRIME;
     for r in 1..(rounds + 1) {
-        input = powmod::<PRIME>(input ^ (K[(rounds - r) & K_COUNT_MASK] as u128), PRIME_2P_MINUS_1_DIV_3);
+        input = powmod::<PRIME>(input ^ K[(rounds - r) & K_COUNT_MASK], PRIME_2P_MINUS_1_DIV_3);
     }
     input
 }
 
-pub fn verify(mut proof: u128, expected: u128, rounds: usize) -> bool {
+/// Quickly verify the result of delay() given the returned proof, original input, and original number of rounds.
+pub fn verify(mut proof: u128, original_input: u128, rounds: usize) -> bool {
     debug_assert!(rounds > 0);
     for r in 0..rounds {
-        proof = mulmod::<PRIME>(proof, mulmod::<PRIME>(proof, proof)) ^ (K[r & K_COUNT_MASK] as u128);
+        proof = mulmod::<PRIME>(proof, mulmod::<PRIME>(proof, proof)) ^ K[r & K_COUNT_MASK];
     }
-    proof == (expected % PRIME)
+    proof == (original_input % PRIME)
 }
 
 #[cfg(test)]
@@ -142,6 +134,7 @@ mod tests {
         for i in 1..5 {
             let input = (crate::random::xorshift64_random() as u128).wrapping_mul(crate::random::xorshift64_random() as u128);
             let proof = delay(input, i * 3);
+            //println!("{}", proof);
             assert!(verify(proof, input, i * 3));
         }
     }
