@@ -2271,6 +2271,12 @@ public:
 		if (syncIps) {
 			std::vector<InetAddress> newManagedIps;
 			newManagedIps.reserve(n.config().assignedAddressCount);
+
+#ifdef __APPLE__
+			std::vector<InetAddress> newManagedIps2;
+			newManagedIps2.reserve(n.config().assignedAddressCount);
+#endif
+
 			for(unsigned int i=0;i<n.config().assignedAddressCount;++i) {
 				const InetAddress *ii = reinterpret_cast<const InetAddress *>(&(n.config().assignedAddresses[i]));
 				if (checkIfManagedIsAllowed(n,*ii))
@@ -2290,15 +2296,41 @@ public:
 				}
 			}
 
+
 			for(std::vector<InetAddress>::iterator ip(newManagedIps.begin());ip!=newManagedIps.end();++ip) {
+
+#ifdef __APPLE__
+				// We can't add multiple addresses to an interface on macOs unless we futz with the netmask.
+				// see `man ifconfig`, alias section
+				// "If the address is on the same subnet as the first network address for this interface, a non-conflicting netmask must be given.  Usually 0xffffffff is most appropriate."
+
+				auto same_subnet = [ip](InetAddress i){
+					return ip->network() == i.network();
+				};
+
 				if (std::find(n.managedIps().begin(),n.managedIps().end(),*ip) == n.managedIps().end()) {
+					// if same subnet as a previously added address
+					if (
+						std::find_if(n.managedIps().begin(),n.managedIps().end(), same_subnet) != n.managedIps().end() ||
+						std::find_if(newManagedIps2.begin(),newManagedIps2.end(), same_subnet) != newManagedIps2.end()
+					) {
+						if (ip->isV4()) {
+							ip->setPort(32);
+						} else {
+							ip->setPort(128);
+						}
+					} else {
+						newManagedIps2.push_back(*ip);
+					}
+				}
+#endif
+
 					if (!n.tap()->addIp(*ip))
 						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
 
 					#ifdef __WINDOWS__
 					WinFWHelper::newICMPRule(*ip, n.config().nwid);
 					#endif
-				}
 			}
 
 #ifdef __APPLE__
