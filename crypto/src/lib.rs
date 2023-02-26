@@ -11,8 +11,6 @@ pub mod salsa;
 pub mod typestate;
 pub mod x25519;
 
-pub const ZEROES: [u8; 64] = [0_u8; 64];
-
 /// Constant time byte slice equality.
 #[inline]
 pub fn secure_eq<A: AsRef<[u8]> + ?Sized, B: AsRef<[u8]> + ?Sized>(a: &A, b: &B) -> bool {
