@@ -1,13 +1,13 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
+pub use openssl::aes;
+pub use openssl::hash;
+pub use openssl::p384;
+pub use openssl::random;
+pub use openssl::secret;
 
-pub mod aes;
-pub mod aes_gmac_siv;
-pub mod hash;
-pub mod p384;
+//pub mod aes_gmac_siv;
 pub mod poly1305;
-pub mod random;
 pub mod salsa;
-pub mod secret;
 pub mod typestate;
 pub mod x25519;
 
