@@ -4,8 +4,8 @@ pub use openssl::hash;
 pub use openssl::p384;
 pub use openssl::random;
 pub use openssl::secret;
+pub use openssl::aes_gmac_siv;
 
-//pub mod aes_gmac_siv;
 pub mod poly1305;
 pub mod salsa;
 pub mod typestate;
