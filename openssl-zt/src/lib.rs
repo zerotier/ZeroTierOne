@@ -4,6 +4,7 @@ mod cipher_ctx;
 mod bn;
 mod ec;
 
+pub mod aes_gmac_siv;
 pub mod secret;
 pub mod random;
 pub mod aes;
