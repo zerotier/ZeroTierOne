@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex, RwLock, Weak};
 
 use zerotier_crypto::aes::{Aes, AesCtr, AesGcm};
 use zerotier_crypto::hash::{hmac_sha512, HMACSHA384, HMAC_SHA384_SIZE, SHA384};
-use zerotier_crypto::p384::{P384KeyPair, P384PublicKey, P384_PUBLIC_KEY_SIZE};
+use zerotier_crypto::p384::{P384KeyPair, P384PublicKey, P384_ECDH_SHARED_SECRET_SIZE, P384_PUBLIC_KEY_SIZE};
 use zerotier_crypto::secret::Secret;
 use zerotier_crypto::{random, secure_eq};
 
@@ -28,7 +28,6 @@ use zerotier_utils::ringbuffermap::RingBufferMap;
 use pqc_kyber::{KYBER_SECRETKEYBYTES, KYBER_SSBYTES};
 
 use crate::applicationlayer::ApplicationLayer;
-use crate::constants::*;
 use crate::error::Error;
 use crate::proto::*;
 use crate::sessionid::SessionId;
@@ -52,11 +51,8 @@ pub enum ReceiveResult<'b, Application: ApplicationLayer> {
     /// Packet was valid and a data payload was decoded and authenticated.
     OkData(Arc<Session<Application>>, &'b mut [u8]),
 
-    /// Packet was valid and a new session was created, with static public blob and optional meta-data.
-    OkNewSession(Arc<Session<Application>>, &'b [u8], Option<&'b [u8]>),
-
-    /// Packet appears valid but was ignored as a duplicate or as meaningless given the current state.
-    Ignored,
+    /// Packet was valid and a new session was created.
+    OkNewSession(Arc<Session<Application>>),
 
     /// Packet appears valid but was rejected by the application layer, e.g. a rejected new session attempt.
     Rejected,
@@ -75,8 +71,7 @@ pub struct Session<Application: ApplicationLayer> {
     psk: Secret<BASE_KEY_SIZE>,
     send_counter: AtomicU64,
     receive_window: [AtomicU64; COUNTER_WINDOW_MAX_OOO],
-    header_check_cipher: Aes,
-    offer: Mutex<EphemeralOffer>,
+    header_protection_cipher: Aes,
     state: RwLock<State>,
     defrag: Mutex<RingBufferMap<u64, GatherArray<Application::IncomingPacketBuffer, MAX_FRAGMENTS>, 16, 16>>,
 }
@@ -89,41 +84,36 @@ struct SessionMaps<Application: ApplicationLayer> {
     incomplete: HashMap<SessionId, Arc<NoiseXKIncoming>>,
 }
 
-/// State for an incoming incomplete Noise_XK session that isn't fully negotiated yet.
 struct NoiseXKIncoming {
     timestamp: i64,
     alice_session_id: SessionId,
     bob_session_id: SessionId,
     noise_es_ee: Secret<BASE_KEY_SIZE>,
     hk: Secret<KYBER_SSBYTES>,
-    header_check_cipher_key: Secret<AES_HEADER_CHECK_KEY_SIZE>,
+    header_protection_key: Secret<AES_HEADER_PROTECTION_KEY_SIZE>,
     bob_noise_e_secret: P384KeyPair,
 }
 
-/// State that needs to be cached for the most recent outgoing offer.
+struct NoiseXKOutgoing {
+    timestamp: i64,
+    alice_noise_e_secret: P384KeyPair,
+    noise_es: Secret<P384_ECDH_SHARED_SECRET_SIZE>,
+    alice_hk_secret: Secret<KYBER_SECRETKEYBYTES>,
+}
+
 enum EphemeralOffer {
     None,
-    NoiseXKInit(
-        // boxed to discard memory after use since we only enter this state once at setup
-        Box<(
-            // alice_e_secret, metadata, noise_es, alice_hk_public, alice_hk_secret, header check key
-            P384KeyPair,
-            Option<ArrayVec<u8, MAX_METADATA_SIZE>>,
-            Secret<48>,
-            Secret<KYBER_SECRETKEYBYTES>,
-        )>,
-    ),
+    NoiseXKInit(Box<NoiseXKOutgoing>),
     RekeyInit(P384KeyPair),
 }
 
-/// Other mutable state within the session.
 struct State {
     remote_session_id: Option<SessionId>,
     keys: [Option<SessionKey>; 2],
     current_key: usize,
+    offer: EphemeralOffer,
 }
 
-/// A session key with lifetime information.
 struct SessionKey {
     ratchet_key: Secret<BASE_KEY_SIZE>,           // Key used in derivation of the next session key
     receive_key: Secret<AES_KEY_SIZE>,            // Receive side AES-GCM key
@@ -154,19 +144,28 @@ impl<Application: ApplicationLayer> Context<Application> {
     /// Perform periodic background service and cleanup tasks.
     ///
     /// This returns the number of milliseconds until it should be called again.
-    pub fn service(&self, current_time: i64) -> i64 {
+    pub fn service<SendFunction: FnMut(&Arc<Session<Application>>, &mut [u8])>(&self, mut send: SendFunction, current_time: i64) -> i64 {
         let mut dead_active = Vec::new();
         let mut dead_pending = Vec::new();
 
         {
             let sessions = self.sessions.read().unwrap();
             for (id, s) in sessions.active.iter() {
-                if s.strong_count() == 0 {
+                if let Some(session) = s.upgrade() {
+                    let state = session.state.read().unwrap();
+                    if let Some(key) = state.keys[state.current_key].as_ref() {
+                        if key.role_is_bob
+                            && (current_time >= key.rekey_at_time || session.send_counter.load(Ordering::Relaxed) >= key.rekey_at_counter)
+                        {
+                            session.send_rekey(|b| send(&session, b));
+                        }
+                    }
+                } else {
                     dead_active.push(*id);
                 }
             }
             for (id, p) in sessions.incomplete.iter() {
-                if (p.timestamp - current_time) > INCOMPLETE_SESSION_TIMEOUT {
+                if (p.timestamp - current_time) > Application::SESSION_NEGOTIATION_TIMEOUT_MS {
                     dead_pending.push(*id);
                 }
             }
@@ -182,7 +181,7 @@ impl<Application: ApplicationLayer> Context<Application> {
             }
         }
 
-        INCOMPLETE_SESSION_TIMEOUT * 2
+        Application::SESSION_NEGOTIATION_TIMEOUT_MS * 2
     }
 
     /// Create a new session and send initial packet(s) to other side.
@@ -191,9 +190,9 @@ impl<Application: ApplicationLayer> Context<Application> {
     /// * `send` - User-supplied packet sending function
     /// * `mtu` - Physical MTU for calls to send()
     /// * `local_session_id` - This side's session ID
-    /// * `remote_s_public_blob` - Remote side's public key/identity blob
-    /// * `metadata` - Optional metadata to be included in initial handshake
+    /// * `remote_s_public_p384` - Remote side's static public NIST P-384 key
     /// * `psk` - Pre-shared key (use all zero if none)
+    /// * `metadata` - Optional metadata to be included in initial handshake
     /// * `application_data` - Arbitrary opaque data to include with session object
     #[allow(unused_variables)]
     pub fn open<SendFunction: FnMut(&mut [u8])>(
@@ -201,10 +200,11 @@ impl<Application: ApplicationLayer> Context<Application> {
         app: &Application,
         mut send: SendFunction,
         mtu: usize,
-        remote_s_public_blob: &[u8],
-        metadata: Option<&[u8]>,
+        remote_s_public_p384: &P384PublicKey,
         psk: Secret<BASE_KEY_SIZE>,
+        metadata: Option<&[u8]>,
         application_data: Application::Data,
+        current_time: i64,
     ) -> Result<Arc<Session<Application>>, Error> {
         if let Some(md) = metadata.as_ref() {
             if md.len() > MAX_METADATA_SIZE {
@@ -212,71 +212,71 @@ impl<Application: ApplicationLayer> Context<Application> {
             }
         }
 
-        if let Some(bob_s_public) = Application::extract_s_public_from_static_public_blob(remote_s_public_blob) {
-            let alice_noise_e_secret = P384KeyPair::generate();
-            let alice_noise_e = alice_noise_e_secret.public_key_bytes().clone();
-            let noise_es = alice_noise_e_secret.agree(&bob_s_public).ok_or(Error::InvalidParameter)?;
-            let alice_hk_secret = pqc_kyber::keypair(&mut random::SecureRandom::default());
-            let header_check_cipher_key: [u8; AES_HEADER_CHECK_KEY_SIZE] = random::get_bytes_secure();
+        let alice_noise_e_secret = P384KeyPair::generate();
+        let alice_noise_e = alice_noise_e_secret.public_key_bytes().clone();
+        let noise_es = alice_noise_e_secret.agree(&remote_s_public_p384).ok_or(Error::InvalidParameter)?;
+        let alice_hk_secret = pqc_kyber::keypair(&mut random::SecureRandom::default());
+        let header_protection_key: [u8; AES_HEADER_PROTECTION_KEY_SIZE] = random::get_bytes_secure();
 
-            let (local_session_id, session) = {
-                let mut sessions = self.sessions.write().unwrap();
+        let (local_session_id, session) = {
+            let mut sessions = self.sessions.write().unwrap();
 
-                let mut local_session_id;
-                loop {
-                    local_session_id = SessionId::random();
-                    if !sessions.active.contains_key(&local_session_id) && !sessions.incomplete.contains_key(&local_session_id) {
-                        break;
-                    }
+            let mut local_session_id;
+            loop {
+                local_session_id = SessionId::random();
+                if !sessions.active.contains_key(&local_session_id) && !sessions.incomplete.contains_key(&local_session_id) {
+                    break;
                 }
+            }
 
-                let session = Arc::new(Session {
-                    id: local_session_id,
-                    application_data,
-                    psk,
-                    send_counter: AtomicU64::new(2), // 1 is the counter value for this INIT message
-                    receive_window: std::array::from_fn(|_| AtomicU64::new(0)),
-                    header_check_cipher: Aes::new(&header_check_cipher_key),
-                    offer: Mutex::new(EphemeralOffer::NoiseXKInit(Box::new((
+            let session = Arc::new(Session {
+                id: local_session_id,
+                application_data,
+                psk,
+                send_counter: AtomicU64::new(2), // 1 is the counter value for this INIT message
+                receive_window: std::array::from_fn(|_| AtomicU64::new(0)),
+                header_protection_cipher: Aes::new(&header_protection_key),
+                state: RwLock::new(State {
+                    remote_session_id: None,
+                    keys: [None, None],
+                    current_key: 0,
+                    offer: EphemeralOffer::NoiseXKInit(Box::new(NoiseXKOutgoing {
+                        timestamp: current_time,
                         alice_noise_e_secret,
-                        metadata.map(|md| ArrayVec::try_from(md).unwrap()),
-                        noise_es.clone(),
-                        Secret(alice_hk_secret.secret),
-                    )))),
-                    state: RwLock::new(State { remote_session_id: None, keys: [None, None], current_key: 0 }),
-                    defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
-                });
+                        noise_es: noise_es.clone(),
+                        alice_hk_secret: Secret(alice_hk_secret.secret),
+                    })),
+                }),
+                defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
+            });
 
-                sessions.active.insert(local_session_id, Arc::downgrade(&session));
+            sessions.active.insert(local_session_id, Arc::downgrade(&session));
 
-                (local_session_id, session)
-            };
+            (local_session_id, session)
+        };
 
-            let mut init_buffer = [0u8; AliceNoiseXKInit::SIZE];
-            let init: &mut AliceNoiseXKInit = byte_array_as_proto_buffer_mut(&mut init_buffer).unwrap();
-            init.session_protocol_version = SESSION_PROTOCOL_VERSION;
-            init.alice_noise_e = alice_noise_e;
-            init.alice_session_id = *local_session_id.as_bytes();
-            init.alice_hk_public = alice_hk_secret.public;
-            init.header_check_cipher_key = header_check_cipher_key;
+        let mut init_buffer = [0u8; AliceNoiseXKInit::SIZE];
+        let init: &mut AliceNoiseXKInit = byte_array_as_proto_buffer_mut(&mut init_buffer).unwrap();
+        init.session_protocol_version = SESSION_PROTOCOL_VERSION;
+        init.alice_noise_e = alice_noise_e;
+        init.alice_session_id = *local_session_id.as_bytes();
+        init.alice_hk_public = alice_hk_secret.public;
+        init.header_protection_key = header_protection_key;
 
-            let mut ctr = AesCtr::new(kbkdf::<AES_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION>(noise_es.as_bytes()).as_bytes());
-            ctr.reset_set_iv(&alice_noise_e[P384_PUBLIC_KEY_SIZE - AES_CTR_NONCE_SIZE..]);
-            ctr.crypt_in_place(&mut init_buffer[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START]);
+        let mut ctr = AesCtr::new(kbkdf::<AES_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION>(noise_es.as_bytes()).as_bytes());
+        ctr.reset_set_iv(&alice_noise_e[P384_PUBLIC_KEY_SIZE - AES_CTR_NONCE_SIZE..]);
+        ctr.crypt_in_place(&mut init_buffer[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START]);
 
-            let hmac = hmac_sha384_2(
-                kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION>(noise_es.as_bytes()).as_bytes(),
-                &create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_INIT, 1),
-                &init_buffer[HEADER_SIZE..AliceNoiseXKInit::AUTH_START],
-            );
-            init_buffer[AliceNoiseXKInit::AUTH_START..AliceNoiseXKInit::AUTH_START + HMAC_SHA384_SIZE].copy_from_slice(&hmac);
+        let hmac = hmac_sha384_2(
+            kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION>(noise_es.as_bytes()).as_bytes(),
+            &create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_INIT, 1),
+            &init_buffer[HEADER_SIZE..AliceNoiseXKInit::AUTH_START],
+        );
+        init_buffer[AliceNoiseXKInit::AUTH_START..AliceNoiseXKInit::AUTH_START + HMAC_SHA384_SIZE].copy_from_slice(&hmac);
 
-            send_with_fragmentation(&mut send, &mut init_buffer, mtu, PACKET_TYPE_ALICE_NOISE_XK_INIT, None, 0, 1, None)?;
+        send_with_fragmentation(&mut send, &mut init_buffer, mtu, PACKET_TYPE_ALICE_NOISE_XK_INIT, None, 0, 1, None)?;
 
-            return Ok(session);
-        } else {
-            return Err(Error::InvalidParameter);
-        }
+        return Ok(session);
     }
 
     /// Receive, authenticate, decrypt, and process a physical wire packet.
@@ -285,18 +285,38 @@ impl<Application: ApplicationLayer> Context<Application> {
     /// wtth an active session this session is supplied, otherwise this parameter is None. The size
     /// of packets to be sent will not exceed the supplied mtu.
     ///
+    /// The check_allow_incoming_session function is called when an initial Noise_XK init message is
+    /// received. This is before anything is known about the caller. A return value of true proceeds
+    /// with negotiation. False drops the packet.
+    ///
+    /// The check_accept_session function is called at the end of negotiation for an incoming session
+    /// with the caller's static public blob and meta-data if any. It must return the P-384 static public
+    /// key extracted from the supplied blob, a PSK (or all zeroes if none), and application data to
+    /// associate with the new session. A return of None abandons the session.
+    ///
+    /// Note that if check_accept_session accepts and returns Some() the session could still fail with
+    /// receive() returning an error. A Some() return from check_accept_sesion doesn't guarantee
+    /// successful new session init.
+    ///
     /// * `app` - Interface to application using ZSSP
     /// * `check_allow_incoming_session` - Function to call to check whether an unidentified new session should be accepted
+    /// * `check_accept_session` - Function to accept sessions after final negotiation, or returns None if rejected
     /// * `send` - Function to call to send packets
     /// * `data_buf` - Buffer to receive decrypted and authenticated object data (an error is returned if too small)
     /// * `incoming_packet_buf` - Buffer containing incoming wire packet (receive() takes ownership)
     /// * `mtu` - Physical wire MTU for sending packets
     /// * `current_time` - Current monotonic time in milliseconds
     #[inline]
-    pub fn receive<'b, SendFunction: FnMut(Option<&Arc<Session<Application>>>, &mut [u8]), CheckAllowIncomingSession: FnMut() -> bool>(
+    pub fn receive<
+        'b,
+        SendFunction: FnMut(Option<&Arc<Session<Application>>>, &mut [u8]),
+        CheckAllowIncomingSession: FnMut() -> bool,
+        CheckAcceptSession: FnMut(&[u8], Option<&[u8]>) -> Option<(P384PublicKey, Secret<64>, Application::Data)>,
+    >(
         &self,
         app: &Application,
         mut check_allow_incoming_session: CheckAllowIncomingSession,
+        mut check_accept_session: CheckAcceptSession,
         mut send: SendFunction,
         data_buf: &'b mut [u8],
         mut incoming_packet_buf: Application::IncomingPacketBuffer,
@@ -308,12 +328,12 @@ impl<Application: ApplicationLayer> Context<Application> {
             return Err(Error::InvalidPacket);
         }
 
-        let mut pending = None;
+        let mut incomplete = None;
         if let Some(local_session_id) = SessionId::new_from_u64_le(memory::load_raw(incoming_packet)) {
             if let Some(session) = self.look_up_session(local_session_id) {
                 session
-                    .header_check_cipher
-                    .decrypt_block_in_place(&mut incoming_packet[HEADER_CHECK_ENCRYPT_START..HEADER_CHECK_ENCRYPT_END]);
+                    .header_protection_cipher
+                    .decrypt_block_in_place(&mut incoming_packet[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                 let (key_index, packet_type, fragment_count, fragment_no, counter) = parse_packet_header(&incoming_packet);
 
                 if session.check_receive_window(counter) {
@@ -327,6 +347,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     app,
                                     &mut send,
                                     &mut check_allow_incoming_session,
+                                    &mut check_accept_session,
                                     data_buf,
                                     counter,
                                     assembled_packet.as_ref(),
@@ -348,6 +369,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             app,
                             &mut send,
                             &mut check_allow_incoming_session,
+                            &mut check_accept_session,
                             data_buf,
                             counter,
                             &[incoming_packet_buf],
@@ -360,15 +382,15 @@ impl<Application: ApplicationLayer> Context<Application> {
                         );
                     }
                 } else {
-                    return Err(Error::OutOfCounterWindow);
+                    return Err(Error::OutOfSequence);
                 }
             } else {
                 if let Some(p) = self.sessions.read().unwrap().incomplete.get(&local_session_id).cloned() {
-                    Aes::new(p.header_check_cipher_key.as_bytes())
-                        .decrypt_block_in_place(&mut incoming_packet[HEADER_CHECK_ENCRYPT_START..HEADER_CHECK_ENCRYPT_END]);
-                    pending = Some(p);
+                    Aes::new(p.header_protection_key.as_bytes())
+                        .decrypt_block_in_place(&mut incoming_packet[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
+                    incomplete = Some(p);
                 } else {
-                    return Err(Error::UnknownLocalSessionId(local_session_id));
+                    return Err(Error::UnknownLocalSessionId);
                 }
             }
         }
@@ -386,12 +408,13 @@ impl<Application: ApplicationLayer> Context<Application> {
                     app,
                     &mut send,
                     &mut check_allow_incoming_session,
+                    &mut check_accept_session,
                     data_buf,
                     counter,
                     assembled_packet.as_ref(),
                     packet_type,
                     None,
-                    pending,
+                    incomplete,
                     key_index,
                     mtu,
                     current_time,
@@ -402,12 +425,13 @@ impl<Application: ApplicationLayer> Context<Application> {
                 app,
                 &mut send,
                 &mut check_allow_incoming_session,
+                &mut check_accept_session,
                 data_buf,
                 counter,
                 &[incoming_packet_buf],
                 packet_type,
                 None,
-                pending,
+                incomplete,
                 key_index,
                 mtu,
                 current_time,
@@ -421,30 +445,32 @@ impl<Application: ApplicationLayer> Context<Application> {
         'b,
         SendFunction: FnMut(Option<&Arc<Session<Application>>>, &mut [u8]),
         CheckAllowIncomingSession: FnMut() -> bool,
+        CheckAcceptSession: FnMut(&[u8], Option<&[u8]>) -> Option<(P384PublicKey, Secret<64>, Application::Data)>,
     >(
         &self,
         app: &Application,
         send: &mut SendFunction,
         check_allow_incoming_session: &mut CheckAllowIncomingSession,
+        check_accept_session: &mut CheckAcceptSession,
         data_buf: &'b mut [u8],
         counter: u64,
         fragments: &[Application::IncomingPacketBuffer],
         packet_type: u8,
         session: Option<Arc<Session<Application>>>,
-        pending: Option<Arc<NoiseXKIncoming>>,
+        incomplete: Option<Arc<NoiseXKIncoming>>,
         key_index: usize,
         mtu: usize,
         current_time: i64,
     ) -> Result<ReceiveResult<'b, Application>, Error> {
         debug_assert!(fragments.len() >= 1);
 
-        let message_nonce = create_message_nonce(packet_type, counter);
+        let incoming_message_nonce = create_message_nonce(packet_type, counter);
         if packet_type == PACKET_TYPE_DATA {
             if let Some(session) = session {
                 let state = session.state.read().unwrap();
-                if let Some(session_key) = state.keys[key_index].as_ref() {
-                    let mut c = session_key.get_receive_cipher();
-                    c.reset_init_gcm(&message_nonce);
+                if let Some(key) = state.keys[key_index].as_ref() {
+                    let mut c = key.get_receive_cipher();
+                    c.reset_init_gcm(&incoming_message_nonce);
 
                     let mut data_len = 0;
 
@@ -455,7 +481,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         let current_frag_data_start = data_len;
                         data_len += f.len() - HEADER_SIZE;
                         if data_len > data_buf.len() {
-                            session_key.return_receive_cipher(c);
+                            key.return_receive_cipher(c);
                             return Err(Error::DataBufferTooSmall);
                         }
                         c.crypt(&f[HEADER_SIZE..], &mut data_buf[current_frag_data_start..data_len]);
@@ -469,7 +495,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     }
                     data_len += last_fragment.len() - (HEADER_SIZE + AES_GCM_TAG_SIZE);
                     if data_len > data_buf.len() {
-                        session_key.return_receive_cipher(c);
+                        key.return_receive_cipher(c);
                         return Err(Error::DataBufferTooSmall);
                     }
                     let payload_end = last_fragment.len() - AES_GCM_TAG_SIZE;
@@ -479,17 +505,17 @@ impl<Application: ApplicationLayer> Context<Application> {
                     );
 
                     let aead_authentication_ok = c.finish_decrypt(&last_fragment[payload_end..]);
-                    session_key.return_receive_cipher(c);
+                    key.return_receive_cipher(c);
 
                     if aead_authentication_ok {
                         if session.update_receive_window(counter) {
                             // If the packet authenticated, this confirms that the other side indeed
                             // knows this session key. In that case mark the session key as confirmed
                             // and if the current active key is older switch it to point to this one.
-                            if session_key.confirmed {
+                            if key.confirmed {
                                 drop(state);
                             } else {
-                                let key_created_at_counter = session_key.created_at_counter;
+                                let key_created_at_counter = key.created_at_counter;
                                 drop(state);
 
                                 let mut state = session.state.write().unwrap();
@@ -507,14 +533,14 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                             return Ok(ReceiveResult::OkData(session, &mut data_buf[..data_len]));
                         } else {
-                            return Err(Error::OutOfCounterWindow);
+                            return Err(Error::OutOfSequence);
                         }
                     }
                 }
 
                 return Err(Error::FailedAuthentication);
             } else {
-                return Err(Error::SessionNotEstablished);
+                return Err(Error::UnknownLocalSessionId);
             }
         } else {
             // For Noise setup/KEX packets go ahead and pre-assemble all fragments to simplify the code below.
@@ -547,8 +573,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                      * to the current exchange.
                      */
 
-                    if session.is_some() || counter != 1 {
-                        return Err(Error::OutOfCounterWindow);
+                    if session.is_some() || incomplete.is_some() || counter != 1 {
+                        return Err(Error::OutOfSequence);
                     }
 
                     let pkt: &AliceNoiseXKInit = byte_array_as_proto_buffer(pkt_assembled)?;
@@ -560,7 +586,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         &pkt.hmac_es,
                         &hmac_sha384_2(
                             kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION>(noise_es.as_bytes()).as_bytes(),
-                            &message_nonce,
+                            &incoming_message_nonce,
                             &pkt_assembled[HEADER_SIZE..AliceNoiseXKInit::AUTH_START],
                         ),
                     ) {
@@ -610,10 +636,10 @@ impl<Application: ApplicationLayer> Context<Application> {
                         if sessions.incomplete.len() >= self.max_incomplete_session_queue_size {
                             // If this queue is too big, we remove the latest entry and replace it. The latest
                             // is used because under flood conditions this is most likely to be another bogus
-                            // entry. If we find one that is actually timed out, that always gets replaced.
+                            // entry. If we find one that is actually timed out, that one is replaced instead.
                             let mut newest = i64::MIN;
                             let mut replace_id = None;
-                            let cutoff_time = current_time - INCOMPLETE_SESSION_TIMEOUT;
+                            let cutoff_time = current_time - Application::SESSION_NEGOTIATION_TIMEOUT_MS;
                             for (id, s) in sessions.incomplete.iter() {
                                 if s.timestamp <= cutoff_time {
                                     replace_id = Some(*id);
@@ -635,7 +661,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 noise_es_ee: noise_es_ee.clone(),
                                 hk,
                                 bob_noise_e_secret,
-                                header_check_cipher_key: Secret(pkt.header_check_cipher_key),
+                                header_protection_key: Secret(pkt.header_protection_key),
                             }),
                         );
 
@@ -672,7 +698,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         Some(alice_session_id),
                         0,
                         1,
-                        Some(&Aes::new(&pkt.header_check_cipher_key)),
+                        Some(&Aes::new(&pkt.header_protection_key)),
                     )?;
 
                     return Ok(ReceiveResult::Ok);
@@ -687,13 +713,13 @@ impl<Application: ApplicationLayer> Context<Application> {
                      * the negotiation.
                      */
 
-                    if counter != 1 {
-                        return Err(Error::OutOfCounterWindow);
+                    if counter != 1 || incomplete.is_some() {
+                        return Err(Error::OutOfSequence);
                     }
 
                     if let Some(session) = session {
-                        let mut offer = session.offer.lock().unwrap();
-                        if let EphemeralOffer::NoiseXKInit(boxed_offer) = &*offer {
+                        let state = session.state.read().unwrap();
+                        if let EphemeralOffer::NoiseXKInit(boxed_offer) = &state.offer {
                             let (alice_e_secret, metadata, noise_es, alice_hk_secret) = boxed_offer.as_ref();
                             let pkt: &BobNoiseXKAck = byte_array_as_proto_buffer(pkt_assembled)?;
 
@@ -714,7 +740,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     &pkt.hmac_es_ee,
                                     &hmac_sha384_2(
                                         noise_es_ee_kex_hmac_key.as_bytes(),
-                                        &message_nonce,
+                                        &incoming_message_nonce,
                                         &pkt_assembled[HEADER_SIZE..BobNoiseXKAck::AUTH_START],
                                     ),
                                 ) {
@@ -749,6 +775,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION>(noise_es_ee_se_hk_psk.as_bytes());
 
                                 let reply_counter = session.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?;
+                                debug_assert_eq!(reply_counter.get(), 2);
                                 let reply_message_nonce = create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_ACK, reply_counter.get());
 
                                 // Create reply informing Bob of our static identity now that we've verified Bob and set
@@ -777,7 +804,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 // is a hash of 'hk' making it actually a secret and "borrowing" a little PQ
                                 // forward secrecy for Alice's identity.
                                 let mut ctr = AesCtr::new(noise_es_ee_kex_enc_key.as_bytes());
-                                ctr.reset_set_iv(&SHA384::hash(hk.as_bytes())[..AES_CTR_NONCE_SIZE]);
+                                ctr.reset_set_iv(&hk.as_bytes()[..AES_CTR_NONCE_SIZE]);
                                 ctr.crypt_in_place(&mut reply_buffer[HEADER_SIZE + 1..reply_len]);
 
                                 // First attach HMAC allowing Bob to verify that this is from the same Alice and to
@@ -801,15 +828,11 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 reply_buffer[reply_len..reply_len + HMAC_SHA384_SIZE].copy_from_slice(&hmac_es_ee_se_hk_psk);
                                 reply_len += HMAC_SHA384_SIZE;
 
-                                // Clear the offer field since we're finished handling a response to our initial offer.
-                                *offer = EphemeralOffer::None;
-                                drop(offer);
-
-                                // Learn Bob's session ID and the first session key.
+                                drop(state);
                                 {
                                     let mut state = session.state.write().unwrap();
                                     let _ = state.remote_session_id.insert(bob_session_id);
-                                    let _ = state.keys[0].insert(SessionKey::new(
+                                    let _ = state.keys[0].insert(SessionKey::new::<Application>(
                                         noise_es_ee_se_hk_psk,
                                         current_time,
                                         reply_counter.get(),
@@ -817,6 +840,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         false,
                                     ));
                                     state.current_key = 0;
+                                    state.offer = EphemeralOffer::None;
                                 }
 
                                 send_with_fragmentation(
@@ -827,7 +851,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     Some(bob_session_id),
                                     0,
                                     reply_counter.get(),
-                                    Some(&session.header_check_cipher),
+                                    Some(&session.header_protection_cipher),
                                 )?;
 
                                 return Ok(ReceiveResult::Ok);
@@ -835,10 +859,10 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 return Err(Error::InvalidPacket);
                             }
                         } else {
-                            return Ok(ReceiveResult::Ignored);
+                            return Err(Error::OutOfSequence);
                         }
                     } else {
-                        return Err(Error::SessionNotEstablished);
+                        return Err(Error::UnknownLocalSessionId);
                     }
                 }
 
@@ -853,120 +877,245 @@ impl<Application: ApplicationLayer> Context<Application> {
                      * that Alice must return.
                      */
 
-                    if session.is_some() {
-                        return Ok(ReceiveResult::Ignored);
+                    if session.is_some() || counter != 2 {
+                        return Err(Error::OutOfSequence);
                     }
-
-                    /*
-                    // Restore state from note to self, returning to where we were after Alice's first contact.
-                    let alice_session_id = SessionId::new_from_bytes(&bob_note_to_self.alice_session_id).ok_or(Error::InvalidPacket)?;
-                    let bob_noise_e_secret = P384KeyPair::from_bytes(&bob_note_to_self.bob_noise_e, &bob_note_to_self.bob_noise_e_secret)
-                        .ok_or(Error::InvalidPacket)?;
-                    let hk = Secret(bob_note_to_self.hk);
-                    let noise_es_ee = Secret(bob_note_to_self.noise_es_ee);
-                    let header_check_cipher = Aes::new(&bob_note_to_self.header_check_cipher_key);
-                    drop(bob_note_to_self_buffer);
-
-                    // Authenticate packet with noise_es_ee (first HMAC) before decrypting and parsing static info.
-                    let pkt_assembled_enc_end = pkt_assembled.len() - (HMAC_SHA384_SIZE * 2);
-                    if !secure_eq(
-                        &pkt_assembled[pkt_assembled_enc_end..pkt_assembled.len() - HMAC_SHA384_SIZE],
-                        &hmac_sha384_2(
-                            &kbkdf512(noise_es_ee.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION).as_bytes()[..HMAC_SHA384_SIZE],
-                            &message_nonce,
-                            &pkt_assembled[HEADER_SIZE..pkt_assembled_enc_end],
-                        ),
-                    ) {
-                        return Err(Error::FailedAuthentication);
-                    }
-
-                    // Save a copy of the encrypted unmodified packet for final HMAC.
-                    let mut pkt_saved_for_final_hmac = [0u8; NOISE_MAX_HANDSHAKE_PACKET_SIZE];
-                    pkt_saved_for_final_hmac[..pkt_assembled.len()].copy_from_slice(pkt_assembled);
-
-                    // Decrypt Alice's static identity and decode.
-                    let mut ctr =
-                        AesCtr::new(&kbkdf512(noise_es_ee.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION).as_bytes()[..AES_KEY_SIZE]);
-                    ctr.reset_set_iv(&SHA384::hash(hk.as_bytes())[..AES_CTR_NONCE_SIZE]);
-                    ctr.crypt_in_place(&mut pkt_assembled[ALICE_NOISE_XK_ACK_ENC_START..pkt_assembled_enc_end]);
-
-                    let mut alice_static_info = &pkt_assembled[ALICE_NOISE_XK_ACK_ENC_START..pkt_assembled_enc_end];
-                    if alice_static_info.len() < 2 {
+                    if pkt_assembled.len() < ALICE_NOISE_XK_ACK_MIN_SIZE {
                         return Err(Error::InvalidPacket);
                     }
-                    let alice_static_public_blob_len = u16::from_le_bytes(alice_static_info[..2].try_into().unwrap()) as usize;
-                    alice_static_info = &alice_static_info[2..];
-                    if alice_static_info.len() < alice_static_public_blob_len {
-                        return Err(Error::InvalidPacket);
-                    }
-                    let alice_static_public_blob = &alice_static_info[..alice_static_public_blob_len];
-                    alice_static_info = &alice_static_info[alice_static_public_blob_len..];
-                    if alice_static_info.len() < 2 {
-                        return Err(Error::InvalidPacket);
-                    }
-                    let meta_data_len = u16::from_le_bytes(alice_static_info[..2].try_into().unwrap()) as usize;
-                    alice_static_info = &alice_static_info[2..];
-                    if alice_static_info.len() < meta_data_len {
-                        return Err(Error::InvalidPacket);
-                    }
-                    let meta_data = &alice_static_info[..meta_data_len];
 
-                    if let Some((bob_session_id, psk, app_data)) =
-                        app.accept_new_session(self, remote_address, alice_static_public_blob, meta_data)
-                    {
-                        // Create final Noise_XKpsk3 shared secret on this side.
-                        let noise_es_ee_se_hk_psk = Secret(hmac_sha512(
-                            &hmac_sha512(
-                                noise_es_ee.as_bytes(),
-                                bob_noise_e_secret
-                                    .agree(
-                                        &Application::extract_s_public_from_raw(alice_static_public_blob)
-                                            .ok_or(Error::FailedAuthentication)?,
-                                    )
-                                    .ok_or(Error::FailedAuthentication)?
-                                    .as_bytes(),
-                            ),
-                            &hmac_sha512(psk.as_bytes(), hk.as_bytes()),
-                        ));
+                    if let Some(incomplete) = incomplete {
+                        // Check timeout, negotiations aren't allowed to take longer than this.
+                        if (current_time - incomplete.timestamp) > Application::SESSION_NEGOTIATION_TIMEOUT_MS {
+                            return Err(Error::UnknownLocalSessionId);
+                        }
 
-                        // Final authentication with the whole enchelada.
+                        // Check the first HMAC to verify against the currently known noise_es_ee key, which verifies
+                        // that this reply is part of this session.
+                        let auth_start = pkt_assembled.len() - ALICE_NOISE_XK_ACK_AUTH_SIZE;
                         if !secure_eq(
-                            &pkt_assembled[pkt_assembled_enc_end + HMAC_SHA384_SIZE..],
+                            &pkt_assembled[auth_start..pkt_assembled.len() - HMAC_SHA384_SIZE],
                             &hmac_sha384_2(
-                                &kbkdf512(noise_es_ee_se_hk_psk.as_bytes(), KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION).as_bytes()
-                                    [..HMAC_SHA384_SIZE],
-                                &message_nonce,
-                                &pkt_saved_for_final_hmac[HEADER_SIZE..pkt_assembled_enc_end + HMAC_SHA384_SIZE],
+                                kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION>(incomplete.noise_es_ee.as_bytes())
+                                    .as_bytes(),
+                                &incoming_message_nonce,
+                                &pkt_assembled[HEADER_SIZE..auth_start],
                             ),
                         ) {
                             return Err(Error::FailedAuthentication);
                         }
 
-                        return Ok(ReceiveResult::OkNewSession(Arc::new(Session {
-                            id: bob_session_id,
-                            application_data: app_data,
+                        // Make a copy of pkt_assembled so we can check the second HMAC against original ciphertext later.
+                        let mut pkt_assembly_buffer_copy = [0u8; MAX_NOISE_HANDSHAKE_SIZE];
+                        pkt_assembly_buffer_copy[..pkt_assembled.len()].copy_from_slice(pkt_assembled);
+
+                        // Decrypt encrypted section so we can finally learn Alice's static identity.
+                        let mut ctr = AesCtr::new(
+                            kbkdf::<AES_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION>(incomplete.noise_es_ee.as_bytes()).as_bytes(),
+                        );
+                        ctr.reset_set_iv(&incomplete.hk.as_bytes()[..AES_CTR_NONCE_SIZE]);
+                        ctr.crypt_in_place(&mut pkt_assembled[ALICE_NOISE_XK_ACK_ENC_START..auth_start]);
+
+                        // Read the static public blob and optional meta-data.
+                        let mut pkt_assembled_ptr = HEADER_SIZE + 1;
+                        let mut pkt_assembled_field_end = pkt_assembled_ptr + 2;
+                        if pkt_assembled_field_end >= pkt_assembled.len() {
+                            return Err(Error::InvalidPacket);
+                        }
+                        let alice_static_public_blob_size =
+                            u16::from_le(memory::load_raw::<u16>(&pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end])) as usize;
+                        pkt_assembled_ptr = pkt_assembled_field_end;
+                        pkt_assembled_field_end = pkt_assembled_ptr + alice_static_public_blob_size;
+                        if pkt_assembled_field_end >= pkt_assembled.len() {
+                            return Err(Error::InvalidPacket);
+                        }
+                        let alice_static_public_blob = &pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end];
+                        pkt_assembled_ptr = pkt_assembled_field_end;
+                        pkt_assembled_field_end = pkt_assembled_ptr + 2;
+                        if pkt_assembled_field_end >= pkt_assembled.len() {
+                            return Err(Error::InvalidPacket);
+                        }
+                        let alice_meta_data_size =
+                            u16::from_le(memory::load_raw::<u16>(&pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end])) as usize;
+                        pkt_assembled_ptr = pkt_assembled_field_end;
+                        pkt_assembled_field_end = pkt_assembled_ptr + alice_meta_data_size;
+                        let alice_meta_data = if alice_meta_data_size > 0 {
+                            Some(&pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end])
+                        } else {
+                            None
+                        };
+
+                        // Check session acceptance and fish Alice's NIST P-384 static public key out of
+                        // her static public blob.
+                        let check_result = check_accept_session(alice_static_public_blob, alice_meta_data);
+                        if check_result.is_none() {
+                            self.sessions.write().unwrap().incomplete.remove(&incomplete.bob_session_id);
+                            return Ok(ReceiveResult::Rejected);
+                        }
+                        let (alice_noise_s, psk, application_data) = check_result.unwrap();
+
+                        // Complete Noise_XKpsk3 on Bob's side.
+                        let noise_es_ee_se_hk_psk = Secret(hmac_sha512(
+                            &hmac_sha512(
+                                incomplete.noise_es_ee.as_bytes(),
+                                incomplete
+                                    .bob_noise_e_secret
+                                    .agree(&alice_noise_s)
+                                    .ok_or(Error::FailedAuthentication)?
+                                    .as_bytes(),
+                            ),
+                            &hmac_sha512(psk.as_bytes(), incomplete.hk.as_bytes()),
+                        ));
+
+                        // Verify the packet using the final key to verify the whole key exchange.
+                        if !secure_eq(
+                            &pkt_assembly_buffer_copy[auth_start + HMAC_SHA384_SIZE..pkt_assembled.len()],
+                            &hmac_sha384_2(
+                                kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION>(noise_es_ee_se_hk_psk.as_bytes())
+                                    .as_bytes(),
+                                &incoming_message_nonce,
+                                &pkt_assembly_buffer_copy[HEADER_SIZE..auth_start],
+                            ),
+                        ) {
+                            return Err(Error::FailedAuthentication);
+                        }
+
+                        let session = Arc::new(Session {
+                            id: incomplete.bob_session_id,
+                            application_data,
                             psk,
-                            send_counter: AtomicU64::new(2), // 1 was already used in our first reply
+                            send_counter: AtomicU64::new(2), // 1 was already used during negotiation
                             receive_window: std::array::from_fn(|_| AtomicU64::new(0)),
-                            header_check_cipher,
-                            offer: Mutex::new(EphemeralOffer::None),
+                            header_protection_cipher: Aes::new(incomplete.header_protection_key.as_bytes()),
                             state: RwLock::new(State {
-                                remote_session_id: Some(alice_session_id),
-                                keys: [Some(SessionKey::new(noise_es_ee_se_hk_psk, current_time, 2, true, true)), None],
+                                remote_session_id: Some(incomplete.alice_session_id),
+                                keys: [
+                                    Some(SessionKey::new::<Application>(noise_es_ee_se_hk_psk, current_time, 2, true, true)),
+                                    None,
+                                ],
                                 current_key: 0,
+                                offer: EphemeralOffer::None,
                             }),
                             defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
-                        })));
+                        });
+
+                        {
+                            let mut sessions = self.sessions.write().unwrap();
+                            sessions.incomplete.remove(&incomplete.bob_session_id);
+                            sessions.active.insert(incomplete.bob_session_id, Arc::downgrade(&session));
+                        }
+
+                        return Ok(ReceiveResult::OkNewSession(session));
                     } else {
-                        return Err(Error::NewSessionRejected);
+                        return Err(Error::UnknownLocalSessionId);
                     }
-                    */
-                    todo!()
                 }
 
-                PACKET_TYPE_ALICE_REKEY_INIT => todo!(),
+                PACKET_TYPE_ALICE_REKEY_INIT => {
+                    if pkt_assembled.len() != AliceRekeyInit::SIZE {
+                        return Err(Error::InvalidPacket);
+                    }
+                    if let Some(session) = session {
+                        let state = session.state.read().unwrap();
+                        if let Some(key) = state.keys[key_index].as_ref() {
+                            // Only the current "Alice" accepts rekeys initiated by the current "Bob."
+                            if !key.role_is_bob {
+                                let mut c = key.get_receive_cipher();
+                                c.reset_init_gcm(&incoming_message_nonce);
+                                c.crypt_in_place(&mut pkt_assembled[AliceRekeyInit::ENC_START..AliceRekeyInit::AUTH_START]);
+                                let aead_authentication_ok = c.finish_decrypt(&pkt_assembled[AliceRekeyInit::AUTH_START..]);
+                                key.return_receive_cipher(c);
 
-                PACKET_TYPE_BOB_REKEY_ACK => todo!(),
+                                if aead_authentication_ok {
+                                    let pkt: &AliceRekeyInit = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
+                                    if let Some(alice_e) = P384PublicKey::from_bytes(&pkt.alice_e) {
+                                        let bob_e_secret = P384KeyPair::generate();
+                                        let ee = bob_e_secret.agree(&alice_e).ok_or(Error::FailedAuthentication)?;
+                                        let next_session_key = Secret(hmac_sha512(key.ratchet_key.as_bytes(), ee.as_bytes()));
+
+                                        let mut reply_buf = [0u8; BobRekeyAck::SIZE];
+                                        let reply: &mut BobRekeyAck = byte_array_as_proto_buffer_mut(&mut reply_buf).unwrap();
+                                        reply.bob_e = *bob_e_secret.public_key_bytes();
+                                        reply.next_key_fingerprint = SHA384::hash(next_session_key.as_bytes());
+
+                                        let counter = session.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?;
+                                        let mut c = key.get_send_cipher(counter.get())?;
+                                        c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_BOB_REKEY_ACK, counter.get()));
+                                        c.crypt_in_place(&mut reply_buf[BobRekeyAck::ENC_START..BobRekeyAck::AUTH_START]);
+                                        reply_buf[BobRekeyAck::AUTH_START..].copy_from_slice(&c.finish_encrypt());
+                                        key.return_send_cipher(c);
+
+                                        send(Some(&session), &mut reply_buf);
+
+                                        drop(state);
+                                        let mut state = session.state.write().unwrap();
+                                        let _ = state.keys[key_index ^ 1].replace(SessionKey::new::<Application>(
+                                            next_session_key,
+                                            current_time,
+                                            counter.get(),
+                                            false,
+                                            true,
+                                        ));
+
+                                        return Ok(ReceiveResult::Ok);
+                                    }
+                                }
+                                return Err(Error::FailedAuthentication);
+                            }
+                        }
+                        return Err(Error::OutOfSequence);
+                    } else {
+                        return Err(Error::UnknownLocalSessionId);
+                    }
+                }
+
+                PACKET_TYPE_BOB_REKEY_ACK => {
+                    if pkt_assembled.len() != BobRekeyAck::SIZE {
+                        return Err(Error::InvalidPacket);
+                    }
+                    if let Some(session) = session {
+                        let state = session.state.read().unwrap();
+                        if let EphemeralOffer::RekeyInit(alice_e_secret) = &state.offer {
+                            if let Some(key) = state.keys[key_index].as_ref() {
+                                // Only the current "Bob" initiates rekeys and expects this ACK.
+                                if key.role_is_bob {
+                                    let mut c = key.get_receive_cipher();
+                                    c.reset_init_gcm(&incoming_message_nonce);
+                                    c.crypt_in_place(&mut pkt_assembled[BobRekeyAck::ENC_START..BobRekeyAck::AUTH_START]);
+                                    let aead_authentication_ok = c.finish_decrypt(&pkt_assembled[BobRekeyAck::AUTH_START..]);
+                                    key.return_receive_cipher(c);
+
+                                    if aead_authentication_ok {
+                                        let pkt: &BobRekeyAck = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
+                                        if let Some(bob_e) = P384PublicKey::from_bytes(&pkt.bob_e) {
+                                            let ee = alice_e_secret.agree(&bob_e).ok_or(Error::FailedAuthentication)?;
+                                            let next_session_key = Secret(hmac_sha512(key.ratchet_key.as_bytes(), ee.as_bytes()));
+
+                                            if secure_eq(&pkt.next_key_fingerprint, &SHA384::hash(next_session_key.as_bytes())) {
+                                                drop(state);
+                                                let mut state = session.state.write().unwrap();
+                                                let _ = state.keys[key_index ^ 1].replace(SessionKey::new::<Application>(
+                                                    next_session_key,
+                                                    current_time,
+                                                    counter,
+                                                    true,
+                                                    false,
+                                                ));
+                                                state.offer = EphemeralOffer::None;
+
+                                                return Ok(ReceiveResult::Ok);
+                                            }
+                                        }
+                                    }
+                                    return Err(Error::FailedAuthentication);
+                                }
+                            }
+                        }
+                        return Err(Error::OutOfSequence);
+                    } else {
+                        return Err(Error::UnknownLocalSessionId);
+                    }
+                }
 
                 _ => {
                     return Err(Error::InvalidPacket);
@@ -1027,8 +1176,8 @@ impl<Application: ApplicationLayer> Session<Application> {
                         mtu_sized_buffer[fragment_size..tagged_fragment_size].copy_from_slice(&c.finish_encrypt());
                         fragment_size = tagged_fragment_size;
                     }
-                    self.header_check_cipher
-                        .encrypt_block_in_place(&mut mtu_sized_buffer[HEADER_CHECK_ENCRYPT_START..HEADER_CHECK_ENCRYPT_END]);
+                    self.header_protection_cipher
+                        .encrypt_block_in_place(&mut mtu_sized_buffer[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                     send(&mut mtu_sized_buffer[..fragment_size]);
                 }
                 debug_assert!(data.is_empty());
@@ -1045,6 +1194,36 @@ impl<Application: ApplicationLayer> Session<Application> {
     pub fn established(&self) -> bool {
         let state = self.state.read().unwrap();
         state.keys[state.current_key].is_some()
+    }
+
+    /// Send a rekey init message.
+    ///
+    /// This is called from the session context's service() method when it's time to rekey.
+    /// It should only be called when the current key was established in the 'bob' role. This
+    /// is checked when rekey time is checked.
+    fn send_rekey<SendFunction: FnMut(&mut [u8])>(&self, mut send: SendFunction) {
+        let rekey_e = P384KeyPair::generate();
+
+        let mut rekey_buf = [0u8; AliceRekeyInit::SIZE];
+        let pkt: &mut AliceRekeyInit = byte_array_as_proto_buffer_mut(&mut rekey_buf).unwrap();
+        pkt.alice_e = *rekey_e.public_key_bytes();
+
+        let state = self.state.read().unwrap();
+        if let Some(key) = state.keys[state.current_key].as_ref() {
+            if let Some(counter) = self.get_next_outgoing_counter() {
+                if let Ok(mut gcm) = key.get_send_cipher(counter.get()) {
+                    gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_ALICE_REKEY_INIT, counter.get()));
+                    gcm.crypt_in_place(&mut rekey_buf[AliceRekeyInit::ENC_START..AliceRekeyInit::AUTH_START]);
+                    rekey_buf[AliceRekeyInit::AUTH_START..].copy_from_slice(&gcm.finish_encrypt());
+                    key.return_send_cipher(gcm);
+
+                    send(&mut rekey_buf);
+
+                    drop(state);
+                    self.state.write().unwrap().offer = EphemeralOffer::RekeyInit(rekey_e);
+                }
+            }
+        }
     }
 
     /// Get the next outgoing counter value.
@@ -1142,7 +1321,7 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
     recipient_session_id: Option<SessionId>,
     key_index: usize,
     counter: u64,
-    header_check_cipher: Option<&Aes>,
+    header_protect_cipher: Option<&Aes>,
 ) -> Result<(), Error> {
     let packet_len = packet.len();
     let recipient_session_id = recipient_session_id.map_or(SessionId::NONE, |s| u64::from(s));
@@ -1160,8 +1339,8 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
             key_index,
             counter,
         );
-        if let Some(hcc) = header_check_cipher {
-            hcc.encrypt_block_in_place(&mut fragment[6..22]);
+        if let Some(hcc) = header_protect_cipher {
+            hcc.encrypt_block_in_place(&mut fragment[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
         }
         send(fragment);
         fragment_start = fragment_end - HEADER_SIZE;
@@ -1171,7 +1350,13 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
 }
 
 impl SessionKey {
-    fn new(key: Secret<BASE_KEY_SIZE>, current_time: i64, current_counter: u64, confirmed: bool, role_is_bob: bool) -> Self {
+    fn new<Application: ApplicationLayer>(
+        key: Secret<BASE_KEY_SIZE>,
+        current_time: i64,
+        current_counter: u64,
+        confirmed: bool,
+        role_is_bob: bool,
+    ) -> Self {
         let a2b = kbkdf::<AES_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB>(key.as_bytes());
         let b2a = kbkdf::<AES_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE>(key.as_bytes());
         let (receive_key, send_key) = if role_is_bob {
@@ -1186,11 +1371,14 @@ impl SessionKey {
             receive_cipher_pool: Mutex::new(Vec::with_capacity(2)),
             send_cipher_pool: Mutex::new(Vec::with_capacity(2)),
             rekey_at_time: current_time
-                .checked_add(REKEY_AFTER_TIME_MS + ((random::xorshift64_random() as u32) % REKEY_AFTER_TIME_MS_MAX_JITTER) as i64)
+                .checked_add(
+                    Application::REKEY_AFTER_TIME_MS
+                        + ((random::xorshift64_random() as u32) % Application::REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
+                )
                 .unwrap(),
             created_at_counter: current_counter,
-            rekey_at_counter: current_counter.checked_add(REKEY_AFTER_USES).unwrap(),
-            expire_at_counter: current_counter.checked_add(EXPIRE_AFTER_USES).unwrap(),
+            rekey_at_counter: current_counter.checked_add(Application::REKEY_AFTER_USES).unwrap(),
+            expire_at_counter: current_counter.checked_add(Application::EXPIRE_AFTER_USES).unwrap(),
             confirmed,
             role_is_bob,
         }

@@ -6,11 +6,9 @@
  * https://www.zerotier.com/
  */
 
-use crate::sessionid::SessionId;
-
 pub enum Error {
     /// The packet was addressed to an unrecognized local session (should usually be ignored)
-    UnknownLocalSessionId(SessionId),
+    UnknownLocalSessionId,
 
     /// Packet was not well formed
     InvalidPacket,
@@ -29,12 +27,6 @@ pub enum Error {
     /// Attempt to send using session without established key
     SessionNotEstablished,
 
-    /// Packet ignored by rate limiter.
-    RateLimited,
-
-    /// Packet counter is too far outside window.
-    OutOfCounterWindow,
-
     /// The other peer specified an unrecognized protocol version
     UnknownProtocolVersion,
 
@@ -43,6 +35,9 @@ pub enum Error {
 
     /// Data object is too large to send, even with fragmentation
     DataTooLarge,
+
+    /// Packet counter was outside window or packet arrived with session in an unexpected state.
+    OutOfSequence,
 
     /// An unexpected buffer overrun occured while attempting to encode or decode a packet.
     ///
@@ -61,20 +56,19 @@ impl From<std::io::Error> for Error {
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::UnknownLocalSessionId(id) => f.write_str(format!("UnknownLocalSessionId({})", id).as_str()),
-            Self::InvalidPacket => f.write_str("InvalidPacket"),
-            Self::InvalidParameter => f.write_str("InvalidParameter"),
-            Self::FailedAuthentication => f.write_str("FailedAuthentication"),
-            Self::MaxKeyLifetimeExceeded => f.write_str("MaxKeyLifetimeExceeded"),
-            Self::SessionNotEstablished => f.write_str("SessionNotEstablished"),
-            Self::RateLimited => f.write_str("RateLimited"),
-            Self::OutOfCounterWindow => f.write_str("OutOfCounterWindow"),
-            Self::UnknownProtocolVersion => f.write_str("UnknownProtocolVersion"),
-            Self::DataBufferTooSmall => f.write_str("DataBufferTooSmall"),
-            Self::DataTooLarge => f.write_str("DataTooLarge"),
-            Self::UnexpectedBufferOverrun => f.write_str("UnexpectedBufferOverrun"),
-        }
+        f.write_str(match self {
+            Self::UnknownLocalSessionId => "UnknownLocalSessionId",
+            Self::InvalidPacket => "InvalidPacket",
+            Self::InvalidParameter => "InvalidParameter",
+            Self::FailedAuthentication => "FailedAuthentication",
+            Self::MaxKeyLifetimeExceeded => "MaxKeyLifetimeExceeded",
+            Self::SessionNotEstablished => "SessionNotEstablished",
+            Self::UnknownProtocolVersion => "UnknownProtocolVersion",
+            Self::DataBufferTooSmall => "DataBufferTooSmall",
+            Self::DataTooLarge => "DataTooLarge",
+            Self::OutOfSequence => "OutOfSequence",
+            Self::UnexpectedBufferOverrun => "UnexpectedBufferOverrun",
+        })
     }
 }
 

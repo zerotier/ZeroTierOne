@@ -13,9 +13,17 @@ use zerotier_crypto::hash::{HMAC_SHA384_SIZE, SHA384_HASH_SIZE};
 use zerotier_crypto::p384::P384_PUBLIC_KEY_SIZE;
 
 use crate::applicationlayer::ApplicationLayer;
-use crate::constants::*;
 use crate::error::Error;
 use crate::sessionid::SessionId;
+
+/// Minimum size of a valid physical ZSSP packet of any type. Anything smaller is discarded.
+pub const MIN_PACKET_SIZE: usize = HEADER_SIZE + AES_GCM_TAG_SIZE;
+
+/// Minimum physical MTU for ZSSP to function.
+pub const MIN_TRANSPORT_MTU: usize = 128;
+
+/// Maximum size of init meta-data objects.
+pub const MAX_METADATA_SIZE: usize = 256;
 
 pub(crate) const SESSION_PROTOCOL_VERSION: u8 = 0x00;
 
@@ -30,8 +38,8 @@ pub(crate) const PACKET_TYPE_ALICE_REKEY_INIT: u8 = 4;
 pub(crate) const PACKET_TYPE_BOB_REKEY_ACK: u8 = 5;
 
 pub(crate) const HEADER_SIZE: usize = 16;
-pub(crate) const HEADER_CHECK_ENCRYPT_START: usize = 6;
-pub(crate) const HEADER_CHECK_ENCRYPT_END: usize = 22;
+pub(crate) const HEADER_PROTECT_ENCRYPT_START: usize = 6;
+pub(crate) const HEADER_PROTECT_ENCRYPT_END: usize = 22;
 
 pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION: u8 = b'X'; // intermediate keys used in key exchanges
 pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION: u8 = b'x'; // intermediate keys used in key exchanges
@@ -46,7 +54,7 @@ pub(crate) const MAX_NOISE_HANDSHAKE_SIZE: usize = MAX_NOISE_HANDSHAKE_FRAGMENTS
 pub(crate) const BASE_KEY_SIZE: usize = 64;
 
 pub(crate) const AES_KEY_SIZE: usize = 32;
-pub(crate) const AES_HEADER_CHECK_KEY_SIZE: usize = 16;
+pub(crate) const AES_HEADER_PROTECTION_KEY_SIZE: usize = 16;
 pub(crate) const AES_GCM_TAG_SIZE: usize = 16;
 pub(crate) const AES_GCM_NONCE_SIZE: usize = 12;
 pub(crate) const AES_CTR_NONCE_SIZE: usize = 12;
@@ -62,14 +70,14 @@ pub(crate) struct AliceNoiseXKInit {
     // -- start AES-CTR(es) encrypted section (IV is last 12 bytes of alice_noise_e))
     pub alice_session_id: [u8; SessionId::SIZE],
     pub alice_hk_public: [u8; KYBER_PUBLICKEYBYTES],
-    pub header_check_cipher_key: [u8; AES_HEADER_CHECK_KEY_SIZE],
+    pub header_protection_key: [u8; AES_HEADER_PROTECTION_KEY_SIZE],
     // -- end encrypted section
     pub hmac_es: [u8; HMAC_SHA384_SIZE],
 }
 
 impl AliceNoiseXKInit {
     pub const ENC_START: usize = HEADER_SIZE + 1 + P384_PUBLIC_KEY_SIZE;
-    pub const AUTH_START: usize = Self::ENC_START + SessionId::SIZE + KYBER_PUBLICKEYBYTES + AES_HEADER_CHECK_KEY_SIZE;
+    pub const AUTH_START: usize = Self::ENC_START + SessionId::SIZE + KYBER_PUBLICKEYBYTES + AES_HEADER_PROTECTION_KEY_SIZE;
     pub const SIZE: usize = Self::AUTH_START + HMAC_SHA384_SIZE;
 }
 
@@ -100,7 +108,7 @@ impl BobNoiseXKAck {
 pub(crate) struct AliceNoiseXKAck {
     pub header: [u8; HEADER_SIZE],
     pub session_protocol_version: u8,
-    // -- start AES-CTR(es_ee) encrypted section (IV is first 12 bytes of SHA384(hk))
+    // -- start AES-CTR(es_ee) encrypted section (IV is first 12 bytes of hk)
     pub alice_static_blob_length: [u8; 2],
     pub alice_static_blob: [u8; ???],
     pub alice_metadata_length: [u8; 2],
@@ -111,14 +119,24 @@ pub(crate) struct AliceNoiseXKAck {
 }
 */
 
+pub(crate) const ALICE_NOISE_XK_ACK_ENC_START: usize = HEADER_SIZE + 1;
+pub(crate) const ALICE_NOISE_XK_ACK_AUTH_SIZE: usize = HMAC_SHA384_SIZE + HMAC_SHA384_SIZE;
+pub(crate) const ALICE_NOISE_XK_ACK_MIN_SIZE: usize = ALICE_NOISE_XK_ACK_ENC_START + 2 + 2 + ALICE_NOISE_XK_ACK_AUTH_SIZE;
+
 #[allow(unused)]
 #[repr(C, packed)]
 pub(crate) struct AliceRekeyInit {
     pub header: [u8; HEADER_SIZE],
     // -- start AES-GCM encrypted portion (using current key)
-    pub alice_noise_e: [u8; P384_PUBLIC_KEY_SIZE],
+    pub alice_e: [u8; P384_PUBLIC_KEY_SIZE],
     // -- end AES-GCM encrypted portion
     pub gcm_mac: [u8; AES_GCM_TAG_SIZE],
+}
+
+impl AliceRekeyInit {
+    pub const ENC_START: usize = HEADER_SIZE;
+    pub const AUTH_START: usize = Self::ENC_START + P384_PUBLIC_KEY_SIZE;
+    pub const SIZE: usize = Self::AUTH_START + AES_GCM_TAG_SIZE;
 }
 
 #[allow(unused)]
@@ -126,10 +144,16 @@ pub(crate) struct AliceRekeyInit {
 pub(crate) struct BobRekeyAck {
     pub header: [u8; HEADER_SIZE],
     // -- start AES-GCM encrypted portion (using current key)
-    pub bob_noise_e: [u8; P384_PUBLIC_KEY_SIZE],
-    pub ee_fingerprint: [u8; SHA384_HASH_SIZE],
+    pub bob_e: [u8; P384_PUBLIC_KEY_SIZE],
+    pub next_key_fingerprint: [u8; SHA384_HASH_SIZE],
     // -- end AES-GCM encrypted portion
     pub gcm_mac: [u8; AES_GCM_TAG_SIZE],
+}
+
+impl BobRekeyAck {
+    pub const ENC_START: usize = HEADER_SIZE;
+    pub const AUTH_START: usize = Self::ENC_START + P384_PUBLIC_KEY_SIZE + SHA384_HASH_SIZE;
+    pub const SIZE: usize = Self::AUTH_START + AES_GCM_TAG_SIZE;
 }
 
 /// Assemble a series of fragments into a buffer and return the length of the assembled packet in bytes.

@@ -1,0 +1,3 @@
+use zssp::*;
+
+fn main() {}

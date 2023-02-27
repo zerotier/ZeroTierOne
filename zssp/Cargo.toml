@@ -5,6 +5,22 @@ license = "MPL-2.0"
 name = "zssp"
 version = "0.1.0"
 
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = 'abort'
+
+[lib]
+name = "zssp"
+path = "src/lib.rs"
+doc = true
+
+[[bin]]
+name = "zssp_test"
+path = "src/main.rs"
+doc = false
+
 [dependencies]
 zerotier-utils = { path = "../utils" }
 zerotier-crypto = { path = "../crypto" }
