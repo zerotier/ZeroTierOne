@@ -15,6 +15,6 @@ mod zssp;
 
 pub use crate::applicationlayer::ApplicationLayer;
 pub use crate::error::Error;
-pub use crate::proto::{MAX_METADATA_SIZE, MIN_PACKET_SIZE, MIN_TRANSPORT_MTU};
+pub use crate::proto::{MAX_INIT_PAYLOAD_SIZE, MIN_PACKET_SIZE, MIN_TRANSPORT_MTU};
 pub use crate::sessionid::SessionId;
 pub use crate::zssp::{Context, ReceiveResult, Session};

@@ -22,8 +22,8 @@ pub const MIN_PACKET_SIZE: usize = HEADER_SIZE + AES_GCM_TAG_SIZE;
 /// Minimum physical MTU for ZSSP to function.
 pub const MIN_TRANSPORT_MTU: usize = 128;
 
-/// Maximum size of init meta-data objects.
-pub const MAX_METADATA_SIZE: usize = 256;
+/// Maximum combined size of static public blob and metadata.
+pub const MAX_INIT_PAYLOAD_SIZE: usize = MAX_NOISE_HANDSHAKE_SIZE - ALICE_NOISE_XK_ACK_MIN_SIZE;
 
 pub(crate) const SESSION_PROTOCOL_VERSION: u8 = 0x00;
 

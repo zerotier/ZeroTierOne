@@ -49,6 +49,12 @@ pub trait ApplicationLayer: Sized {
     /// over very long distances.
     const INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS: i64 = 2000;
 
+    /// Retry interval for outgoing connection initiation or rekey attempts.
+    ///
+    /// Retry attepmpts will be no more often than this, but the delay may end up being slightly more
+    /// in some cases depending on where in the cycle the initial attempt falls.
+    const RETRY_INTERVAL: i64 = 500;
+
     /// Type for arbitrary opaque object for use by the application that is attached to each session.
     type Data;
 
