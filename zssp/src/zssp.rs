@@ -99,6 +99,7 @@ struct NoiseXKOutgoing {
     alice_noise_e_secret: P384KeyPair,
     noise_es: Secret<P384_ECDH_SHARED_SECRET_SIZE>,
     alice_hk_secret: Secret<KYBER_SECRETKEYBYTES>,
+    metadata: Option<ArrayVec<u8, MAX_METADATA_SIZE>>,
 }
 
 enum EphemeralOffer {
@@ -165,7 +166,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 }
             }
             for (id, p) in sessions.incomplete.iter() {
-                if (p.timestamp - current_time) > Application::SESSION_NEGOTIATION_TIMEOUT_MS {
+                if (p.timestamp - current_time) > Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS {
                     dead_pending.push(*id);
                 }
             }
@@ -181,7 +182,7 @@ impl<Application: ApplicationLayer> Context<Application> {
             }
         }
 
-        Application::SESSION_NEGOTIATION_TIMEOUT_MS * 2
+        Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS * 2
     }
 
     /// Create a new session and send initial packet(s) to other side.
@@ -245,6 +246,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         alice_noise_e_secret,
                         noise_es: noise_es.clone(),
                         alice_hk_secret: Secret(alice_hk_secret.secret),
+                        metadata: metadata.map(|md| ArrayVec::try_from(md).unwrap()),
                     })),
                 }),
                 defrag: Mutex::new(RingBufferMap::new(random::xorshift64_random() as u32)),
@@ -639,7 +641,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             // entry. If we find one that is actually timed out, that one is replaced instead.
                             let mut newest = i64::MIN;
                             let mut replace_id = None;
-                            let cutoff_time = current_time - Application::SESSION_NEGOTIATION_TIMEOUT_MS;
+                            let cutoff_time = current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS;
                             for (id, s) in sessions.incomplete.iter() {
                                 if s.timestamp <= cutoff_time {
                                     replace_id = Some(*id);
@@ -719,16 +721,19 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                     if let Some(session) = session {
                         let state = session.state.read().unwrap();
-                        if let EphemeralOffer::NoiseXKInit(boxed_offer) = &state.offer {
-                            let (alice_e_secret, metadata, noise_es, alice_hk_secret) = boxed_offer.as_ref();
+                        if let EphemeralOffer::NoiseXKInit(outgoing_offer) = &state.offer {
                             let pkt: &BobNoiseXKAck = byte_array_as_proto_buffer(pkt_assembled)?;
 
                             if let Some(bob_session_id) = SessionId::new_from_bytes(&pkt.bob_session_id) {
                                 // Derive noise_es_ee from Bob's ephemeral public key.
                                 let bob_noise_e = P384PublicKey::from_bytes(&pkt.bob_noise_e).ok_or(Error::FailedAuthentication)?;
                                 let noise_es_ee = Secret(hmac_sha512(
-                                    noise_es.as_bytes(),
-                                    alice_e_secret.agree(&bob_noise_e).ok_or(Error::FailedAuthentication)?.as_bytes(),
+                                    outgoing_offer.noise_es.as_bytes(),
+                                    outgoing_offer
+                                        .alice_noise_e_secret
+                                        .agree(&bob_noise_e)
+                                        .ok_or(Error::FailedAuthentication)?
+                                        .as_bytes(),
                                 ));
                                 let noise_es_ee_kex_enc_key =
                                     kbkdf::<AES_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION>(noise_es_ee.as_bytes());
@@ -757,7 +762,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 // the Noise pattern is concerned is the result of mixing the externally supplied PSK
                                 // with the Kyber1024 shared secret (hk). Kyber is treated as part of the PSK because
                                 // it's an external add-on beyond the Noise spec.
-                                let hk = pqc_kyber::decapsulate(&pkt.bob_hk_ciphertext, alice_hk_secret.as_bytes())
+                                let hk = pqc_kyber::decapsulate(&pkt.bob_hk_ciphertext, outgoing_offer.alice_hk_secret.as_bytes())
                                     .map_err(|_| Error::FailedAuthentication)
                                     .map(|k| Secret(k))?;
                                 let noise_es_ee_se_hk_psk = Secret(hmac_sha512(
@@ -793,7 +798,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 assert!(alice_s_public_blob.len() <= (u16::MAX as usize));
                                 reply_buffer_append(&(alice_s_public_blob.len() as u16).to_le_bytes());
                                 reply_buffer_append(alice_s_public_blob);
-                                if let Some(md) = metadata.as_ref() {
+                                if let Some(md) = outgoing_offer.metadata.as_ref() {
                                     reply_buffer_append(&(md.len() as u16).to_le_bytes());
                                     reply_buffer_append(md.as_ref());
                                 } else {
@@ -886,7 +891,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                     if let Some(incomplete) = incomplete {
                         // Check timeout, negotiations aren't allowed to take longer than this.
-                        if (current_time - incomplete.timestamp) > Application::SESSION_NEGOTIATION_TIMEOUT_MS {
+                        if (current_time - incomplete.timestamp) > Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS {
                             return Err(Error::UnknownLocalSessionId);
                         }
 

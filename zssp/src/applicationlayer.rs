@@ -43,11 +43,11 @@ pub trait ApplicationLayer: Sized {
     /// Default is ten minutes.
     const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10;
 
-    /// Timeout for Noise_XK session negotiation in milliseconds.
+    /// Timeout for incoming Noise_XK session negotiation in milliseconds.
     ///
     /// Default is two seconds, which should be enough for even extremely slow links or links
     /// over very long distances.
-    const SESSION_NEGOTIATION_TIMEOUT_MS: i64 = 2000;
+    const INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS: i64 = 2000;
 
     /// Type for arbitrary opaque object for use by the application that is attached to each session.
     type Data;
