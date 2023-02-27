@@ -1,15 +1,27 @@
-// (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
-pub use openssl::aes;
-pub use openssl::hash;
-pub use openssl::p384;
-pub use openssl::random;
-pub use openssl::secret;
-pub use openssl::aes_gmac_siv;
+
+mod error;
+mod cipher_ctx;
+mod bn;
+mod ec;
+
+pub mod aes_gmac_siv;
+pub mod secret;
+pub mod random;
+pub mod aes;
+pub mod hash;
+pub mod p384;
 
 pub mod poly1305;
 pub mod salsa;
 pub mod typestate;
 pub mod x25519;
+
+
+/// This must be called before using any function from this library.
+pub fn init() {
+    ffi::init();
+    lazy_static::initialize(&p384::GROUP_P384);
+}
 
 /// Constant time byte slice equality.
 #[inline]
@@ -24,14 +36,4 @@ pub fn secure_eq<A: AsRef<[u8]> + ?Sized, B: AsRef<[u8]> + ?Sized>(a: &A, b: &B)
     } else {
         false
     }
-}
-
-extern "C" {
-    fn OPENSSL_cleanse(ptr: *mut std::ffi::c_void, len: usize);
-}
-
-/// Destroy the contents of some memory
-#[inline(always)]
-pub fn burn(b: &mut [u8]) {
-    unsafe { OPENSSL_cleanse(b.as_mut_ptr().cast(), b.len()) };
 }

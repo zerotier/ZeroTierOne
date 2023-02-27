@@ -5,8 +5,8 @@ use std::io::Write;
 
 use ed25519_dalek::Digest;
 
-use openssl::random::SecureRandom;
-use openssl::secret::Secret;
+use crate::random::SecureRandom;
+use crate::secret::Secret;
 
 pub const C25519_PUBLIC_KEY_SIZE: usize = 32;
 pub const C25519_SECRET_KEY_SIZE: usize = 32;

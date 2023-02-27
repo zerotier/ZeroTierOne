@@ -1,20 +1,32 @@
 [package]
-authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ierymenko@zerotier.com>"]
-edition = "2021"
-license = "MPL-2.0"
 name = "zerotier-crypto"
+authors = ["Steven Fackler <sfackler@gmail.com>"]
+license = "Apache-2.0"
+description = "OpenSSL bindings"
+readme = "README.md"
+keywords = ["crypto", "tls", "ssl", "dtls"]
+categories = ["cryptography", "api-bindings"]
+edition = "2021"
 version = "0.1.0"
 
+
+[features]
+vendored = ['ffi/vendored']
+bindgen = ['ffi/bindgen']
+default = []
+
 [dependencies]
-zerotier-utils = { path = "../utils" }
 ed25519-dalek = { version = "1.0.1", features = ["std", "u64_backend"], default-features = false }
 poly1305 = { version = "0.8.0", features = [], default-features = false }
 x25519-dalek = { version = "1.2.0", features = ["std", "u64_backend"], default-features = false }
-openssl = { package = "openssl-zt", path = "../openssl-zt" }
+cfg-if = "1.0"
+foreign-types = "0.5.0"
+libc = "0.2"
+lazy_static = "^1"
+rand_core = "0.5.1"
 
-[target."cfg(windows)".dependencies]
-winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
+ffi = { package = "openssl-sys", version = "0.9.80", path = "../openssl-sys" }
 
-[target."cfg(not(windows))".dependencies]
-libc = "^0"
-signal-hook = "^0"
+[dev-dependencies]
+hex = "0.4.3"
+hex-literal = "0.3.4"
