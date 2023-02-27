@@ -688,10 +688,9 @@ JNIEXPORT void JNICALL Java_com_zerotier_sdk_Node_node_1delete(
     int64_t nodeId = (int64_t)id;
 
     NodeMap::iterator found;
-    {
-        ZeroTier::Mutex::Lock lock(nodeMapMutex);
-        found = nodeMap.find(nodeId);
-    }
+
+    ZeroTier::Mutex::Lock lock(nodeMapMutex);
+    found = nodeMap.find(nodeId);
 
     if(found != nodeMap.end())
     {
