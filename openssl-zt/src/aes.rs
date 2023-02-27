@@ -8,12 +8,14 @@ use crate::{secret::Secret, cipher_ctx::CipherCtx};
 
 /// An OpenSSL AES_GCM context. Automatically frees itself on drop.
 /// The current interface is custom made for ZeroTier, but could easily be adapted for other uses.
-pub struct AesGcm<const ENCRYPT: bool, const KEY_SIZE: usize> (CipherCtx);
+/// Whether `ENCRYPT` is true or false decides respectively whether this context encrypts or decrypts.
+/// Even though OpenSSL lets you set this dynamically almost no operations work when you do this without resetting the context.
+pub struct AesGcm<const ENCRYPT: bool> (CipherCtx);
 
-impl<const ENCRYPT: bool, const KEY_SIZE: usize> AesGcm<ENCRYPT, KEY_SIZE> {
+impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
 	/// Create an AesGcm context with the given key, key must be 16, 24 or 32 bytes long.
 	/// OpenSSL internally processes and caches this key, so it is recommended to reuse this context whenever encrypting under the same key. Call `set_iv` to change the IV for each reuse.
-	pub fn new(key: &Secret<KEY_SIZE>) -> Self {
+	pub fn new<const KEY_SIZE: usize>(key: &Secret<KEY_SIZE>) -> Self {
 		let mut ctx = CipherCtx::new().unwrap();
 		unsafe {
 			let t = match KEY_SIZE {
@@ -59,7 +61,7 @@ impl<const ENCRYPT: bool, const KEY_SIZE: usize> AesGcm<ENCRYPT, KEY_SIZE> {
 		unsafe { self.0.update::<ENCRYPT>(data, ptr).unwrap() }
 	}
 }
-impl<const KEY_SIZE: usize> AesGcm<true, KEY_SIZE> {
+impl AesGcm<true> {
 	/// Produce the gcm authentication tag.
 	#[inline(always)]
 	pub fn finish_encrypt(&mut self) -> [u8; 16] {
@@ -71,7 +73,7 @@ impl<const KEY_SIZE: usize> AesGcm<true, KEY_SIZE> {
 		}
 	}
 }
-impl<const KEY_SIZE: usize> AesGcm<false, KEY_SIZE> {
+impl AesGcm<false> {
 	/// Check the gcm authentication tag. Outputs true if it matches the just decrypted message, outputs false otherwise.
 	#[inline(always)]
 	pub fn finish_decrypt(&mut self, expected_tag: &[u8]) -> bool {
@@ -87,12 +89,14 @@ impl<const KEY_SIZE: usize> AesGcm<false, KEY_SIZE> {
 
 
 /// An OpenSSL AES_CTR context. Automatically frees itself on drop. AES_CTR is similar to AES_GCM except it produces no authentication tag.
-pub struct AesCtr<const KEY_SIZE: usize> (CipherCtx);
+/// Whether `ENCRYPT` is true or false decides respectively whether this context encrypts or decrypts.
+/// Even though OpenSSL lets you set this dynamically almost no operations work when you do this without resetting the context.
+pub struct AesCtr<const ENCRYPT: bool> (CipherCtx);
 
-impl<const KEY_SIZE: usize> AesCtr<KEY_SIZE> {
+impl<const ENCRYPT: bool> AesCtr<ENCRYPT> {
 	/// Create an AesCtr context with the given key, key must be 16, 24 or 32 bytes long.
 	/// OpenSSL internally processes and caches this key, so it is recommended to reuse this context whenever encrypting under the same key. Call `set_iv` to change the IV for each reuse.
-	pub fn new(key: &Secret<KEY_SIZE>) -> Self {
+	pub fn new<const KEY_SIZE: usize>(key: &Secret<KEY_SIZE>) -> Self {
 		let mut ctx = CipherCtx::new().unwrap();
 		unsafe {
 			let t = match KEY_SIZE {
@@ -111,7 +115,7 @@ impl<const KEY_SIZE: usize> AesCtr<KEY_SIZE> {
 	/// Set the IV of this AesCtr context. This call resets the IV but leaves the key and encryption algorithm alone.
 	/// This method must be called before any other method on AesCtr.
 	/// `iv` must be exactly 12 bytes in length, because that is what Aes supports.
-	pub fn set_iv<const ENCRYPT: bool>(&mut self, iv: &[u8]) {
+	pub fn set_iv(&mut self, iv: &[u8]) {
 		debug_assert_eq!(iv.len(), 12, "Aes IV must be 12 bytes long");
 		unsafe {
 			self.0.cipher_init::<true>(ptr::null(), ptr::null(), iv.as_ptr()).unwrap();
@@ -120,14 +124,14 @@ impl<const KEY_SIZE: usize> AesCtr<KEY_SIZE> {
 
 	/// Encrypt or decrypt.
 	#[inline(always)]
-	pub fn crypt<const ENCRYPT: bool>(&mut self, input: &[u8], output: &mut [u8]) {
+	pub fn crypt(&mut self, input: &[u8], output: &mut [u8]) {
 		debug_assert!(output.len() >= input.len(), "output buffer must fit the size of the input buffer");
 		unsafe { self.0.update::<ENCRYPT>(input, output.as_mut_ptr()).unwrap() };
 	}
 
 	/// Encrypt or decrypt in place.
 	#[inline(always)]
-	pub fn crypt_in_place<const ENCRYPT: bool>(&mut self, data: &mut [u8]) {
+	pub fn crypt_in_place(&mut self, data: &mut [u8]) {
 		let ptr = data.as_mut_ptr();
 		unsafe { self.0.update::<ENCRYPT>(data, ptr).unwrap() }
 	}
@@ -137,12 +141,12 @@ const AES_BLOCK_SIZE: usize = 16;
 
 /// An OpenSSL AES_ECB context. Automatically frees itself on drop.
 /// AES_ECB is very insecure if used incorrectly so its public interface supports only exactly what ZeroTier uses it for.
-pub struct AesEcb<const ENCRYPT: bool, const KEY_SIZE: usize> (CipherCtx);
+pub struct AesEcb<const ENCRYPT: bool> (CipherCtx);
 
-impl<const ENCRYPT: bool, const KEY_SIZE: usize> AesEcb<ENCRYPT, KEY_SIZE> {
+impl<const ENCRYPT: bool> AesEcb<ENCRYPT> {
 	/// Create an AesEcb context with the given key, key must be 16, 24 or 32 bytes long.
 	/// OpenSSL internally processes and caches this key, so it is recommended to reuse this context whenever encrypting under the same key.
-	pub fn new(key: &Secret<KEY_SIZE>) -> Self {
+	pub fn new<const KEY_SIZE: usize>(key: &Secret<KEY_SIZE>) -> Self {
 		let mut ctx = CipherCtx::new().unwrap();
 		unsafe {
 			let t = match KEY_SIZE {
@@ -179,8 +183,8 @@ mod test {
 	fn aes_256_gcm() {
 		init();
 		let key = Secret::move_bytes([1u8; 32]);
-		let mut enc = AesGcm::<true, 32>::new(&key);
-		let mut dec = AesGcm::<false, 32>::new(&key);
+		let mut enc = AesGcm::<true>::new(&key);
+		let mut dec = AesGcm::<false>::new(&key);
 
 		let plain = [2u8; 127];
 		let iv0 = [3u8; 12];
@@ -229,7 +233,7 @@ mod test {
 		}
 		let iv = [1_u8; 12];
 
-		let mut c = AesGcm::<true, 32>::new(&Secret::move_bytes([1_u8; 32]));
+		let mut c = AesGcm::<true>::new(&Secret::move_bytes([1_u8; 32]));
 
 		let benchmark_iterations: usize = 80000;
 		let start = SystemTime::now();
@@ -243,7 +247,7 @@ mod test {
 			(((benchmark_iterations * buf.len()) as f64) / 1048576.0) / duration.as_secs_f64()
 		);
 
-		let mut c = AesGcm::<false, 32>::new(&Secret::move_bytes([1_u8; 32]));
+		let mut c = AesGcm::<false>::new(&Secret::move_bytes([1_u8; 32]));
 
 		let start = SystemTime::now();
 		for _ in 0..benchmark_iterations {
