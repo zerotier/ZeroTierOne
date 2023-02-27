@@ -12,7 +12,6 @@ use pqc_kyber::{KYBER_CIPHERTEXTBYTES, KYBER_PUBLICKEYBYTES};
 use zerotier_crypto::hash::{HMAC_SHA384_SIZE, SHA384_HASH_SIZE};
 use zerotier_crypto::p384::P384_PUBLIC_KEY_SIZE;
 
-use crate::applicationlayer::ApplicationLayer;
 use crate::error::Error;
 use crate::sessionid::SessionId;
 
@@ -156,27 +155,6 @@ impl BobRekeyAck {
     pub const SIZE: usize = Self::AUTH_START + AES_GCM_TAG_SIZE;
 }
 
-/// Assemble a series of fragments into a buffer and return the length of the assembled packet in bytes.
-pub(crate) fn assemble_fragments_into<A: ApplicationLayer>(fragments: &[A::IncomingPacketBuffer], d: &mut [u8]) -> Result<usize, Error> {
-    let mut l = 0;
-    for i in 0..fragments.len() {
-        let mut ff = fragments[i].as_ref();
-        if ff.len() <= MIN_PACKET_SIZE {
-            return Err(Error::InvalidPacket);
-        }
-        if i > 0 {
-            ff = &ff[HEADER_SIZE..];
-        }
-        let j = l + ff.len();
-        if j > d.len() {
-            return Err(Error::InvalidPacket);
-        }
-        d[l..j].copy_from_slice(ff);
-        l = j;
-    }
-    return Ok(l);
-}
-
 // Annotate only these structs as being compatible with packet_buffer_as_bytes(). These structs
 // are packed flat buffers containing only byte or byte array fields, making them safe to treat
 // this way even on architectures that require type size aligned access.
@@ -186,6 +164,24 @@ impl ProtocolFlatBuffer for BobNoiseXKAck {}
 //impl ProtocolFlatBuffer for NoiseXKAliceStaticAck {}
 impl ProtocolFlatBuffer for AliceRekeyInit {}
 impl ProtocolFlatBuffer for BobRekeyAck {}
+
+#[derive(Clone, Copy)]
+#[repr(C, packed)]
+struct MessageNonceCreateBuffer(u64, u32);
+
+/// Create a 96-bit AES-GCM nonce.
+///
+/// The primary information that we want to be contained here is the counter and the
+/// packet type. The former makes this unique and the latter's inclusion authenticates
+/// it as effectively AAD. Other elements of the header are either not authenticated,
+/// like fragmentation info, or their authentication is implied via key exchange like
+/// the session ID.
+///
+/// This is also used as part of HMAC authentication for key exchange packets.
+#[inline(always)]
+pub(crate) fn create_message_nonce(packet_type: u8, counter: u64) -> [u8; AES_GCM_NONCE_SIZE] {
+    unsafe { std::mem::transmute(MessageNonceCreateBuffer(counter.to_le(), (packet_type as u32).to_le())) }
+}
 
 #[inline(always)]
 pub(crate) fn byte_array_as_proto_buffer<B: ProtocolFlatBuffer>(b: &[u8]) -> Result<&B, Error> {
