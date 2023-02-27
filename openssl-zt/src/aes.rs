@@ -6,9 +6,13 @@ use foreign_types::ForeignType;
 
 use crate::{secret::Secret, cipher_ctx::CipherCtx};
 
+/// An OpenSSL AES_GCM context. Automatically frees itself on drop.
+/// The current interface is custom made for ZeroTier, but could easily be adapted for other uses.
 pub struct AesGcm<const ENCRYPT: bool, const KEY_SIZE: usize> (CipherCtx);
 
 impl<const ENCRYPT: bool, const KEY_SIZE: usize> AesGcm<ENCRYPT, KEY_SIZE> {
+	/// Create an AesGcm context with the given key, key must be 16, 24 or 32 bytes long.
+	/// OpenSSL internally processes and caches this key, so it is recommended to reuse this context whenever encrypting under the same key. Call `set_iv` to change the IV for each reuse.
 	pub fn new(key: &Secret<KEY_SIZE>) -> Self {
 		let mut ctx = CipherCtx::new().unwrap();
 		unsafe {
@@ -25,6 +29,9 @@ impl<const ENCRYPT: bool, const KEY_SIZE: usize> AesGcm<ENCRYPT, KEY_SIZE> {
 		ret
 	}
 
+	/// Set the IV of this AesGcm context. This call resets the IV but leaves the key and encryption algorithm alone.
+	/// This method must be called before any other method on AesGcm.
+	/// `iv` must be exactly 12 bytes in length, because that is what Aes supports.
 	pub fn set_iv(&mut self, iv: &[u8]) {
 		debug_assert_eq!(iv.len(), 12, "Aes IV must be 12 bytes long");
 		unsafe {
@@ -32,6 +39,7 @@ impl<const ENCRYPT: bool, const KEY_SIZE: usize> AesGcm<ENCRYPT, KEY_SIZE> {
 		}
 	}
 
+	/// Add additional authentication data to AesGcm (same operation with CTR mode).
 	#[inline(always)]
 	pub fn aad(&mut self, aad: &[u8]) {
 		unsafe { self.0.update::<ENCRYPT>(aad, ptr::null_mut()).unwrap() };
@@ -44,7 +52,7 @@ impl<const ENCRYPT: bool, const KEY_SIZE: usize> AesGcm<ENCRYPT, KEY_SIZE> {
 		unsafe { self.0.update::<ENCRYPT>(input, output.as_mut_ptr()).unwrap() };
 	}
 
-	/// Encrypt or decrypt in place (same operation with CTR mode)
+	/// Encrypt or decrypt in place (same operation with CTR mode).
 	#[inline(always)]
 	pub fn crypt_in_place(&mut self, data: &mut [u8]) {
 		let ptr = data.as_mut_ptr();
@@ -52,6 +60,7 @@ impl<const ENCRYPT: bool, const KEY_SIZE: usize> AesGcm<ENCRYPT, KEY_SIZE> {
 	}
 }
 impl<const KEY_SIZE: usize> AesGcm<true, KEY_SIZE> {
+	/// Produce the gcm authentication tag.
 	#[inline(always)]
 	pub fn finish_encrypt(&mut self) -> [u8; 16] {
 		unsafe {
@@ -63,6 +72,7 @@ impl<const KEY_SIZE: usize> AesGcm<true, KEY_SIZE> {
 	}
 }
 impl<const KEY_SIZE: usize> AesGcm<false, KEY_SIZE> {
+	/// Check the gcm authentication tag. Outputs true if it matches the just decrypted message, outputs false otherwise.
 	#[inline(always)]
 	pub fn finish_decrypt(&mut self, expected_tag: &[u8]) -> bool {
 		debug_assert_eq!(expected_tag.len(), 16);
@@ -76,9 +86,12 @@ impl<const KEY_SIZE: usize> AesGcm<false, KEY_SIZE> {
 
 
 
+/// An OpenSSL AES_CTR context. Automatically frees itself on drop. AES_CTR is similar to AES_GCM except it produces no authentication tag.
 pub struct AesCtr<const KEY_SIZE: usize> (CipherCtx);
 
 impl<const KEY_SIZE: usize> AesCtr<KEY_SIZE> {
+	/// Create an AesCtr context with the given key, key must be 16, 24 or 32 bytes long.
+	/// OpenSSL internally processes and caches this key, so it is recommended to reuse this context whenever encrypting under the same key. Call `set_iv` to change the IV for each reuse.
 	pub fn new(key: &Secret<KEY_SIZE>) -> Self {
 		let mut ctx = CipherCtx::new().unwrap();
 		unsafe {
@@ -95,7 +108,9 @@ impl<const KEY_SIZE: usize> AesCtr<KEY_SIZE> {
 		ret
 	}
 
-	//`iv` must be exactly 12 bytes in length.
+	/// Set the IV of this AesCtr context. This call resets the IV but leaves the key and encryption algorithm alone.
+	/// This method must be called before any other method on AesCtr.
+	/// `iv` must be exactly 12 bytes in length, because that is what Aes supports.
 	pub fn set_iv<const ENCRYPT: bool>(&mut self, iv: &[u8]) {
 		debug_assert_eq!(iv.len(), 12, "Aes IV must be 12 bytes long");
 		unsafe {
@@ -103,14 +118,14 @@ impl<const KEY_SIZE: usize> AesCtr<KEY_SIZE> {
 		}
 	}
 
-	/// Encrypt or decrypt
+	/// Encrypt or decrypt.
 	#[inline(always)]
 	pub fn crypt<const ENCRYPT: bool>(&mut self, input: &[u8], output: &mut [u8]) {
 		debug_assert!(output.len() >= input.len(), "output buffer must fit the size of the input buffer");
 		unsafe { self.0.update::<ENCRYPT>(input, output.as_mut_ptr()).unwrap() };
 	}
 
-	/// Encrypt or decrypt in place
+	/// Encrypt or decrypt in place.
 	#[inline(always)]
 	pub fn crypt_in_place<const ENCRYPT: bool>(&mut self, data: &mut [u8]) {
 		let ptr = data.as_mut_ptr();
@@ -119,9 +134,14 @@ impl<const KEY_SIZE: usize> AesCtr<KEY_SIZE> {
 }
 
 const AES_BLOCK_SIZE: usize = 16;
+
+/// An OpenSSL AES_ECB context. Automatically frees itself on drop.
+/// AES_ECB is very insecure if used incorrectly so its public interface supports only exactly what ZeroTier uses it for.
 pub struct AesEcb<const ENCRYPT: bool, const KEY_SIZE: usize> (CipherCtx);
 
 impl<const ENCRYPT: bool, const KEY_SIZE: usize> AesEcb<ENCRYPT, KEY_SIZE> {
+	/// Create an AesEcb context with the given key, key must be 16, 24 or 32 bytes long.
+	/// OpenSSL internally processes and caches this key, so it is recommended to reuse this context whenever encrypting under the same key.
 	pub fn new(key: &Secret<KEY_SIZE>) -> Self {
 		let mut ctx = CipherCtx::new().unwrap();
 		unsafe {
@@ -142,6 +162,7 @@ impl<const ENCRYPT: bool, const KEY_SIZE: usize> AesEcb<ENCRYPT, KEY_SIZE> {
 	/// Do not ever encrypt the same plaintext twice. Make sure data is always different between calls.
 	#[inline(always)]
 	pub fn crypt_in_place(&mut self, data: &mut [u8]) {
+		debug_assert_eq!(data.len(), AES_BLOCK_SIZE, "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing.");
 		let ptr = data.as_mut_ptr();
 		unsafe { self.0.update::<ENCRYPT>(data, ptr).unwrap() }
 	}
