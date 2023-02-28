@@ -46,7 +46,7 @@ mod fruit_flavored {
             data_out_len: usize,
             data_out_written: *mut usize,
         ) -> i32;
-        //fn CCCryptorReset(cryptor_ref: *mut c_void, iv: *const c_void) -> i32;
+        fn CCCryptorReset(cryptor_ref: *mut c_void, iv: *const c_void) -> i32;
         fn CCCryptorRelease(cryptor_ref: *mut c_void) -> i32;
         fn CCCryptorGCMSetIV(cryptor_ref: *mut c_void, iv: *const c_void, iv_len: usize) -> i32;
         fn CCCryptorGCMAddAAD(cryptor_ref: *mut c_void, aad: *const c_void, len: usize) -> i32;
@@ -183,6 +183,101 @@ mod fruit_flavored {
     unsafe impl Send for Aes {}
     unsafe impl Sync for Aes {}
 
+    pub struct AesCtr(*mut c_void);
+
+    impl Drop for AesCtr {
+        #[inline(always)]
+        fn drop(&mut self) {
+            unsafe { CCCryptorRelease(self.0) };
+        }
+    }
+
+    impl AesCtr {
+        /// Construct a new AES-CTR cipher.
+        /// Key must be 16, 24, or 32 bytes in length or a panic will occur.
+        pub fn new(k: &[u8]) -> Self {
+            if k.len() != 32 && k.len() != 24 && k.len() != 16 {
+                panic!("AES supports 128, 192, or 256 bits keys");
+            }
+            unsafe {
+                let mut ptr: *mut c_void = null_mut();
+                let result = CCCryptorCreateWithMode(
+                    kCCEncrypt,
+                    kCCModeCTR,
+                    kCCAlgorithmAES,
+                    0,
+                    [0_u64; 2].as_ptr().cast(),
+                    k.as_ptr().cast(),
+                    k.len(),
+                    null(),
+                    0,
+                    0,
+                    0,
+                    &mut ptr,
+                );
+                if result != 0 {
+                    panic!("CCCryptorCreateWithMode for CTR mode returned {}", result);
+                }
+                AesCtr(ptr)
+            }
+        }
+
+        /// Initialize AES-CTR for encryption or decryption with the given IV.
+        /// If it's already been used, this also resets the cipher. There is no separate reset.
+        pub fn reset_set_iv(&mut self, iv: &[u8]) {
+            unsafe {
+                if iv.len() == 16 {
+                    if CCCryptorReset(self.0, iv.as_ptr().cast()) != 0 {
+                        panic!("CCCryptorReset for CTR mode failed (old MacOS bug)");
+                    }
+                } else if iv.len() < 16 {
+                    let mut iv2 = [0_u8; 16];
+                    iv2[0..iv.len()].copy_from_slice(iv);
+                    if CCCryptorReset(self.0, iv2.as_ptr().cast()) != 0 {
+                        panic!("CCCryptorReset for CTR mode failed (old MacOS bug)");
+                    }
+                } else {
+                    panic!("CTR IV must be less than or equal to 16 bytes in length");
+                }
+            }
+        }
+
+        /// Encrypt or decrypt (same operation with CTR mode)
+        #[inline(always)]
+        pub fn crypt(&mut self, input: &[u8], output: &mut [u8]) {
+            unsafe {
+                assert!(output.len() >= input.len());
+                let mut data_out_written: usize = 0;
+                CCCryptorUpdate(
+                    self.0,
+                    input.as_ptr().cast(),
+                    input.len(),
+                    output.as_mut_ptr().cast(),
+                    output.len(),
+                    &mut data_out_written,
+                );
+            }
+        }
+
+        /// Encrypt or decrypt in place (same operation with CTR mode)
+        #[inline(always)]
+        pub fn crypt_in_place(&mut self, data: &mut [u8]) {
+            unsafe {
+                let mut data_out_written: usize = 0;
+                CCCryptorUpdate(
+                    self.0,
+                    data.as_ptr().cast(),
+                    data.len(),
+                    data.as_mut_ptr().cast(),
+                    data.len(),
+                    &mut data_out_written,
+                );
+            }
+        }
+    }
+
+    unsafe impl Send for AesCtr {}
+
     pub struct AesGcm(*mut c_void, bool);
 
     impl Drop for AesGcm {
@@ -307,6 +402,17 @@ mod openssl_aes {
     use std::cell::UnsafeCell;
     use std::mem::MaybeUninit;
 
+    fn aes_ctr_by_key_size(ks: usize) -> Cipher {
+        match ks {
+            16 => Cipher::aes_128_ctr(),
+            24 => Cipher::aes_192_ctr(),
+            32 => Cipher::aes_256_ctr(),
+            _ => {
+                panic!("AES supports 128, 192, or 256 bits keys");
+            }
+        }
+    }
+
     fn aes_gcm_by_key_size(ks: usize) -> Cipher {
         match ks {
             16 => Cipher::aes_128_gcm(),
@@ -389,6 +495,53 @@ mod openssl_aes {
 
     unsafe impl Send for Aes {}
     unsafe impl Sync for Aes {}
+
+    pub struct AesCtr(Secret<32>, usize, Option<Crypter>);
+
+    impl AesCtr {
+        /// Construct a new AES-CTR cipher.
+        /// Key must be 16, 24, or 32 bytes in length or a panic will occur.
+        #[inline(always)]
+        pub fn new(k: &[u8]) -> Self {
+            let mut s: Secret<32> = Secret::default();
+            match k.len() {
+                16 | 24 | 32 => {
+                    s.0[..k.len()].copy_from_slice(k);
+                    Self(s, k.len(), None)
+                }
+                _ => {
+                    panic!("AES supports 128, 192, or 256 bits keys");
+                }
+            }
+        }
+
+        /// Initialize AES-CTR for encryption or decryption with the given IV.
+        /// If it's already been used, this also resets the cipher. There is no separate reset.
+        #[inline(always)]
+        pub fn reset_set_iv(&mut self, iv: &[u8]) {
+            let mut c = Crypter::new(aes_ctr_by_key_size(self.1), Mode::Encrypt, &self.0 .0[..self.1], Some(iv)).unwrap();
+            c.pad(false);
+            let _ = self.2.replace(c);
+        }
+
+        /// Encrypt or decrypt (same operation with CTR mode)
+        #[inline(always)]
+        pub fn crypt(&mut self, input: &[u8], output: &mut [u8]) {
+            let _ = self.2.as_mut().unwrap().update(input, output);
+        }
+
+        /// Encrypt or decrypt in place (same operation with CTR mode)
+        #[inline(always)]
+        pub fn crypt_in_place(&mut self, data: &mut [u8]) {
+            let _ = self
+                .2
+                .as_mut()
+                .unwrap()
+                .update(unsafe { &*std::slice::from_raw_parts(data.as_ptr(), data.len()) }, data);
+        }
+    }
+
+    unsafe impl Send for AesCtr {}
 
     pub struct AesGcm(Secret<32>, usize, CipherCtx, bool);
 
@@ -479,10 +632,10 @@ mod openssl_aes {
 }
 
 #[cfg(target_os = "macos")]
-pub use fruit_flavored::{Aes, AesGcm};
+pub use fruit_flavored::{Aes, AesCtr, AesGcm};
 
 #[cfg(not(target_os = "macos"))]
-pub use openssl_aes::{Aes, AesGcm};
+pub use openssl_aes::{Aes, AesCtr, AesGcm};
 
 #[cfg(test)]
 mod tests {

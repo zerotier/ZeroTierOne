@@ -7,6 +7,8 @@ use std::ptr::null;
 
 pub const SHA512_HASH_SIZE: usize = 64;
 pub const SHA384_HASH_SIZE: usize = 48;
+pub const HMAC_SHA512_SIZE: usize = 64;
+pub const HMAC_SHA384_SIZE: usize = 48;
 
 pub struct SHA512(Option<openssl::sha::Sha512>);
 

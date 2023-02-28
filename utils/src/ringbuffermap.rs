@@ -1,4 +1,10 @@
-// (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ *
+ * (c) ZeroTier, Inc.
+ * https://www.zerotier.com/
+ */
 
 use std::hash::{Hash, Hasher};
 use std::mem::MaybeUninit;
@@ -102,8 +108,8 @@ struct Entry<K: Eq + PartialEq + Hash + Clone, V> {
 /// buckets in the hash table. The maximum for both these parameters is 65535. This could be
 /// increased by making the index variables larger (e.g. u32 instead of u16).
 pub struct RingBufferMap<K: Eq + PartialEq + Hash + Clone, V, const C: usize, const B: usize> {
-    salt: u32,
     entries: [Entry<K, V>; C],
+    salt: u32,
     buckets: [u16; B],
     entry_ptr: u16,
 }
