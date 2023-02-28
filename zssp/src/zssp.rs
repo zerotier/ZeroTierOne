@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex, RwLock, Weak};
 
 use zerotier_crypto::aes::{Aes, AesCtr, AesGcm};
 use zerotier_crypto::hash::{hmac_sha512, HMACSHA384, HMAC_SHA384_SIZE, SHA384, SHA384_HASH_SIZE};
-use zerotier_crypto::p384::{P384KeyPair, P384PublicKey, P384_ECDH_SHARED_SECRET_SIZE, P384_PUBLIC_KEY_SIZE};
+use zerotier_crypto::p384::{P384KeyPair, P384PublicKey, P384_ECDH_SHARED_SECRET_SIZE};
 use zerotier_crypto::secret::Secret;
 use zerotier_crypto::{random, secure_eq};
 
