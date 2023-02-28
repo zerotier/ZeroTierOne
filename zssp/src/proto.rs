@@ -52,11 +52,10 @@ pub(crate) const MAX_NOISE_HANDSHAKE_SIZE: usize = MAX_NOISE_HANDSHAKE_FRAGMENTS
 
 pub(crate) const BASE_KEY_SIZE: usize = 64;
 
-pub(crate) const AES_KEY_SIZE: usize = 32;
+pub(crate) const AES_256_KEY_SIZE: usize = 32;
 pub(crate) const AES_HEADER_PROTECTION_KEY_SIZE: usize = 16;
 pub(crate) const AES_GCM_TAG_SIZE: usize = 16;
 pub(crate) const AES_GCM_NONCE_SIZE: usize = 12;
-pub(crate) const AES_CTR_NONCE_SIZE: usize = 12;
 
 /// The first packet in Noise_XK exchange containing Alice's ephemeral keys, session ID, and a random
 /// symmetric key to protect header fragmentation fields for this session.
@@ -66,7 +65,7 @@ pub(crate) struct AliceNoiseXKInit {
     pub header: [u8; HEADER_SIZE],
     pub session_protocol_version: u8,
     pub alice_noise_e: [u8; P384_PUBLIC_KEY_SIZE],
-    // -- start AES-CTR(es) encrypted section (IV is last 12 bytes of alice_noise_e))
+    // -- start AES-CTR(es) encrypted section
     pub alice_session_id: [u8; SessionId::SIZE],
     pub alice_hk_public: [u8; KYBER_PUBLICKEYBYTES],
     pub header_protection_key: [u8; AES_HEADER_PROTECTION_KEY_SIZE],
@@ -87,7 +86,7 @@ pub(crate) struct BobNoiseXKAck {
     pub header: [u8; HEADER_SIZE],
     pub session_protocol_version: u8,
     pub bob_noise_e: [u8; P384_PUBLIC_KEY_SIZE],
-    // -- start AES-CTR(es_ee) encrypted section (IV is last 12 bytes of bob_noise_e)
+    // -- start AES-CTR(es_ee) encrypted section
     pub bob_session_id: [u8; SessionId::SIZE],
     pub bob_hk_ciphertext: [u8; KYBER_CIPHERTEXTBYTES],
     // -- end encrypted sectiion
@@ -107,7 +106,7 @@ impl BobNoiseXKAck {
 pub(crate) struct AliceNoiseXKAck {
     pub header: [u8; HEADER_SIZE],
     pub session_protocol_version: u8,
-    // -- start AES-CTR(es_ee) encrypted section (IV is first 12 bytes of hk)
+    // -- start AES-CTR(es_ee_hk) encrypted section
     pub alice_static_blob_length: [u8; 2],
     pub alice_static_blob: [u8; ???],
     pub alice_metadata_length: [u8; 2],
