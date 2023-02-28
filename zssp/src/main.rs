@@ -55,6 +55,9 @@ fn alice_main(
 
     println!("[alice] opening session {}", alice_session.id.to_string());
 
+    let test_data = [1u8; 10000];
+    let mut up = false;
+
     while run.load(Ordering::Relaxed) {
         let pkt = alice_in.try_recv();
         let current_time = ms_monotonic();
@@ -74,10 +77,10 @@ fn alice_main(
                 current_time,
             ) {
                 Ok(zssp::ReceiveResult::Ok) => {
-                    println!("[alice] ok");
+                    //println!("[alice] ok");
                 }
-                Ok(zssp::ReceiveResult::OkData(_, data)) => {
-                    println!("[alice] received {}", data.len());
+                Ok(zssp::ReceiveResult::OkData(_, _)) => {
+                    //println!("[alice] received {}", data.len());
                 }
                 Ok(zssp::ReceiveResult::OkNewSession(s)) => {
                     println!("[alice] new session {}", s.id.to_string());
@@ -86,6 +89,22 @@ fn alice_main(
                 Err(e) => {
                     println!("[alice] ERROR {}", e.to_string());
                 }
+            }
+        }
+
+        if up {
+            assert!(alice_session
+                .send(
+                    |b| {
+                        let _ = alice_out.send(b.to_vec());
+                    },
+                    &mut data_buf[..TEST_MTU],
+                    &test_data[..2048 + ((zerotier_crypto::random::xorshift64_random() as usize) % (test_data.len() - 2048))],
+                )
+                .is_ok());
+        } else {
+            if alice_session.established() {
+                up = true;
             }
         }
 
@@ -111,7 +130,11 @@ fn bob_main(
 ) {
     let context = zssp::Context::<TestApplication>::new(16);
     let mut data_buf = [0u8; 65536];
-    let mut next_service = ms_monotonic() + 500;
+    let mut last_speed_metric = ms_monotonic();
+    let mut next_service = last_speed_metric + 500;
+    let mut transferred = 0u64;
+
+    let mut bob_session = None;
 
     while run.load(Ordering::Relaxed) {
         let pkt = bob_in.recv_timeout(Duration::from_millis(10));
@@ -132,19 +155,31 @@ fn bob_main(
                 current_time,
             ) {
                 Ok(zssp::ReceiveResult::Ok) => {
-                    println!("[bob] ok");
+                    //println!("[bob] ok");
                 }
                 Ok(zssp::ReceiveResult::OkData(_, data)) => {
-                    println!("[bob] received {}", data.len());
+                    //println!("[bob] received {}", data.len());
+                    transferred += data.len() as u64;
                 }
                 Ok(zssp::ReceiveResult::OkNewSession(s)) => {
                     println!("[bob] new session {}", s.id.to_string());
+                    let _ = bob_session.replace(s);
                 }
                 Ok(zssp::ReceiveResult::Rejected) => {}
                 Err(e) => {
                     println!("[bob] ERROR {}", e.to_string());
                 }
             }
+        }
+
+        let speed_metric_elapsed = current_time - last_speed_metric;
+        if speed_metric_elapsed >= 1000 {
+            last_speed_metric = current_time;
+            println!(
+                "[bob] RX speed {} MiB/sec",
+                ((transferred as f64) / 1048576.0) / ((speed_metric_elapsed as f64) / 1000.0)
+            );
+            transferred = 0;
         }
 
         if current_time >= next_service {

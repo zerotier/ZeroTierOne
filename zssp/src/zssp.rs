@@ -465,7 +465,6 @@ impl<Application: ApplicationLayer> Context<Application> {
                         .decrypt_block_in_place(&mut incoming_packet[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                     incoming = Some(i);
                 } else {
-                    println!("unknown {}", local_session_id.to_string());
                     return Err(Error::UnknownLocalSessionId);
                 }
             }
@@ -928,7 +927,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     let mut state = session.state.write().unwrap();
                                     let _ = state.remote_session_id.insert(bob_session_id);
                                     let _ =
-                                        state.keys[0].insert(SessionKey::new::<Application>(noise_es_ee_se_hk_psk, current_time, 2, true));
+                                        state.keys[0].insert(SessionKey::new::<Application>(noise_es_ee_se_hk_psk, current_time, 2, false));
                                     state.current_key = 0;
                                     state.current_offer = Offer::None;
                                 }
@@ -1244,7 +1243,7 @@ impl<Application: ApplicationLayer> Session<Application> {
         let state = self.state.read().unwrap();
         if let Some(remote_session_id) = state.remote_session_id {
             if let Some(session_key) = state.keys[state.current_key].as_ref() {
-                let counter = self.send_counter.fetch_add(1, Ordering::SeqCst);
+                let counter = self.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?.get();
 
                 let mut c = session_key.get_send_cipher(counter)?;
                 c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_DATA, counter));
@@ -1253,9 +1252,11 @@ impl<Application: ApplicationLayer> Session<Application> {
                     (((data.len() + AES_GCM_TAG_SIZE) as f32) / (mtu_sized_buffer.len() - HEADER_SIZE) as f32).ceil() as usize;
                 let fragment_max_chunk_size = mtu_sized_buffer.len() - HEADER_SIZE;
                 let last_fragment_no = fragment_count - 1;
+
                 for fragment_no in 0..fragment_count {
                     let chunk_size = fragment_max_chunk_size.min(data.len());
                     let mut fragment_size = chunk_size + HEADER_SIZE;
+
                     set_packet_header(
                         mtu_sized_buffer,
                         fragment_count,
@@ -1265,14 +1266,17 @@ impl<Application: ApplicationLayer> Session<Application> {
                         state.current_key,
                         counter,
                     );
+
                     c.crypt(&data[..chunk_size], &mut mtu_sized_buffer[HEADER_SIZE..fragment_size]);
                     data = &data[chunk_size..];
+
                     if fragment_no == last_fragment_no {
                         debug_assert!(data.is_empty());
                         let tagged_fragment_size = fragment_size + AES_GCM_TAG_SIZE;
                         mtu_sized_buffer[fragment_size..tagged_fragment_size].copy_from_slice(&c.finish_encrypt());
                         fragment_size = tagged_fragment_size;
                     }
+
                     self.header_protection_cipher
                         .encrypt_block_in_place(&mut mtu_sized_buffer[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                     send(&mut mtu_sized_buffer[..fragment_size]);
