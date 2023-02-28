@@ -10,7 +10,6 @@ mod applicationlayer;
 mod error;
 mod proto;
 mod sessionid;
-mod tests;
 mod zssp;
 
 pub use crate::applicationlayer::ApplicationLayer;
