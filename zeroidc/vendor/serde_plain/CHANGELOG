@@ -1,8 +1,0 @@
-# 1.0.0
-
-- added the ability to capture lifetimes.
-- renamed macros but kept deprecated legacy aliases around:
-  - `forward_from_str_to_serde!` -> `derive_fromstr_from_deserialize!`
-  - `forward_display_to_serde!` -> `derive_display_from_serialize!`
-  - `derive_deserialize_from_str!` -> `derive_deserialize_from_fromstr!`
-- modernized codebase slightly and fixed clippy warnings.
