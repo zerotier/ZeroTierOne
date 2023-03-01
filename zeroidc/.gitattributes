@@ -1,3 +1,0 @@
-# disable autocrlf because it doesn't mix well with
-# vendored rust packages
-* text=false
