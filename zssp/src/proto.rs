@@ -33,8 +33,8 @@ pub(crate) const PACKET_TYPE_DATA: u8 = 0;
 pub(crate) const PACKET_TYPE_ALICE_NOISE_XK_INIT: u8 = 1;
 pub(crate) const PACKET_TYPE_BOB_NOISE_XK_ACK: u8 = 2;
 pub(crate) const PACKET_TYPE_ALICE_NOISE_XK_ACK: u8 = 3;
-pub(crate) const PACKET_TYPE_ALICE_REKEY_INIT: u8 = 4;
-pub(crate) const PACKET_TYPE_BOB_REKEY_ACK: u8 = 5;
+pub(crate) const PACKET_TYPE_REKEY_INIT: u8 = 4;
+pub(crate) const PACKET_TYPE_REKEY_ACK: u8 = 5;
 
 pub(crate) const HEADER_SIZE: usize = 16;
 pub(crate) const HEADER_PROTECT_ENCRYPT_START: usize = 6;
@@ -123,24 +123,26 @@ pub(crate) const ALICE_NOISE_XK_ACK_MIN_SIZE: usize = ALICE_NOISE_XK_ACK_ENC_STA
 
 #[allow(unused)]
 #[repr(C, packed)]
-pub(crate) struct AliceRekeyInit {
+pub(crate) struct RekeyInit {
     pub header: [u8; HEADER_SIZE],
+    pub session_protocol_version: u8,
     // -- start AES-GCM encrypted portion (using current key)
     pub alice_e: [u8; P384_PUBLIC_KEY_SIZE],
     // -- end AES-GCM encrypted portion
     pub gcm_mac: [u8; AES_GCM_TAG_SIZE],
 }
 
-impl AliceRekeyInit {
-    pub const ENC_START: usize = HEADER_SIZE;
+impl RekeyInit {
+    pub const ENC_START: usize = HEADER_SIZE + 1;
     pub const AUTH_START: usize = Self::ENC_START + P384_PUBLIC_KEY_SIZE;
     pub const SIZE: usize = Self::AUTH_START + AES_GCM_TAG_SIZE;
 }
 
 #[allow(unused)]
 #[repr(C, packed)]
-pub(crate) struct BobRekeyAck {
+pub(crate) struct RekeyAck {
     pub header: [u8; HEADER_SIZE],
+    pub session_protocol_version: u8,
     // -- start AES-GCM encrypted portion (using current key)
     pub bob_e: [u8; P384_PUBLIC_KEY_SIZE],
     pub next_key_fingerprint: [u8; SHA384_HASH_SIZE],
@@ -148,8 +150,8 @@ pub(crate) struct BobRekeyAck {
     pub gcm_mac: [u8; AES_GCM_TAG_SIZE],
 }
 
-impl BobRekeyAck {
-    pub const ENC_START: usize = HEADER_SIZE;
+impl RekeyAck {
+    pub const ENC_START: usize = HEADER_SIZE + 1;
     pub const AUTH_START: usize = Self::ENC_START + P384_PUBLIC_KEY_SIZE + SHA384_HASH_SIZE;
     pub const SIZE: usize = Self::AUTH_START + AES_GCM_TAG_SIZE;
 }
@@ -161,8 +163,8 @@ pub(crate) trait ProtocolFlatBuffer {}
 impl ProtocolFlatBuffer for AliceNoiseXKInit {}
 impl ProtocolFlatBuffer for BobNoiseXKAck {}
 //impl ProtocolFlatBuffer for NoiseXKAliceStaticAck {}
-impl ProtocolFlatBuffer for AliceRekeyInit {}
-impl ProtocolFlatBuffer for BobRekeyAck {}
+impl ProtocolFlatBuffer for RekeyInit {}
+impl ProtocolFlatBuffer for RekeyAck {}
 
 #[derive(Clone, Copy)]
 #[repr(C, packed)]

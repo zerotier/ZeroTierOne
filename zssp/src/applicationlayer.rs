@@ -31,7 +31,7 @@ pub trait ApplicationLayer: Sized {
     /// Attempting to encrypt more than this many messages with a key will cause a hard error
     /// and the internal erasure of ephemeral key material. You'll only ever hit this if something
     /// goes wrong and rekeying fails.
-    const EXPIRE_AFTER_USES: u64 = 2147483648;
+    const EXPIRE_AFTER_USES: u64 = 2147483647;
 
     /// Start attempting to rekey after a key has been in use for this many milliseconds.
     ///

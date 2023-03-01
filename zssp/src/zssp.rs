@@ -119,7 +119,7 @@ struct OutgoingSessionInit {
 enum Offer {
     None,
     NoiseXKInit(Box<OutgoingSessionInit>),
-    RekeyInit(P384KeyPair, [u8; AliceRekeyInit::SIZE], AtomicI64),
+    RekeyInit(P384KeyPair, [u8; RekeyInit::SIZE], AtomicI64),
 }
 
 /// An ephemeral session key with expiration info.
@@ -181,6 +181,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     && (current_time >= key.rekey_at_time
                                         || session.send_counter.load(Ordering::Relaxed) >= key.rekey_at_counter)
                                 {
+                                    drop(state);
                                     session.initiate_rekey(|b| send(&session, b), current_time);
                                 }
                             }
@@ -1106,8 +1107,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                     }
                 }
 
-                PACKET_TYPE_ALICE_REKEY_INIT => {
-                    if pkt_assembled.len() != AliceRekeyInit::SIZE {
+                PACKET_TYPE_REKEY_INIT => {
+                    if pkt_assembled.len() != RekeyInit::SIZE {
                         return Err(Error::InvalidPacket);
                     }
                     if incoming.is_some() {
@@ -1116,58 +1117,74 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                     if let Some(session) = session {
                         let state = session.state.read().unwrap();
-                        if let Some(key) = state.keys[key_index].as_ref() {
-                            // Only the current "Alice" accepts rekeys initiated by the current "Bob." These roles
-                            // flip with each rekey event.
-                            if !key.bob {
-                                let mut c = key.get_receive_cipher();
-                                c.reset_init_gcm(&incoming_message_nonce);
-                                c.crypt_in_place(&mut pkt_assembled[AliceRekeyInit::ENC_START..AliceRekeyInit::AUTH_START]);
-                                let aead_authentication_ok = c.finish_decrypt(&pkt_assembled[AliceRekeyInit::AUTH_START..]);
-                                key.return_receive_cipher(c);
+                        if let Some(remote_session_id) = state.remote_session_id {
+                            if let Some(key) = state.keys[key_index].as_ref() {
+                                // Only the current "Alice" accepts rekeys initiated by the current "Bob." These roles
+                                // flip with each rekey event.
+                                if !key.bob {
+                                    let mut c = key.get_receive_cipher();
+                                    c.reset_init_gcm(&incoming_message_nonce);
+                                    c.crypt_in_place(&mut pkt_assembled[RekeyInit::ENC_START..RekeyInit::AUTH_START]);
+                                    let aead_authentication_ok = c.finish_decrypt(&pkt_assembled[RekeyInit::AUTH_START..]);
+                                    key.return_receive_cipher(c);
 
-                                if aead_authentication_ok {
-                                    let pkt: &AliceRekeyInit = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
-                                    if let Some(alice_e) = P384PublicKey::from_bytes(&pkt.alice_e) {
-                                        let bob_e_secret = P384KeyPair::generate();
-                                        let next_session_key = Secret(hmac_sha512(
-                                            key.ratchet_key.as_bytes(),
-                                            bob_e_secret.agree(&alice_e).ok_or(Error::FailedAuthentication)?.as_bytes(),
-                                        ));
+                                    if aead_authentication_ok {
+                                        let pkt: &RekeyInit = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
+                                        if let Some(alice_e) = P384PublicKey::from_bytes(&pkt.alice_e) {
+                                            let bob_e_secret = P384KeyPair::generate();
+                                            let next_session_key = Secret(hmac_sha512(
+                                                key.ratchet_key.as_bytes(),
+                                                bob_e_secret.agree(&alice_e).ok_or(Error::FailedAuthentication)?.as_bytes(),
+                                            ));
 
-                                        let mut reply_buf = [0u8; BobRekeyAck::SIZE];
-                                        let reply: &mut BobRekeyAck = byte_array_as_proto_buffer_mut(&mut reply_buf).unwrap();
-                                        reply.bob_e = *bob_e_secret.public_key_bytes();
-                                        reply.next_key_fingerprint = SHA384::hash(next_session_key.as_bytes());
+                                            let mut reply_buf = [0u8; RekeyAck::SIZE];
+                                            let reply: &mut RekeyAck = byte_array_as_proto_buffer_mut(&mut reply_buf).unwrap();
+                                            reply.session_protocol_version = SESSION_PROTOCOL_VERSION;
+                                            reply.bob_e = *bob_e_secret.public_key_bytes();
+                                            reply.next_key_fingerprint = SHA384::hash(next_session_key.as_bytes());
 
-                                        let counter = session.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?;
-                                        let mut c = key.get_send_cipher(counter.get())?;
-                                        c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_BOB_REKEY_ACK, counter.get()));
-                                        c.crypt_in_place(&mut reply_buf[BobRekeyAck::ENC_START..BobRekeyAck::AUTH_START]);
-                                        reply_buf[BobRekeyAck::AUTH_START..].copy_from_slice(&c.finish_encrypt());
-                                        key.return_send_cipher(c);
+                                            let counter = session.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?.get();
+                                            set_packet_header(
+                                                &mut reply_buf,
+                                                1,
+                                                0,
+                                                PACKET_TYPE_REKEY_ACK,
+                                                u64::from(remote_session_id),
+                                                state.current_key,
+                                                counter,
+                                            );
 
-                                        send(Some(&session), &mut reply_buf);
+                                            let mut c = key.get_send_cipher(counter)?;
+                                            c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_REKEY_ACK, counter));
+                                            c.crypt_in_place(&mut reply_buf[RekeyAck::ENC_START..RekeyAck::AUTH_START]);
+                                            reply_buf[RekeyAck::AUTH_START..].copy_from_slice(&c.finish_encrypt());
+                                            key.return_send_cipher(c);
 
-                                        // The new "Bob" doesn't know yet if Alice has received the new key, so the
-                                        // new key is recorded as the "alt" (key_index ^ 1) but the current key is
-                                        // not advanced yet. This happens automatically the first time we receive a
-                                        // valid packet with the new key.
-                                        let next_ratchet_count = key.ratchet_count + 1;
-                                        drop(state);
-                                        let mut state = session.state.write().unwrap();
-                                        let _ = state.keys[key_index ^ 1].replace(SessionKey::new::<Application>(
-                                            next_session_key,
-                                            next_ratchet_count,
-                                            current_time,
-                                            counter.get(),
-                                            false,
-                                        ));
+                                            session.header_protection_cipher.encrypt_block_in_place(
+                                                &mut reply_buf[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END],
+                                            );
+                                            send(Some(&session), &mut reply_buf);
 
-                                        return Ok(ReceiveResult::Ok);
+                                            // The new "Bob" doesn't know yet if Alice has received the new key, so the
+                                            // new key is recorded as the "alt" (key_index ^ 1) but the current key is
+                                            // not advanced yet. This happens automatically the first time we receive a
+                                            // valid packet with the new key.
+                                            let next_ratchet_count = key.ratchet_count + 1;
+                                            drop(state);
+                                            let mut state = session.state.write().unwrap();
+                                            let _ = state.keys[key_index ^ 1].replace(SessionKey::new::<Application>(
+                                                next_session_key,
+                                                next_ratchet_count,
+                                                current_time,
+                                                counter,
+                                                false,
+                                            ));
+
+                                            return Ok(ReceiveResult::Ok);
+                                        }
                                     }
+                                    return Err(Error::FailedAuthentication);
                                 }
-                                return Err(Error::FailedAuthentication);
                             }
                         }
                         return Err(Error::OutOfSequence);
@@ -1176,8 +1193,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                     }
                 }
 
-                PACKET_TYPE_BOB_REKEY_ACK => {
-                    if pkt_assembled.len() != BobRekeyAck::SIZE {
+                PACKET_TYPE_REKEY_ACK => {
+                    if pkt_assembled.len() != RekeyAck::SIZE {
                         return Err(Error::InvalidPacket);
                     }
                     if incoming.is_some() {
@@ -1192,12 +1209,12 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 if key.bob {
                                     let mut c = key.get_receive_cipher();
                                     c.reset_init_gcm(&incoming_message_nonce);
-                                    c.crypt_in_place(&mut pkt_assembled[BobRekeyAck::ENC_START..BobRekeyAck::AUTH_START]);
-                                    let aead_authentication_ok = c.finish_decrypt(&pkt_assembled[BobRekeyAck::AUTH_START..]);
+                                    c.crypt_in_place(&mut pkt_assembled[RekeyAck::ENC_START..RekeyAck::AUTH_START]);
+                                    let aead_authentication_ok = c.finish_decrypt(&pkt_assembled[RekeyAck::AUTH_START..]);
                                     key.return_receive_cipher(c);
 
                                     if aead_authentication_ok {
-                                        let pkt: &BobRekeyAck = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
+                                        let pkt: &RekeyAck = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
                                         if let Some(bob_e) = P384PublicKey::from_bytes(&pkt.bob_e) {
                                             let next_session_key = Secret(hmac_sha512(
                                                 key.ratchet_key.as_bytes(),
@@ -1333,8 +1350,9 @@ impl<Application: ApplicationLayer> Session<Application> {
     fn initiate_rekey<SendFunction: FnMut(&mut [u8])>(&self, mut send: SendFunction, current_time: i64) {
         let rekey_e = P384KeyPair::generate();
 
-        let mut rekey_buf = [0u8; AliceRekeyInit::SIZE];
-        let pkt: &mut AliceRekeyInit = byte_array_as_proto_buffer_mut(&mut rekey_buf).unwrap();
+        let mut rekey_buf = [0u8; RekeyInit::SIZE];
+        let pkt: &mut RekeyInit = byte_array_as_proto_buffer_mut(&mut rekey_buf).unwrap();
+        pkt.session_protocol_version = SESSION_PROTOCOL_VERSION;
         pkt.alice_e = *rekey_e.public_key_bytes();
 
         let state = self.state.read().unwrap();
@@ -1342,9 +1360,9 @@ impl<Application: ApplicationLayer> Session<Application> {
             if let Some(key) = state.keys[state.current_key].as_ref() {
                 if let Some(counter) = self.get_next_outgoing_counter() {
                     if let Ok(mut gcm) = key.get_send_cipher(counter.get()) {
-                        gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_ALICE_REKEY_INIT, counter.get()));
-                        gcm.crypt_in_place(&mut rekey_buf[AliceRekeyInit::ENC_START..AliceRekeyInit::AUTH_START]);
-                        rekey_buf[AliceRekeyInit::AUTH_START..].copy_from_slice(&gcm.finish_encrypt());
+                        gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_REKEY_INIT, counter.get()));
+                        gcm.crypt_in_place(&mut rekey_buf[RekeyInit::ENC_START..RekeyInit::AUTH_START]);
+                        rekey_buf[RekeyInit::AUTH_START..].copy_from_slice(&gcm.finish_encrypt());
                         key.return_send_cipher(gcm);
 
                         debug_assert!(rekey_buf.len() <= MIN_TRANSPORT_MTU);
@@ -1352,15 +1370,18 @@ impl<Application: ApplicationLayer> Session<Application> {
                             &mut rekey_buf,
                             1,
                             0,
-                            PACKET_TYPE_ALICE_REKEY_INIT,
+                            PACKET_TYPE_REKEY_INIT,
                             u64::from(remote_session_id),
                             state.current_key,
                             counter.get(),
                         );
 
+                        drop(state);
+
+                        self.header_protection_cipher
+                            .encrypt_block_in_place(&mut rekey_buf[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                         send(&mut rekey_buf);
 
-                        drop(state);
                         self.state.write().unwrap().current_offer = Offer::RekeyInit(rekey_e, rekey_buf, AtomicI64::new(current_time));
                     }
                 }
