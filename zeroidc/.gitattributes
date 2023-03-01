@@ -1,0 +1,7 @@
+* text=auto
+* text eol=lf
+*.vcxproj eol=crlf
+*.vcxproj.filters eol=crlf
+*.a binary
+*.lib binary
+
