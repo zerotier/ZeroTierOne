@@ -87,7 +87,7 @@ fn alice_main(
                     Ok(zssp::ReceiveResult::Ok) => {
                         //println!("[alice] ok");
                     }
-                    Ok(zssp::ReceiveResult::OkData(_, data)) => {
+                    Ok(zssp::ReceiveResult::OkData(_, _)) => {
                         //println!("[alice] received {}", data.len());
                     }
                     Ok(zssp::ReceiveResult::OkNewSession(s)) => {

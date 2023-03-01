@@ -22,7 +22,6 @@ use zerotier_crypto::{random, secure_eq};
 
 use zerotier_utils::arrayvec::ArrayVec;
 use zerotier_utils::gatherarray::GatherArray;
-use zerotier_utils::memory;
 use zerotier_utils::ringbuffermap::RingBufferMap;
 
 use pqc_kyber::{KYBER_CIPHERTEXTBYTES, KYBER_SECRETKEYBYTES, KYBER_SSBYTES};
@@ -397,7 +396,7 @@ impl<Application: ApplicationLayer> Context<Application> {
         }
 
         let mut incoming = None;
-        if let Some(local_session_id) = SessionId::new_from_u64_le(memory::load_raw(incoming_packet)) {
+        if let Some(local_session_id) = SessionId::new_from_u64_le(u64::from_le_bytes(incoming_packet[0..8].try_into().unwrap())) {
             if let Some(session) = self
                 .sessions
                 .read()
@@ -1018,7 +1017,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             return Err(Error::InvalidPacket);
                         }
                         let alice_static_public_blob_size =
-                            u16::from_le(memory::load_raw::<u16>(&pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end])) as usize;
+                            u16::from_le_bytes(pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end].try_into().unwrap()) as usize;
                         pkt_assembled_ptr = pkt_assembled_field_end;
                         pkt_assembled_field_end = pkt_assembled_ptr + alice_static_public_blob_size;
                         if pkt_assembled_field_end >= pkt_assembled.len() {
@@ -1031,7 +1030,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             return Err(Error::InvalidPacket);
                         }
                         let alice_meta_data_size =
-                            u16::from_le(memory::load_raw::<u16>(&pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end])) as usize;
+                            u16::from_le_bytes(pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end].try_into().unwrap()) as usize;
                         pkt_assembled_ptr = pkt_assembled_field_end;
                         pkt_assembled_field_end = pkt_assembled_ptr + alice_meta_data_size;
                         let alice_meta_data = if alice_meta_data_size > 0 {
@@ -1411,6 +1410,7 @@ impl<Application: ApplicationLayer> Session<Application> {
     }
 }
 
+#[inline(always)]
 fn set_packet_header(
     packet: &mut [u8],
     fragment_count: usize,
@@ -1433,27 +1433,32 @@ fn set_packet_header(
     // [52-57]           fragment count (1..64 - 1, so 0 means 1 fragment)
     // [58-63]           fragment number (0..63)
     // [64-127]          64-bit counter
-    memory::store_raw(
-        (u64::from(remote_session_id)
+    assert!(packet.len() >= 16);
+    packet[0..8].copy_from_slice(
+        &(remote_session_id
             | ((key_index & 1) as u64).wrapping_shl(48)
             | (packet_type as u64).wrapping_shl(49)
             | ((fragment_count - 1) as u64).wrapping_shl(52)
             | (fragment_no as u64).wrapping_shl(58))
-        .to_le(),
-        packet,
+        .to_le_bytes(),
     );
-    memory::store_raw(counter.to_le(), &mut packet[8..]);
+    packet[8..16].copy_from_slice(&counter.to_le_bytes());
 }
 
 #[inline(always)]
 fn parse_packet_header(incoming_packet: &[u8]) -> (usize, u8, u8, u8, u64) {
-    let raw_header_a = u16::from_le(memory::load_raw(&incoming_packet[6..]));
+    let raw_header_a = u16::from_le_bytes(incoming_packet[6..8].try_into().unwrap());
     let key_index = (raw_header_a & 1) as usize;
     let packet_type = (raw_header_a.wrapping_shr(1) & 7) as u8;
     let fragment_count = ((raw_header_a.wrapping_shr(4) & 63) + 1) as u8;
     let fragment_no = raw_header_a.wrapping_shr(10) as u8;
-    let counter = u64::from_le(memory::load_raw(&incoming_packet[8..]));
-    (key_index, packet_type, fragment_count, fragment_no, counter)
+    (
+        key_index,
+        packet_type,
+        fragment_count,
+        fragment_no,
+        u64::from_le_bytes(incoming_packet[8..16].try_into().unwrap()),
+    )
 }
 
 /// Break a packet into fragments and send them all.
