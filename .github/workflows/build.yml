@@ -4,9 +4,9 @@ jobs:
   build_ubuntu:
     runs-on: ubuntu-latest
     steps:
-      #   - name: gitconfig
-      #      run: |
-      #        git config --global core.autocrlf false
+      - name: gitconfig
+        run: |
+          git config --global core.autocrlf input
       #        git config --global core.eol lf
     - name: checkout
       uses: actions/checkout@v3
@@ -40,9 +40,9 @@ jobs:
   build_macos:
     runs-on: macos-latest
     steps:
-      #    - name: gitconfig
-      #      run: |
-      #        git config --global core.autocrlf false
+      - name: gitconfig
+        run: |
+          git config --global core.autocrlf input
       #        git config --global core.eol lf
     - name: checkout
       uses: actions/checkout@v3
@@ -75,9 +75,9 @@ jobs:
   build_windows:
     runs-on: windows-latest
     steps:
-      #    - name: gitconfig
-      #      run: |
-      #        git config --global core.autocrlf false
+      - name: gitconfig
+        run: |
+          git config --global core.autocrlf true
       #        git config --global core.eol lf
     - name: checkout
       uses: actions/checkout@v3
