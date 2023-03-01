@@ -5,6 +5,7 @@ use std::time::Duration;
 
 use zerotier_crypto::p384::{P384KeyPair, P384PublicKey};
 use zerotier_crypto::secret::Secret;
+use zerotier_utils::hex;
 use zerotier_utils::ms_monotonic;
 
 const TEST_MTU: usize = 1500;
@@ -14,7 +15,7 @@ struct TestApplication {
 }
 
 impl zssp::ApplicationLayer for TestApplication {
-    const REKEY_AFTER_USES: u64 = 100000;
+    const REKEY_AFTER_USES: u64 = 350000;
     const EXPIRE_AFTER_USES: u64 = 2147483648;
     const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60 * 2;
     const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10;
@@ -103,10 +104,10 @@ fn alice_main(
         }
 
         if up {
-            let ratchet_count = alice_session.key_info().unwrap().0;
-            if ratchet_count > last_ratchet_count {
-                last_ratchet_count = ratchet_count;
-                println!("[alice] new key! ratchet count {}", ratchet_count);
+            let ki = alice_session.key_info().unwrap();
+            if ki.0 > last_ratchet_count {
+                last_ratchet_count = ki.0;
+                println!("[alice] new key! ratchet count {} fp {}", ki.0, hex::to_string(&ki.1[..16]));
             }
 
             assert!(alice_session
@@ -115,7 +116,7 @@ fn alice_main(
                         let _ = alice_out.send(b.to_vec());
                     },
                     &mut data_buf[..TEST_MTU],
-                    &test_data[..1000 + ((zerotier_crypto::random::xorshift64_random() as usize) % (test_data.len() - 1000))],
+                    &test_data[..1400 + ((zerotier_crypto::random::xorshift64_random() as usize) % (test_data.len() - 1400))],
                 )
                 .is_ok());
         } else {
@@ -177,7 +178,6 @@ fn bob_main(
                 }
                 Ok(zssp::ReceiveResult::OkData(s, data)) => {
                     //println!("[bob] received {}", data.len());
-                    transferred += data.len() as u64;
                     assert!(s
                         .send(
                             |b| {
@@ -187,6 +187,7 @@ fn bob_main(
                             data.as_mut(),
                         )
                         .is_ok());
+                    transferred += data.len() as u64 * 2; // *2 because we are also sending this many bytes back
                 }
                 Ok(zssp::ReceiveResult::OkNewSession(s)) => {
                     println!("[bob] new session {}", s.id.to_string());
@@ -200,10 +201,10 @@ fn bob_main(
         }
 
         if let Some(bob_session) = bob_session.as_ref() {
-            let ratchet_count = bob_session.key_info().unwrap().0;
-            if ratchet_count > last_ratchet_count {
-                last_ratchet_count = ratchet_count;
-                println!("[bob] new key! ratchet count {}", ratchet_count);
+            let ki = bob_session.key_info().unwrap();
+            if ki.0 > last_ratchet_count {
+                last_ratchet_count = ki.0;
+                println!("[bob] new key! ratchet count {} fp {}", ki.0, hex::to_string(&ki.1[..16]));
             }
         }
 
@@ -211,7 +212,7 @@ fn bob_main(
         if speed_metric_elapsed >= 1000 {
             last_speed_metric = current_time;
             println!(
-                "[bob] RX speed {} MiB/sec",
+                "[bob] throughput: {} MiB/sec (combined input and output)",
                 ((transferred as f64) / 1048576.0) / ((speed_metric_elapsed as f64) / 1000.0)
             );
             transferred = 0;
