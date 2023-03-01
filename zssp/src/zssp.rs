@@ -133,6 +133,7 @@ struct SessionKey {
     created_at_counter: u64,                      // Counter at which session was created
     rekey_at_counter: u64,                        // Rekey at or after this counter
     expire_at_counter: u64,                       // Hard error when this counter value is reached or exceeded
+    ratchet_count: u64,                           // Number of rekey events
     bob: bool,                                    // Was this side "Bob" in this exchange?
 }
 
@@ -926,8 +927,13 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 {
                                     let mut state = session.state.write().unwrap();
                                     let _ = state.remote_session_id.insert(bob_session_id);
-                                    let _ =
-                                        state.keys[0].insert(SessionKey::new::<Application>(noise_es_ee_se_hk_psk, current_time, 2, false));
+                                    let _ = state.keys[0].insert(SessionKey::new::<Application>(
+                                        noise_es_ee_se_hk_psk,
+                                        1,
+                                        current_time,
+                                        2,
+                                        false,
+                                    ));
                                     state.current_key = 0;
                                     state.current_offer = Offer::None;
                                 }
@@ -1078,7 +1084,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             state: RwLock::new(State {
                                 remote_session_id: Some(incoming.alice_session_id),
                                 keys: [
-                                    Some(SessionKey::new::<Application>(noise_es_ee_se_hk_psk, current_time, 2, true)),
+                                    Some(SessionKey::new::<Application>(noise_es_ee_se_hk_psk, 1, current_time, 2, true)),
                                     None,
                                 ],
                                 current_key: 0,
@@ -1111,7 +1117,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                     if let Some(session) = session {
                         let state = session.state.read().unwrap();
                         if let Some(key) = state.keys[key_index].as_ref() {
-                            // Only the current "Alice" accepts rekeys initiated by the current "Bob."
+                            // Only the current "Alice" accepts rekeys initiated by the current "Bob." These roles
+                            // flip with each rekey event.
                             if !key.bob {
                                 let mut c = key.get_receive_cipher();
                                 c.reset_init_gcm(&incoming_message_nonce);
@@ -1142,10 +1149,16 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                                         send(Some(&session), &mut reply_buf);
 
+                                        // The new "Bob" doesn't know yet if Alice has received the new key, so the
+                                        // new key is recorded as the "alt" (key_index ^ 1) but the current key is
+                                        // not advanced yet. This happens automatically the first time we receive a
+                                        // valid packet with the new key.
+                                        let next_ratchet_count = key.ratchet_count + 1;
                                         drop(state);
                                         let mut state = session.state.write().unwrap();
                                         let _ = state.keys[key_index ^ 1].replace(SessionKey::new::<Application>(
                                             next_session_key,
+                                            next_ratchet_count,
                                             current_time,
                                             counter.get(),
                                             false,
@@ -1192,11 +1205,16 @@ impl<Application: ApplicationLayer> Context<Application> {
                                             ));
 
                                             if secure_eq(&pkt.next_key_fingerprint, &SHA384::hash(next_session_key.as_bytes())) {
+                                                // The new "Alice" knows Bob has the key since this is an ACK, so she can go
+                                                // ahead and set current_key to the new key. Then when she sends something
+                                                // to Bob the other side will automatically advance to the new key as well.
+                                                let next_ratchet_count = key.ratchet_count + 1;
                                                 drop(state);
                                                 let next_key_index = key_index ^ 1;
                                                 let mut state = session.state.write().unwrap();
                                                 let _ = state.keys[next_key_index].replace(SessionKey::new::<Application>(
                                                     next_session_key,
+                                                    next_ratchet_count,
                                                     current_time,
                                                     session.send_counter.load(Ordering::Acquire),
                                                     true,
@@ -1295,6 +1313,16 @@ impl<Application: ApplicationLayer> Session<Application> {
     pub fn established(&self) -> bool {
         let state = self.state.read().unwrap();
         state.keys[state.current_key].is_some()
+    }
+
+    /// Get the ratchet count and a hash fingerprint of the current active key.
+    pub fn key_info(&self) -> Option<(u64, [u8; 48])> {
+        let state = self.state.read().unwrap();
+        if let Some(key) = state.keys[state.current_key].as_ref() {
+            Some((key.ratchet_count, SHA384::hash(key.ratchet_key.as_bytes())))
+        } else {
+            None
+        }
     }
 
     /// Send a rekey init message.
@@ -1473,7 +1501,13 @@ fn assemble_fragments_into<A: ApplicationLayer>(fragments: &[A::IncomingPacketBu
 }
 
 impl SessionKey {
-    fn new<Application: ApplicationLayer>(key: Secret<BASE_KEY_SIZE>, current_time: i64, current_counter: u64, role_is_bob: bool) -> Self {
+    fn new<Application: ApplicationLayer>(
+        key: Secret<BASE_KEY_SIZE>,
+        ratchet_count: u64,
+        current_time: i64,
+        current_counter: u64,
+        role_is_bob: bool,
+    ) -> Self {
         let a2b = kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB>(key.as_bytes());
         let b2a = kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE>(key.as_bytes());
         let (receive_key, send_key) = if role_is_bob {
@@ -1496,6 +1530,7 @@ impl SessionKey {
             created_at_counter: current_counter,
             rekey_at_counter: current_counter.checked_add(Application::REKEY_AFTER_USES).unwrap(),
             expire_at_counter: current_counter.checked_add(Application::EXPIRE_AFTER_USES).unwrap(),
+            ratchet_count,
             bob: role_is_bob,
         }
     }

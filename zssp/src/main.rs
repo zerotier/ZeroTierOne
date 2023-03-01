@@ -14,6 +14,13 @@ struct TestApplication {
 }
 
 impl zssp::ApplicationLayer for TestApplication {
+    const REKEY_AFTER_USES: u64 = 131072;
+    const EXPIRE_AFTER_USES: u64 = 2147483648;
+    const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60 * 2;
+    const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10;
+    const INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS: i64 = 2000;
+    const RETRY_INTERVAL: i64 = 500;
+
     type Data = ();
 
     type IncomingPacketBuffer = Vec<u8>;
