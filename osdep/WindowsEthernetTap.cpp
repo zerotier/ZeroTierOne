@@ -850,12 +850,14 @@ void WindowsEthernetTap::setFriendlyName(const char *dn)
 					NETCON_PROPERTIES *ncp = nullptr;
 					nc->GetProperties(&ncp);
 
-					GUID curId = ncp->guidId;
-					if (curId == _deviceGuid) {
-						wchar_t wtext[255];
-						mbstowcs(wtext, dn, strlen(dn)+1);
-						nc->Rename(wtext);
-						found = true;
+					if (ncp != nullptr) {
+						GUID curId = ncp->guidId;
+						if (curId == _deviceGuid) {
+							wchar_t wtext[255];
+							mbstowcs(wtext, dn, strlen(dn)+1);
+							nc->Rename(wtext);
+							found = true;
+						}
 					}
 					nc->Release();
 				}

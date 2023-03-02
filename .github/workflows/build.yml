@@ -6,8 +6,8 @@ jobs:
     steps:
     - name: gitconfig
       run: |
-        git config --global core.autocrlf false
-        git config --global core.eol lf
+        git config --global core.autocrlf input
+      #        git config --global core.eol lf
     - name: checkout
       uses: actions/checkout@v3
     - name: Install Rust
@@ -42,8 +42,8 @@ jobs:
     steps:
     - name: gitconfig
       run: |
-        git config --global core.autocrlf false
-        git config --global core.eol lf
+        git config --global core.autocrlf input
+      #        git config --global core.eol lf
     - name: checkout
       uses: actions/checkout@v3
     - name: Install Rust
@@ -77,8 +77,8 @@ jobs:
     steps:
     - name: gitconfig
       run: |
-        git config --global core.autocrlf false
-        git config --global core.eol lf
+        git config --global core.autocrlf true
+      #        git config --global core.eol lf
     - name: checkout
       uses: actions/checkout@v3
     - name: Install Rust
