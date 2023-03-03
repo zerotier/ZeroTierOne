@@ -6,6 +6,7 @@
  * https://www.zerotier.com/
  */
 
+#[derive(PartialEq, Eq)]
 pub enum Error {
     /// The packet was addressed to an unrecognized local session (should usually be ignored)
     UnknownLocalSessionId,

@@ -1,5 +1,5 @@
 #unstable_features = true
-max_width = 140
+max_width = 150
 #use_small_heuristics = "Max"
 edition = "2021"
 #empty_item_single_line = true

@@ -52,6 +52,7 @@ fn alice_main(
     let mut last_ratchet_count = 0;
     let test_data = [1u8; TEST_MTU * 10];
     let mut up = false;
+    let mut last_error = zssp::Error::UnknownProtocolVersion;
 
     let alice_session = context
         .open(
@@ -100,9 +101,10 @@ fn alice_main(
                         }
                         Ok(zssp::ReceiveResult::Rejected) => {}
                         Err(e) => {
-                            println!("[alice] ERROR {}", e.to_string());
-                            //run.store(false, Ordering::SeqCst);
-                            //break;
+                            if e != last_error {
+                                println!("[alice] ERROR {}", e.to_string());
+                                last_error = e;
+                            }
                         }
                     }
                 }
@@ -163,6 +165,7 @@ fn bob_main(
     let mut last_speed_metric = ms_monotonic();
     let mut next_service = last_speed_metric + 500;
     let mut transferred = 0u64;
+    let mut last_error = zssp::Error::UnknownProtocolVersion;
 
     let mut bob_session = None;
 
@@ -207,9 +210,10 @@ fn bob_main(
                     }
                     Ok(zssp::ReceiveResult::Rejected) => {}
                     Err(e) => {
-                        println!("[bob] ERROR {}", e.to_string());
-                        //run.store(false, Ordering::SeqCst);
-                        //break;
+                        if e != last_error {
+                            println!("[bob] ERROR {}", e.to_string());
+                            last_error = e;
+                        }
                     }
                 }
             }

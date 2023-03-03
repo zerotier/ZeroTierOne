@@ -24,4 +24,4 @@ doc = false
 [dependencies]
 zerotier-utils = { path = "../utils" }
 zerotier-crypto = { path = "../crypto" }
-pqc_kyber = { git = "https://github.com/Argyle-Software/kyber", rev = "8c7927e00f4e3508769bf69afd55b2be1c22884d", features = ["kyber1024", "std"], default-features = false }
+pqc_kyber = { version = "0.4.0", default-features = false, features = ["kyber1024", "std"] }

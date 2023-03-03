@@ -7,7 +7,7 @@
  */
 
 /*
- * MIMC is a hash function originally designed for use with STARK and SNARK proofs. It's based
+ * MIMC is a cipher originally designed for use with STARK and SNARK proofs. It's based
  * on modular multiplication and exponentiation instead of the usual bit twiddling or ARX
  * operations that underpin more common hash algorithms.
  *
@@ -17,7 +17,8 @@
  * compute intensive. The "forward" direction simply requires modular cubing which is two modular
  * multiplications and is much faster.
  *
- * It's also nice because it's incredibly simple with a tiny code footprint.
+ * It's a nice VDF because it's incredibly simple with a tiny code footprint. Most other VDFs
+ * involve RSA group operations or zero knowledge proofs.
  *
  * This is used for anti-DOS and anti-spamming delay functions. It's not used for anything
  * really "cryptographically hard," and if it were broken cryptographically it would still be
