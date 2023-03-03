@@ -2239,7 +2239,9 @@ int main(int argc,char **argv)
 	try {
 		char p[4096];
 		OSUtils::ztsnprintf(p, sizeof(p), "%s" ZT_PATH_SEPARATOR_S "identity.secret", homeDir.c_str());
-		OSUtils::lockDownFile(p, false);
+		if (OSUtils::fileExists(p)) {
+			OSUtils::lockDownFile(p, false);
+		}
 	}
 	catch (...) {
 	}
@@ -2247,7 +2249,9 @@ int main(int argc,char **argv)
 	try {
 		char p[4096];
 		OSUtils::ztsnprintf(p, sizeof(p), "%s" ZT_PATH_SEPARATOR_S "authtoken.secret", homeDir.c_str());
-		OSUtils::lockDownFile(p, false);
+		if (OSUtils::fileExists(p)) {
+			OSUtils::lockDownFile(p, false);
+		}
 	}
 	catch (...) {
 	}
