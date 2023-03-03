@@ -2235,6 +2235,23 @@ int main(int argc,char **argv)
 		}
 	}
 
+	// Check and fix permissions on critical files at startup
+	try {
+		char p[4096];
+		OSUtils::ztsnprintf(p, sizeof(p), "%s" ZT_PATH_SEPARATOR_S "identity.secret", homeDir.c_str());
+		OSUtils::lockDownFile(p, false);
+	}
+	catch (...) {
+	}
+
+	try {
+		char p[4096];
+		OSUtils::ztsnprintf(p, sizeof(p), "%s" ZT_PATH_SEPARATOR_S "authtoken.secret", homeDir.c_str());
+		OSUtils::lockDownFile(p, false);
+	}
+	catch (...) {
+	}
+
 	// This can be removed once the new controller code has been around for many versions
 	if (OSUtils::fileExists((homeDir + ZT_PATH_SEPARATOR_S + "controller.db").c_str(),true)) {
 		fprintf(stderr,"%s: FATAL: an old controller.db exists in %s -- see instructions in controller/README.md for how to migrate!" ZT_EOL_S,argv[0],homeDir.c_str());
