@@ -8,6 +8,7 @@
 
 mod applicationlayer;
 mod error;
+mod fragged;
 mod proto;
 mod sessionid;
 mod zssp;

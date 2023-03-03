@@ -24,24 +24,29 @@ pub const MIN_TRANSPORT_MTU: usize = 128;
 /// Maximum combined size of static public blob and metadata.
 pub const MAX_INIT_PAYLOAD_SIZE: usize = MAX_NOISE_HANDSHAKE_SIZE - ALICE_NOISE_XK_ACK_MIN_SIZE;
 
+/// Version 0: Noise_XK with NIST P-384 plus Kyber1024 hybrid exchange on session init.
 pub(crate) const SESSION_PROTOCOL_VERSION: u8 = 0x00;
 
-pub(crate) const COUNTER_WINDOW_MAX_OOO: usize = 16;
+/// Maximum window over which packets may be reordered.
+pub(crate) const COUNTER_WINDOW_MAX_OOO: usize = 32;
+
+/// Maximum number of counter steps that the counter is allowed to skip ahead.
 pub(crate) const COUNTER_WINDOW_MAX_SKIP_AHEAD: u64 = 16777216;
 
-pub(crate) const PACKET_TYPE_DATA: u8 = 0;
-pub(crate) const PACKET_TYPE_ALICE_NOISE_XK_INIT: u8 = 1;
-pub(crate) const PACKET_TYPE_BOB_NOISE_XK_ACK: u8 = 2;
-pub(crate) const PACKET_TYPE_ALICE_NOISE_XK_ACK: u8 = 3;
-pub(crate) const PACKET_TYPE_REKEY_INIT: u8 = 4;
-pub(crate) const PACKET_TYPE_REKEY_ACK: u8 = 5;
+pub(crate) const PACKET_TYPE_NOP: u8 = 0;
+pub(crate) const PACKET_TYPE_DATA: u8 = 1;
+pub(crate) const PACKET_TYPE_ALICE_NOISE_XK_INIT: u8 = 2;
+pub(crate) const PACKET_TYPE_BOB_NOISE_XK_ACK: u8 = 3;
+pub(crate) const PACKET_TYPE_ALICE_NOISE_XK_ACK: u8 = 4;
+pub(crate) const PACKET_TYPE_REKEY_INIT: u8 = 5;
+pub(crate) const PACKET_TYPE_REKEY_ACK: u8 = 6;
 
 pub(crate) const HEADER_SIZE: usize = 16;
 pub(crate) const HEADER_PROTECT_ENCRYPT_START: usize = 6;
 pub(crate) const HEADER_PROTECT_ENCRYPT_END: usize = 22;
 
-pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ENCRYPTION: u8 = b'X'; // intermediate keys used in key exchanges
-pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_AUTHENTICATION: u8 = b'x'; // intermediate keys used in key exchanges
+pub(crate) const KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION: u8 = b'x'; // AES-CTR encryption during initial setup
+pub(crate) const KBKDF_KEY_USAGE_LABEL_INIT_AUTHENTICATION: u8 = b'X'; // HMAC-SHA384 during initial setup
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A'; // AES-GCM in A->B direction
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE: u8 = b'B'; // AES-GCM in B->A direction
 pub(crate) const KBKDF_KEY_USAGE_LABEL_RATCHET: u8 = b'R'; // Key used in derivatin of next session key
@@ -50,6 +55,7 @@ pub(crate) const MAX_FRAGMENTS: usize = 48; // hard protocol max: 63
 pub(crate) const MAX_NOISE_HANDSHAKE_FRAGMENTS: usize = 16; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
 pub(crate) const MAX_NOISE_HANDSHAKE_SIZE: usize = MAX_NOISE_HANDSHAKE_FRAGMENTS * MIN_TRANSPORT_MTU;
 
+/// Size of keys used during derivation, mixing, etc. process.
 pub(crate) const BASE_KEY_SIZE: usize = 64;
 
 pub(crate) const AES_256_KEY_SIZE: usize = 32;
@@ -162,7 +168,6 @@ impl RekeyAck {
 pub(crate) trait ProtocolFlatBuffer {}
 impl ProtocolFlatBuffer for AliceNoiseXKInit {}
 impl ProtocolFlatBuffer for BobNoiseXKAck {}
-//impl ProtocolFlatBuffer for NoiseXKAliceStaticAck {}
 impl ProtocolFlatBuffer for RekeyInit {}
 impl ProtocolFlatBuffer for RekeyAck {}
 

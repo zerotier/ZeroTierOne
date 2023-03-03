@@ -6,6 +6,8 @@
  * https://www.zerotier.com/
  */
 
+use std::hash::Hash;
+
 use zerotier_crypto::p384::P384KeyPair;
 
 /// Trait to implement to integrate the session into an application.
@@ -64,6 +66,12 @@ pub trait ApplicationLayer: Sized {
     /// buffer that automatically returns to its pool when ZSSP is done with it. ZSSP may hold these
     /// for a short period of time when assembling fragmented packets on the receive path.
     type IncomingPacketBuffer: AsRef<[u8]> + AsMut<[u8]>;
+
+    /// Opaque type for whatever constitutes a physical path to the application.
+    ///
+    /// A physical path could be an IP address or IP plus device in the case of UDP, a socket in the
+    /// case of TCP, etc.
+    type PhysicalPath: PartialEq + Eq + Hash + Clone;
 
     /// Get a reference to this host's static public key blob.
     ///

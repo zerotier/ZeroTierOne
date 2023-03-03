@@ -38,7 +38,7 @@ impl<T, const C: usize> GatherArray<T, C> {
 
     /// Add an item to the array if we don't have this index anymore, returning complete array if all parts are here.
     #[inline(always)]
-    pub fn add(&mut self, index: u8, value: T) -> Option<ArrayVec<T, C>> {
+    pub fn add_return_when_satisfied(&mut self, index: u8, value: T) -> Option<ArrayVec<T, C>> {
         if index < self.goal {
             let mut have = self.have_bits;
             let got = 1u64.wrapping_shl(index as u32);
@@ -91,9 +91,9 @@ mod tests {
         for goal in 2u8..64u8 {
             let mut m = GatherArray::<u8, 64>::new(goal);
             for x in 0..(goal - 1) {
-                assert!(m.add(x, x).is_none());
+                assert!(m.add_return_when_satisfied(x, x).is_none());
             }
-            let r = m.add(goal - 1, goal - 1).unwrap();
+            let r = m.add_return_when_satisfied(goal - 1, goal - 1).unwrap();
             for x in 0..goal {
                 assert_eq!(r.as_ref()[x as usize], x);
             }
