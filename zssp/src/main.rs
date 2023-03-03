@@ -18,7 +18,7 @@ struct TestApplication {
 }
 
 impl zssp::ApplicationLayer for TestApplication {
-    const REKEY_AFTER_USES: u64 = 350000;
+    const REKEY_AFTER_USES: u64 = 300000;
     const EXPIRE_AFTER_USES: u64 = 2147483648;
     const REKEY_AFTER_TIME_MS: i64 = 1000 * 60 * 60 * 2;
     const REKEY_AFTER_TIME_MS_MAX_JITTER: u32 = 1000 * 60 * 10;
@@ -90,7 +90,7 @@ fn alice_main(
                         TEST_MTU,
                         current_time,
                     ) {
-                        Ok(zssp::ReceiveResult::Ok) => {
+                        Ok(zssp::ReceiveResult::Ok(_)) => {
                             //println!("[alice] ok");
                         }
                         Ok(zssp::ReceiveResult::OkData(_, _)) => {
@@ -188,7 +188,7 @@ fn bob_main(
                     TEST_MTU,
                     current_time,
                 ) {
-                    Ok(zssp::ReceiveResult::Ok) => {
+                    Ok(zssp::ReceiveResult::Ok(_)) => {
                         //println!("[bob] ok");
                     }
                     Ok(zssp::ReceiveResult::OkData(s, data)) => {
