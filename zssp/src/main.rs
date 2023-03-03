@@ -272,7 +272,7 @@ fn main() {
         let alice_thread = ts.spawn(|| alice_main(&run, packet_success_rate, &alice_app, &bob_app, alice_out, alice_in));
         let bob_thread = ts.spawn(|| bob_main(&run, packet_success_rate, &alice_app, &bob_app, bob_out, bob_in));
 
-        thread::sleep(Duration::from_secs(60 * 10));
+        thread::sleep(Duration::from_secs(60 * 60));
 
         run.store(false, Ordering::SeqCst);
         let _ = alice_thread.join();

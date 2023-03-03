@@ -29,6 +29,7 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Drop for Assembled<Fragment, MAX_FRAG
 }
 
 impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
+    #[inline(always)]
     pub fn new() -> Self {
         debug_assert!(MAX_FRAGMENTS <= 64);
         debug_assert_eq!(size_of::<MaybeUninit<Fragment>>(), size_of::<Fragment>());
@@ -39,6 +40,11 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
         unsafe { zeroed() }
     }
 
+    /// Add a fragment and return an assembled packet container if all fragments have been received.
+    ///
+    /// When a fully assembled packet is returned the internal state is reset and this object can
+    /// be reused to assemble another packet.
+    #[inline(always)]
     pub fn assemble(&mut self, counter: u64, fragment: Fragment, fragment_no: u8, fragment_count: u8) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
         if fragment_no < fragment_count && (fragment_count as usize) <= MAX_FRAGMENTS {
             debug_assert!((fragment_count as usize) <= MAX_FRAGMENTS);
@@ -70,6 +76,9 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
             have |= 1u64.wrapping_shl(fragment_no as u32);
             if (have & want) == want {
                 self.have = 0;
+                // Setting 'have' to 0 resets the state of this object, and the fragments
+                // are effectively moved into the Assembled<> container and returned. That
+                // container will drop them when it is dropped.
                 return Some(Assembled(unsafe { std::mem::transmute_copy(&self.frags) }, fragment_count as usize));
             } else {
                 self.have = have;
@@ -80,6 +89,7 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
 }
 
 impl<Fragment, const MAX_FRAGMENTS: usize> Drop for Fragged<Fragment, MAX_FRAGMENTS> {
+    #[inline(always)]
     fn drop(&mut self) {
         if needs_drop::<Fragment>() {
             let mut have = self.have;

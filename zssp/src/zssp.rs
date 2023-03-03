@@ -171,6 +171,7 @@ impl<Application: ApplicationLayer> Context<Application> {
         let retry_cutoff = current_time - Application::RETRY_INTERVAL;
         let negotiation_timeout_cutoff = current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS;
 
+        // Scan sessions in read lock mode, then lock more briefly in write mode to delete any dead entries that we found.
         {
             let sessions = self.sessions.read().unwrap();
             for (id, s) in sessions.active.iter() {
@@ -251,6 +252,7 @@ impl<Application: ApplicationLayer> Context<Application> {
             }
         }
 
+        // Delete any expired defragmentation queue items not associated with a session.
         self.defrag.lock().unwrap().retain(|_, fragged| fragged.1 > negotiation_timeout_cutoff);
 
         Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS.min(Application::RETRY_INTERVAL)
@@ -502,8 +504,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     .or_insert_with(|| Arc::new((Mutex::new(Fragged::new()), current_time)))
                     .clone();
 
-                // Anti-DOS emergency cleaning of the incoming defragmentation queue for packets not
-                // associated with known sessions.
+                // Anti-DOS overflow purge of the incoming defragmentation queue for packets not associated with known sessions.
                 if defrag.len() >= self.max_incomplete_session_queue_size {
                     // First, drop all entries that are timed out or whose physical source duplicates another entry.
                     let mut sources = HashSet::with_capacity(defrag.len());
@@ -700,15 +701,9 @@ impl<Application: ApplicationLayer> Context<Application> {
                      *
                      * Bob authenticates the message and confirms that Alice indeed knows Bob's
                      * identity, then responds with his ephemeral keys.
-                     *
-                     * Bob also sends an opaque sealed object called Bob's "note to self." It contains
-                     * Bob's state for the connection as of this first exchange, allowing Bob to be
-                     * stateless until he knows and has confirmed Alice's identity. It's encrypted,
-                     * authenticated, subject to a short TTL, and contains only information relevant
-                     * to the current exchange.
                      */
 
-                    if incoming_counter != 1 || session.is_some() {
+                    if incoming_counter != 1 || session.is_some() || incoming.is_some() {
                         return Err(Error::OutOfSequence);
                     }
                     if pkt_assembled.len() != AliceNoiseXKInit::SIZE {
@@ -770,10 +765,10 @@ impl<Application: ApplicationLayer> Context<Application> {
                         }
                     }
 
+                    // If this queue is too big, we remove the latest entry and replace it. The latest
+                    // is used because under flood conditions this is most likely to be another bogus
+                    // entry. If we find one that is actually timed out, that one is replaced instead.
                     if sessions.incoming.len() >= self.max_incomplete_session_queue_size {
-                        // If this queue is too big, we remove the latest entry and replace it. The latest
-                        // is used because under flood conditions this is most likely to be another bogus
-                        // entry. If we find one that is actually timed out, that one is replaced instead.
                         let mut newest = i64::MIN;
                         let mut replace_id = None;
                         let cutoff_time = current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS;
@@ -1390,7 +1385,7 @@ impl<Application: ApplicationLayer> Session<Application> {
     /// Check whether this session is established.
     pub fn established(&self) -> bool {
         let state = self.state.read().unwrap();
-        state.keys[state.current_key].is_some()
+        state.keys[state.current_key].as_ref().map_or(false, |k| k.confirmed)
     }
 
     /// Get the ratchet count and a hash fingerprint of the current active key.
