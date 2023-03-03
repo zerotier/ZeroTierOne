@@ -892,11 +892,7 @@ impl Marshalable for InetAddress {
                 AF_INET6 => {
                     let b = buf.append_bytes_fixed_get_mut::<19>()?;
                     b[0] = 6;
-                    copy_nonoverlapping(
-                        (&(self.sin6.sin6_addr) as *const in6_addr).cast::<u8>(),
-                        b.as_mut_ptr().offset(1),
-                        16,
-                    );
+                    copy_nonoverlapping((&(self.sin6.sin6_addr) as *const in6_addr).cast::<u8>(), b.as_mut_ptr().offset(1), 16);
                     b[17] = *(&self.sin6.sin6_port as *const u16).cast::<u8>();
                     b[18] = *(&self.sin6.sin6_port as *const u16).cast::<u8>().offset(1);
                 }
@@ -913,10 +909,7 @@ impl Marshalable for InetAddress {
             Ok(InetAddress::from_ip_port(&b[0..4], u16::from_be_bytes(b[4..6].try_into().unwrap())))
         } else if t == 6 {
             let b: &[u8; 18] = buf.read_bytes_fixed(cursor)?;
-            Ok(InetAddress::from_ip_port(
-                &b[0..16],
-                u16::from_be_bytes(b[16..18].try_into().unwrap()),
-            ))
+            Ok(InetAddress::from_ip_port(&b[0..16], u16::from_be_bytes(b[16..18].try_into().unwrap())))
         } else {
             Ok(InetAddress::new())
         }

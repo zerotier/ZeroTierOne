@@ -55,10 +55,7 @@ pub fn base64_decode_url_nopad(b64: &str) -> Option<Vec<u8>> {
 /// Get milliseconds since unix epoch.
 #[inline]
 pub fn ms_since_epoch() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as i64
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis() as i64
 }
 
 /// Get milliseconds since an arbitrary time in the past, guaranteed to monotonically increase.

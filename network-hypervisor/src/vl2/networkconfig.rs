@@ -116,10 +116,7 @@ impl NetworkConfig {
 
         d.set_u64(proto_v1_field_name::network_config::VERSION, 6);
 
-        d.set_str(
-            proto_v1_field_name::network_config::NETWORK_ID,
-            self.network_id.to_string().as_str(),
-        );
+        d.set_str(proto_v1_field_name::network_config::NETWORK_ID, self.network_id.to_string().as_str());
         if !self.name.is_empty() {
             d.set_str(proto_v1_field_name::network_config::NAME, self.name.as_str());
         }
@@ -253,8 +250,7 @@ impl NetworkConfig {
 
         let mut nc = Self::new(nwid, issued_to_address);
 
-        d.get_str(proto_v1_field_name::network_config::NAME)
-            .map(|x| nc.name = x.to_string());
+        d.get_str(proto_v1_field_name::network_config::NAME).map(|x| nc.name = x.to_string());
         nc.private = d.get_str(proto_v1_field_name::network_config::TYPE).map_or(true, |x| x == "1");
         nc.timestamp = d
             .get_i64(proto_v1_field_name::network_config::TIMESTAMP)
@@ -358,16 +354,10 @@ impl NetworkConfig {
                 authentication_expiry_time: d
                     .get_i64(proto_v1_field_name::network_config::SSO_AUTHENTICATION_EXPIRY_TIME)
                     .unwrap_or(0),
-                issuer_url: d
-                    .get_str(proto_v1_field_name::network_config::SSO_ISSUER_URL)
-                    .unwrap_or("")
-                    .to_string(),
+                issuer_url: d.get_str(proto_v1_field_name::network_config::SSO_ISSUER_URL).unwrap_or("").to_string(),
                 nonce: d.get_str(proto_v1_field_name::network_config::SSO_NONCE).unwrap_or("").to_string(),
                 state: d.get_str(proto_v1_field_name::network_config::SSO_STATE).unwrap_or("").to_string(),
-                client_id: d
-                    .get_str(proto_v1_field_name::network_config::SSO_CLIENT_ID)
-                    .unwrap_or("")
-                    .to_string(),
+                client_id: d.get_str(proto_v1_field_name::network_config::SSO_CLIENT_ID).unwrap_or("").to_string(),
             })
         }
 
@@ -464,10 +454,7 @@ pub struct IpRoute {
 impl Marshalable for IpRoute {
     const MAX_MARSHAL_SIZE: usize = (InetAddress::MAX_MARSHAL_SIZE * 2) + 2 + 2;
 
-    fn marshal<const BL: usize>(
-        &self,
-        buf: &mut zerotier_utils::buffer::Buffer<BL>,
-    ) -> Result<(), zerotier_utils::marshalable::UnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut zerotier_utils::buffer::Buffer<BL>) -> Result<(), zerotier_utils::marshalable::UnmarshalError> {
         self.target.marshal(buf)?;
         if let Some(via) = self.via.as_ref() {
             via.marshal(buf)?;

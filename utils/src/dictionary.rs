@@ -93,13 +93,11 @@ impl Dictionary {
     }
 
     pub fn get_u64(&self, k: &str) -> Option<u64> {
-        self.get_str(k)
-            .map_or(None, |s| u64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
+        self.get_str(k).map_or(None, |s| u64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
     }
 
     pub fn get_i64(&self, k: &str) -> Option<i64> {
-        self.get_str(k)
-            .map_or(None, |s| i64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
+        self.get_str(k).map_or(None, |s| i64::from_str_radix(s, 16).map_or(None, |i| Some(i)))
     }
 
     pub fn get_bool(&self, k: &str) -> Option<bool> {

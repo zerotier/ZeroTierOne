@@ -388,14 +388,7 @@ impl Node {
     /// Get the root sets that this node trusts.
     #[inline]
     pub fn root_sets(&self) -> Vec<RootSet> {
-        self.roots
-            .read()
-            .unwrap()
-            .sets
-            .values()
-            .cloned()
-            .map(|s| s.remove_typestate())
-            .collect()
+        self.roots.read().unwrap().sets.values().cloned().map(|s| s.remove_typestate()).collect()
     }
 
     pub fn do_background_tasks<Application: ApplicationLayer + ?Sized>(&self, app: &Application) -> Duration {
@@ -463,8 +456,7 @@ impl Node {
 
                     for (_, rs) in roots.sets.iter() {
                         for m in rs.members.iter() {
-                            if m.endpoints.is_some() && !address_collisions.contains(&m.identity.address) && !m.identity.eq(&self.identity)
-                            {
+                            if m.endpoints.is_some() && !address_collisions.contains(&m.identity.address) && !m.identity.eq(&self.identity) {
                                 debug_event!(
                                     app,
                                     "[vl1] examining root {} with {} endpoints",
@@ -551,11 +543,7 @@ impl Node {
                             );
                             *best_root = best.clone();
                         } else {
-                            debug_event!(
-                                app,
-                                "[vl1] selected new best root: {} (was empty)",
-                                best.identity.address.to_string()
-                            );
+                            debug_event!(app, "[vl1] selected new best root: {} (was empty)", best.identity.address.to_string());
                             let _ = best_root.insert(best.clone());
                         }
                     }
@@ -648,11 +636,7 @@ impl Node {
 
             // Lock in write mode and remove dead paths, doing so piecemeal to again avoid blocking.
             for dp in dead_paths.iter() {
-                self.paths
-                    .write()
-                    .unwrap()
-                    .get_mut::<PathMap<Application::LocalSocket>>()
-                    .remove(dp);
+                self.paths.write().unwrap().get_mut::<PathMap<Application::LocalSocket>>().remove(dp);
             }
 
             // Finally run keepalive sends as a batch.
@@ -704,15 +688,9 @@ impl Node {
             app,
             "[vl1] {} -> #{} {}->{} length {} (on socket {}@{})",
             source_endpoint.to_string(),
-            packet
-                .bytes_fixed_at::<8>(0)
-                .map_or("????????????????".into(), |pid| hex::to_string(pid)),
-            packet
-                .bytes_fixed_at::<5>(13)
-                .map_or("??????????".into(), |src| hex::to_string(src)),
-            packet
-                .bytes_fixed_at::<5>(8)
-                .map_or("??????????".into(), |dest| hex::to_string(dest)),
+            packet.bytes_fixed_at::<8>(0).map_or("????????????????".into(), |pid| hex::to_string(pid)),
+            packet.bytes_fixed_at::<5>(13).map_or("??????????".into(), |src| hex::to_string(src)),
+            packet.bytes_fixed_at::<5>(8).map_or("??????????".into(), |dest| hex::to_string(dest)),
             packet.len(),
             source_local_socket.to_string(),
             source_local_interface.to_string()
@@ -780,8 +758,7 @@ impl Node {
                                             for i in 1..assembled_packet.have {
                                                 if let Some(f) = assembled_packet.frags[i as usize].as_ref() {
                                                     if f.len() > v1::FRAGMENT_HEADER_SIZE {
-                                                        ok |=
-                                                            combined_packet.append_bytes(&f.as_bytes()[v1::FRAGMENT_HEADER_SIZE..]).is_ok();
+                                                        ok |= combined_packet.append_bytes(&f.as_bytes()[v1::FRAGMENT_HEADER_SIZE..]).is_ok();
                                                     }
                                                 }
                                             }
@@ -831,12 +808,7 @@ impl Node {
                         #[cfg(debug_assertions)]
                         {
                             debug_packet_id = u64::from_be_bytes(packet_header.id);
-                            debug_event!(
-                                app,
-                                "[vl1] [v1] #{:0>16x} forwarding packet to {}",
-                                debug_packet_id,
-                                dest.to_string()
-                            );
+                            debug_event!(app, "[vl1] [v1] #{:0>16x} forwarding packet to {}", debug_packet_id, dest.to_string());
                         }
                         if packet_header.increment_hops() > v1::FORWARD_MAX_HOPS {
                             #[cfg(debug_assertions)]
@@ -993,10 +965,7 @@ impl Node {
         time_ticks: i64,
     ) -> Arc<Path> {
         let paths = self.paths.read().unwrap();
-        if let Some(path) = paths
-            .get::<PathMap<Application::LocalSocket>>()
-            .get(&PathKey::Ref(ep, local_socket))
-        {
+        if let Some(path) = paths.get::<PathMap<Application::LocalSocket>>().get(&PathKey::Ref(ep, local_socket)) {
             path.clone()
         } else {
             drop(paths);

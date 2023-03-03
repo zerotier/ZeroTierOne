@@ -178,15 +178,9 @@ impl AesGmacSiv {
         self.tmp.copy_from_slice(&tag_tmp[0..16]);
 
         self.tmp[12] &= 0x7f;
-        let _ = self.ctr.replace(
-            Crypter::new(
-                aes_ctr_by_key_size(self.k1.len()),
-                Mode::Encrypt,
-                self.k1.as_slice(),
-                Some(&self.tmp),
-            )
-            .unwrap(),
-        );
+        let _ = self
+            .ctr
+            .replace(Crypter::new(aes_ctr_by_key_size(self.k1.len()), Mode::Encrypt, self.k1.as_slice(), Some(&self.tmp)).unwrap());
     }
 
     /// Feed plaintext for second pass and write ciphertext to supplied buffer.
@@ -219,15 +213,9 @@ impl AesGmacSiv {
     pub fn decrypt_init(&mut self, tag: &[u8]) {
         self.tmp.copy_from_slice(tag);
         self.tmp[12] &= 0x7f;
-        let _ = self.ctr.replace(
-            Crypter::new(
-                aes_ctr_by_key_size(self.k1.len()),
-                Mode::Decrypt,
-                self.k1.as_slice(),
-                Some(&self.tmp),
-            )
-            .unwrap(),
-        );
+        let _ = self
+            .ctr
+            .replace(Crypter::new(aes_ctr_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), Some(&self.tmp)).unwrap());
 
         let mut tag_tmp = [0_u8; 32];
         let mut ecb = Crypter::new(aes_ecb_by_key_size(self.k1.len()), Mode::Decrypt, self.k1.as_slice(), None).unwrap();

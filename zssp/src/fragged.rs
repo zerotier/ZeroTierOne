@@ -39,13 +39,7 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
         unsafe { zeroed() }
     }
 
-    pub fn assemble(
-        &mut self,
-        counter: u64,
-        fragment: Fragment,
-        fragment_no: u8,
-        fragment_count: u8,
-    ) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
+    pub fn assemble(&mut self, counter: u64, fragment: Fragment, fragment_no: u8, fragment_count: u8) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
         if fragment_no < fragment_count && (fragment_count as usize) <= MAX_FRAGMENTS {
             debug_assert!((fragment_count as usize) <= MAX_FRAGMENTS);
             debug_assert!((fragment_no as usize) < MAX_FRAGMENTS);

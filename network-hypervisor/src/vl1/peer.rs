@@ -324,11 +324,7 @@ impl Peer {
 
                     let mut aes_gmac_siv = self.v1_proto_static_secret.aes_gmac_siv.get();
                     aes_gmac_siv.encrypt_init(&self.v1_proto_next_message_id().to_be_bytes());
-                    aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
-                        self.identity.address,
-                        node.identity.address,
-                        flags_cipher_hops,
-                    ));
+                    aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(self.identity.address, node.identity.address, flags_cipher_hops));
                     let payload = packet.as_bytes_starting_at_mut(v1::HEADER_SIZE).unwrap();
                     aes_gmac_siv.encrypt_first_pass(payload);
                     aes_gmac_siv.encrypt_first_pass_finish();
@@ -419,8 +415,7 @@ impl Peer {
             let message_id = self.v1_proto_next_message_id();
 
             {
-                let f: &mut (v1::PacketHeader, v1::message_component_structs::HelloFixedHeaderFields) =
-                    packet.append_struct_get_mut().unwrap();
+                let f: &mut (v1::PacketHeader, v1::message_component_structs::HelloFixedHeaderFields) = packet.append_struct_get_mut().unwrap();
                 f.0.id = message_id.to_ne_bytes();
                 f.0.dest = self.identity.address.to_bytes();
                 f.0.src = node.identity.address.to_bytes();
@@ -545,16 +540,9 @@ impl Peer {
                 return match verb {
                     message_type::VL1_NOP => PacketHandlerResult::Ok,
                     message_type::VL1_HELLO => self.handle_incoming_hello(app, inner, node, time_ticks, message_id, source_path, &payload),
-                    message_type::VL1_ERROR => self.handle_incoming_error(
-                        app,
-                        inner,
-                        node,
-                        time_ticks,
-                        source_path,
-                        packet_header.hops(),
-                        message_id,
-                        &payload,
-                    ),
+                    message_type::VL1_ERROR => {
+                        self.handle_incoming_error(app, inner, node, time_ticks, source_path, packet_header.hops(), message_id, &payload)
+                    }
                     message_type::VL1_OK => self.handle_incoming_ok(
                         app,
                         inner,
@@ -567,13 +555,9 @@ impl Peer {
                         &payload,
                     ),
                     message_type::VL1_WHOIS => self.handle_incoming_whois(app, inner, node, time_ticks, message_id, &payload),
-                    message_type::VL1_RENDEZVOUS => {
-                        self.handle_incoming_rendezvous(app, node, time_ticks, message_id, source_path, &payload)
-                    }
+                    message_type::VL1_RENDEZVOUS => self.handle_incoming_rendezvous(app, node, time_ticks, message_id, source_path, &payload),
                     message_type::VL1_ECHO => self.handle_incoming_echo(app, inner, node, time_ticks, message_id, &payload),
-                    message_type::VL1_PUSH_DIRECT_PATHS => {
-                        self.handle_incoming_push_direct_paths(app, node, time_ticks, source_path, &payload)
-                    }
+                    message_type::VL1_PUSH_DIRECT_PATHS => self.handle_incoming_push_direct_paths(app, node, time_ticks, source_path, &payload),
                     message_type::VL1_USER_MESSAGE => self.handle_incoming_user_message(app, node, time_ticks, source_path, &payload),
                     _ => inner.handle_packet(app, node, self, &source_path, packet_header.hops(), message_id, verb, &payload, 1),
                 };
@@ -617,8 +601,7 @@ impl Peer {
                     }
 
                     self.send(app, node, Some(source_path), time_ticks, |packet| -> Result<(), Infallible> {
-                        let f: &mut (OkHeader, v1::message_component_structs::OkHelloFixedHeaderFields) =
-                            packet.append_struct_get_mut().unwrap();
+                        let f: &mut (OkHeader, v1::message_component_structs::OkHelloFixedHeaderFields) = packet.append_struct_get_mut().unwrap();
                         f.0.verb = message_type::VL1_OK;
                         f.0.in_re_verb = message_type::VL1_HELLO;
                         f.0.in_re_message_id = message_id.to_ne_bytes();

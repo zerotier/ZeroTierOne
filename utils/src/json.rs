@@ -44,11 +44,7 @@ pub fn json_patch(target: &mut serde_json::value::Value, source: &serde_json::va
 ///
 /// If there are no changes, None is returned. The depth limit is passed through to json_patch and
 /// should be set to a sanity check value to prevent overflows.
-pub fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(
-    obj: O,
-    patch: &str,
-    depth_limit: usize,
-) -> Result<Option<O>, serde_json::Error> {
+pub fn json_patch_object<O: Serialize + DeserializeOwned + Eq>(obj: O, patch: &str, depth_limit: usize) -> Result<Option<O>, serde_json::Error> {
     serde_json::from_str::<serde_json::value::Value>(patch).map_or_else(
         |e| Err(e),
         |patch| {
