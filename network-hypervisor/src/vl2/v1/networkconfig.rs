@@ -7,6 +7,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 use crate::vl1::{Address, Identity, InetAddress};
+use crate::vl2::iproute::IpRoute;
 use crate::vl2::rule::Rule;
 use crate::vl2::v1::{CertificateOfMembership, CertificateOfOwnership, Tag};
 use crate::vl2::NetworkId;
@@ -434,21 +435,6 @@ pub struct V1Credentials {
     #[serde(skip_serializing_if = "HashMap::is_empty")]
     #[serde(default)]
     pub tags: HashMap<u32, Tag>,
-}
-
-/// Statically pushed L3 IP routes included with a network configuration.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct IpRoute {
-    pub target: InetAddress,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default)]
-    pub via: Option<InetAddress>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default)]
-    pub flags: Option<u16>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default)]
-    pub metric: Option<u16>,
 }
 
 impl Marshalable for IpRoute {

@@ -12,8 +12,9 @@ use zerotier_network_hypervisor::protocol::{PacketBuffer, DEFAULT_MULTICAST_LIMI
 use zerotier_network_hypervisor::vl1::*;
 use zerotier_network_hypervisor::vl2;
 use zerotier_network_hypervisor::vl2::multicastauthority::MulticastAuthority;
-use zerotier_network_hypervisor::vl2::networkconfig::*;
-use zerotier_network_hypervisor::vl2::{NetworkId, Revocation};
+use zerotier_network_hypervisor::vl2::v1::networkconfig::*;
+use zerotier_network_hypervisor::vl2::v1::Revocation;
+use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 use zerotier_utils::buffer::OutOfBoundsError;
 use zerotier_utils::error::InvalidParameterError;
