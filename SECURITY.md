@@ -17,7 +17,7 @@ The following versions of ZeroTier One receive security updates
 
 **Please do not report security issues through public GitHub issues**
 
-Instead, please report vulerabilities via email to security@zerotier.com. If possible,
+Instead, please report vulnerabilities via email to security@zerotier.com. If possible,
 please encrypt with our PGP key (see below).
 
 Please include the following information, or as much as you can provide to help us 
