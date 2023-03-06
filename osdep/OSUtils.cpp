@@ -257,6 +257,16 @@ void OSUtils::lockDownFile(const char *path,bool isDir)
 			CloseHandle(processInfo.hProcess);
 			CloseHandle(processInfo.hThread);
 		}
+
+		// Remove 'Everyone' group from R/RX access
+		startupInfo.cb = sizeof(startupInfo);
+		memset(&startupInfo, 0, sizeof(STARTUPINFOA));
+		memset(&processInfo, 0, sizeof(PROCESS_INFORMATION));
+		if (CreateProcessA(NULL, (LPSTR)(std::string("C:\\Windows\\System32\\icacls.exe \"") + path + "\" /remove:g Everyone /t /c /Q").c_str(), NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &startupInfo, &processInfo)) {
+			WaitForSingleObject(processInfo.hProcess, INFINITE);
+			CloseHandle(processInfo.hProcess);
+			CloseHandle(processInfo.hThread);
+		}
 	}
 #endif
 #endif

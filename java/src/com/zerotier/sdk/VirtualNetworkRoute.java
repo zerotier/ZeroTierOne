@@ -29,80 +29,135 @@ package com.zerotier.sdk;
 
 import java.net.InetSocketAddress;
 
-public final class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute>
+/**
+ * A route to be pushed on a virtual network
+ *
+ * Defined in ZeroTierOne.h as ZT_VirtualNetworkRoute
+ */
+public class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute>
 {
-	private VirtualNetworkRoute() {
-        target = null;
-        via = null;
-        flags = 0;
-        metric = 0;
-    }
-
 	/**
 	 * Target network / netmask bits (in port field) or NULL or 0.0.0.0/0 for default
 	 */
-	public InetSocketAddress target;
-
+    private final InetSocketAddress target;
+    
 	/**
 	 * Gateway IP address (port ignored) or NULL (family == 0) for LAN-local (no gateway)
 	 */
-	public InetSocketAddress via;
+    private final InetSocketAddress via;
 
 	/**
 	 * Route flags
 	 */
-	public int flags;
+    private final int flags;
 
 	/**
 	 * Route metric (not currently used)
 	 */
-	public int metric;
+    private final int metric;
 
-	@Override
-    public String toString() {
-	    StringBuilder sb = new StringBuilder();
-	    sb.append(target.toString());
-        if (via != null) {
-            sb.append(via.toString());
-        }
-        return sb.toString();
+    public VirtualNetworkRoute(InetSocketAddress target, InetSocketAddress via, int flags, int metric) {
+        this.target = target;
+        this.via = via;
+        this.flags = flags;
+        this.metric = metric;
     }
 
     @Override
-	public int compareTo(VirtualNetworkRoute other) {
-        return this.toString().compareTo(other.toString());
-	}
+    public String toString() {
+        return "VirtualNetworkRoute(" + target + ", " + via + ", " + flags + ", " + metric + ")";
+    }
 
-    public boolean equals(VirtualNetworkRoute other) {
-        boolean targetEquals = false;
-        if (target == null && other.target == null) {
-            targetEquals = true;
-        }
-        else if (target == null && other.target != null) {
-            targetEquals = false;
-        }
-        else if (target != null && other.target == null) {
-            targetEquals = false;
-        }
-        else {
-            targetEquals = target.toString().equals(other.target.toString());
+    @Override
+    public int compareTo(VirtualNetworkRoute other) {
+        throw new RuntimeException("Unimplemented");
+    }
+
+    @Override
+    public boolean equals(Object o) {
+
+        if (!(o instanceof VirtualNetworkRoute)) {
+            return false;
         }
 
+        VirtualNetworkRoute other = (VirtualNetworkRoute) o;
+
+        boolean targetEquals;
+        if (target == null) {
+            //noinspection RedundantIfStatement
+            if (other.target == null) {
+                targetEquals = true;
+            } else {
+                targetEquals = false;
+            }
+        } else {
+            if (other.target == null) {
+                targetEquals = false;
+            } else {
+                targetEquals = target.equals(other.target);
+            }
+        }
+
+        if (!targetEquals) {
+            return false;
+        }
 
         boolean viaEquals;
-        if (via == null && other.via == null) {
-            viaEquals = true;
-        }
-        else if (via == null && other.via != null) {
-            viaEquals = false;
-        }
-        else if (via != null && other.via == null) {
-            viaEquals = false;
-        }
-        else {
-            viaEquals = via.toString().equals(other.via.toString());
+        if (via == null) {
+            //noinspection RedundantIfStatement
+            if (other.via == null) {
+                viaEquals = true;
+            } else {
+                viaEquals = false;
+            }
+        } else {
+            if (other.via == null) {
+                viaEquals = false;
+            } else {
+                viaEquals = via.equals(other.via);
+            }
         }
 
-        return viaEquals && targetEquals;
+        if (!viaEquals) {
+            return false;
+        }
+
+        if (flags != other.flags) {
+            return false;
+        }
+
+        if (metric != other.metric) {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+
+        int result = 17;
+        result = 37 * result + (target == null ? 0 : target.hashCode());
+        result = 37 * result + (via == null ? 0 : via.hashCode());
+        result = 37 * result + flags;
+        result = 37 * result + metric;
+
+        return result;
+    }
+
+    public InetSocketAddress getTarget() {
+        return target;
+    }
+
+    public InetSocketAddress getVia() {
+        return via;
+    }
+
+    public int getFlags() {
+        return flags;
+    }
+
+    public int getMetric() {
+        return metric;
     }
 }

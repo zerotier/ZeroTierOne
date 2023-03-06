@@ -29,197 +29,302 @@ package com.zerotier.sdk;
 
 import android.util.Log;
 
-import java.lang.Comparable;
-import java.lang.Override;
-import java.lang.String;
-import java.util.ArrayList;
+import com.zerotier.sdk.util.StringUtils;
+
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
-public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
+/**
+ * Virtual network configuration
+ *
+ * Defined in ZeroTierOne.h as ZT_VirtualNetworkConfig
+ */
+public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
+
     private final static String TAG = "VirtualNetworkConfig";
 
     public static final int MAX_MULTICAST_SUBSCRIPTIONS = 4096;
     public static final int ZT_MAX_ZT_ASSIGNED_ADDRESSES = 16;
 
-    private long nwid;
-    private long mac;
-    private String name;
-    private VirtualNetworkStatus status;
-    private VirtualNetworkType type;
-    private int mtu;
-    private boolean dhcp;
-    private boolean bridge;
-    private boolean broadcastEnabled;
-    private int portError;
-    private boolean enabled;
-    private long netconfRevision;
-    private InetSocketAddress[] assignedAddresses;
-    private VirtualNetworkRoute[] routes;
-    private VirtualNetworkDNS dns;
+    private final long nwid;
 
-    private VirtualNetworkConfig() {
+    private final long mac;
 
+    private final String name;
+
+    private final VirtualNetworkStatus status;
+
+    private final VirtualNetworkType type;
+
+    private final int mtu;
+
+    private final boolean dhcp;
+
+    private final boolean bridge;
+
+    private final boolean broadcastEnabled;
+
+    private final int portError;
+
+    private final long netconfRevision;
+
+    private final InetSocketAddress[] assignedAddresses;
+
+    private final VirtualNetworkRoute[] routes;
+
+    private final VirtualNetworkDNS dns;
+
+    public VirtualNetworkConfig(long nwid, long mac, String name, VirtualNetworkStatus status, VirtualNetworkType type, int mtu, boolean dhcp, boolean bridge, boolean broadcastEnabled, int portError, long netconfRevision, InetSocketAddress[] assignedAddresses, VirtualNetworkRoute[] routes, VirtualNetworkDNS dns) {
+        this.nwid = nwid;
+        this.mac = mac;
+        this.name = name;
+        this.status = status;
+        this.type = type;
+        if (mtu < 0) {
+            throw new RuntimeException("mtu < 0: " + mtu);
+        }
+        this.mtu = mtu;
+        this.dhcp = dhcp;
+        this.bridge = bridge;
+        this.broadcastEnabled = broadcastEnabled;
+        this.portError = portError;
+        if (netconfRevision < 0) {
+            throw new RuntimeException("netconfRevision < 0: " + netconfRevision);
+        }
+        this.netconfRevision = netconfRevision;
+        this.assignedAddresses = assignedAddresses;
+        this.routes = routes;
+        this.dns = dns;
     }
 
-    public boolean equals(VirtualNetworkConfig cfg) {
-        ArrayList<String> aaCurrent = new ArrayList<>();
-        ArrayList<String> aaNew = new ArrayList<>();
-        for (InetSocketAddress s : assignedAddresses) {
-            aaCurrent.add(s.toString());
-        }
-        for (InetSocketAddress s : cfg.assignedAddresses) {
-            aaNew.add(s.toString());
-        }
-        Collections.sort(aaCurrent);
-        Collections.sort(aaNew);
-        boolean aaEqual = aaCurrent.equals(aaNew);
+    @Override
+    public String toString() {
+        return "VirtualNetworkConfig(" + StringUtils.networkIdToString(nwid) + ", " + StringUtils.macAddressToString(mac) + ", " + name + ", " + status + ", " + type + ", " + mtu + ", " + dhcp + ", " + bridge + ", " + broadcastEnabled + ", " + portError + ", " + netconfRevision + ", " + Arrays.toString(assignedAddresses) + ", " + Arrays.toString(routes) + ", " + dns + ")";
+    }
 
-        ArrayList<String> rCurrent = new ArrayList<>();
-        ArrayList<String> rNew = new ArrayList<>();
-        for (VirtualNetworkRoute r : routes) {
-            rCurrent.add(r.toString());
+    @Override
+    public boolean equals(Object o) {
+
+        if (!(o instanceof VirtualNetworkConfig)) {
+            return false;
         }
-        for (VirtualNetworkRoute r : cfg.routes) {
-            rNew.add(r.toString());
-        }
-        Collections.sort(rCurrent);
-        Collections.sort(rNew);
-        boolean routesEqual = rCurrent.equals(rNew);
+
+        VirtualNetworkConfig cfg = (VirtualNetworkConfig) o;
 
         if (this.nwid != cfg.nwid) {
-            Log.i(TAG, "nwid Changed. Old: " + Long.toHexString(this.nwid) + " (" + Long.toString(this.nwid) + "), " +
-                    "New: " + Long.toHexString(cfg.nwid) + " (" + Long.toString(cfg.nwid) + ")");
+            Log.i(TAG, "NetworkID Changed. Old: " + StringUtils.networkIdToString(this.nwid) + " (" + this.nwid + "), " +
+                    "New: " + StringUtils.networkIdToString(cfg.nwid) + " (" + cfg.nwid + ")");
+
+            return false;
         }
+
         if (this.mac != cfg.mac) {
-            Log.i(TAG, "MAC Changed. Old: " + Long.toHexString(this.mac) + ", New: " + Long.toHexString(cfg.mac));
+            Log.i(TAG, "MAC Changed. Old: " + StringUtils.macAddressToString(this.mac) + ", New: " + StringUtils.macAddressToString(cfg.mac));
+
+            return false;
         }
 
         if (!this.name.equals(cfg.name)) {
-            Log.i(TAG, "Name Changed.  Old: " + this.name + " New: "+ cfg.name);
+            Log.i(TAG, "Name Changed. Old: " + this.name + ", New: " + cfg.name);
+
+            return false;
         }
 
-        if (!this.type.equals(cfg.type)) {
-            Log.i(TAG, "TYPE changed.  Old " + this.type + ", New: " + cfg.type);
+        if (this.status != cfg.status) {
+            Log.i(TAG, "Status Changed. Old: " + this.status + ", New: " + cfg.status);
+
+            return false;
+        }
+
+        if (this.type != cfg.type) {
+            Log.i(TAG, "Type changed. Old " + this.type + ", New: " + cfg.type);
+
+            return false;
         }
 
         if (this.mtu != cfg.mtu) {
-            Log.i(TAG, "MTU Changed.  Old: " + this.mtu + ", New: " + cfg.mtu);
+            Log.i(TAG, "MTU Changed. Old: " + this.mtu + ", New: " + cfg.mtu);
+
+            return false;
         }
 
         if (this.dhcp != cfg.dhcp) {
             Log.i(TAG, "DHCP Flag Changed. Old: " + this.dhcp + ", New: " + cfg.dhcp);
+
+            return false;
         }
 
         if (this.bridge != cfg.bridge) {
             Log.i(TAG, "Bridge Flag Changed. Old: " + this.bridge + ", New: " + cfg.bridge);
+
+            return false;
         }
 
         if (this.broadcastEnabled != cfg.broadcastEnabled) {
-            Log.i(TAG, "Broadcast Flag Changed. Old: "+ this.broadcastEnabled +", New: " + this.broadcastEnabled);
+            Log.i(TAG, "Broadcast Flag Changed. Old: "+ this.broadcastEnabled + ", New: " + cfg.broadcastEnabled);
+
+            return false;
         }
 
         if (this.portError != cfg.portError) {
-            Log.i(TAG, "Port Error Changed. Old: " + this.portError + ", New: " + this.portError);
+            Log.i(TAG, "Port Error Changed. Old: " + this.portError + ", New: " + cfg.portError);
+
+            return false;
         }
 
-        if (this.enabled != cfg.enabled) {
-            Log.i(TAG, "Enabled Changed. Old: " + this.enabled + ", New: " + this.enabled);
+        if (this.netconfRevision != cfg.netconfRevision) {
+            Log.i(TAG, "NetConfRevision Changed. Old: " + this.netconfRevision + ", New: " + cfg.netconfRevision);
+
+            return false;
         }
 
-        if (!aaEqual) {
+        if (!Arrays.equals(assignedAddresses, cfg.assignedAddresses)) {
+
+            ArrayList<String> aaCurrent = new ArrayList<>();
+            ArrayList<String> aaNew = new ArrayList<>();
+            for (InetSocketAddress s : assignedAddresses) {
+                aaCurrent.add(s.toString());
+            }
+            for (InetSocketAddress s : cfg.assignedAddresses) {
+                aaNew.add(s.toString());
+            }
+            Collections.sort(aaCurrent);
+            Collections.sort(aaNew);
+
             Log.i(TAG, "Assigned Addresses Changed");
             Log.i(TAG, "Old:");
             for (String s : aaCurrent) {
                 Log.i(TAG, "    " + s);
             }
+            Log.i(TAG, "");
             Log.i(TAG, "New:");
             for (String s : aaNew) {
                 Log.i(TAG, "    " +s);
             }
+            Log.i(TAG, "");
+
+            return false;
         }
 
-        if (!routesEqual) {
+        if (!Arrays.equals(routes, cfg.routes)) {
+
+            ArrayList<String> rCurrent = new ArrayList<>();
+            ArrayList<String> rNew = new ArrayList<>();
+            for (VirtualNetworkRoute r : routes) {
+                rCurrent.add(r.toString());
+            }
+            for (VirtualNetworkRoute r : cfg.routes) {
+                rNew.add(r.toString());
+            }
+            Collections.sort(rCurrent);
+            Collections.sort(rNew);
+
             Log.i(TAG, "Managed Routes Changed");
             Log.i(TAG, "Old:");
             for (String s : rCurrent) {
                 Log.i(TAG, "    " + s);
             }
+            Log.i(TAG, "");
             Log.i(TAG, "New:");
             for (String s : rNew) {
                 Log.i(TAG, "    " + s);
             }
+            Log.i(TAG, "");
+
+            return false;
         }
 
-        boolean dnsEquals = false;
-        if (this.dns == null || cfg.dns == null) {
-            dnsEquals = true;
-        } else if (this.dns != null) {
-            dnsEquals = this.dns.equals(cfg.dns);
+        boolean dnsEquals;
+        if (this.dns == null) {
+            //noinspection RedundantIfStatement
+            if (cfg.dns == null) {
+                dnsEquals = true;
+            } else {
+                dnsEquals = false;
+            }
+        } else {
+            if (cfg.dns == null) {
+                dnsEquals = false;
+            } else {
+                dnsEquals = this.dns.equals(cfg.dns);
+            }
         }
 
-        return this.nwid == cfg.nwid &&
-               this.mac == cfg.mac &&
-               this.name.equals(cfg.name) &&
-               this.status.equals(cfg.status) &&
-               this.type.equals(cfg.type) &&
-               this.mtu == cfg.mtu &&
-               this.dhcp == cfg.dhcp &&
-               this.bridge == cfg.bridge &&
-               this.broadcastEnabled == cfg.broadcastEnabled &&
-               this.portError == cfg.portError &&
-               this.enabled == cfg.enabled &&
-               dnsEquals &&
-               aaEqual && routesEqual;
+        if (!dnsEquals) {
+            return false;
+        }
+
+        return true;
     }
 
+    @Override
     public int compareTo(VirtualNetworkConfig cfg) {
-        if(cfg.nwid == this.nwid) {
-            return 0;
-        } else {
-            return this.nwid > cfg.nwid ? 1 : -1;
-        }
+        return Long.compare(this.nwid, cfg.nwid);
+    }
+
+    @Override
+    public int hashCode() {
+
+        int result = 17;
+        result = 37 * result + (int) (nwid ^ (nwid >>> 32));
+        result = 37 * result + (int) (mac ^ (mac >>> 32));
+        result = 37 * result + name.hashCode();
+        result = 37 * result + status.hashCode();
+        result = 37 * result + type.hashCode();
+        result = 37 * result + mtu;
+        result = 37 * result + (dhcp ? 1 : 0);
+        result = 37 * result + (bridge ? 1 : 0);
+        result = 37 * result + (broadcastEnabled ? 1 : 0);
+        result = 37 * result + portError;
+        result = 37 * result + (int) (netconfRevision ^ (netconfRevision >>> 32));
+        result = 37 * result + Arrays.hashCode(assignedAddresses);
+        result = 37 * result + Arrays.hashCode(routes);
+        result = 37 * result + (dns == null ? 0 : dns.hashCode());
+
+        return result;
     }
 
     /**
      * 64-bit ZeroTier network ID
      */
-    public final long networkId() {
+    public long getNwid() {
         return nwid;
     }
 
     /**
-     * Ethernet MAC (40 bits) that should be assigned to port
+     * Ethernet MAC (48 bits) that should be assigned to port
      */
-    public final long macAddress() {
+    public long getMac() {
         return mac;
     }
 
     /**
      * Network name (from network configuration master)
      */
-    public final String name() {
+    public String getName() {
         return name;
     }
 
     /**
      * Network configuration request status
      */
-    public final VirtualNetworkStatus networkStatus() {
+    public VirtualNetworkStatus getStatus() {
         return status;
     }
 
     /**
      * Network type
      */
-    public final VirtualNetworkType networkType() {
+    public VirtualNetworkType getType() {
         return type;
     }
 
     /**
      * Maximum interface MTU
      */
-    public final int mtu() {
+    public int getMtu() {
         return mtu;
     }
 
@@ -230,7 +335,7 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
      * for security or other reasons. This is simply a netconf parameter that
      * means 'DHCP is available on this network.'</p>
      */
-    public final boolean isDhcpAvailable() {
+    public boolean isDhcp() {
         return dhcp;
     }
 
@@ -240,21 +345,21 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
      * <p>This is informational. If this is false, bridged packets will simply
      * be dropped and bridging won't work.</p>
      */
-    public final boolean isBridgeEnabled() {
+    public boolean isBridge() {
         return bridge;
     }
 
     /**
      * If true, this network supports and allows broadcast (ff:ff:ff:ff:ff:ff) traffic
      */
-    public final boolean broadcastEnabled() {
+    public boolean isBroadcastEnabled() {
         return broadcastEnabled;
     }
 
     /**
      * If the network is in PORT_ERROR state, this is the error most recently returned by the port config callback
      */
-    public final int portError() {
+    public int getPortError() {
         return portError;
     }
 
@@ -263,12 +368,12 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
      *
      * <p>If this is zero, it means we're still waiting for our netconf.</p>
      */
-    public final long netconfRevision() {
+    public long getNetconfRevision() {
         return netconfRevision;
     }
 
     /**
-     * ZeroTier-assigned addresses (in {@link java.net.InetSocketAddress} objects)
+     * ZeroTier-assigned addresses (in {@link InetSocketAddress} objects)
      *
      * For IP, the port number of the sockaddr_XX structure contains the number
      * of bits in the address netmask. Only the IP address and port are used.
@@ -277,16 +382,21 @@ public final class VirtualNetworkConfig implements Comparable<VirtualNetworkConf
      * This is only used for ZeroTier-managed address assignments sent by the
      * virtual network's configuration master.
      */
-    public final InetSocketAddress[] assignedAddresses() {
+    public InetSocketAddress[] getAssignedAddresses() {
         return assignedAddresses;
     }
 
     /**
-     * ZeroTier-assigned routes (in {@link com.zerotier.sdk.VirtualNetworkRoute} objects)
-     *
-     * @return
+     * ZeroTier-assigned routes (in {@link VirtualNetworkRoute} objects)
      */
-    public final VirtualNetworkRoute[] routes() { return routes; }
+    public VirtualNetworkRoute[] getRoutes() {
+        return routes;
+    }
 
-    public final VirtualNetworkDNS dns() { return dns; }
+    /**
+     * Network specific DNS configuration
+     */
+    public VirtualNetworkDNS getDns() {
+        return dns;
+    }
 }

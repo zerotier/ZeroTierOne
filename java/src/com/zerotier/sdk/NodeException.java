@@ -27,9 +27,10 @@
 
 package com.zerotier.sdk;
 
-import java.lang.RuntimeException;
+public class NodeException extends Exception {
 
-public class NodeException extends RuntimeException {
+    private static final long serialVersionUID = 6268040509883125819L;
+    
     public NodeException(String message) {
         super(message);
     }

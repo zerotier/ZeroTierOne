@@ -24,16 +24,41 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
+
 package com.zerotier.sdk;
 
+/**
+ * Virtual network type codes
+ *
+ * Defined in ZeroTierOne.h as ZT_VirtualNetworkType
+ */
 public enum VirtualNetworkType {
+
     /**
      * Private networks are authorized via certificates of membership
      */
-    NETWORK_TYPE_PRIVATE,
+    NETWORK_TYPE_PRIVATE(0),
 
     /**
      * Public networks have no access control -- they'll always be AUTHORIZED
      */
-    NETWORK_TYPE_PUBLIC
+    NETWORK_TYPE_PUBLIC(1);
+
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private final int id;
+
+    VirtualNetworkType(int id) {
+        this.id = id;
+    }
+
+    public static VirtualNetworkType fromInt(int id) {
+        switch (id) {
+            case 0:
+                return NETWORK_TYPE_PRIVATE;
+            case 1:
+                return NETWORK_TYPE_PUBLIC;
+            default:
+                throw new RuntimeException("Unhandled value: " + id);
+        }
+    }
 }

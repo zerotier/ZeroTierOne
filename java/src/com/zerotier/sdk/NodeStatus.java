@@ -27,43 +27,64 @@
 
 package com.zerotier.sdk;
 
-public final class NodeStatus {
-	private long address;
-	private String publicIdentity;
-	private String secretIdentity;
-	private boolean online;
+import com.zerotier.sdk.util.StringUtils;
 
-	private NodeStatus() {}
+/**
+ * Current node status
+ *
+ * Defined in ZeroTierOne.h as ZT_NodeStatus
+ */
+public class NodeStatus {
+
+    private final long address;
+
+    private final String publicIdentity;
+
+    private final String secretIdentity;
+
+    private final boolean online;
+
+    public NodeStatus(long address, String publicIdentity, String secretIdentity, boolean online) {
+        this.address = address;
+        this.publicIdentity = publicIdentity;
+        this.secretIdentity = secretIdentity;
+        this.online = online;
+    }
+
+    @Override
+    public String toString() {
+        return "NodeStatus(" + StringUtils.addressToString(address) + ", " + publicIdentity + ", " + secretIdentity + ", " + online + ")";
+    }
 
 	/**
 	 * 40-bit ZeroTier address of this node
 	 */
-	public final long getAddress() {
-		return address;
-	}
+    public long getAddress() {
+        return address;
+    }
 
 	/**
 	 * Public identity in string-serialized form (safe to send to others)
 	 *
 	 * <p>This identity will remain valid as long as the node exists.</p>
 	 */
-	public final String getPublicIdentity() {
-		return publicIdentity;
-	}
+    public String getPublicIdentity() {
+        return publicIdentity;
+    }
 
 	/**
 	 * Full identity including secret key in string-serialized form
 	 *
 	 * <p>This identity will remain valid as long as the node exists.</p>
 	 */
-	public final String getSecretIdentity() {
-		return secretIdentity;
-	}
+    public String getSecretIdentity() {
+        return secretIdentity;
+    }
 
 	/**
 	 * True if some kind of connectivity appears available
 	 */
-	public final boolean isOnline() {
-		return online;
-	}
+    public boolean isOnline() {
+        return online;
+    }
 }

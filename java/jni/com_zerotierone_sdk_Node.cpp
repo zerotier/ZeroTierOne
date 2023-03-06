@@ -26,47 +26,62 @@
  */
 
 #include "com_zerotierone_sdk_Node.h"
+
+#include "ZT_jnicache.h"
 #include "ZT_jniutils.h"
-#include "ZT_jnilookup.h"
 
 #include <ZeroTierOne.h>
 #include "Mutex.hpp"
 
 #include <map>
 #include <string>
-#include <assert.h>
-#include <string.h>
+#include <cassert>
+#include <cstring>
+#include <cinttypes> // for PRId64
 
-// global static JNI Lookup Object
-JniLookup lookup;
-
-#ifdef __cplusplus
-extern "C" {
-#endif
+#define LOG_TAG "Node"
 
 namespace {
     struct JniRef
     {
-        JniRef()
-            : jvm(NULL)
-            , node(NULL)
-            , dataStoreGetListener(NULL)
-            , dataStorePutListener(NULL)
-            , packetSender(NULL)
-            , eventListener(NULL)
-            , frameListener(NULL)
-            , configListener(NULL)
-            , pathChecker(NULL)
-            , callbacks(NULL)
-        {
-            callbacks = (ZT_Node_Callbacks*)malloc(sizeof(ZT_Node_Callbacks));
-            memset(callbacks, 0, sizeof(ZT_Node_Callbacks));
-        }
+        JniRef(
+            int64_t id,
+            JavaVM *jvm,
+            jobject dataStoreGetListenerLocalIn,
+            jobject dataStorePutListenerLocalIn,
+            jobject packetSenderLocalIn,
+            jobject eventListenerLocalIn,
+            jobject frameListenerLocalIn,
+            jobject configListenerLocalIn,
+            jobject pathCheckerLocalIn)
+            : id(id)
+            , jvm(jvm)
+            , node()
+            , dataStoreGetListener()
+            , dataStorePutListener()
+            , packetSender()
+            , eventListener()
+            , frameListener()
+            , configListener()
+            , pathChecker()
+            , inited() {
+
+            JNIEnv *env;
+            GETENV(env, jvm);
+
+            dataStoreGetListener = env->NewGlobalRef(dataStoreGetListenerLocalIn);
+            dataStorePutListener = env->NewGlobalRef(dataStorePutListenerLocalIn);
+            packetSender = env->NewGlobalRef(packetSenderLocalIn);
+            eventListener = env->NewGlobalRef(eventListenerLocalIn);
+            frameListener = env->NewGlobalRef(frameListenerLocalIn);
+            configListener = env->NewGlobalRef(configListenerLocalIn);
+            pathChecker = env->NewGlobalRef(pathCheckerLocalIn);
+        };
 
         ~JniRef()
         {
-            JNIEnv *env = NULL;
-            jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+            JNIEnv *env;
+            GETENV(env, jvm);
 
             env->DeleteGlobalRef(dataStoreGetListener);
             env->DeleteGlobalRef(dataStorePutListener);
@@ -75,9 +90,6 @@ namespace {
             env->DeleteGlobalRef(frameListener);
             env->DeleteGlobalRef(configListener);
             env->DeleteGlobalRef(pathChecker);
-
-            free(callbacks);
-            callbacks = NULL;
         }
 
         int64_t id;
@@ -94,70 +106,76 @@ namespace {
         jobject configListener;
         jobject pathChecker;
 
-        ZT_Node_Callbacks *callbacks;
+        bool inited;
+
+        bool finishInitializing();
     };
 
 
+    /*
+    * This must return 0 on success. It can return any OS-dependent error code
+    * on failure, and this results in the network being placed into the
+    * PORT_ERROR state.
+    */
     int VirtualNetworkConfigFunctionCallback(
         ZT_Node *node,
         void *userData,
         void *threadData,
         uint64_t nwid,
-        void **,
+        void **nuptr,
         enum ZT_VirtualNetworkConfigOperation operation,
         const ZT_VirtualNetworkConfig *config)
     {
         LOGV("VirtualNetworkConfigFunctionCallback");
         JniRef *ref = (JniRef*)userData;
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        assert(ref);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
+
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return -100;
+        }
 
         if (ref->configListener == NULL) {
             LOGE("configListener is NULL");
-            return -1;
-        }
-
-        jclass configListenerClass = env->GetObjectClass(ref->configListener);
-        if(configListenerClass == NULL)
-        {
-            LOGE("Couldn't find class for VirtualNetworkConfigListener instance");
-            return -1;
-        }
-
-        jmethodID configListenerCallbackMethod = lookup.findMethod(configListenerClass,
-            "onNetworkConfigurationUpdated",
-            "(JLcom/zerotier/sdk/VirtualNetworkConfigOperation;Lcom/zerotier/sdk/VirtualNetworkConfig;)I");
-        if(configListenerCallbackMethod == NULL)
-        {
-            LOGE("Couldn't find onVirtualNetworkFrame() method");
-            return -2;
+            return -101;
         }
 
         jobject operationObject = createVirtualNetworkConfigOperation(env, operation);
-        if(operationObject == NULL)
+        if(env->ExceptionCheck() || operationObject == NULL)
         {
-            LOGE("Error creating VirtualNetworkConfigOperation object");
-            return -3;
+            return -102;
+        }
+
+        if (config == NULL) {
+            LOGE("Config is NULL");
+            return -103;
         }
 
         jobject networkConfigObject = newNetworkConfig(env, *config);
-        if(networkConfigObject == NULL)
+        if(env->ExceptionCheck() || networkConfigObject == NULL)
         {
-            LOGE("Error creating VirtualNetworkConfig object");
-            return -4;
+            return -104;
         }
 
-        return env->CallIntMethod(
+        jint ret = env->CallIntMethod(
             ref->configListener,
-            configListenerCallbackMethod,
+            VirtualNetworkConfigListener_onNetworkConfigurationUpdated_method,
             (jlong)nwid, operationObject, networkConfigObject);
+        if (env->ExceptionCheck()) {
+            LOGE("Exception calling onNetworkConfigurationUpdated");
+            return -105;
+        }
+
+        return ret;
     }
 
     void VirtualNetworkFrameFunctionCallback(ZT_Node *node,
         void *userData,
         void *threadData,
         uint64_t nwid,
-        void**,
+        void** nuptr,
         uint64_t sourceMac,
         uint64_t destMac,
         unsigned int etherType,
@@ -167,53 +185,39 @@ namespace {
     {
         LOGV("VirtualNetworkFrameFunctionCallback");
 #ifndef NDEBUG
-        unsigned char* local = (unsigned char*)frameData;
-        LOGV("Type Bytes: 0x%02x%02x", local[12], local[13]);
+        if (frameLength >= 14) {
+            unsigned char* local = (unsigned char*)frameData;
+            LOGV("Type Bytes: 0x%02x%02x", local[12], local[13]);
+        }
 #endif
         JniRef *ref = (JniRef*)userData;
+        assert(ref);
         assert(ref->node == node);
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
+
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return;
+        }
 
         if (ref->frameListener == NULL) {
             LOGE("frameListener is NULL");
             return;
         }
 
-        jclass frameListenerClass = env->GetObjectClass(ref->frameListener);
-        if(env->ExceptionCheck() || frameListenerClass == NULL)
-        {
-            LOGE("Couldn't find class for VirtualNetworkFrameListener instance");
-            return;
-        }
-
-        jmethodID frameListenerCallbackMethod = lookup.findMethod(
-            frameListenerClass,
-            "onVirtualNetworkFrame", "(JJJJJ[B)V");
-        if(env->ExceptionCheck() || frameListenerCallbackMethod == NULL)
-        {
-            LOGE("Couldn't find onVirtualNetworkFrame() method");
-            return;
-        }
-
-        jbyteArray dataArray = env->NewByteArray(frameLength);
+        const unsigned char *bytes = static_cast<const unsigned char*>(frameData);
+        jbyteArray dataArray = newByteArray(env, bytes, frameLength);
         if(env->ExceptionCheck() || dataArray == NULL)
         {
-            LOGE("Couldn't create frame data array");
             return;
         }
 
-        void *data = env->GetPrimitiveArrayCritical(dataArray, NULL);
-        memcpy(data, frameData, frameLength);
-        env->ReleasePrimitiveArrayCritical(dataArray, data, 0);
-
-        if(env->ExceptionCheck())
-        {
-            LOGE("Error setting frame data to array");
+        env->CallVoidMethod(ref->frameListener, VirtualNetworkFrameListener_onVirtualNetworkFrame_method, (jlong)nwid, (jlong)sourceMac, (jlong)destMac, (jlong)etherType, (jlong)vlanid, dataArray);
+        if (env->ExceptionCheck()) {
+            LOGE("Exception calling onVirtualNetworkFrame");
             return;
         }
-
-        env->CallVoidMethod(ref->frameListener, frameListenerCallbackMethod, (jlong)nwid, (jlong)sourceMac, (jlong)destMac, (jlong)etherType, (jlong)vlanid, dataArray);
     }
 
 
@@ -224,83 +228,98 @@ namespace {
         const void *data) {
         LOGV("EventCallback");
         JniRef *ref = (JniRef *) userData;
+        assert(ref);
         if (ref->node != node && event != ZT_EVENT_UP) {
             LOGE("Nodes not equal. ref->node %p, node %p. Event: %d", ref->node, node, event);
             return;
         }
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void **) &env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
+
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return;
+        }
 
         if (ref->eventListener == NULL) {
             LOGE("eventListener is NULL");
             return;
         }
 
-        jclass eventListenerClass = env->GetObjectClass(ref->eventListener);
-        if (eventListenerClass == NULL) {
-            LOGE("Couldn't class for EventListener instance");
-            return;
-        }
-
-        jmethodID onEventMethod = lookup.findMethod(eventListenerClass,
-                                                    "onEvent", "(Lcom/zerotier/sdk/Event;)V");
-        if (onEventMethod == NULL) {
-            LOGE("Couldn't find onEvent method");
-            return;
-        }
-
-        jmethodID onTraceMethod = lookup.findMethod(eventListenerClass,
-                                                    "onTrace", "(Ljava/lang/String;)V");
-        if (onTraceMethod == NULL) {
-            LOGE("Couldn't find onTrace method");
-            return;
-        }
-
         jobject eventObject = createEvent(env, event);
-        if (eventObject == NULL) {
+        if (env->ExceptionCheck() || eventObject == NULL) {
             return;
         }
 
         switch (event) {
             case ZT_EVENT_UP: {
                 LOGD("Event Up");
-                env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
+                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onEvent");
+                    return;
+                }
                 break;
             }
             case ZT_EVENT_OFFLINE: {
                 LOGD("Event Offline");
-                env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
+                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onEvent");
+                    return;
+                }
                 break;
             }
             case ZT_EVENT_ONLINE: {
                 LOGD("Event Online");
-                env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
+                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onEvent");
+                    return;
+                }
                 break;
             }
             case ZT_EVENT_DOWN: {
                 LOGD("Event Down");
-                env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
+                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onEvent");
+                    return;
+                }
                 break;
             }
             case ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION: {
                 LOGV("Identity Collision");
                 // call onEvent()
-                env->CallVoidMethod(ref->eventListener, onEventMethod, eventObject);
+                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onEvent");
+                    return;
+                }
             }
                 break;
             case ZT_EVENT_TRACE: {
                 LOGV("Trace Event");
                 // call onTrace()
-                if (data != NULL) {
-                    const char *message = (const char *) data;
-                    jstring messageStr = env->NewStringUTF(message);
-                    env->CallVoidMethod(ref->eventListener, onTraceMethod, messageStr);
+                if (data == NULL) {
+                    break;
+                }
+                const char *message = (const char *) data;
+                jstring messageStr = env->NewStringUTF(message);
+                if (env->ExceptionCheck() || messageStr == NULL) {
+                    LOGE("Exception creating new string");
+                    return;
+                }
+
+                env->CallVoidMethod(ref->eventListener, EventListener_onTrace_method, messageStr);
+                if (env->ExceptionCheck()) {
+                    LOGE("Exception calling onTrace");
+                    return;
                 }
             }
                 break;
             case ZT_EVENT_USER_MESSAGE:
             case ZT_EVENT_REMOTE_TRACE:
-            default:
                 break;
         }
     }
@@ -313,93 +332,101 @@ namespace {
             const uint64_t id[2],
             const void *buffer,
             int bufferLength) {
+        LOGV("StatePutFunction");
+        
         char p[4096] = {0};
         bool secure = false;
+        int res = 0;
         switch (type) {
             case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
-                snprintf(p, sizeof(p), "identity.public");
+                res = snprintf(p, sizeof(p), "identity.public");
                 break;
             case ZT_STATE_OBJECT_IDENTITY_SECRET:
-                snprintf(p, sizeof(p), "identity.secret");
+                res = snprintf(p, sizeof(p), "identity.secret");
                 secure = true;
                 break;
             case ZT_STATE_OBJECT_PLANET:
-                snprintf(p, sizeof(p), "planet");
+                res = snprintf(p, sizeof(p), "planet");
                 break;
             case ZT_STATE_OBJECT_MOON:
-                snprintf(p, sizeof(p), "moons.d/%.16llx.moon", (unsigned long long)id[0]);
+                res = snprintf(p, sizeof(p), "moons.d/%.16" PRIx64 ".moon", id[0]);
                 break;
             case ZT_STATE_OBJECT_NETWORK_CONFIG:
-                snprintf(p, sizeof(p), "networks.d/%.16llx.conf", (unsigned long long)id[0]);
+                res = snprintf(p, sizeof(p), "networks.d/%.16" PRIx64 ".conf", id[0]);
                 break;
             case ZT_STATE_OBJECT_PEER:
-                snprintf(p, sizeof(p), "peers.d/%.10llx", (unsigned long long)id[0]);
+                res = snprintf(p, sizeof(p), "peers.d/%.10" PRIx64, id[0]);
                 break;
-            default:
+            case ZT_STATE_OBJECT_NULL:
                 return;
         }
 
-        if (strlen(p) < 1) {
+        if (!(0 <= res && res < sizeof(p))) {
+            LOGE("snprintf error: %d", res);
             return;
         }
 
         JniRef *ref = (JniRef*)userData;
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        assert(ref);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
+
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return;
+        }
 
         if (ref->dataStorePutListener == NULL) {
             LOGE("dataStorePutListener is NULL");
             return;
         }
 
-        jclass dataStorePutClass = env->GetObjectClass(ref->dataStorePutListener);
-        if (dataStorePutClass == NULL)
-        {
-            LOGE("Couldn't find class for DataStorePutListener instance");
-            return;
-        }
-
-        jmethodID dataStorePutCallbackMethod = lookup.findMethod(
-                dataStorePutClass,
-                "onDataStorePut",
-                "(Ljava/lang/String;[BZ)I");
-        if(dataStorePutCallbackMethod == NULL)
-        {
-            LOGE("Couldn't find onDataStorePut method");
-            return;
-        }
-
-        jmethodID deleteMethod = lookup.findMethod(dataStorePutClass,
-                                                   "onDelete", "(Ljava/lang/String;)I");
-        if(deleteMethod == NULL)
-        {
-            LOGE("Couldn't find onDelete method");
-            return;
-        }
-
         jstring nameStr = env->NewStringUTF(p);
+        if (env->ExceptionCheck() || nameStr == NULL) {
+            LOGE("Exception creating new string");
+            return;
+        }
 
         if (bufferLength >= 0) {
             LOGD("JNI: Write file: %s", p);
-            // set operation
-            jbyteArray bufferObj = env->NewByteArray(bufferLength);
+            const unsigned char *bytes = static_cast<const unsigned char *>(buffer);
+            jbyteArray bufferObj = newByteArray(env, bytes, bufferLength);
             if(env->ExceptionCheck() || bufferObj == NULL)
             {
-                LOGE("Error creating byte array buffer!");
                 return;
             }
 
-            env->SetByteArrayRegion(bufferObj, 0, bufferLength, (jbyte*)buffer);
-
-            env->CallIntMethod(ref->dataStorePutListener,
-                               dataStorePutCallbackMethod,
+            int retval = env->CallIntMethod(ref->dataStorePutListener,
+                               DataStorePutListener_onDataStorePut_method,
                                nameStr, bufferObj, secure);
+            if (env->ExceptionCheck()) {
+                LOGE("Exception calling onDataStorePut");
+                return;
+            }
+
+            if (retval != 0) {
+                LOGE("onDataStorePut error: %d", retval);
+            }
+
         } else {
             LOGD("JNI: Delete file: %s", p);
-            env->CallIntMethod(ref->dataStorePutListener, deleteMethod, nameStr);
+            int retval = env->CallIntMethod(ref->dataStorePutListener, DataStorePutListener_onDelete_method, nameStr);
+            if (env->ExceptionCheck()) {
+                LOGE("Exception calling onDelete");
+                return;
+            }
+
+            if (retval != 0) {
+                LOGE("onDelete error: %d", retval);
+            }
         }
     }
 
+    /**
+     * This function should return the number of bytes actually stored to the
+     * buffer or -1 if the state object was not found or the buffer was too
+     * small to store it.
+     */
     int StateGetFunction(
             ZT_Node *node,
             void *userData,
@@ -408,86 +435,87 @@ namespace {
             const uint64_t id[2],
             void *buffer,
             unsigned int bufferLength) {
+        LOGV("StateGetFunction");
+
         char p[4096] = {0};
+        int res = 0;
         switch (type) {
             case ZT_STATE_OBJECT_IDENTITY_PUBLIC:
-                snprintf(p, sizeof(p), "identity.public");
+                res = snprintf(p, sizeof(p), "identity.public");
                 break;
             case ZT_STATE_OBJECT_IDENTITY_SECRET:
-                snprintf(p, sizeof(p), "identity.secret");
+                res = snprintf(p, sizeof(p), "identity.secret");
                 break;
             case ZT_STATE_OBJECT_PLANET:
-                snprintf(p, sizeof(p), "planet");
+                res = snprintf(p, sizeof(p), "planet");
                 break;
             case ZT_STATE_OBJECT_MOON:
-                snprintf(p, sizeof(p), "moons.d/%.16llx.moon", (unsigned long long)id[0]);
+                res = snprintf(p, sizeof(p), "moons.d/%.16" PRIx64 ".moon", id[0]);
                 break;
             case ZT_STATE_OBJECT_NETWORK_CONFIG:
-                snprintf(p, sizeof(p), "networks.d/%.16llx.conf", (unsigned long long)id[0]);
+                res = snprintf(p, sizeof(p), "networks.d/%.16" PRIx64 ".conf", id[0]);
                 break;
             case ZT_STATE_OBJECT_PEER:
-                snprintf(p, sizeof(p), "peers.d/%.10llx", (unsigned long long)id[0]);
+                res = snprintf(p, sizeof(p), "peers.d/%.10" PRIx64, id[0]);
                 break;
-            default:
-                return -1;
+            case ZT_STATE_OBJECT_NULL:
+                return -100;
         }
 
-        if (strlen(p) < 1) {
-            return -1;
+        if (!(0 <= res && res < sizeof(p))) {
+            LOGE("snprintf error: %d", res);
+            return -101;
         }
 
         JniRef *ref = (JniRef*)userData;
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        assert(ref);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
+
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return -102;
+        }
 
         if (ref->dataStoreGetListener == NULL) {
             LOGE("dataStoreGetListener is NULL");
-            return -2;
-        }
-
-        jclass dataStoreGetClass = env->GetObjectClass(ref->dataStoreGetListener);
-        if(dataStoreGetClass == NULL)
-        {
-            LOGE("Couldn't find class for DataStoreGetListener instance");
-            return -2;
-        }
-
-        jmethodID dataStoreGetCallbackMethod = lookup.findMethod(
-                dataStoreGetClass,
-                "onDataStoreGet",
-                "(Ljava/lang/String;[B)J");
-        if(dataStoreGetCallbackMethod == NULL)
-        {
-            LOGE("Couldn't find onDataStoreGet method");
-            return -2;
+            return -103;
         }
 
         jstring nameStr = env->NewStringUTF(p);
-        if(nameStr == NULL)
+        if(env->ExceptionCheck() || nameStr == NULL)
         {
             LOGE("Error creating name string object");
-            return -2; // out of memory
+            return -104; // out of memory
         }
 
-        jbyteArray bufferObj = env->NewByteArray(bufferLength);
-        if(bufferObj == NULL)
+        jbyteArray bufferObj = newByteArray(env, bufferLength);
+        if(env->ExceptionCheck() || bufferObj == NULL)
         {
-            LOGE("Error creating byte[] buffer of size: %u", bufferLength);
-            return -2;
+            return -105;
         }
 
         LOGV("Calling onDataStoreGet(%s, %p)", p, buffer);
 
         int retval = (int)env->CallLongMethod(
                 ref->dataStoreGetListener,
-                dataStoreGetCallbackMethod,
+                DataStoreGetListener_onDataStoreGet_method,
                 nameStr,
                 bufferObj);
+        if (env->ExceptionCheck()) {
+            LOGE("Exception calling onDataStoreGet");
+            return -106;
+        }
 
         LOGV("onDataStoreGet returned %d", retval);
 
         if(retval > 0)
         {
+            if (retval > bufferLength) {
+                LOGE("retval > bufferLength. retval: %d, bufferLength: %u", retval, bufferLength);
+                return -107;
+            }
+
             void *data = env->GetPrimitiveArrayCritical(bufferObj, NULL);
             memcpy(buffer, data, retval);
             env->ReleasePrimitiveArrayCritical(bufferObj, data, 0);
@@ -496,6 +524,11 @@ namespace {
         return retval;
     }
 
+    /**
+     * The function must return zero on success and may return any error code
+     * on failure. Note that success does not (of course) guarantee packet
+     * delivery. It only means that the packet appears to have been sent.
+     */
     int WirePacketSendFunction(ZT_Node *node,
         void *userData,
         void *threadData,
@@ -505,42 +538,51 @@ namespace {
         unsigned int bufferSize,
         unsigned int ttl)
     {
-        LOGV("WirePacketSendFunction(%lld, %p, %p, %d)", (long long)localSocket, remoteAddress, buffer, bufferSize);
+        LOGV("WirePacketSendFunction(%" PRId64 ", %p, %p, %u, %u)", localSocket, remoteAddress, buffer, bufferSize, ttl);
         JniRef *ref = (JniRef*)userData;
+        assert(ref);
         assert(ref->node == node);
 
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
+
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return -100;
+        }
 
         if (ref->packetSender == NULL) {
             LOGE("packetSender is NULL");
-            return -1;
+            return -101;
         }
 
-        jclass packetSenderClass = env->GetObjectClass(ref->packetSender);
-        if(packetSenderClass == NULL)
-        {
-            LOGE("Couldn't find class for PacketSender instance");
-            return -1;
-        }
-
-        jmethodID packetSenderCallbackMethod = lookup.findMethod(packetSenderClass,
-            "onSendPacketRequested", "(JLjava/net/InetSocketAddress;[BI)I");
-        if(packetSenderCallbackMethod == NULL)
-        {
-            LOGE("Couldn't find onSendPacketRequested method");
-            return -2;
-        }
-
+        //
+        // may be NULL
+        //
         jobject remoteAddressObj = newInetSocketAddress(env, *remoteAddress);
-        jbyteArray bufferObj = env->NewByteArray(bufferSize);
-        env->SetByteArrayRegion(bufferObj, 0, bufferSize, (jbyte*)buffer);
-        int retval = env->CallIntMethod(ref->packetSender, packetSenderCallbackMethod, localSocket, remoteAddressObj, bufferObj);
+        if (env->ExceptionCheck()) {
+            return -102;
+        }
+        const unsigned char *bytes = static_cast<const unsigned char *>(buffer);
+        jbyteArray bufferObj = newByteArray(env, bytes, bufferSize);
+        if (env->ExceptionCheck() || bufferObj == NULL)
+        {
+            return -103;
+        }
+        
+        int retval = env->CallIntMethod(ref->packetSender, PacketSender_onSendPacketRequested_method, localSocket, remoteAddressObj, bufferObj, 0);
+        if (env->ExceptionCheck()) {
+            LOGE("Exception calling onSendPacketRequested");
+            return -104;
+        }
 
         LOGV("JNI Packet Sender returned: %d", retval);
         return retval;
     }
 
+    /**
+     * This function must return nonzero (true) if the path should be used.
+     */
     int PathCheckFunction(ZT_Node *node,
         void *userPtr,
         void *threadPtr,
@@ -548,61 +590,44 @@ namespace {
         int64_t localSocket,
         const struct sockaddr_storage *remoteAddress)
     {
+        LOGV("PathCheckFunction");
+
         JniRef *ref = (JniRef*)userPtr;
+        assert(ref);
         assert(ref->node == node);
 
         if(ref->pathChecker == NULL) {
             return true;
         }
 
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
 
-        jclass pathCheckerClass = env->GetObjectClass(ref->pathChecker);
-        if(pathCheckerClass == NULL)
-        {
-            LOGE("Couldn't find class for PathChecker instance");
-            return true;
-        }
-
-        jmethodID pathCheckCallbackMethod = lookup.findMethod(pathCheckerClass,
-            "onPathCheck", "(JJLjava/net/InetSocketAddress;)Z");
-        if(pathCheckCallbackMethod == NULL)
-        {
-            LOGE("Couldn't find onPathCheck method implementation");
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
             return true;
         }
 
         //
-        // was:
-        // struct sockaddr_storage nullAddress = {0};
+        // may be NULL
         //
-        // but was getting this warning:
-        // warning: suggest braces around initialization of subobject
-        //
-        // when building ZeroTierOne
-        //
-        struct sockaddr_storage nullAddress;
-
-        //
-        // It is possible to assume knowledge about internals of sockaddr_storage and construct
-        // correct 0-initializer, but it is simpler to just treat sockaddr_storage as opaque and
-        // use memset here to fill with 0
-        //
-        // This is also done in InetAddress.hpp for InetAddress
-        //
-        memset(&nullAddress, 0, sizeof(sockaddr_storage));
-
-        jobject remoteAddressObj = NULL;
-
-        if(memcmp(remoteAddress, &nullAddress, sizeof(sockaddr_storage)) != 0)
-        {
-            remoteAddressObj = newInetSocketAddress(env, *remoteAddress);
+        jobject remoteAddressObj = newInetSocketAddress(env, *remoteAddress);
+        if (env->ExceptionCheck()) {
+            return true;
         }
 
-        return env->CallBooleanMethod(ref->pathChecker, pathCheckCallbackMethod, address, localSocket, remoteAddressObj);
+        jboolean ret = env->CallBooleanMethod(ref->pathChecker, PathChecker_onPathCheck_method, address, localSocket, remoteAddressObj);
+        if (env->ExceptionCheck()) {
+            LOGE("Exception calling onPathCheck");
+            return true;
+        }
+
+        return ret;
     }
 
+    /**
+     * It must return a nonzero (true) value if the result buffer has been filled with an address.
+     */
     int PathLookupFunction(ZT_Node *node,
         void *userPtr,
         void *threadPtr,
@@ -610,105 +635,41 @@ namespace {
         int ss_family,
         struct sockaddr_storage *result)
     {
+        LOGV("PathLookupFunction");
+
         JniRef *ref = (JniRef*)userPtr;
+        assert(ref);
         assert(ref->node == node);
 
         if(ref->pathChecker == NULL) {
             return false;
         }
 
-        JNIEnv *env = NULL;
-        ref->jvm->GetEnv((void**)&env, JNI_VERSION_1_6);
+        JNIEnv *env;
+        GETENV(env, ref->jvm);
 
-        jclass pathCheckerClass = env->GetObjectClass(ref->pathChecker);
-        if(pathCheckerClass == NULL)
-        {
-            LOGE("Couldn't find class for PathChecker instance");
+        if (env->ExceptionCheck()) {
+            LOGE("Unhandled pending exception");
+            return false;
+        }
+        
+        //
+        // may be NULL
+        //
+        jobject sockAddressObject = env->CallObjectMethod(ref->pathChecker, PathChecker_onPathLookup_method, address, ss_family);
+        if (env->ExceptionCheck()) {
+            LOGE("Unable to call onPathLookup implementation");
             return false;
         }
 
-        jmethodID pathLookupMethod = lookup.findMethod(pathCheckerClass,
-            "onPathLookup", "(JI)Ljava/net/InetSocketAddress;");
-        if(pathLookupMethod == NULL) {
-            return false;
-        }
-
-        jobject sockAddressObject = env->CallObjectMethod(ref->pathChecker, pathLookupMethod, address, ss_family);
         if(sockAddressObject == NULL)
         {
             LOGE("Unable to call onPathLookup implementation");
             return false;
         }
 
-        jclass inetSockAddressClass = env->GetObjectClass(sockAddressObject);
-        if(inetSockAddressClass == NULL)
-        {
-            LOGE("Unable to find InetSocketAddress class");
-            return false;
-        }
-
-        jmethodID getAddressMethod = lookup.findMethod(inetSockAddressClass, "getAddress", "()Ljava/net/InetAddress;");
-        if(getAddressMethod == NULL)
-        {
-            LOGE("Unable to find InetSocketAddress.getAddress() method");
-            return false;
-        }
-
-        jmethodID getPortMethod = lookup.findMethod(inetSockAddressClass, "getPort", "()I");
-        if(getPortMethod == NULL)
-        {
-            LOGE("Unable to find InetSocketAddress.getPort() method");
-            return false;
-        }
-
-        jint port = env->CallIntMethod(sockAddressObject, getPortMethod);
-        jobject addressObject = env->CallObjectMethod(sockAddressObject, getAddressMethod);
-        
-        jclass inetAddressClass = lookup.findClass("java/net/InetAddress");
-        if(inetAddressClass == NULL)
-        {
-            LOGE("Unable to find InetAddress class");
-            return false;
-        }
-
-        getAddressMethod = lookup.findMethod(inetAddressClass, "getAddress", "()[B");
-        if(getAddressMethod == NULL)
-        {
-            LOGE("Unable to find InetAddress.getAddress() method");
-            return false;
-        }
-
-        jbyteArray addressBytes = (jbyteArray)env->CallObjectMethod(addressObject, getAddressMethod);
-        if(addressBytes == NULL)
-        {
-            LOGE("Unable to call InetAddress.getBytes()");
-            return false;
-        }
-
-        int addressSize = env->GetArrayLength(addressBytes);
-        if(addressSize == 4)
-        {
-            // IPV4
-            sockaddr_in *addr = (sockaddr_in*)result;
-            addr->sin_family = AF_INET;
-            addr->sin_port = htons(port);
-            
-            void *data = env->GetPrimitiveArrayCritical(addressBytes, NULL);
-            memcpy(&addr->sin_addr, data, 4);
-            env->ReleasePrimitiveArrayCritical(addressBytes, data, 0);
-        }
-        else if (addressSize == 16)
-        {
-            // IPV6
-            sockaddr_in6 *addr = (sockaddr_in6*)result;
-            addr->sin6_family = AF_INET6;
-            addr->sin6_port = htons(port);
-            void *data = env->GetPrimitiveArrayCritical(addressBytes, NULL);
-            memcpy(&addr->sin6_addr, data, 16);
-            env->ReleasePrimitiveArrayCritical(addressBytes, data, 0);
-        }
-        else
-        {
+        *result = fromSocketAddressObject(env, sockAddressObject);
+        if (env->ExceptionCheck() || isSocketAddressEmpty(*result)) {
             return false;
         }
 
@@ -716,171 +677,179 @@ namespace {
     }
 
     typedef std::map<int64_t, JniRef*> NodeMap;
-    static NodeMap nodeMap;
+    NodeMap nodeMap;
     ZeroTier::Mutex nodeMapMutex;
+
+    bool isInited(int64_t nodeId) {
+
+        ZeroTier::Mutex::Lock lock(nodeMapMutex);
+        NodeMap::iterator found = nodeMap.find(nodeId);
+
+        if (found == nodeMap.end()) {
+
+            //
+            // not in map yet, or has been removed from map
+            //
+            return false;
+        }
+        
+        JniRef *ref = found->second;
+
+        assert(ref);
+
+        return ref->inited;
+    }
+
+    bool JniRef::finishInitializing() {
+
+        ZeroTier::Mutex::Lock lock(nodeMapMutex);
+        NodeMap::iterator found = nodeMap.find(id);
+
+        if (found != nodeMap.end()) {
+            //
+            // already in map
+            //
+            LOGE("Cannot finish initializing; node is already in map");
+            return false;
+        }
+
+        nodeMap.insert(std::make_pair(id, this));
+
+        assert(!inited);
+        inited = true;
+
+        return true;
+    }
 
     ZT_Node* findNode(int64_t nodeId)
     {
         ZeroTier::Mutex::Lock lock(nodeMapMutex);
         NodeMap::iterator found = nodeMap.find(nodeId);
-        if(found != nodeMap.end())
-        {
-            JniRef *ref = found->second;
-            return ref->node;
+
+        assert(found != nodeMap.end());
+
+        JniRef *ref = found->second;
+
+        assert(ref);
+
+        return ref->node;
+    }
+
+    JniRef *removeRef(int64_t nodeId) {
+
+        ZeroTier::Mutex::Lock lock(nodeMapMutex);
+
+        NodeMap::iterator found = nodeMap.find(nodeId);
+
+        if (found == nodeMap.end()) {
+            return nullptr;
         }
-        return NULL;
+
+        JniRef *ref = found->second;
+
+        assert(ref);
+
+        nodeMap.erase(nodeId);
+
+        return ref;
     }
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved)
 {
-    lookup.setJavaVM(vm);
+    setupJNICache(vm);
     return JNI_VERSION_1_6;
 }
 
 JNIEXPORT void JNICALL JNI_OnUnload(JavaVM *vm, void *reserved)
 {
-
+    teardownJNICache(vm);
 }
 
 
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    node_init
- * Signature: (J)Lcom/zerotier/sdk/ResultCode;
+ * Signature: (JLcom/zerotier/sdk/DataStoreGetListener;Lcom/zerotier/sdk/DataStorePutListener;Lcom/zerotier/sdk/PacketSender;Lcom/zerotier/sdk/EventListener;Lcom/zerotier/sdk/VirtualNetworkFrameListener;Lcom/zerotier/sdk/VirtualNetworkConfigListener;Lcom/zerotier/sdk/PathChecker;)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
-    JNIEnv *env, jobject obj, jlong now)
+    JNIEnv *env, jobject obj, jlong now, jobject dataStoreGetListener,
+    jobject dataStorePutListener, jobject packetSender, jobject eventListener,
+    jobject frameListener, jobject configListener,
+    jobject pathChecker)
 {
     LOGV("Creating ZT_Node struct");
-    jobject resultObject = createResultObject(env, ZT_RESULT_OK);
+    jobject resultObject = ResultCode_RESULT_OK_enum;
+
+    JavaVM *vm;
+    GETJAVAVM(env, vm);
+
+    assert(dataStoreGetListener != NULL);
+    assert(dataStorePutListener != NULL);
+    assert(packetSender != NULL);
+    assert(frameListener != NULL);
+    assert(configListener != NULL);
+    assert(eventListener != NULL);
+    //
+    // OPTIONAL, pathChecker may be NULL
+    //
+//    assert(pathChecker != NULL);
+
+    ZT_Node_Callbacks callbacks{};
+    callbacks.stateGetFunction = &StateGetFunction;
+    callbacks.statePutFunction = &StatePutFunction;
+    callbacks.wirePacketSendFunction = &WirePacketSendFunction;
+    callbacks.virtualNetworkFrameFunction = &VirtualNetworkFrameFunctionCallback;
+    callbacks.virtualNetworkConfigFunction = &VirtualNetworkConfigFunctionCallback;
+    callbacks.eventCallback = &EventCallback;
+    callbacks.pathCheckFunction = &PathCheckFunction;
+    callbacks.pathLookupFunction = &PathLookupFunction;
+
+    //
+    // a bit of a confusing dance here where ref and node both know about each other
+    //
+    JniRef *ref = new JniRef(
+            now,
+            vm,
+            dataStoreGetListener,
+            dataStorePutListener,
+            packetSender,
+            eventListener,
+            frameListener,
+            configListener,
+            pathChecker);
 
     ZT_Node *node;
-    JniRef *ref = new JniRef;
-    ref->id = (int64_t)now;
-    env->GetJavaVM(&ref->jvm);
-
-    jclass cls = env->GetObjectClass(obj);
-    jfieldID fid = lookup.findField(
-        cls, "getListener", "Lcom/zerotier/sdk/DataStoreGetListener;");
-
-    if(fid == NULL)
-    {
-        return NULL; // exception already thrown
-    }
-
-    jobject tmp = env->GetObjectField(obj, fid);
-    if(tmp == NULL)
-    {
-        return NULL;
-    }
-    ref->dataStoreGetListener = env->NewGlobalRef(tmp);
-
-    fid = lookup.findField(
-        cls, "putListener", "Lcom/zerotier/sdk/DataStorePutListener;");
-
-    if(fid == NULL)
-    {
-        return NULL; // exception already thrown
-    }
-
-    tmp = env->GetObjectField(obj, fid);
-    if(tmp == NULL)
-    {
-        return NULL;
-    }
-    ref->dataStorePutListener = env->NewGlobalRef(tmp);
-
-    fid = lookup.findField(
-        cls, "sender", "Lcom/zerotier/sdk/PacketSender;");
-    if(fid == NULL)
-    {
-        return NULL; // exception already thrown
-    }
-
-    tmp = env->GetObjectField(obj, fid);
-    if(tmp == NULL)
-    {
-        return NULL;
-    }
-    ref->packetSender = env->NewGlobalRef(tmp);
-
-    fid = lookup.findField(
-        cls, "frameListener", "Lcom/zerotier/sdk/VirtualNetworkFrameListener;");
-    if(fid == NULL)
-    {
-        return NULL; // exception already thrown
-    }
-
-    tmp = env->GetObjectField(obj, fid);
-    if(tmp == NULL)
-    {
-        return NULL;
-    }
-    ref->frameListener = env->NewGlobalRef(tmp);
-
-    fid = lookup.findField(
-        cls, "configListener", "Lcom/zerotier/sdk/VirtualNetworkConfigListener;");
-    if(fid == NULL)
-    {
-        return NULL; // exception already thrown
-    }
-
-    tmp = env->GetObjectField(obj, fid);
-    if(tmp == NULL)
-    {
-        return NULL;
-    }
-    ref->configListener = env->NewGlobalRef(tmp);
-
-    fid = lookup.findField(
-        cls, "eventListener", "Lcom/zerotier/sdk/EventListener;");
-    if(fid == NULL)
-    {
-        return NULL;
-    }
-
-    tmp = env->GetObjectField(obj, fid);
-    if(tmp == NULL)
-    {
-        return NULL;
-    }
-    ref->eventListener = env->NewGlobalRef(tmp);
-
-    fid = lookup.findField(
-        cls, "pathChecker", "Lcom/zerotier/sdk/PathChecker;");
-    if(fid == NULL)
-    {
-        LOGE("no path checker?");
-        return NULL;
-    }
-
-    tmp = env->GetObjectField(obj, fid);
-    if(tmp != NULL)
-    {
-        ref->pathChecker = env->NewGlobalRef(tmp);
-    }
-
-    ref->callbacks->stateGetFunction = &StateGetFunction;
-    ref->callbacks->statePutFunction = &StatePutFunction;
-    ref->callbacks->wirePacketSendFunction = &WirePacketSendFunction;
-    ref->callbacks->virtualNetworkFrameFunction = &VirtualNetworkFrameFunctionCallback;
-    ref->callbacks->virtualNetworkConfigFunction = &VirtualNetworkConfigFunctionCallback;
-    ref->callbacks->eventCallback = &EventCallback;
-    ref->callbacks->pathCheckFunction = &PathCheckFunction;
-    ref->callbacks->pathLookupFunction = &PathLookupFunction;
-
     ZT_ResultCode rc = ZT_Node_new(
         &node,
         ref,
         NULL,
-        ref->callbacks,
+        &callbacks,
         (int64_t)now);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception creating Node");
 
+        if(node)
+        {
+            ZT_Node_delete(node);
+            node = NULL;
+        }
+        delete ref;
+        ref = NULL;
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
     if(rc != ZT_RESULT_OK)
     {
         LOGE("Error creating Node: %d", rc);
         resultObject = createResultObject(env, rc);
+        if (env->ExceptionCheck() || resultObject == NULL) {
+            return NULL;
+        }
+
         if(node)
         {
             ZT_Node_delete(node);
@@ -891,11 +860,27 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init(
         return resultObject;
     }
 
-    ZeroTier::Mutex::Lock lock(nodeMapMutex);
+    //
+    // node is now updated
+    //
     ref->node = node;
-    nodeMap.insert(std::make_pair(ref->id, ref));
+
+    if (!ref->finishInitializing()) {
+        LOGE("finishInitializing() failed");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
 
     return resultObject;
+}
+
+/*
+ * Class:     com_zerotier_sdk_Node
+ * Method:    node_isInited
+ * Signature: (J)Z
+ */
+JNIEXPORT jboolean JNICALL Java_com_zerotier_sdk_Node_node_1isInited
+        (JNIEnv *env, jobject obj, jlong nodeId) {
+    return isInited(nodeId);
 }
 
 /*
@@ -909,26 +894,15 @@ JNIEXPORT void JNICALL Java_com_zerotier_sdk_Node_node_1delete(
     LOGV("Destroying ZT_Node struct");
     int64_t nodeId = (int64_t)id;
 
-    NodeMap::iterator found;
-    {
-        ZeroTier::Mutex::Lock lock(nodeMapMutex);
-        found = nodeMap.find(nodeId);
+    JniRef *ref = removeRef(nodeId);
+
+    if (!ref) {
+        return;
     }
 
-    if(found != nodeMap.end())
-    {
-        JniRef *ref = found->second;
-        nodeMap.erase(found);
+    ZT_Node_delete(ref->node);
 
-        ZT_Node_delete(ref->node);
-
-        delete ref;
-        ref = NULL;
-    }
-    else
-    {
-        LOGE("Attempted to delete a node that doesn't exist!");
-    }
+    delete ref;
 }
 
 /*
@@ -951,17 +925,12 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
     int64_t nodeId = (int64_t) id;
 
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
 
     unsigned int nbtd_len = env->GetArrayLength(out_nextBackgroundTaskDeadline);
     if(nbtd_len < 1)
     {
         // array for next background task length has 0 elements!
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
     }
 
     int64_t now = (int64_t)in_now;
@@ -973,6 +942,9 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
 
     unsigned int frameLength = env->GetArrayLength(in_frameData);
     void *frameData = env->GetPrimitiveArrayCritical(in_frameData, NULL);
+    //
+    // need local copy of frameData because arbitrary code may run in ZT_Node_processVirtualNetworkFrame and no other JNI work may happen between GetPrimitiveArrayCritical / ReleasePrimitiveArrayCritical
+    //
     void *localData = malloc(frameLength);
     memcpy(localData, frameData, frameLength);
     env->ReleasePrimitiveArrayCritical(in_frameData, frameData, 0);
@@ -991,6 +963,16 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
         (const void*)localData,
         frameLength,
         &nextBackgroundTaskDeadline);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_processVirtualNetworkFrame");
+        free(localData);
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
+    if (rc != ZT_RESULT_OK) {
+        LOGE("ZT_Node_processVirtualNetworkFrame returned: %d", rc);
+    }
+
+    free(localData);
 
     jlong *outDeadline = (jlong*)env->GetPrimitiveArrayCritical(out_nextBackgroundTaskDeadline, NULL);
     outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
@@ -1002,7 +984,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame(
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    processWirePacket
- * Signature: (JJJLjava/net/InetSocketAddress;I[B[J)Lcom/zerotier/sdk/ResultCode;
+ * Signature: (JJJLjava/net/InetSocketAddress;[B[J)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
     JNIEnv *env, jobject obj,
@@ -1015,122 +997,31 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        LOGE("Couldn't find a valid node!");
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
 
     unsigned int nbtd_len = (unsigned int)env->GetArrayLength(out_nextBackgroundTaskDeadline);
     if(nbtd_len < 1)
     {
         LOGE("nbtd_len < 1");
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
     }
 
     int64_t now = (int64_t)in_now;
 
-    // get the java.net.InetSocketAddress class and getAddress() method
-    jclass inetAddressClass = lookup.findClass("java/net/InetAddress");
-    if(inetAddressClass == NULL)
-    {
-        LOGE("Can't find InetAddress class");
-        // can't find java.net.InetAddress
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
+    sockaddr_storage remoteAddress = fromSocketAddressObject(env, in_remoteAddress);
+    if (env->ExceptionCheck() || isSocketAddressEmpty(remoteAddress)) {
+        return NULL;
     }
-
-    jmethodID getAddressMethod = lookup.findMethod(
-        inetAddressClass, "getAddress", "()[B");
-    if(getAddressMethod == NULL)
-    {
-        // cant find InetAddress.getAddress()
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
-
-    jclass InetSocketAddressClass = lookup.findClass("java/net/InetSocketAddress");
-    if(InetSocketAddressClass == NULL)
-    {
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
-
-    jmethodID inetSockGetAddressMethod = lookup.findMethod(
-        InetSocketAddressClass, "getAddress", "()Ljava/net/InetAddress;");
-
-    jobject remoteAddrObject = env->CallObjectMethod(in_remoteAddress, inetSockGetAddressMethod);
-
-    if(remoteAddrObject == NULL)
-    {
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
-
-    jmethodID inetSock_getPort = lookup.findMethod(
-        InetSocketAddressClass, "getPort", "()I");
-
-    if(env->ExceptionCheck() || inetSock_getPort == NULL)
-    {
-        LOGE("Couldn't find getPort method on InetSocketAddress");
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
-
-    // call InetSocketAddress.getPort()
-    int remotePort = env->CallIntMethod(in_remoteAddress, inetSock_getPort);
-    if(env->ExceptionCheck())
-    {
-        LOGE("Exception calling InetSocketAddress.getPort()");
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
-
-    // Call InetAddress.getAddress()
-    jbyteArray remoteAddressArray = (jbyteArray)env->CallObjectMethod(remoteAddrObject, getAddressMethod);
-    if(remoteAddressArray == NULL)
-    {
-        LOGE("Unable to call getAddress()");
-        // unable to call getAddress()
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
-
-    unsigned int addrSize = env->GetArrayLength(remoteAddressArray);
-
-
-    // get the address bytes
-    jbyte *addr = (jbyte*)env->GetPrimitiveArrayCritical(remoteAddressArray, NULL);
-    sockaddr_storage remoteAddress = {};
-
-    if(addrSize == 16)
-    {
-        // IPV6 address
-        sockaddr_in6 ipv6 = {};
-        ipv6.sin6_family = AF_INET6;
-        ipv6.sin6_port = htons(remotePort);
-        memcpy(ipv6.sin6_addr.s6_addr, addr, 16);
-        memcpy(&remoteAddress, &ipv6, sizeof(sockaddr_in6));
-    }
-    else if(addrSize == 4)
-    {
-        // IPV4 address
-        sockaddr_in ipv4 = {};
-        ipv4.sin_family = AF_INET;
-        ipv4.sin_port = htons(remotePort);
-        memcpy(&ipv4.sin_addr, addr, 4);
-        memcpy(&remoteAddress, &ipv4, sizeof(sockaddr_in));
-    }
-    else
-    {
-        LOGE("Unknown IP version");
-        // unknown address type
-        env->ReleasePrimitiveArrayCritical(remoteAddressArray, addr, 0);
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
-    env->ReleasePrimitiveArrayCritical(remoteAddressArray, addr, 0);
 
     unsigned int packetLength = (unsigned int)env->GetArrayLength(in_packetData);
     if(packetLength == 0)
     {
         LOGE("Empty packet?!?");
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
     }
     void *packetData = env->GetPrimitiveArrayCritical(in_packetData, NULL);
+    //
+    // need local copy of packetData because arbitrary code may run in ZT_Node_processWirePacket and no other JNI work may happen between GetPrimitiveArrayCritical / ReleasePrimitiveArrayCritical
+    //
     void *localData = malloc(packetLength);
     memcpy(localData, packetData, packetLength);
     env->ReleasePrimitiveArrayCritical(in_packetData, packetData, 0);
@@ -1146,6 +1037,11 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket(
         localData,
         packetLength,
         &nextBackgroundTaskDeadline);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_processWirePacket");
+        free(localData);
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
     if(rc != ZT_RESULT_OK)
     {
         LOGE("ZT_Node_processWirePacket returned: %d", rc);
@@ -1173,22 +1069,24 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processBackgroundTasks(
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
 
     unsigned int nbtd_len = env->GetArrayLength(out_nextBackgroundTaskDeadline);
     if(nbtd_len < 1)
     {
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
     }
 
     int64_t now = (int64_t)in_now;
     int64_t nextBackgroundTaskDeadline = 0;
 
     ZT_ResultCode rc = ZT_Node_processBackgroundTasks(node, NULL, now, &nextBackgroundTaskDeadline);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_processBackgroundTasks");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
+    if (rc != ZT_RESULT_OK) {
+        LOGE("ZT_Node_processBackgroundTasks returned: %d", rc);
+    }
 
     jlong *outDeadline = (jlong*)env->GetPrimitiveArrayCritical(out_nextBackgroundTaskDeadline, NULL);
     outDeadline[0] = (jlong)nextBackgroundTaskDeadline;
@@ -1207,15 +1105,13 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_join(
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
-
     uint64_t nwid = (uint64_t)in_nwid;
 
     ZT_ResultCode rc = ZT_Node_join(node, nwid, NULL, NULL);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_join");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
 
     return createResultObject(env, rc);
 }
@@ -1230,15 +1126,14 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_leave(
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
 
     uint64_t nwid = (uint64_t)in_nwid;
 
     ZT_ResultCode rc = ZT_Node_leave(node, nwid, NULL, NULL);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_leave");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
 
     return createResultObject(env, rc);
 }
@@ -1257,11 +1152,6 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastSubscribe(
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
 
     uint64_t nwid = (uint64_t)in_nwid;
     uint64_t multicastGroup = (uint64_t)in_multicastGroup;
@@ -1269,6 +1159,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastSubscribe(
 
     ZT_ResultCode rc = ZT_Node_multicastSubscribe(
         node, NULL, nwid, multicastGroup, multicastAdi);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_multicastSubscribe");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
 
     return createResultObject(env, rc);
 }
@@ -1287,11 +1181,6 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastUnsubscribe(
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
 
     uint64_t nwid = (uint64_t)in_nwid;
     uint64_t multicastGroup = (uint64_t)in_multicastGroup;
@@ -1299,6 +1188,10 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_multicastUnsubscribe(
 
     ZT_ResultCode rc = ZT_Node_multicastUnsubscribe(
         node, nwid, multicastGroup, multicastAdi);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_multicastUnsubscribe");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
 
     return createResultObject(env, rc);
 }
@@ -1316,15 +1209,16 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_orbit(
 {
     int64_t nodeId = (int64_t)id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
 
     uint64_t moonWorldId = (uint64_t)in_moonWorldId;
     uint64_t moonSeed = (uint64_t)in_moonSeed;
 
     ZT_ResultCode rc = ZT_Node_orbit(node, NULL, moonWorldId, moonSeed);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_orbit");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
+
     return createResultObject(env, rc);
 }
 
@@ -1340,14 +1234,15 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_deorbit(
 {
     int64_t nodeId = (int64_t)id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        return createResultObject(env, ZT_RESULT_FATAL_ERROR_INTERNAL);
-    }
 
     uint64_t moonWorldId = (uint64_t)in_moonWorldId;
 
     ZT_ResultCode rc = ZT_Node_deorbit(node, NULL, moonWorldId);
+    if (env->ExceptionCheck()) {
+        LOGE("Exception calling ZT_Node_deorbit");
+        return ResultCode_RESULT_FATAL_ERROR_INTERNAL_enum;
+    }
+
     return createResultObject(env, rc);
 }
 
@@ -1361,11 +1256,6 @@ JNIEXPORT jlong JNICALL Java_com_zerotier_sdk_Node_address(
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return 0;
-    }
 
     uint64_t address = ZT_Node_address(node);
     return (jlong)address;
@@ -1381,105 +1271,29 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_status
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return 0;
-    }
-
-    jclass nodeStatusClass = NULL;
-    jmethodID nodeStatusConstructor = NULL;
-
-    // create a com.zerotier.sdk.NodeStatus object
-    nodeStatusClass = lookup.findClass("com/zerotier/sdk/NodeStatus");
-    if(nodeStatusClass == NULL)
-    {
-        return NULL;
-    }
-
-    nodeStatusConstructor = lookup.findMethod(
-        nodeStatusClass, "<init>", "()V");
-    if(nodeStatusConstructor == NULL)
-    {
-        return NULL;
-    }
-
-    jobject nodeStatusObj = env->NewObject(nodeStatusClass, nodeStatusConstructor);
-    if(nodeStatusObj == NULL)
-    {
-        return NULL;
-    }
 
     ZT_NodeStatus nodeStatus;
     ZT_Node_status(node, &nodeStatus);
 
-    jfieldID addressField = NULL;
-    jfieldID publicIdentityField = NULL;
-    jfieldID secretIdentityField = NULL;
-    jfieldID onlineField = NULL;
-
-    addressField = lookup.findField(nodeStatusClass, "address", "J");
-    if(addressField == NULL)
-    {
-        return NULL;
-    }
-
-    publicIdentityField = lookup.findField(nodeStatusClass, "publicIdentity", "Ljava/lang/String;");
-    if(publicIdentityField == NULL)
-    {
-        return NULL;
-    }
-
-    secretIdentityField = lookup.findField(nodeStatusClass, "secretIdentity", "Ljava/lang/String;");
-    if(secretIdentityField == NULL)
-    {
-        return NULL;
-    }
-
-    onlineField = lookup.findField(nodeStatusClass, "online", "Z");
-    if(onlineField == NULL)
-    {
-        return NULL;
-    }
-
-    env->SetLongField(nodeStatusObj, addressField, nodeStatus.address);
-
-    jstring pubIdentStr = env->NewStringUTF(nodeStatus.publicIdentity);
-    if(pubIdentStr == NULL)
-    {
-        return NULL; // out of memory
-    }
-    env->SetObjectField(nodeStatusObj, publicIdentityField, pubIdentStr);
-
-    jstring secIdentStr = env->NewStringUTF(nodeStatus.secretIdentity);
-    if(secIdentStr == NULL)
-    {
-        return NULL; // out of memory
-    }
-    env->SetObjectField(nodeStatusObj, secretIdentityField, secIdentStr);
-
-    env->SetBooleanField(nodeStatusObj, onlineField, nodeStatus.online);
-
-    return nodeStatusObj;
+    return newNodeStatus(env, nodeStatus);
 }
 
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    networkConfig
- * Signature: (J)Lcom/zerotier/sdk/VirtualNetworkConfig;
+ * Signature: (JJ)Lcom/zerotier/sdk/VirtualNetworkConfig;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networkConfig(
     JNIEnv *env, jobject obj, jlong id, jlong nwid)
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return 0;
-    }
 
     ZT_VirtualNetworkConfig *vnetConfig = ZT_Node_networkConfig(node, nwid);
+    if (vnetConfig == NULL) {
+        LOGE("vnetConfig == NULL");
+        return NULL;
+    }
 
     jobject vnetConfigObject = newNetworkConfig(env, *vnetConfig);
 
@@ -1491,7 +1305,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_networkConfig(
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    version
- * Signature: (J)Lcom/zerotier/sdk/Version;
+ * Signature: ()Lcom/zerotier/sdk/Version;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_version(
     JNIEnv *env, jobject obj)
@@ -1515,11 +1329,6 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return 0;
-    }
 
     ZT_PeerList *peerList = ZT_Node_peers(node);
 
@@ -1529,44 +1338,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
         return NULL;
     }
 
-    int peerCount = peerList->peerCount * 100;
-    LOGV("Ensure Local Capacity: %d", peerCount);
-    if(env->EnsureLocalCapacity(peerCount))
-    {
-        LOGE("EnsureLocalCapacity failed!!");
-        ZT_Node_freeQueryResult(node, peerList);
-        return NULL;
-    }
-
-    jclass peerClass = lookup.findClass("com/zerotier/sdk/Peer");
-    if(env->ExceptionCheck() || peerClass == NULL)
-    {
-        LOGE("Error finding Peer class");
-        ZT_Node_freeQueryResult(node, peerList);
-        return NULL;
-    }
-
-    jobjectArray peerArrayObj = env->NewObjectArray(
-        peerList->peerCount, peerClass, NULL);
-
-    if(env->ExceptionCheck() || peerArrayObj == NULL)
-    {
-        LOGE("Error creating Peer[] array");
-        ZT_Node_freeQueryResult(node, peerList);
-        return NULL;
-    }
-
-
-    for(unsigned int i = 0; i < peerList->peerCount; ++i)
-    {
-        jobject peerObj = newPeer(env, peerList->peers[i]);
-        env->SetObjectArrayElement(peerArrayObj, i, peerObj);
-        if(env->ExceptionCheck())
-        {
-            LOGE("Error assigning Peer object to array");
-            break;
-        }
-    }
+    jobjectArray peerArrayObj = newPeerArray(env, peerList->peers, peerList->peerCount);
 
     ZT_Node_freeQueryResult(node, peerList);
     peerList = NULL;
@@ -1576,53 +1348,23 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers(
 
 /*
  * Class:     com_zerotier_sdk_Node
- * Method:    networks
+ * Method:    networkConfigs
  * Signature: (J)[Lcom/zerotier/sdk/VirtualNetworkConfig;
  */
-JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networks(
+JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networkConfigs(
     JNIEnv *env, jobject obj, jlong id)
 {
     int64_t nodeId = (int64_t) id;
     ZT_Node *node = findNode(nodeId);
-    if(node == NULL)
-    {
-        // cannot find valid node.  We should  never get here.
-        return 0;
-    }
 
     ZT_VirtualNetworkList *networkList = ZT_Node_networks(node);
     if(networkList == NULL)
     {
+        LOGE("ZT_Node_networks returned NULL");
         return NULL;
     }
 
-    jclass vnetConfigClass = lookup.findClass("com/zerotier/sdk/VirtualNetworkConfig");
-    if(env->ExceptionCheck() || vnetConfigClass == NULL)
-    {
-        LOGE("Error finding VirtualNetworkConfig class");
-        ZT_Node_freeQueryResult(node, networkList);
-        return NULL;
-    }
-
-    jobjectArray networkListObject = env->NewObjectArray(
-        networkList->networkCount, vnetConfigClass, NULL);
-    if(env->ExceptionCheck() || networkListObject == NULL)
-    {
-        LOGE("Error creating VirtualNetworkConfig[] array");
-        ZT_Node_freeQueryResult(node, networkList);
-        return NULL;
-    }
-
-    for(unsigned int i = 0; i < networkList->networkCount; ++i)
-    {
-        jobject networkObject = newNetworkConfig(env, networkList->networks[i]);
-        env->SetObjectArrayElement(networkListObject, i, networkObject);
-        if(env->ExceptionCheck())
-        {
-            LOGE("Error assigning VirtualNetworkConfig object to array");
-            break;
-        }
-    }
+    jobjectArray networkListObject = newVirtualNetworkConfigArray(env, networkList->networks, networkList->networkCount);
 
     ZT_Node_freeQueryResult(node, networkList);
 
