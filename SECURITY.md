@@ -5,7 +5,7 @@ includes all source code repositories managed through our GitHub organization.
 
 ## Supported Versions
 
-The following versions of ZeroTier one receive security updates
+The following versions of ZeroTier One receive security updates
 
 | Version | Supported          |
 | ------- | ------------------ |
