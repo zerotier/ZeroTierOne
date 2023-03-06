@@ -10,9 +10,17 @@ extern "C" {
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    node_init
- * Signature: (J)Lcom/zerotier/sdk/ResultCode;
+ * Signature: (JLcom/zerotier/sdk/DataStoreGetListener;Lcom/zerotier/sdk/DataStorePutListener;Lcom/zerotier/sdk/PacketSender;Lcom/zerotier/sdk/EventListener;Lcom/zerotier/sdk/VirtualNetworkFrameListener;Lcom/zerotier/sdk/VirtualNetworkConfigListener;Lcom/zerotier/sdk/PathChecker;)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_node_1init
+  (JNIEnv *, jobject, jlong, jobject, jobject, jobject, jobject, jobject, jobject, jobject);
+
+/*
+ * Class:     com_zerotier_sdk_Node
+ * Method:    node_isInited
+ * Signature: (J)Z;
+ */
+JNIEXPORT jboolean JNICALL Java_com_zerotier_sdk_Node_node_1isInited
   (JNIEnv *, jobject, jlong);
 
 /*
@@ -34,7 +42,7 @@ JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processVirtualNetworkFrame
 /*
  * Class:     com_zerotier_sdk_Node
  * Method:    processWirePacket
- * Signature: (JJLjava/net/InetSockAddress;Ljava/net/InetSockAddress;[B[J)Lcom/zerotier/sdk/ResultCode;
+ * Signature: (JJJLjava/net/InetSockAddress;[B[J)Lcom/zerotier/sdk/ResultCode;
  */
 JNIEXPORT jobject JNICALL Java_com_zerotier_sdk_Node_processWirePacket
   (JNIEnv *, jobject, jlong, jlong, jlong, jobject, jbyteArray, jlongArray);
@@ -121,10 +129,10 @@ JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_peers
 
 /*
  * Class:     com_zerotier_sdk_Node
- * Method:    networks
+ * Method:    networkConfigs
  * Signature: (J)[Lcom/zerotier/sdk/VirtualNetworkConfig;
  */
-JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networks
+JNIEXPORT jobjectArray JNICALL Java_com_zerotier_sdk_Node_networkConfigs
   (JNIEnv *, jobject, jlong);
 
 #ifdef __cplusplus

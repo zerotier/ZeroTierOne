@@ -34,12 +34,20 @@ package com.zerotier.sdk;
  * occurs, the node should be considered to not be working correctly. These
  * indicate serious problems like an inaccessible data store or a compile
  * problem.</p>
+ *
+ * Defined in ZeroTierOne.h as ZT_ResultCode
  */
 public enum ResultCode {
+
     /**
      * Operation completed normally
      */
-	RESULT_OK(0),
+    RESULT_OK(0),
+
+    /**
+     * Call produced no error but no action was taken
+     */
+    RESULT_OK_IGNORED(1),
 
     // Fatal errors (>=100, <1000)
     /**
@@ -68,12 +76,36 @@ public enum ResultCode {
 
     RESULT_ERROR_BAD_PARAMETER(1002);
 
-	
-	private final int id;
-    ResultCode(int id) { this.id = id; }
-    public int getValue() { return id; }
+    private final int id;
 
-    public boolean isFatal(int id) {
-    	return (id > 100 && id < 1000);
+    ResultCode(int id) {
+        this.id = id;
+    }
+
+    public static ResultCode fromInt(int id) {
+        switch (id) {
+            case 0:
+                return RESULT_OK;
+            case 1:
+                return RESULT_OK_IGNORED;
+            case 100:
+                return RESULT_FATAL_ERROR_OUT_OF_MEMORY;
+            case 101:
+                return RESULT_FATAL_ERROR_DATA_STORE_FAILED;
+            case 102:
+                return RESULT_FATAL_ERROR_INTERNAL;
+            case 1000:
+                return RESULT_ERROR_NETWORK_NOT_FOUND;
+            case 1001:
+                return RESULT_ERROR_UNSUPPORTED_OPERATION;
+            case 1002:
+                return RESULT_ERROR_BAD_PARAMETER;
+            default:
+                throw new RuntimeException("Unhandled value: " + id);
+        }
+    }
+
+    public boolean isFatal() {
+        return (id >= 100 && id < 1000);
     }
 }

@@ -8,15 +8,48 @@ package com.zerotier.sdk;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
+/**
+ * DNS configuration to be pushed on a virtual network
+ *
+ * Defined in ZeroTierOne.h as ZT_VirtualNetworkDNS
+ */
 public class VirtualNetworkDNS implements Comparable<VirtualNetworkDNS> {
-    private String domain;
-    private ArrayList<InetSocketAddress> servers;
 
-    public VirtualNetworkDNS() {}
+    private final String domain;
+    private final ArrayList<InetSocketAddress> servers;
 
-    public boolean equals(VirtualNetworkDNS o) {
-        if (o == null) return false;
-        return domain.equals(o.domain) && servers.equals(o.servers);
+    public VirtualNetworkDNS(String domain, ArrayList<InetSocketAddress> servers) {
+        this.domain = domain;
+        this.servers = servers;
+    }
+
+    @Override
+    public String toString() {
+        return "VirtualNetworkDNS(" + domain + ", " + servers + ")";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+
+        if (o == null) {
+            return false;
+        }
+
+        if (!(o instanceof VirtualNetworkDNS)) {
+            return false;
+        }
+
+        VirtualNetworkDNS d = (VirtualNetworkDNS) o;
+
+        if (!domain.equals(d.domain)) {
+            return false;
+        }
+
+        if (!servers.equals(d.servers)) {
+            return false;
+        }
+
+        return true;
     }
 
     @Override
@@ -24,7 +57,21 @@ public class VirtualNetworkDNS implements Comparable<VirtualNetworkDNS> {
         return domain.compareTo(o.domain);
     }
 
-    public String getSearchDomain() { return domain; }
+    @Override
+    public int hashCode() {
 
-    public ArrayList<InetSocketAddress> getServers() { return servers; }
+        int result = 17;
+        result = 37 * result + domain.hashCode();
+        result = 37 * result + servers.hashCode();
+
+        return result;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public ArrayList<InetSocketAddress> getServers() {
+        return servers;
+    }
 }
