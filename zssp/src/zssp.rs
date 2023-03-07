@@ -10,12 +10,13 @@
 // FIPS compliant Noise_XK with Jedi powers (Kyber1024) and built-in attack-resistant large payload (fragmentation) support.
 
 use std::collections::{HashMap, HashSet};
+use std::io::Write;
 use std::num::NonZeroU64;
 use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock, Weak};
 
-use zerotier_crypto::aes::{Aes, AesCtr, AesGcm};
-use zerotier_crypto::hash::{hmac_sha512, HMACSHA384, HMAC_SHA384_SIZE, SHA384};
+use zerotier_crypto::aes::{Aes, AesGcm};
+use zerotier_crypto::hash::{hmac_sha512, SHA384};
 use zerotier_crypto::p384::{P384KeyPair, P384PublicKey, P384_ECDH_SHARED_SECRET_SIZE};
 use zerotier_crypto::secret::Secret;
 use zerotier_crypto::{random, secure_eq};
@@ -63,8 +64,8 @@ pub enum ReceiveResult<'b, Application: ApplicationLayer> {
     /// Packet was valid and a data payload was decoded and authenticated.
     OkData(Arc<Session<Application>>, &'b mut [u8]),
 
-    /// Packet was valid and a new session was created.
-    OkNewSession(Arc<Session<Application>>),
+    /// Packet was valid and a new session was created, with optional attached meta-data.
+    OkNewSession(Arc<Session<Application>>, Option<&'b mut [u8]>),
 
     /// Packet appears valid but was rejected by the application layer, e.g. a rejected new session attempt.
     Rejected,
@@ -339,24 +340,22 @@ impl<Application: ApplicationLayer> Context<Application> {
                 panic!(); // should be impossible
             };
 
-            let init: &mut AliceNoiseXKInit = byte_array_as_proto_buffer_mut(init_packet).unwrap();
-            init.session_protocol_version = SESSION_PROTOCOL_VERSION;
-            init.alice_noise_e = alice_noise_e;
-            init.alice_session_id = *local_session_id.as_bytes();
-            init.alice_hk_public = alice_hk_secret.public;
-            init.header_protection_key = header_protection_key.0;
+            {
+                let init: &mut AliceNoiseXKInit = byte_array_as_proto_buffer_mut(init_packet).unwrap();
+                init.session_protocol_version = SESSION_PROTOCOL_VERSION;
+                init.alice_noise_e = alice_noise_e;
+                init.alice_session_id = *local_session_id.as_bytes();
+                init.alice_hk_public = alice_hk_secret.public;
+                init.header_protection_key = header_protection_key.0;
+            }
 
-            aes_ctr_crypt_one_time_use_key(
+            let mut gcm = AesGcm::new(
                 kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es.as_bytes()).as_bytes(),
-                &mut init_packet[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START],
+                true,
             );
-
-            let hmac = hmac_sha384_2(
-                kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_AUTHENTICATION>(noise_es.as_bytes()).as_bytes(),
-                &create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_INIT, 1),
-                &init_packet[HEADER_SIZE..AliceNoiseXKInit::AUTH_START],
-            );
-            init_packet[AliceNoiseXKInit::AUTH_START..AliceNoiseXKInit::AUTH_START + HMAC_SHA384_SIZE].copy_from_slice(&hmac);
+            gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_INIT, 1));
+            gcm.crypt_in_place(&mut init_packet[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START]);
+            init_packet[AliceNoiseXKInit::AUTH_START..AliceNoiseXKInit::AUTH_START + AES_GCM_TAG_SIZE].copy_from_slice(&gcm.finish_encrypt());
 
             send_with_fragmentation(
                 &mut send,
@@ -385,9 +384,9 @@ impl<Application: ApplicationLayer> Context<Application> {
     /// with negotiation. False drops the packet.
     ///
     /// The check_accept_session function is called at the end of negotiation for an incoming session
-    /// with the caller's static public blob and meta-data if any. It must return the P-384 static public
-    /// key extracted from the supplied blob, a PSK (or all zeroes if none), and application data to
-    /// associate with the new session. A return of None abandons the session.
+    /// with the caller's static public blob. It must return the P-384 static public key extracted from
+    /// the supplied blob, a PSK (or all zeroes if none), and application data to associate with the new
+    /// session. A return of None rejects and abandons the session.
     ///
     /// Note that if check_accept_session accepts and returns Some() the session could still fail with
     /// receive() returning an error. A Some() return from check_accept_sesion doesn't guarantee
@@ -409,7 +408,7 @@ impl<Application: ApplicationLayer> Context<Application> {
         'b,
         SendFunction: FnMut(Option<&Arc<Session<Application>>>, &mut [u8]),
         CheckAllowIncomingSession: FnMut() -> bool,
-        CheckAcceptSession: FnMut(&[u8], Option<&[u8]>) -> Option<(P384PublicKey, Secret<64>, Application::Data)>,
+        CheckAcceptSession: FnMut(&[u8]) -> Option<(P384PublicKey, Secret<64>, Application::Data)>,
     >(
         &self,
         app: &Application,
@@ -568,7 +567,7 @@ impl<Application: ApplicationLayer> Context<Application> {
         'b,
         SendFunction: FnMut(Option<&Arc<Session<Application>>>, &mut [u8]),
         CheckAllowIncomingSession: FnMut() -> bool,
-        CheckAcceptSession: FnMut(&[u8], Option<&[u8]>) -> Option<(P384PublicKey, Secret<64>, Application::Data)>,
+        CheckAcceptSession: FnMut(&[u8]) -> Option<(P384PublicKey, Secret<64>, Application::Data)>,
     >(
         &self,
         app: &Application,
@@ -716,15 +715,14 @@ impl<Application: ApplicationLayer> Context<Application> {
                     let alice_noise_e = P384PublicKey::from_bytes(&pkt.alice_noise_e).ok_or(Error::FailedAuthentication)?;
                     let noise_es = app.get_local_s_keypair().agree(&alice_noise_e).ok_or(Error::FailedAuthentication)?;
 
-                    // Authenticate packet and also prove that Alice knows our static public key.
-                    if !secure_eq(
-                        &pkt.hmac_es,
-                        &hmac_sha384_2(
-                            kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_AUTHENTICATION>(noise_es.as_bytes()).as_bytes(),
-                            &incoming_message_nonce,
-                            &pkt_assembled[HEADER_SIZE..AliceNoiseXKInit::AUTH_START],
-                        ),
-                    ) {
+                    // Decrypt and authenticate init packet, also proving that caller knows our static identity.
+                    let mut gcm = AesGcm::new(
+                        kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es.as_bytes()).as_bytes(),
+                        false,
+                    );
+                    gcm.reset_init_gcm(&incoming_message_nonce);
+                    gcm.crypt_in_place(&mut pkt_assembled[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START]);
+                    if !gcm.finish_decrypt(&pkt_assembled[AliceNoiseXKInit::AUTH_START..AliceNoiseXKInit::AUTH_START + AES_GCM_TAG_SIZE]) {
                         return Err(Error::FailedAuthentication);
                     }
 
@@ -732,12 +730,6 @@ impl<Application: ApplicationLayer> Context<Application> {
                     if !check_allow_incoming_session() {
                         return Ok(ReceiveResult::Rejected);
                     }
-
-                    // Decrypt encrypted part of payload.
-                    aes_ctr_crypt_one_time_use_key(
-                        kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es.as_bytes()).as_bytes(),
-                        &mut pkt_assembled[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START],
-                    );
 
                     let pkt: &AliceNoiseXKInit = byte_array_as_proto_buffer(pkt_assembled)?;
                     let alice_session_id = SessionId::new_from_bytes(&pkt.alice_session_id).ok_or(Error::InvalidPacket)?;
@@ -809,19 +801,14 @@ impl<Application: ApplicationLayer> Context<Application> {
                     ack.bob_session_id = *bob_session_id.as_bytes();
                     ack.bob_hk_ciphertext = bob_hk_ciphertext;
 
-                    // Encrypt main section of reply.
-                    aes_ctr_crypt_one_time_use_key(
+                    // Encrypt main section of reply and attach tag.
+                    let mut gcm = AesGcm::new(
                         kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es_ee.as_bytes()).as_bytes(),
-                        &mut ack_packet[BobNoiseXKAck::ENC_START..BobNoiseXKAck::AUTH_START],
+                        true,
                     );
-
-                    // Add HMAC-SHA384 to reply packet.
-                    let reply_hmac = hmac_sha384_2(
-                        kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_AUTHENTICATION>(noise_es_ee.as_bytes()).as_bytes(),
-                        &create_message_nonce(PACKET_TYPE_BOB_NOISE_XK_ACK, 1),
-                        &ack_packet[HEADER_SIZE..BobNoiseXKAck::AUTH_START],
-                    );
-                    ack_packet[BobNoiseXKAck::AUTH_START..].copy_from_slice(&reply_hmac);
+                    gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_BOB_NOISE_XK_ACK, 1));
+                    gcm.crypt_in_place(&mut ack_packet[BobNoiseXKAck::ENC_START..BobNoiseXKAck::AUTH_START]);
+                    ack_packet[BobNoiseXKAck::AUTH_START..BobNoiseXKAck::AUTH_START + AES_GCM_TAG_SIZE].copy_from_slice(&gcm.finish_encrypt());
 
                     send_with_fragmentation(
                         |b| send(None, b),
@@ -875,26 +862,17 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     .as_bytes(),
                             ));
 
-                            let noise_es_ee_kex_hmac_key =
-                                kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_AUTHENTICATION>(noise_es_ee.as_bytes());
-
-                            // Authenticate Bob's reply and the validity of bob_noise_e.
-                            if !secure_eq(
-                                &pkt.hmac_es_ee,
-                                &hmac_sha384_2(
-                                    noise_es_ee_kex_hmac_key.as_bytes(),
-                                    &incoming_message_nonce,
-                                    &pkt_assembled[HEADER_SIZE..BobNoiseXKAck::AUTH_START],
-                                ),
-                            ) {
+                            // Decrypt and authenticate Bob's reply.
+                            let mut gcm = AesGcm::new(
+                                kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es_ee.as_bytes()).as_bytes(),
+                                false,
+                            );
+                            gcm.reset_init_gcm(&incoming_message_nonce);
+                            gcm.crypt_in_place(&mut pkt_assembled[BobNoiseXKAck::ENC_START..BobNoiseXKAck::AUTH_START]);
+                            if !gcm.finish_decrypt(&pkt_assembled[BobNoiseXKAck::AUTH_START..BobNoiseXKAck::AUTH_START + AES_GCM_TAG_SIZE]) {
                                 return Err(Error::FailedAuthentication);
                             }
 
-                            // Decrypt encrypted portion of message.
-                            aes_ctr_crypt_one_time_use_key(
-                                kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es_ee.as_bytes()).as_bytes(),
-                                &mut pkt_assembled[BobNoiseXKAck::ENC_START..BobNoiseXKAck::AUTH_START],
-                            );
                             let pkt: &BobNoiseXKAck = byte_array_as_proto_buffer(pkt_assembled)?;
 
                             if let Some(bob_session_id) = SessionId::new_from_bytes(&pkt.bob_session_id) {
@@ -922,51 +900,47 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 // up forward secrecy. Also return Bob's opaque note.
                                 let mut reply_buffer = [0u8; MAX_NOISE_HANDSHAKE_SIZE];
                                 reply_buffer[HEADER_SIZE] = SESSION_PROTOCOL_VERSION;
-                                let mut reply_len = HEADER_SIZE + 1;
-                                let mut reply_buffer_append = |b: &[u8]| {
-                                    let reply_len_new = reply_len + b.len();
-                                    debug_assert!(reply_len_new <= MAX_NOISE_HANDSHAKE_SIZE);
-                                    reply_buffer[reply_len..reply_len_new].copy_from_slice(b);
-                                    reply_len = reply_len_new;
-                                };
+                                let mut rw = &mut reply_buffer[HEADER_SIZE + 1..];
+
                                 let alice_s_public_blob = app.get_local_s_public_blob();
                                 assert!(alice_s_public_blob.len() <= (u16::MAX as usize));
-                                reply_buffer_append(&(alice_s_public_blob.len() as u16).to_le_bytes());
-                                reply_buffer_append(alice_s_public_blob);
+                                rw.write_all(&(alice_s_public_blob.len() as u16).to_le_bytes())?;
+                                let mut enc_start = MAX_NOISE_HANDSHAKE_SIZE - rw.len();
+                                rw.write_all(alice_s_public_blob)?;
+
+                                let mut reply_len = MAX_NOISE_HANDSHAKE_SIZE - rw.len();
+                                let mut gcm = AesGcm::new(
+                                    kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(&hmac_sha512(
+                                        noise_es_ee.as_bytes(),
+                                        hk.as_bytes(),
+                                    ))
+                                    .as_bytes(),
+                                    true,
+                                );
+                                gcm.reset_init_gcm(&reply_message_nonce);
+                                gcm.crypt_in_place(&mut reply_buffer[enc_start..reply_len]);
+                                let mut rw = &mut reply_buffer[reply_len..];
+                                rw.write_all(&gcm.finish_encrypt())?;
+
                                 if let Some(md) = outgoing_offer.metadata.as_ref() {
-                                    reply_buffer_append(&(md.len() as u16).to_le_bytes());
-                                    reply_buffer_append(md.as_ref());
+                                    assert!(md.len() <= (u16::MAX as usize));
+                                    rw.write_all(&(md.len() as u16).to_le_bytes())?;
+                                    enc_start = MAX_NOISE_HANDSHAKE_SIZE - rw.len();
+                                    rw.write_all(md.as_ref())?;
                                 } else {
-                                    reply_buffer_append(&[0u8, 0u8]); // no meta-data
+                                    rw.write_all(&[0u8, 0u8])?; // no meta-data
+                                    enc_start = MAX_NOISE_HANDSHAKE_SIZE - rw.len();
                                 }
 
-                                // Encrypt Alice's static identity and other inner payload items. The key used here is
-                                // mixed with 'hk' to make identity secrecy PQ forward secure.
-                                aes_ctr_crypt_one_time_use_key(
-                                    &hmac_sha512(noise_es_ee.as_bytes(), hk.as_bytes())[..AES_256_KEY_SIZE],
-                                    &mut reply_buffer[HEADER_SIZE + 1..reply_len],
+                                reply_len = MAX_NOISE_HANDSHAKE_SIZE - rw.len();
+                                let mut gcm = AesGcm::new(
+                                    kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es_ee_se_hk_psk.as_bytes()).as_bytes(),
+                                    true,
                                 );
-
-                                // First attach HMAC allowing Bob to verify that this is from the same Alice and to
-                                // verify the authenticity of encrypted data.
-                                let hmac_es_ee = hmac_sha384_2(
-                                    noise_es_ee_kex_hmac_key.as_bytes(),
-                                    &reply_message_nonce,
-                                    &reply_buffer[HEADER_SIZE..reply_len],
-                                );
-                                reply_buffer[reply_len..reply_len + HMAC_SHA384_SIZE].copy_from_slice(&hmac_es_ee);
-                                reply_len += HMAC_SHA384_SIZE;
-
-                                // Then attach the final HMAC permitting Bob to verify the authenticity of the whole
-                                // key exchange. Bob won't be able to do this until he decrypts and parses Alice's
-                                // identity, so the first HMAC is to let him authenticate that first.
-                                let hmac_es_ee_se_hk_psk = hmac_sha384_2(
-                                    kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_AUTHENTICATION>(noise_es_ee_se_hk_psk.as_bytes()).as_bytes(),
-                                    &reply_message_nonce,
-                                    &reply_buffer[HEADER_SIZE..reply_len],
-                                );
-                                reply_buffer[reply_len..reply_len + HMAC_SHA384_SIZE].copy_from_slice(&hmac_es_ee_se_hk_psk);
-                                reply_len += HMAC_SHA384_SIZE;
+                                gcm.reset_init_gcm(&reply_message_nonce);
+                                gcm.crypt_in_place(&mut reply_buffer[enc_start..reply_len]);
+                                reply_buffer[reply_len..reply_len + AES_GCM_TAG_SIZE].copy_from_slice(&gcm.finish_encrypt());
+                                reply_len += AES_GCM_TAG_SIZE;
 
                                 drop(state);
                                 {
@@ -1025,62 +999,20 @@ impl<Application: ApplicationLayer> Context<Application> {
                     }
 
                     if let Some(incoming) = incoming {
-                        // Check the first HMAC to verify against the currently known noise_es_ee key, which verifies
-                        // that this reply is part of this session.
-                        let auth_start = pkt_assembled.len() - ALICE_NOISE_XK_ACK_AUTH_SIZE;
-                        if !secure_eq(
-                            &pkt_assembled[auth_start..pkt_assembled.len() - HMAC_SHA384_SIZE],
-                            &hmac_sha384_2(
-                                kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_AUTHENTICATION>(incoming.noise_es_ee.as_bytes()).as_bytes(),
-                                &incoming_message_nonce,
-                                &pkt_assembled[HEADER_SIZE..auth_start],
-                            ),
-                        ) {
-                            return Err(Error::FailedAuthentication);
-                        }
+                        let mut r = PktReader(pkt_assembled, HEADER_SIZE + 1);
 
-                        // Make a copy of pkt_assembled so we can check the second HMAC against original ciphertext later.
-                        let mut pkt_assembly_buffer_copy = [0u8; MAX_NOISE_HANDSHAKE_SIZE];
-                        pkt_assembly_buffer_copy[..pkt_assembled.len()].copy_from_slice(pkt_assembled);
+                        let alice_static_public_blob_size = r.read_u16()? as usize;
+                        let alice_static_public_blob = r.read_decrypt_auth(
+                            alice_static_public_blob_size,
+                            kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(&hmac_sha512(
+                                incoming.noise_es_ee.as_bytes(),
+                                incoming.hk.as_bytes(),
+                            )),
+                            &incoming_message_nonce,
+                        )?;
 
-                        // Decrypt encrypted section so we can finally learn Alice's static identity.
-                        aes_ctr_crypt_one_time_use_key(
-                            &hmac_sha512(incoming.noise_es_ee.as_bytes(), incoming.hk.as_bytes())[..AES_256_KEY_SIZE],
-                            &mut pkt_assembled[ALICE_NOISE_XK_ACK_ENC_START..auth_start],
-                        );
-
-                        // Read the static public blob and optional meta-data.
-                        let mut pkt_assembled_ptr = HEADER_SIZE + 1;
-                        let mut pkt_assembled_field_end = pkt_assembled_ptr + 2;
-                        if pkt_assembled_field_end >= pkt_assembled.len() {
-                            return Err(Error::InvalidPacket);
-                        }
-                        let alice_static_public_blob_size =
-                            u16::from_le_bytes(pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end].try_into().unwrap()) as usize;
-                        pkt_assembled_ptr = pkt_assembled_field_end;
-                        pkt_assembled_field_end = pkt_assembled_ptr + alice_static_public_blob_size;
-                        if pkt_assembled_field_end >= pkt_assembled.len() {
-                            return Err(Error::InvalidPacket);
-                        }
-                        let alice_static_public_blob = &pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end];
-                        pkt_assembled_ptr = pkt_assembled_field_end;
-                        pkt_assembled_field_end = pkt_assembled_ptr + 2;
-                        if pkt_assembled_field_end >= pkt_assembled.len() {
-                            return Err(Error::InvalidPacket);
-                        }
-                        let alice_meta_data_size =
-                            u16::from_le_bytes(pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end].try_into().unwrap()) as usize;
-                        pkt_assembled_ptr = pkt_assembled_field_end;
-                        pkt_assembled_field_end = pkt_assembled_ptr + alice_meta_data_size;
-                        let alice_meta_data = if alice_meta_data_size > 0 {
-                            Some(&pkt_assembled[pkt_assembled_ptr..pkt_assembled_field_end])
-                        } else {
-                            None
-                        };
-
-                        // Check session acceptance and fish Alice's NIST P-384 static public key out of
-                        // her static public blob.
-                        let check_result = check_accept_session(alice_static_public_blob, alice_meta_data);
+                        // Check session acceptance and fish Alice's NIST P-384 static public key out of her static public blob.
+                        let check_result = check_accept_session(alice_static_public_blob);
                         if check_result.is_none() {
                             self.sessions.write().unwrap().incoming.remove(&incoming.bob_session_id);
                             return Ok(ReceiveResult::Rejected);
@@ -1100,17 +1032,18 @@ impl<Application: ApplicationLayer> Context<Application> {
                             &hmac_sha512(psk.as_bytes(), incoming.hk.as_bytes()),
                         ));
 
-                        // Verify the packet using the final key to verify the whole key exchange.
-                        if !secure_eq(
-                            &pkt_assembly_buffer_copy[auth_start + HMAC_SHA384_SIZE..pkt_assembled.len()],
-                            &hmac_sha384_2(
-                                kbkdf::<HMAC_SHA384_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_AUTHENTICATION>(noise_es_ee_se_hk_psk.as_bytes()).as_bytes(),
-                                &incoming_message_nonce,
-                                &pkt_assembly_buffer_copy[HEADER_SIZE..auth_start + HMAC_SHA384_SIZE],
-                            ),
-                        ) {
-                            return Err(Error::FailedAuthentication);
+                        // Decrypt meta-data and verify the final key in the process. Copy meta-data
+                        // into the temporary data buffer to return.
+                        let alice_meta_data_size = r.read_u16()? as usize;
+                        let alice_meta_data = r.read_decrypt_auth(
+                            alice_meta_data_size,
+                            kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es_ee_se_hk_psk.as_bytes()),
+                            &incoming_message_nonce,
+                        )?;
+                        if alice_meta_data.len() > data_buf.len() {
+                            return Err(Error::DataTooLarge);
                         }
+                        data_buf[..alice_meta_data.len()].copy_from_slice(alice_meta_data);
 
                         let session = Arc::new(Session {
                             id: incoming.bob_session_id,
@@ -1131,6 +1064,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             defrag: std::array::from_fn(|_| Mutex::new(Fragged::new())),
                         });
 
+                        // Promote incoming session to active.
                         {
                             let mut sessions = self.sessions.write().unwrap();
                             sessions.incoming.remove(&incoming.bob_session_id);
@@ -1139,7 +1073,14 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                         let _ = session.send_nop(|b| send(Some(&session), b));
 
-                        return Ok(ReceiveResult::OkNewSession(session));
+                        return Ok(ReceiveResult::OkNewSession(
+                            session,
+                            if alice_meta_data.is_empty() {
+                                None
+                            } else {
+                                Some(&mut data_buf[..alice_meta_data.len()])
+                            },
+                        ));
                     } else {
                         return Err(Error::UnknownLocalSessionId);
                     }
@@ -1650,22 +1591,40 @@ impl SessionKey {
     }
 }
 
-/// Shortcut to HMAC data split into two slices.
-fn hmac_sha384_2(key: &[u8], a: &[u8], b: &[u8]) -> [u8; 48] {
-    let mut hmac = HMACSHA384::new(key);
-    hmac.update(a);
-    hmac.update(b);
-    hmac.finish()
-}
+/// Helper for parsing variable length ALICE_NOISE_XK_ACK
+struct PktReader<'a>(&'a mut [u8], usize);
 
-/// Shortcut to AES-CTR encrypt or decrypt with a zero IV.
-///
-/// This is used during Noise_XK handshaking. Each stage uses a different key to encrypt the
-/// payload that is used only once per handshake and per session.
-fn aes_ctr_crypt_one_time_use_key(key: &[u8], data: &mut [u8]) {
-    let mut ctr = AesCtr::new(key);
-    ctr.reset_set_iv(&[0u8; 12]);
-    ctr.crypt_in_place(data);
+impl<'a> PktReader<'a> {
+    fn read_u16(&mut self) -> Result<u16, Error> {
+        let tmp = self.1 + 2;
+        if tmp <= self.0.len() {
+            let n = u16::from_le_bytes(self.0[self.1..tmp].try_into().unwrap());
+            self.1 = tmp;
+            Ok(n)
+        } else {
+            Err(Error::InvalidPacket)
+        }
+    }
+
+    fn read_decrypt_auth<'b>(&'b mut self, l: usize, k: Secret<AES_256_KEY_SIZE>, nonce: &[u8]) -> Result<&'b [u8], Error> {
+        let mut tmp = self.1 + l;
+        if (tmp + AES_GCM_TAG_SIZE) <= self.0.len() {
+            let mut gcm = AesGcm::new(k.as_bytes(), false);
+            gcm.reset_init_gcm(nonce);
+            gcm.crypt_in_place(&mut self.0[self.1..tmp]);
+            let s = &self.0[self.1..tmp];
+            self.1 = tmp;
+            tmp += AES_GCM_TAG_SIZE;
+            if !gcm.finish_decrypt(&self.0[self.1..tmp]) {
+                Err(Error::FailedAuthentication)
+            } else {
+                self.1 = tmp;
+                Ok(s)
+            }
+        } else {
+            Err(Error::InvalidPacket)
+        }
+    }
 }
 
 /// HMAC-SHA512 key derivation based on: https://csrc.nist.gov/publications/detail/sp/800-108/final (page 7)

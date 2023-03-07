@@ -80,7 +80,7 @@ fn alice_main(
                     match context.receive(
                         alice_app,
                         || true,
-                        |s_public, _| Some((P384PublicKey::from_bytes(s_public).unwrap(), Secret::default(), ())),
+                        |s_public| Some((P384PublicKey::from_bytes(s_public).unwrap(), Secret::default(), ())),
                         |_, b| {
                             let _ = alice_out.send(b.to_vec());
                         },
@@ -96,7 +96,7 @@ fn alice_main(
                         Ok(zssp::ReceiveResult::OkData(_, _)) => {
                             //println!("[alice] received {}", data.len());
                         }
-                        Ok(zssp::ReceiveResult::OkNewSession(s)) => {
+                        Ok(zssp::ReceiveResult::OkNewSession(s, _)) => {
                             println!("[alice] new session {}", s.id.to_string());
                         }
                         Ok(zssp::ReceiveResult::Rejected) => {}
@@ -178,7 +178,7 @@ fn bob_main(
                 match context.receive(
                     bob_app,
                     || true,
-                    |s_public, _| Some((P384PublicKey::from_bytes(s_public).unwrap(), Secret::default(), ())),
+                    |s_public| Some((P384PublicKey::from_bytes(s_public).unwrap(), Secret::default(), ())),
                     |_, b| {
                         let _ = bob_out.send(b.to_vec());
                     },
@@ -204,7 +204,7 @@ fn bob_main(
                             .is_ok());
                         transferred += data.len() as u64 * 2; // *2 because we are also sending this many bytes back
                     }
-                    Ok(zssp::ReceiveResult::OkNewSession(s)) => {
+                    Ok(zssp::ReceiveResult::OkNewSession(s, _)) => {
                         println!("[bob] new session {}", s.id.to_string());
                         let _ = bob_session.replace(s);
                     }
