@@ -18,7 +18,11 @@ To reduce latency, the tcp-relay should be as close as possible to the nodes it 
 
 #### Option 1 - local.conf configuration
 See [Service docs](https://github.com/zerotier/ZeroTierOne/blob/e0acccc3c918b59678033e585b31eb000c68fdf2/service/README.md) for more info on local.conf
-`{ "settings": { "tcpFallbackRelay": "198.51.100.123/443"  } }`
+`{ "settings": { "tcpFallbackRelay": "198.51.100.123/443", "forceTcpRelay": true  } }`
+
+
+In this example, `forceTcpRelay` is enabled. This is helpful for testing or if you know you'll need tcp relay. It takes a few minutes for zerotier-one to realize it needs to relay otherwise. 
+
 
 
 #### Option 2 - redirect 204.80.128.1 to your own IP

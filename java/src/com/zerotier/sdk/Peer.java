@@ -27,68 +27,92 @@
 
 package com.zerotier.sdk;
 
-import java.util.ArrayList;
+import com.zerotier.sdk.util.StringUtils;
+
+import java.util.Arrays;
 
 /**
- * Peer status result
+ * Peer status result buffer
+ *
+ * Defined in ZeroTierOne.h as ZT_Peer
  */
-public final class Peer {
-    private long address;
-    private int versionMajor;
-    private int versionMinor;
-    private int versionRev;
-    private int latency;
-    private PeerRole role;
-    private PeerPhysicalPath[] paths;
+public class Peer {
 
-    private Peer() {}
+    private final long address;
+
+    private final int versionMajor;
+
+    private final int versionMinor;
+
+    private final int versionRev;
+
+    private final int latency;
+
+    private final PeerRole role;
+
+    private final PeerPhysicalPath[] paths;
+
+    public Peer(long address, int versionMajor, int versionMinor, int versionRev, int latency, PeerRole role, PeerPhysicalPath[] paths) {
+        this.address = address;
+        this.versionMajor = versionMajor;
+        this.versionMinor = versionMinor;
+        this.versionRev = versionRev;
+        this.latency = latency;
+        this.role = role;
+        this.paths = paths;
+    }
+
+    @Override
+    public String toString() {
+        return "Peer(" + StringUtils.addressToString(address) + ", " + versionMajor + ", " + versionMinor + ", " + versionRev + ", " + latency + ", " + role + ", " + Arrays.toString(paths) + ")";
+    }
 
     /**
      * ZeroTier address (40 bits)
      */
-    public final long address() {
+    public long getAddress() {
         return address;
     }
 
     /**
      * Remote major version or -1 if not known
      */
-    public final int versionMajor() {
+    public int getVersionMajor() {
         return versionMajor;
     }
 
     /**
      * Remote minor version or -1 if not known
      */
-    public final int versionMinor() {
+    public int getVersionMinor() {
         return versionMinor;
     }
 
     /**
      * Remote revision or -1 if not known
      */
-    public final int versionRev() {
+    public int getVersionRev() {
         return versionRev;
     }
 
     /**
      * Last measured latency in milliseconds or zero if unknown
      */
-    public final int latency() {
+    public int getLatency() {
         return latency;
     }
 
     /**
      * What trust hierarchy role does this device have?
      */
-    public final PeerRole role() {
+    public PeerRole getRole() {
         return role;
     }
 
     /**
      * Known network paths to peer
      */
-    public final PeerPhysicalPath[] paths() {
+    public PeerPhysicalPath[] getPaths() {
         return paths;
     }
 }

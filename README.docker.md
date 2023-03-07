@@ -60,6 +60,7 @@ To ensure you have a network available before trying to listen on it. Without pr
 
 You can control a few settings including the identity used and the authtoken used to interact with the control socket (which you can forward and access through `localhost:9993`).
 
+- `ZEROTIER_JOIN_NETWORKS`: additional way to set networks to join.
 - `ZEROTIER_API_SECRET`: replaces the `authtoken.secret` before booting and allows you to manage the control socket's authentication key.
 - `ZEROTIER_IDENTITY_PUBLIC`: the `identity.public` file for zerotier-one. Use `zerotier-idtool` to generate one of these for you.
 - `ZEROTIER_IDENTITY_SECRET`: the `identity.secret` file for zerotier-one. Use `zerotier-idtool` to generate one of these for you.

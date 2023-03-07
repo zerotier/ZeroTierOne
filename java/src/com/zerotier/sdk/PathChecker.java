@@ -8,6 +8,7 @@ package com.zerotier.sdk;
 import java.net.InetSocketAddress;
 
 public interface PathChecker {
+
     /**
      * Callback to check whether a path should be used for ZeroTier traffic
      *
@@ -28,6 +29,7 @@ public interface PathChecker {
      * @param ztAddress ZeroTier address or 0 for none/any
      * @param localSocket Local interface socket.  -1 if unspecified
      * @param remoteAddress remote address
+     * @return true if the path should be used
      */
     boolean onPathCheck(long ztAddress, long localSocket, InetSocketAddress remoteAddress);
 

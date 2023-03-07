@@ -25,11 +25,11 @@
  * LLC. Start here: http://www.zerotier.com/
  */
 
-
 package com.zerotier.sdk;
 
 
 public interface VirtualNetworkConfigListener {
+
     /**
      * Callback called to update virtual network port configuration
      *
@@ -40,7 +40,7 @@ public interface VirtualNetworkConfigListener {
      * This in turn should be used by the underlying implementation to create
      * and configure tap devices at the OS (or virtual network stack) layer.</P>
      *
-     * This should not call {@link Node#multicastSubscribe} or other network-modifying
+     * This should not call {@link Node#multicastSubscribe(long, long)} or other network-modifying
      * methods, as this could cause a deadlock in multithreaded or interrupt
      * driven environments.
      *
@@ -53,7 +53,7 @@ public interface VirtualNetworkConfigListener {
      * @param config {@link VirtualNetworkConfig} object with the new configuration
      * @return 0 on success
      */
-    public int onNetworkConfigurationUpdated(
+    int onNetworkConfigurationUpdated(
             long nwid,
             VirtualNetworkConfigOperation op,
             VirtualNetworkConfig config);

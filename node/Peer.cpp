@@ -530,7 +530,9 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 	performMultipathStateCheck(tPtr, now);
 
 	const bool sendFullHello = ((now - _lastSentFullHello) >= ZT_PEER_PING_PERIOD);
-	_lastSentFullHello = now;
+	if (sendFullHello) {
+		_lastSentFullHello = now;
+	}
 
 	// Right now we only keep pinging links that have the maximum priority. The
 	// priority is used to track cluster redirections, meaning that when a cluster

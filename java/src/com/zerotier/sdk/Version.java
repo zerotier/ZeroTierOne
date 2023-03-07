@@ -27,10 +27,27 @@
 
 package com.zerotier.sdk;
 
-public final class Version {
-    private Version() {}
-    
-	public int major = 0;
-	public int minor = 0;
-	public int revision = 0;
+public class Version {
+
+    private final int major;
+    private final int minor;
+    private final int revision;
+
+    public Version(int major, int minor, int revision) {
+        this.major = major;
+        this.minor = minor;
+        this.revision = revision;
+    }
+
+    public int getMajor() {
+        return major;
+    }
+
+    public int getMinor() {
+        return minor;
+    }
+
+    public int getRevision() {
+        return revision;
+    }
 }

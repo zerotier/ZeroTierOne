@@ -24,12 +24,14 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
+
 package com.zerotier.sdk;
 
 import java.net.InetSocketAddress;
 
 
 public interface PacketSender {
+
     /**
      * Function to send a ZeroTier packet out over the wire
      *
@@ -40,9 +42,10 @@ public interface PacketSender {
      * @param localSocket socket file descriptor to send from.  Set to -1 if not specified.
      * @param remoteAddr {@link InetSocketAddress} to send to
      * @param packetData data to send
+     * @param ttl TTL is ignored
      * @return 0 on success, any error code on failure.
      */
-    public int onSendPacketRequested(
+    int onSendPacketRequested(
             long localSocket,
             InetSocketAddress remoteAddr,
             byte[] packetData,

@@ -24,6 +24,7 @@
  * redistribute it in a modified binary form, please contact ZeroTier Networks
  * LLC. Start here: http://www.zerotier.com/
  */
+
 package com.zerotier.sdk;
 
 public interface DataStoreGetListener {
@@ -48,7 +49,7 @@ public interface DataStoreGetListener {
      * @param out_buffer buffer to put the object in
      * @return size of the object
      */
-    public long onDataStoreGet(
+    long onDataStoreGet(
             String name,
             byte[] out_buffer);
 }
