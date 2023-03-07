@@ -146,6 +146,9 @@ endif
 ifeq ($(CC_MACH),e2k)
 	ZT_ARCHITECTURE=2
 endif
+ifeq ($(CC_MACH),e2k64)
+	ZT_ARCHITECTURE=2
+endif
 ifeq ($(CC_MACH),i386)
 	ZT_ARCHITECTURE=1
 	ZT_SSO_SUPPORTED=1
