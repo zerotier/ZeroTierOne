@@ -1,6 +1,19 @@
 ZeroTier Release Notes
 ======
 
+# 2023-03-07 -- Version 1.10.4
+
+ * SECURITY FIX (Windows): this version fixes a file permission problem on
+   Windows that could allow non-privileged users on a Windows system to read
+   privileged files in the ZeroTier service's working directory. This could
+   allow an unprivileged local Windows user to administrate the local ZeroTier
+   instance without appropriate local permissions. This issue is not remotely
+   exploitable unless a remote user can read arbitrary local files, and does
+   not impact other operating systems.
+
+ * Fix a bug in the handling of multiple IP address assignments to virtual
+   interfaces on macOS.
+
 # 2023-02-15 -- Version 1.10.3
 
  * Fix for duplicate paths in client. Could cause connectivity issues. Affects all platforms.
