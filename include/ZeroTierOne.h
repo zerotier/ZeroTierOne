@@ -168,7 +168,7 @@ extern "C" {
 /**
  * Maximum number of direct network paths to a given peer
  */
-#define ZT_MAX_PEER_NETWORK_PATHS 64
+#define ZT_MAX_PEER_NETWORK_PATHS 128
 
 /**
  * Maximum number of path configurations that can be set
