@@ -320,7 +320,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     current_key: 0,
                     current_offer: Offer::NoiseXKInit(Box::new(AliceOutgoingIncompleteSessionState {
                         last_retry_time: AtomicI64::new(current_time),
-                        noise_h: mix_hash(&INITIAL_H, remote_s_public_blob),
+                        noise_h: mix_hash(&mix_hash(&INITIAL_H, remote_s_public_blob), &alice_noise_e),
                         noise_es: noise_es.clone(),
                         alice_noise_e_secret,
                         alice_hk_secret: Secret(alice_hk_secret.secret),
@@ -726,7 +726,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     let alice_noise_e = P384PublicKey::from_bytes(&pkt.alice_noise_e).ok_or(Error::FailedAuthentication)?;
                     let noise_es = app.get_local_s_keypair().agree(&alice_noise_e).ok_or(Error::FailedAuthentication)?;
 
-                    let noise_h = mix_hash(&INITIAL_H, app.get_local_s_public_blob());
+                    let noise_h = mix_hash(&mix_hash(&INITIAL_H, app.get_local_s_public_blob()), alice_noise_e.as_bytes());
                     let noise_h_next = mix_hash(&noise_h, &pkt_assembled[HEADER_SIZE..]);
 
                     // Decrypt and authenticate init packet, also proving that caller knows our static identity.
@@ -816,7 +816,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             timestamp: current_time,
                             alice_session_id,
                             bob_session_id,
-                            noise_h: mix_hash(&noise_h_next, &ack_packet[HEADER_SIZE..]),
+                            noise_h: mix_hash(&mix_hash(&noise_h_next, &bob_noise_e), &ack_packet[HEADER_SIZE..]),
                             noise_es_ee: noise_es_ee.clone(),
                             hk,
                             bob_noise_e_secret,
@@ -881,7 +881,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             ));
 
                             // Go ahead and compute the next 'h' state before we lose the ciphertext in decrypt.
-                            let noise_h_next = mix_hash(&outgoing_offer.noise_h, &pkt_assembled[HEADER_SIZE..]);
+                            let noise_h_next = mix_hash(&mix_hash(&outgoing_offer.noise_h, bob_noise_e.as_bytes()), &pkt_assembled[HEADER_SIZE..]);
 
                             // Decrypt and authenticate Bob's reply.
                             let mut gcm = AesGcm::new(
