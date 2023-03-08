@@ -948,7 +948,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 assert!(metadata.len() <= (u16::MAX as usize));
                                 reply_len = append_to_slice(&mut reply_buffer, reply_len, &(metadata.len() as u16).to_le_bytes())?;
 
-                                let noise_h_next = mix_hash(&noise_h_next, &reply_buffer[HEADER_SIZE..reply_len]);
+                                let noise_h_next = mix_hash(&mix_hash(&noise_h_next, &reply_buffer[HEADER_SIZE..reply_len]), session.psk.as_bytes());
 
                                 enc_start = reply_len;
                                 reply_len = append_to_slice(&mut reply_buffer, reply_len, metadata)?;
@@ -1046,6 +1046,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                             return Ok(ReceiveResult::Rejected);
                         }
                         let (alice_noise_s, psk, application_data) = check_result.unwrap();
+
+                        let noise_h_next = mix_hash(&noise_h_next, psk.as_bytes());
 
                         // Complete Noise_XKpsk3 on Bob's side.
                         let noise_es_ee_se_hk_psk = Secret(hmac_sha512(
