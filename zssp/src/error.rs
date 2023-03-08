@@ -51,7 +51,7 @@ pub enum Error {
 impl From<std::io::Error> for Error {
     #[inline(always)]
     fn from(_: std::io::Error) -> Self {
-        Self::InvalidPacket
+        Self::UnexpectedBufferOverrun
     }
 }
 
