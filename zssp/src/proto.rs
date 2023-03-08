@@ -52,7 +52,10 @@ pub(crate) const HEADER_SIZE: usize = 16;
 pub(crate) const HEADER_PROTECT_ENCRYPT_START: usize = 6;
 pub(crate) const HEADER_PROTECT_ENCRYPT_END: usize = 22;
 
-pub(crate) const KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION: u8 = b'x'; // AES-GCM encryption during initial setup
+pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ES: u8 = b's'; // AES-GCM encryption during noise key exchange -> e, es
+pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ES_EE: u8 = b'e'; // AES-GCM encryption during noise key exchange <- e, ee
+pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK: u8 = b'h'; // AES-GCM encryption during noise key exchange -> s, se
+pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK: u8 = b'p'; // AES-GCM encryption during noise key exchange -> s, se
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A'; // AES-GCM in A->B direction
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE: u8 = b'B'; // AES-GCM in B->A direction
 pub(crate) const KBKDF_KEY_USAGE_LABEL_RATCHET: u8 = b'R'; // Key used in derivatin of next session key

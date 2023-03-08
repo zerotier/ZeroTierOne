@@ -357,7 +357,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
             // Encrypt and add authentication tag.
             let mut gcm = AesGcm::new(
-                kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es.as_bytes()).as_bytes(),
+                kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES>(noise_es.as_bytes()).as_bytes(),
                 true,
             );
             gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_INIT, 1));
@@ -731,7 +731,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                     // Decrypt and authenticate init packet, also proving that caller knows our static identity.
                     let mut gcm = AesGcm::new(
-                        kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es.as_bytes()).as_bytes(),
+                        kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES>(noise_es.as_bytes()).as_bytes(),
                         false,
                     );
                     gcm.reset_init_gcm(&incoming_message_nonce);
@@ -782,7 +782,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                     // Encrypt main section of reply and attach tag.
                     let mut gcm = AesGcm::new(
-                        kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es_ee.as_bytes()).as_bytes(),
+                        kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(noise_es_ee.as_bytes()).as_bytes(),
                         true,
                     );
                     gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_BOB_NOISE_XK_ACK, 1));
@@ -885,7 +885,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                             // Decrypt and authenticate Bob's reply.
                             let mut gcm = AesGcm::new(
-                                kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es_ee.as_bytes()).as_bytes(),
+                                kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(noise_es_ee.as_bytes()).as_bytes(),
                                 false,
                             );
                             gcm.reset_init_gcm(&incoming_message_nonce);
@@ -931,7 +931,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 reply_len = append_to_slice(&mut reply_buffer, reply_len, alice_s_public_blob)?;
 
                                 let mut gcm = AesGcm::new(
-                                    kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(&hmac_sha512(
+                                    kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(&hmac_sha512(
                                         noise_es_ee.as_bytes(),
                                         hk.as_bytes(),
                                     ))
@@ -954,7 +954,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 reply_len = append_to_slice(&mut reply_buffer, reply_len, metadata)?;
 
                                 let mut gcm = AesGcm::new(
-                                    kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es_ee_se_hk_psk.as_bytes()).as_bytes(),
+                                    kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(noise_es_ee_se_hk_psk.as_bytes()).as_bytes(),
                                     true,
                                 );
                                 gcm.reset_init_gcm(&reply_message_nonce);
@@ -1031,7 +1031,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                         let alice_static_public_blob = r.read_decrypt_auth(
                             alice_static_public_blob_size,
-                            kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(&hmac_sha512(
+                            kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(&hmac_sha512(
                                 incoming.noise_es_ee.as_bytes(),
                                 incoming.hk.as_bytes(),
                             )),
@@ -1067,7 +1067,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         let alice_meta_data_size = r.read_u16()? as usize;
                         let alice_meta_data = r.read_decrypt_auth(
                             alice_meta_data_size,
-                            kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_INIT_ENCRYPTION>(noise_es_ee_se_hk_psk.as_bytes()),
+                            kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(noise_es_ee_se_hk_psk.as_bytes()),
                             &noise_h_next,
                             &incoming_message_nonce,
                         )?;
