@@ -13,10 +13,9 @@ ZSSP is designed for use in ZeroTier 2 but is payload-agnostic and could easily 
 
 ## Cryptographic Primitives Used
 
- - AES-256-GCM: Authenticated encryption of data in transit.
- - AES-256-CTR: Encryption of initial handshake data to be protected such as identities.
- - HMAC-SHA384: Key mixing, key derivation, message authentication during initial session handshake.
- - NIST P-384 ECDH: Elliptic curve key exchange during initial handshake and for periodic re-keying during the session.
- - Kyber1024: Quantum attack resistant lattice-based key exchange during initial handshake.
- - AES-256-ECB: Single 128-bit block encryption of header information to harden the fragmentation protocol against denial of service attack (see section on header protection).
+ - AES-256-GCM: Authenticated encryption
+ - HMAC-SHA384: Key mixing, sub-key derivation in key-based KDF construction
+ - NIST P-384 ECDH: Elliptic curve key exchange during initial handshake and for periodic re-keying during the session
+ - Kyber1024: Quantum attack resistant lattice-based key exchange during initial handshake
+ - AES-256-ECB: Single 128-bit block encryption of header information to harden the fragmentation protocol against denial of service attack (see section on header protection)
 

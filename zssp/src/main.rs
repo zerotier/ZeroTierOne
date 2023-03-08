@@ -61,6 +61,7 @@ fn alice_main(
                 let _ = alice_out.send(b.to_vec());
             },
             TEST_MTU,
+            bob_app.identity_key.public_key_bytes(),
             bob_app.identity_key.public_key(),
             Secret::default(),
             None,
