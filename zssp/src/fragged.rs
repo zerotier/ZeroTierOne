@@ -31,9 +31,13 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Drop for Assembled<Fragment, MAX_FRAG
 impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
     #[inline(always)]
     pub fn new() -> Self {
-        debug_assert!(MAX_FRAGMENTS <= 64);
-        debug_assert_eq!(size_of::<MaybeUninit<Fragment>>(), size_of::<Fragment>());
-        debug_assert_eq!(
+        // These assertions should be optimized out at compile time and check to make sure
+        // that the array of MaybeUninit<Fragment> can be freely cast into an array of
+        // Fragment. They also check that the maximum number of fragments is not too large
+        // for the fact that we use bits in a u64 to track which fragments are received.
+        assert!(MAX_FRAGMENTS <= 64);
+        assert_eq!(size_of::<MaybeUninit<Fragment>>(), size_of::<Fragment>());
+        assert_eq!(
             size_of::<[MaybeUninit<Fragment>; MAX_FRAGMENTS]>(),
             size_of::<[Fragment; MAX_FRAGMENTS]>()
         );
@@ -47,10 +51,9 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
     #[inline(always)]
     pub fn assemble(&mut self, counter: u64, fragment: Fragment, fragment_no: u8, fragment_count: u8) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
         if fragment_no < fragment_count && (fragment_count as usize) <= MAX_FRAGMENTS {
-            debug_assert!((fragment_count as usize) <= MAX_FRAGMENTS);
-            debug_assert!((fragment_no as usize) < MAX_FRAGMENTS);
-
             let mut have = self.have;
+
+            // If the counter has changed, reset the structure to receive a new packet.
             if counter != self.counter {
                 self.counter = counter;
                 if needs_drop::<Fragment>() {
