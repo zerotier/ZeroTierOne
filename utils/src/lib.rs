@@ -14,6 +14,7 @@ pub mod dictionary;
 pub mod error;
 #[allow(unused)]
 pub mod exitcode;
+pub mod flatsortedmap;
 pub mod gate;
 pub mod gatherarray;
 pub mod hex;

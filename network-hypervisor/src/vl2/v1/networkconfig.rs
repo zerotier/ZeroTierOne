@@ -31,11 +31,6 @@ pub struct NetworkConfig {
     #[serde(default)]
     pub name: String,
 
-    /// A human-readable message for members of this network (V2 only)
-    #[serde(skip_serializing_if = "String::is_empty")]
-    #[serde(default)]
-    pub motd: String,
-
     /// True if network has access control (the default)
     pub private: bool,
 
@@ -95,7 +90,6 @@ impl NetworkConfig {
             network_id,
             issued_to,
             name: String::new(),
-            motd: String::new(),
             private: true,
             timestamp: 0,
             mtu: 0,
