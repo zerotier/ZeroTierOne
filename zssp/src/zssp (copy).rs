@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, RwLock, Weak, MutexGuard};
 
 use zerotier_crypto::aes::{Aes, AesGcm};
-use zerotier_crypto::hash::{hmac_sha512, SHA384, SHA384_HASH_SIZE};
+use zerotier_crypto::hash::{hmac_sha512, SHA384, SHA384_HASH_SIZE, hmac_sha512_secret};
 use zerotier_crypto::p384::{P384KeyPair, P384PublicKey, P384_ECDH_SHARED_SECRET_SIZE};
 use zerotier_crypto::secret::Secret;
 use zerotier_crypto::{random, secure_eq};
@@ -132,10 +132,10 @@ enum Offer {
 
 struct SessionKey {
     ratchet_key: Secret<BASE_KEY_SIZE>,           // Key used in derivation of the next session key
-    receive_key: Secret<AES_256_KEY_SIZE>,        // Receive side AES-GCM key
-    send_key: Secret<AES_256_KEY_SIZE>,           // Send side AES-GCM key
-    receive_cipher_pool: Mutex<Vec<Box<AesGcm<false>>>>, // Pool of reusable sending ciphers
-    send_cipher_pool: Mutex<Vec<Box<AesGcm<true>>>>,    // Pool of reusable receiving ciphers
+    //receive_key: Secret<AES_256_KEY_SIZE>,        // Receive side AES-GCM key
+    //send_key: Secret<AES_256_KEY_SIZE>,           // Send side AES-GCM key
+    receive_cipher_pool: [Mutex<AesGcm<false>>; 4], // Pool of reusable sending ciphers
+    send_cipher_pool: [Mutex<AesGcm<true>>; 4],    // Pool of reusable receiving ciphers
     rekey_at_time: i64,                           // Rekey at or after this time (ticks)
     created_at_counter: u64,                      // Counter at which session was created
     rekey_at_counter: u64,                        // Rekey at or after this counter
@@ -616,7 +616,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         let current_frag_data_start = data_len;
                         data_len += f.len() - HEADER_SIZE;
                         if data_len > data_buf.len() {
-                            key.return_receive_cipher(c);
+                            drop(c);
                             return Err(Error::DataBufferTooSmall);
                         }
                         c.crypt(&f[HEADER_SIZE..], &mut data_buf[current_frag_data_start..data_len]);
@@ -630,14 +630,14 @@ impl<Application: ApplicationLayer> Context<Application> {
                     }
                     data_len += last_fragment.len() - (HEADER_SIZE + AES_GCM_TAG_SIZE);
                     if data_len > data_buf.len() {
-                        key.return_receive_cipher(c);
+                        drop(c);
                         return Err(Error::DataBufferTooSmall);
                     }
                     let payload_end = last_fragment.len() - AES_GCM_TAG_SIZE;
                     c.crypt(&last_fragment[HEADER_SIZE..payload_end], &mut data_buf[current_frag_data_start..data_len]);
 
                     let aead_authentication_ok = c.finish_decrypt(&last_fragment[payload_end..]);
-                    key.return_receive_cipher(c);
+                    drop(c);
 
                     if aead_authentication_ok {
                         if session.update_receive_window(incoming_counter) {
@@ -1130,7 +1130,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     c.reset_init_gcm(&incoming_message_nonce);
                                     c.crypt_in_place(&mut pkt_assembled[RekeyInit::ENC_START..RekeyInit::AUTH_START]);
                                     let aead_authentication_ok = c.finish_decrypt(&pkt_assembled[RekeyInit::AUTH_START..]);
-                                    key.return_receive_cipher(c);
+                                    drop(c);
 
                                     if aead_authentication_ok {
                                         let pkt: &RekeyInit = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
@@ -1162,7 +1162,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                             c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_REKEY_ACK, counter));
                                             c.crypt_in_place(&mut reply_buf[RekeyAck::ENC_START..RekeyAck::AUTH_START]);
                                             reply_buf[RekeyAck::AUTH_START..].copy_from_slice(&c.finish_encrypt());
-                                            key.return_send_cipher(c);
+                                            drop(c);
 
                                             session
                                                 .get_header_cipher()
@@ -1217,7 +1217,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     c.reset_init_gcm(&incoming_message_nonce);
                                     c.crypt_in_place(&mut pkt_assembled[RekeyAck::ENC_START..RekeyAck::AUTH_START]);
                                     let aead_authentication_ok = c.finish_decrypt(&pkt_assembled[RekeyAck::AUTH_START..]);
-                                    key.return_receive_cipher(c);
+                                    drop(c);
 
                                     if aead_authentication_ok {
                                         let pkt: &RekeyAck = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
@@ -1320,7 +1320,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                 }
                 debug_assert!(data.is_empty());
 
-                session_key.return_send_cipher(c);
+                drop(c);
 
                 return Ok(());
             }
@@ -1338,7 +1338,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                 let mut c = session_key.get_send_cipher(counter)?;
                 c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_NOP, counter));
                 nop[HEADER_SIZE..].copy_from_slice(&c.finish_encrypt());
-                session_key.return_send_cipher(c);
+                drop(c);
                 set_packet_header(&mut nop, 1, 0, PACKET_TYPE_NOP, u64::from(remote_session_id), state.current_key, counter);
                 self.get_header_cipher()
                     .encrypt_block_in_place(&mut nop[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
@@ -1385,7 +1385,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                         gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_REKEY_INIT, counter.get()));
                         gcm.crypt_in_place(&mut rekey_buf[RekeyInit::ENC_START..RekeyInit::AUTH_START]);
                         rekey_buf[RekeyInit::AUTH_START..].copy_from_slice(&gcm.finish_encrypt());
-                        key.return_send_cipher(gcm);
+                        drop(gcm);
 
                         debug_assert!(rekey_buf.len() <= MIN_TRANSPORT_MTU);
                         set_packet_header(
@@ -1398,7 +1398,9 @@ impl<Application: ApplicationLayer> Session<Application> {
                             counter.get(),
                         );
 
-                        drop(state);
+                        //drop(key);
+                        //drop(gcm);
+                        //drop(state);
 
                         self.get_header_cipher()
                             .encrypt_block_in_place(&mut rekey_buf[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
@@ -1431,7 +1433,6 @@ impl<Application: ApplicationLayer> Session<Application> {
         let prev_counter = self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OOO].fetch_max(counter, Ordering::AcqRel);
         prev_counter < counter && counter.wrapping_sub(prev_counter) < COUNTER_WINDOW_MAX_SKIP_AHEAD
     }
-
 
     #[inline(always)]
     fn get_header_cipher<'a>(&'a self) -> MutexGuard<'a, Aes>{
@@ -1567,12 +1568,14 @@ impl SessionKey {
         } else {
             (b2a, a2b)
         };
+        let receive_cipher_pool = std::array::from_fn(|_| Mutex::new(AesGcm::new(&receive_key)));
+        let send_cipher_pool = std::array::from_fn(|_| Mutex::new(AesGcm::new(&send_key)));
         Self {
             ratchet_key: kbkdf::<BASE_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_RATCHET>(key.as_bytes()),
-            receive_key,
-            send_key,
-            receive_cipher_pool: Mutex::new(Vec::with_capacity(2)),
-            send_cipher_pool: Mutex::new(Vec::with_capacity(2)),
+            //receive_key,
+            //send_key,
+            receive_cipher_pool,
+            send_cipher_pool,
             rekey_at_time: current_time
                 .checked_add(
                     Application::REKEY_AFTER_TIME_MS + ((random::xorshift64_random() as u32) % Application::REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
@@ -1587,38 +1590,26 @@ impl SessionKey {
         }
     }
 
-    fn get_send_cipher(&self, counter: u64) -> Result<Box<AesGcm<true>>, Error> {
+    fn get_send_cipher<'a>(&'a self, counter: u64) -> Result<MutexGuard<'a, AesGcm<true>>, Error> {
         if counter < self.expire_at_counter {
-            Ok(self
-                .send_cipher_pool
-                .lock()
-                .unwrap()
-                .pop()
-                .unwrap_or_else(|| Box::new(AesGcm::new(&self.send_key))))
+            for mutex in &self.send_cipher_pool {
+                if let Ok(guard) = mutex.try_lock() {
+                    return Ok(guard)
+                }
+            }
+            Ok(self.send_cipher_pool[0].lock().unwrap())
         } else {
-            // Not only do we return an error, but we also destroy the key.
-            let mut scp = self.send_cipher_pool.lock().unwrap();
-            scp.clear();
-            self.send_key.nuke();
-
             Err(Error::MaxKeyLifetimeExceeded)
         }
     }
 
-    fn return_send_cipher(&self, c: Box<AesGcm<true>>) {
-        self.send_cipher_pool.lock().unwrap().push(c);
-    }
-
-    fn get_receive_cipher(&self) -> Box<AesGcm<false>> {
-        self.receive_cipher_pool
-            .lock()
-            .unwrap()
-            .pop()
-            .unwrap_or_else(|| Box::new(AesGcm::new(&self.receive_key)))
-    }
-
-    fn return_receive_cipher(&self, c: Box<AesGcm<false>>) {
-        self.receive_cipher_pool.lock().unwrap().push(c);
+    fn get_receive_cipher<'a>(&'a self) -> MutexGuard<'a, AesGcm<false>> {
+        for mutex in &self.receive_cipher_pool {
+            if let Ok(guard) = mutex.try_lock() {
+                return guard
+            }
+        }
+        self.receive_cipher_pool[0].lock().unwrap()
     }
 }
 
@@ -1683,20 +1674,18 @@ fn mix_hash(h: &[u8; SHA384_HASH_SIZE], m: &[u8]) -> [u8; SHA384_HASH_SIZE] {
 fn kbkdf<const OUTPUT_BYTES: usize, const LABEL: u8>(key: &[u8]) -> Secret<OUTPUT_BYTES> {
     //These are the values we have assigned to the 5 variables involved in https://csrc.nist.gov/publications/detail/sp/800-108/final:
     // K_in = key, i = 0x01, Label = 'Z'||'T'||LABEL, Context = 0x00, L = (OUTPUT_BYTES * 8)
-    Secret::<OUTPUT_BYTES>::from_bytes_then_nuke(
-        &mut hmac_sha512(
-            key,
-            &[
-                1,
-                b'Z',
-                b'T',
-                LABEL,
-                0x00,
-                0,
-                (((OUTPUT_BYTES * 8) >> 8) & 0xff) as u8,
-                ((OUTPUT_BYTES * 8) & 0xff) as u8,
-            ],
-        )[..OUTPUT_BYTES],
+    hmac_sha512_secretZ(
+        key,
+        &[
+            1,
+            b'Z',
+            b'T',
+            LABEL,
+            0x00,
+            0,
+            (((OUTPUT_BYTES * 8) >> 8) & 0xff) as u8,
+            ((OUTPUT_BYTES * 8) & 0xff) as u8,
+        ],
     )
 }
 
