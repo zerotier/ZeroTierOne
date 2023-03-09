@@ -7,7 +7,6 @@ mod ec;
 pub mod aes_gmac_siv;
 pub mod secret;
 pub mod random;
-pub mod aes;
 pub mod hash;
 pub mod mimcvdf;
 pub mod p384;
@@ -16,6 +15,8 @@ pub mod poly1305;
 pub mod salsa;
 pub mod typestate;
 pub mod x25519;
+
+pub mod aes;
 
 
 /// This must be called before using any function from this library.
