@@ -17,18 +17,15 @@ pub mod x25519;
 
 /// NOTE: we assume that each aes library is threadsafe
 pub mod aes_fruity;
-#[cfg(not(target_os = "macos"))]
 pub mod aes_openssl;
-//#[cfg(target_os = "macos")]
+#[cfg(target_os = "macos")]
 pub use aes_fruity as aes;
-//#[cfg(not(target_os = "macos"))]
-//pub use aes_openssl as aes;
+#[cfg(not(target_os = "macos"))]
+pub use aes_openssl as aes;
 
 mod aes_tests;
 
-#[cfg(target_os = "macos")]
 pub mod aes_gmac_siv_fruity;
-#[cfg(not(target_os = "macos"))]
 pub mod aes_gmac_siv_openssl;
 #[cfg(target_os = "macos")]
 pub use aes_gmac_siv_fruity as aes_gmac_siv;
