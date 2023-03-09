@@ -134,8 +134,8 @@ struct SessionKey {
     ratchet_key: Secret<BASE_KEY_SIZE>,           // Key used in derivation of the next session key
     receive_key: Secret<AES_256_KEY_SIZE>,        // Receive side AES-GCM key
     send_key: Secret<AES_256_KEY_SIZE>,           // Send side AES-GCM key
-    receive_cipher_pool: Mutex<Vec<Box<AesGcm>>>, // Pool of reusable sending ciphers
-    send_cipher_pool: Mutex<Vec<Box<AesGcm>>>,    // Pool of reusable receiving ciphers
+    receive_cipher_pool: Mutex<Vec<Box<AesGcm<false>>>>, // Pool of reusable sending ciphers
+    send_cipher_pool: Mutex<Vec<Box<AesGcm<true>>>>,    // Pool of reusable receiving ciphers
     rekey_at_time: i64,                           // Rekey at or after this time (ticks)
     created_at_counter: u64,                      // Counter at which session was created
     rekey_at_counter: u64,                        // Rekey at or after this counter
@@ -313,7 +313,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 psk,
                 send_counter: AtomicU64::new(3), // 1 and 2 are reserved for init and final ack
                 receive_window: std::array::from_fn(|_| AtomicU64::new(0)),
-                header_protection_cipher: Aes::new(header_protection_key.as_bytes()),
+                header_protection_cipher: Aes::new(&header_protection_key),
                 state: RwLock::new(State {
                     remote_session_id: None,
                     keys: [None, None],
@@ -357,8 +357,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
             // Encrypt and add authentication tag.
             let mut gcm = AesGcm::new(
-                kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES>(noise_es.as_bytes()).as_bytes(),
-                true,
+                &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES>(noise_es.as_bytes())
             );
             gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_INIT, 1));
             gcm.aad(&offer.noise_h);
@@ -493,7 +492,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 }
             } else {
                 if let Some(i) = self.sessions.read().unwrap().incoming.get(&local_session_id).cloned() {
-                    Aes::new(i.header_protection_key.as_bytes())
+                    Aes::new(&i.header_protection_key)
                         .decrypt_block_in_place(&mut incoming_packet[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                     incoming = Some(i);
                 } else {
@@ -731,8 +730,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                     // Decrypt and authenticate init packet, also proving that caller knows our static identity.
                     let mut gcm = AesGcm::new(
-                        kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES>(noise_es.as_bytes()).as_bytes(),
-                        false,
+                        &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES>(noise_es.as_bytes())
                     );
                     gcm.reset_init_gcm(&incoming_message_nonce);
                     gcm.aad(&noise_h);
@@ -782,8 +780,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                     // Encrypt main section of reply and attach tag.
                     let mut gcm = AesGcm::new(
-                        kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(noise_es_ee.as_bytes()).as_bytes(),
-                        true,
+                        &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(noise_es_ee.as_bytes())
                     );
                     gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_BOB_NOISE_XK_ACK, 1));
                     gcm.aad(&noise_h_next);
@@ -836,7 +833,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         Some(alice_session_id),
                         0,
                         1,
-                        Some(&Aes::new(header_protection_key.as_bytes())),
+                        Some(&Aes::new(&header_protection_key)),
                     )?;
 
                     return Ok(ReceiveResult::Ok(session));
@@ -885,8 +882,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                             // Decrypt and authenticate Bob's reply.
                             let mut gcm = AesGcm::new(
-                                kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(noise_es_ee.as_bytes()).as_bytes(),
-                                false,
+                                &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(noise_es_ee.as_bytes())
                             );
                             gcm.reset_init_gcm(&incoming_message_nonce);
                             gcm.aad(&outgoing_offer.noise_h);
@@ -931,12 +927,10 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 reply_len = append_to_slice(&mut reply_buffer, reply_len, alice_s_public_blob)?;
 
                                 let mut gcm = AesGcm::new(
-                                    kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(&hmac_sha512(
+                                    &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(&hmac_sha512(
                                         noise_es_ee.as_bytes(),
                                         hk.as_bytes(),
                                     ))
-                                    .as_bytes(),
-                                    true,
                                 );
                                 gcm.reset_init_gcm(&reply_message_nonce);
                                 gcm.aad(&noise_h_next);
@@ -954,8 +948,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 reply_len = append_to_slice(&mut reply_buffer, reply_len, metadata)?;
 
                                 let mut gcm = AesGcm::new(
-                                    kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(noise_es_ee_se_hk_psk.as_bytes()).as_bytes(),
-                                    true,
+                                    &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(noise_es_ee_se_hk_psk.as_bytes())
                                 );
                                 gcm.reset_init_gcm(&reply_message_nonce);
                                 gcm.aad(&noise_h_next);
@@ -1082,7 +1075,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             psk,
                             send_counter: AtomicU64::new(2), // 1 was already used during negotiation
                             receive_window: std::array::from_fn(|_| AtomicU64::new(0)),
-                            header_protection_cipher: Aes::new(incoming.header_protection_key.as_bytes()),
+                            header_protection_cipher: Aes::new(&incoming.header_protection_key),
                             state: RwLock::new(State {
                                 remote_session_id: Some(incoming.alice_session_id),
                                 keys: [
@@ -1587,14 +1580,14 @@ impl SessionKey {
         }
     }
 
-    fn get_send_cipher(&self, counter: u64) -> Result<Box<AesGcm>, Error> {
+    fn get_send_cipher(&self, counter: u64) -> Result<Box<AesGcm<true>>, Error> {
         if counter < self.expire_at_counter {
             Ok(self
                 .send_cipher_pool
                 .lock()
                 .unwrap()
                 .pop()
-                .unwrap_or_else(|| Box::new(AesGcm::new(self.send_key.as_bytes(), true))))
+                .unwrap_or_else(|| Box::new(AesGcm::new(&self.send_key))))
         } else {
             // Not only do we return an error, but we also destroy the key.
             let mut scp = self.send_cipher_pool.lock().unwrap();
@@ -1605,19 +1598,19 @@ impl SessionKey {
         }
     }
 
-    fn return_send_cipher(&self, c: Box<AesGcm>) {
+    fn return_send_cipher(&self, c: Box<AesGcm<true>>) {
         self.send_cipher_pool.lock().unwrap().push(c);
     }
 
-    fn get_receive_cipher(&self) -> Box<AesGcm> {
+    fn get_receive_cipher(&self) -> Box<AesGcm<false>> {
         self.receive_cipher_pool
             .lock()
             .unwrap()
             .pop()
-            .unwrap_or_else(|| Box::new(AesGcm::new(self.receive_key.as_bytes(), false)))
+            .unwrap_or_else(|| Box::new(AesGcm::new(&self.receive_key)))
     }
 
-    fn return_receive_cipher(&self, c: Box<AesGcm>) {
+    fn return_receive_cipher(&self, c: Box<AesGcm<false>>) {
         self.receive_cipher_pool.lock().unwrap().push(c);
     }
 }
@@ -1640,7 +1633,7 @@ impl<'a> PktReader<'a> {
     fn read_decrypt_auth<'b>(&'b mut self, l: usize, k: Secret<AES_256_KEY_SIZE>, gcm_aad: &[u8], nonce: &[u8]) -> Result<&'b [u8], Error> {
         let mut tmp = self.1 + l;
         if (tmp + AES_GCM_TAG_SIZE) <= self.0.len() {
-            let mut gcm = AesGcm::new(k.as_bytes(), false);
+            let mut gcm = AesGcm::new(&k);
             gcm.reset_init_gcm(nonce);
             gcm.aad(gcm_aad);
             gcm.crypt_in_place(&mut self.0[self.1..tmp]);
@@ -1683,8 +1676,8 @@ fn mix_hash(h: &[u8; SHA384_HASH_SIZE], m: &[u8]) -> [u8; SHA384_HASH_SIZE] {
 fn kbkdf<const OUTPUT_BYTES: usize, const LABEL: u8>(key: &[u8]) -> Secret<OUTPUT_BYTES> {
     //These are the values we have assigned to the 5 variables involved in https://csrc.nist.gov/publications/detail/sp/800-108/final:
     // K_in = key, i = 0x01, Label = 'Z'||'T'||LABEL, Context = 0x00, L = (OUTPUT_BYTES * 8)
-    Secret::<OUTPUT_BYTES>::from_bytes(
-        &hmac_sha512(
+    Secret::<OUTPUT_BYTES>::from_bytes_then_nuke(
+        &mut hmac_sha512(
             key,
             &[
                 1,

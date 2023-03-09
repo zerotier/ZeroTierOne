@@ -14,7 +14,7 @@ pub struct AesGcm<const ENCRYPT: bool> (CipherCtx);
 
 impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
     /// Create an AesGcm context with the given key, key must be 16, 24 or 32 bytes long.
-    /// OpenSSL internally processes and caches this key, so it is recommended to reuse this context whenever encrypting under the same key. Call `set_iv` to change the IV for each reuse.
+    /// OpenSSL internally processes and caches this key, so it is recommended to reuse this context whenever encrypting under the same key. Call `reset_init_gcm` to change the IV for each reuse.
     pub fn new<const KEY_SIZE: usize>(key: &Secret<KEY_SIZE>) -> Self {
         let ctx = CipherCtx::new().unwrap();
         unsafe {
@@ -34,7 +34,7 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
     /// Set the IV of this AesGcm context. This call resets the IV but leaves the key and encryption algorithm alone.
     /// This method must be called before any other method on AesGcm.
     /// `iv` must be exactly 12 bytes in length, because that is what Aes supports.
-    pub fn set_iv(&self, iv: &[u8]) {
+    pub fn reset_init_gcm(&self, iv: &[u8]) {
         debug_assert_eq!(iv.len(), 12, "Aes IV must be 12 bytes long");
         unsafe {
             self.0.cipher_init::<ENCRYPT>(ptr::null(), ptr::null(), iv.as_ptr()).unwrap();
@@ -86,68 +86,18 @@ impl AesGcm<false> {
     }
 }
 
-
-
-/// An OpenSSL AES_CTR context. Automatically frees itself on drop. AES_CTR is similar to AES_GCM except it produces no authentication tag.
-/// Whether `ENCRYPT` is true or false decides respectively whether this context encrypts or decrypts.
-/// Even though OpenSSL lets you set this dynamically almost no operations work when you do this without resetting the context.
-pub struct AesCtr<const ENCRYPT: bool> (CipherCtx);
-
-impl<const ENCRYPT: bool> AesCtr<ENCRYPT> {
-    /// Create an AesCtr context with the given key, key must be 16, 24 or 32 bytes long.
-    /// OpenSSL internally processes and caches this key, so it is recommended to reuse this context whenever encrypting under the same key. Call `set_iv` to change the IV for each reuse.
-    pub fn new<const KEY_SIZE: usize>(key: &Secret<KEY_SIZE>) -> Self {
-        let ctx = CipherCtx::new().unwrap();
-        unsafe {
-            let t = match KEY_SIZE {
-                16 => ffi::EVP_aes_128_ctr(),
-                24 => ffi::EVP_aes_192_ctr(),
-                32 => ffi::EVP_aes_256_ctr(),
-                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32")
-            };
-            ctx.cipher_init::<true>(t, key.as_ptr(), ptr::null()).unwrap();
-            ffi::EVP_CIPHER_CTX_set_padding(ctx.as_ptr(), 0);
-        }
-        let ret = AesCtr(ctx);
-        ret
-    }
-
-    /// Set the IV of this AesCtr context. This call resets the IV but leaves the key and encryption algorithm alone.
-    /// This method must be called before any other method on AesCtr.
-    /// `iv` must be exactly 12 bytes in length, because that is what Aes supports.
-    pub fn set_iv(&self, iv: &[u8]) {
-        debug_assert_eq!(iv.len(), 12, "Aes IV must be 12 bytes long");
-        unsafe {
-            self.0.cipher_init::<true>(ptr::null(), ptr::null(), iv.as_ptr()).unwrap();
-        }
-    }
-
-    /// Encrypt or decrypt.
-    #[inline(always)]
-    pub fn crypt(&self, input: &[u8], output: &mut [u8]) {
-        debug_assert!(output.len() >= input.len(), "output buffer must fit the size of the input buffer");
-        unsafe { self.0.update::<ENCRYPT>(input, output.as_mut_ptr()).unwrap() };
-    }
-
-    /// Encrypt or decrypt in place.
-    #[inline(always)]
-    pub fn crypt_in_place(&self, data: &mut [u8]) {
-        let ptr = data.as_mut_ptr();
-        unsafe { self.0.update::<ENCRYPT>(data, ptr).unwrap() }
-    }
-}
-
 const AES_BLOCK_SIZE: usize = 16;
 
 /// An OpenSSL AES_ECB context. Automatically frees itself on drop.
 /// AES_ECB is very insecure if used incorrectly so its public interface supports only exactly what ZeroTier uses it for.
-pub struct AesEcb<const ENCRYPT: bool> (CipherCtx);
+pub struct Aes(CipherCtx, CipherCtx);
 
-impl<const ENCRYPT: bool> AesEcb<ENCRYPT> {
+impl Aes {
     /// Create an AesEcb context with the given key, key must be 16, 24 or 32 bytes long.
     /// OpenSSL internally processes and caches this key, so it is recommended to reuse this context whenever encrypting under the same key.
     pub fn new<const KEY_SIZE: usize>(key: &Secret<KEY_SIZE>) -> Self {
-        let ctx = CipherCtx::new().unwrap();
+        let ctx0 = CipherCtx::new().unwrap();
+        let ctx1 = CipherCtx::new().unwrap();
         unsafe {
             let t = match KEY_SIZE {
                 16 => ffi::EVP_aes_128_ecb(),
@@ -155,20 +105,28 @@ impl<const ENCRYPT: bool> AesEcb<ENCRYPT> {
                 32 => ffi::EVP_aes_256_ecb(),
                 _ => panic!("Aes KEY_SIZE must be 16, 24 or 32")
             };
-            ctx.cipher_init::<true>(t, key.as_ptr(), ptr::null()).unwrap();
-            ffi::EVP_CIPHER_CTX_set_padding(ctx.as_ptr(), 0);
-            debug_assert_eq!(ffi::EVP_CIPHER_CTX_get_block_size(ctx.as_ptr()) as usize, AES_BLOCK_SIZE, "Aes block size is incorrect, something is very wrong.");
+            ctx0.cipher_init::<true>(t, key.as_ptr(), ptr::null()).unwrap();
+            ffi::EVP_CIPHER_CTX_set_padding(ctx0.as_ptr(), 0);
+            ctx1.cipher_init::<false>(t, key.as_ptr(), ptr::null()).unwrap();
+            ffi::EVP_CIPHER_CTX_set_padding(ctx1.as_ptr(), 0);
         }
-        let ret = AesEcb(ctx);
+        let ret = Aes(ctx0, ctx1);
         ret
     }
 
     /// Do not ever encrypt the same plaintext twice. Make sure data is always different between calls.
     #[inline(always)]
-    pub fn crypt_in_place(&self, data: &mut [u8]) {
+    pub fn encrypt_block_in_place(&self, data: &mut [u8]) {
         debug_assert_eq!(data.len(), AES_BLOCK_SIZE, "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing.");
         let ptr = data.as_mut_ptr();
-        unsafe { self.0.update::<ENCRYPT>(data, ptr).unwrap() }
+        unsafe { self.0.update::<true>(data, ptr).unwrap() }
+    }
+    /// Do not ever encrypt the same plaintext twice. Make sure data is always different between calls.
+    #[inline(always)]
+    pub fn decrypt_block_in_place(&self, data: &mut [u8]) {
+        debug_assert_eq!(data.len(), AES_BLOCK_SIZE, "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing.");
+        let ptr = data.as_mut_ptr();
+        unsafe { self.1.update::<false>(data, ptr).unwrap() }
     }
 }
 
@@ -193,31 +151,31 @@ mod test {
         let mut cipher_out = [0u8; 127];
         let mut plain_out = [0u8; 127];
 
-        enc.set_iv(&iv0);
+        enc.reset_init_gcm(&iv0);
         enc.crypt(&plain, &mut cipher_out);
         tag_out = enc.finish_encrypt();
 
-        dec.set_iv(&iv0);
+        dec.reset_init_gcm(&iv0);
         dec.crypt(&cipher_out, &mut plain_out);
         assert!(dec.finish_decrypt(&tag_out));
 
         assert_eq!(plain, plain_out);
 
-        enc.set_iv(&iv1);
+        enc.reset_init_gcm(&iv1);
         enc.crypt(&plain, &mut cipher_out);
         tag_out = enc.finish_encrypt();
 
-        dec.set_iv(&iv1);
+        dec.reset_init_gcm(&iv1);
         dec.crypt(&cipher_out, &mut plain_out);
         assert!(dec.finish_decrypt(&tag_out));
 
         assert_eq!(plain, plain_out);
 
-        enc.set_iv(&iv0);
+        enc.reset_init_gcm(&iv0);
         enc.crypt(&plain, &mut cipher_out);
         tag_out = enc.finish_encrypt();
 
-        dec.set_iv(&iv1);
+        dec.reset_init_gcm(&iv1);
         dec.crypt(&cipher_out, &mut plain_out);
         assert!(!dec.finish_decrypt(&tag_out));
     }
@@ -238,7 +196,7 @@ mod test {
         let benchmark_iterations: usize = 80000;
         let start = SystemTime::now();
         for _ in 0..benchmark_iterations {
-            c.set_iv(&iv);
+            c.reset_init_gcm(&iv);
             c.crypt_in_place(&mut buf);
         }
         let duration = SystemTime::now().duration_since(start).unwrap();
@@ -251,7 +209,7 @@ mod test {
 
         let start = SystemTime::now();
         for _ in 0..benchmark_iterations {
-            c.set_iv(&iv);
+            c.reset_init_gcm(&iv);
             c.crypt_in_place(&mut buf);
         }
         let duration = SystemTime::now().duration_since(start).unwrap();
@@ -266,7 +224,7 @@ mod test {
         // Even though we are just wrapping other implementations, it's still good to test thoroughly!
         for tv in NIST_AES_GCM_TEST_VECTORS.iter() {
             let gcm = AesGcm::new(unsafe { &Secret::<32>::from_bytes(tv.key) });
-            gcm.set_iv(tv.nonce);
+            gcm.reset_init_gcm(tv.nonce);
             gcm.aad(tv.aad);
             let mut ciphertext = Vec::new();
             ciphertext.resize(tv.plaintext.len(), 0);
@@ -276,13 +234,13 @@ mod test {
             assert!(ciphertext.as_slice().eq(tv.ciphertext));
 
             let gcm = AesGcm::new(unsafe { &Secret::<32>::from_bytes(tv.key) });
-            gcm.set_iv(tv.nonce);
+            gcm.reset_init_gcm(tv.nonce);
             gcm.aad(tv.aad);
             let mut ct_copy = ciphertext.clone();
             gcm.crypt_in_place(ct_copy.as_mut());
             assert!(gcm.finish_decrypt(&tag));
 
-            gcm.set_iv(tv.nonce);
+            gcm.reset_init_gcm(tv.nonce);
             gcm.aad(tv.aad);
             gcm.crypt_in_place(ciphertext.as_mut());
             tag[0] ^= 1;
