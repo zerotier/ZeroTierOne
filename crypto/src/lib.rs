@@ -1,18 +1,27 @@
-// (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
-pub mod aes;
+mod error;
+mod cipher_ctx;
+mod bn;
+mod ec;
+
 pub mod aes_gmac_siv;
+pub mod secret;
+pub mod random;
+pub mod aes;
 pub mod hash;
 pub mod mimcvdf;
 pub mod p384;
+
 pub mod poly1305;
-pub mod random;
 pub mod salsa;
-pub mod secret;
 pub mod typestate;
 pub mod x25519;
 
-pub const ZEROES: [u8; 64] = [0_u8; 64];
+
+/// This must be called before using any function from this library.
+pub fn init() {
+    ffi::init();
+}
 
 /// Constant time byte slice equality.
 #[inline]
@@ -27,14 +36,4 @@ pub fn secure_eq<A: AsRef<[u8]> + ?Sized, B: AsRef<[u8]> + ?Sized>(a: &A, b: &B)
     } else {
         false
     }
-}
-
-extern "C" {
-    fn OPENSSL_cleanse(ptr: *mut std::ffi::c_void, len: usize);
-}
-
-/// Destroy the contents of some memory
-#[inline(always)]
-pub fn burn(b: &mut [u8]) {
-    unsafe { OPENSSL_cleanse(b.as_mut_ptr().cast(), b.len()) };
 }
