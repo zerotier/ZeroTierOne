@@ -131,18 +131,18 @@ enum Offer {
 }
 
 struct SessionKey {
-    ratchet_key: Secret<BASE_KEY_SIZE>,           // Key used in derivation of the next session key
-    //receive_key: Secret<AES_256_KEY_SIZE>,        // Receive side AES-GCM key
-    //send_key: Secret<AES_256_KEY_SIZE>,           // Send side AES-GCM key
-    receive_cipher_pool: [Mutex<AesGcm<false>>; 4], // Pool of reusable sending ciphers
+    ratchet_key: Secret<BASE_KEY_SIZE>,            // Key used in derivation of the next session key
+    //receive_key: Secret<AES_256_KEY_SIZE>,       // Receive side AES-GCM key
+    //send_key: Secret<AES_256_KEY_SIZE>,          // Send side AES-GCM key
+    receive_cipher_pool: [Mutex<AesGcm<false>>; 4],// Pool of reusable sending ciphers
     send_cipher_pool: [Mutex<AesGcm<true>>; 4],    // Pool of reusable receiving ciphers
-    rekey_at_time: i64,                           // Rekey at or after this time (ticks)
-    created_at_counter: u64,                      // Counter at which session was created
-    rekey_at_counter: u64,                        // Rekey at or after this counter
-    expire_at_counter: u64,                       // Hard error when this counter value is reached or exceeded
-    ratchet_count: u64,                           // Number of rekey events
-    bob: bool,                                    // Was this side "Bob" in this exchange?
-    confirmed: bool,                              // Is this key confirmed by the other side?
+    rekey_at_time: i64,                            // Rekey at or after this time (ticks)
+    created_at_counter: u64,                       // Counter at which session was created
+    rekey_at_counter: u64,                         // Rekey at or after this counter
+    expire_at_counter: u64,                        // Hard error when this counter value is reached or exceeded
+    ratchet_count: u64,                            // Number of rekey events
+    bob: bool,                                     // Was this side "Bob" in this exchange?
+    confirmed: bool,                               // Is this key confirmed by the other side?
 }
 
 impl<Application: ApplicationLayer> Context<Application> {
