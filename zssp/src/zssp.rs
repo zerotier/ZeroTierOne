@@ -150,6 +150,7 @@ impl<Application: ApplicationLayer> Context<Application> {
     ///
     /// * `max_incomplete_session_queue_size` - Maximum number of incomplete sessions in negotiation phase
     pub fn new(max_incomplete_session_queue_size: usize) -> Self {
+        zerotier_crypto::init();
         Self {
             max_incomplete_session_queue_size,
             defrag: Mutex::new(HashMap::new()),
