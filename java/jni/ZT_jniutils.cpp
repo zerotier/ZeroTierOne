@@ -307,11 +307,8 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
             vnetConfig.dhcp,
             vnetConfig.bridge,
             vnetConfig.broadcastEnabled,
-            //
-            // ANDROID-56: temporarily remove parameters to prevent crashing
-            //
-//            vnetConfig.portError,
-//            vnetConfig.netconfRevision,
+            vnetConfig.portError,
+            vnetConfig.netconfRevision,
             assignedAddrArrayObj,
             routesArrayObj,
             dnsObj);
