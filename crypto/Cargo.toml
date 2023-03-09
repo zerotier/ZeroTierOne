@@ -10,11 +10,6 @@ edition = "2021"
 version = "0.1.0"
 
 
-[features]
-vendored = ['ffi/vendored']
-bindgen = ['ffi/bindgen']
-default = []
-
 [dependencies]
 ed25519-dalek = { version = "1.0.1", features = ["std", "u64_backend"], default-features = false }
 poly1305 = { version = "0.8.0", features = [], default-features = false }

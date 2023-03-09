@@ -2,8 +2,6 @@
 use cfg_if::cfg_if;
 use libc::{c_char, c_int};
 use std::borrow::Cow;
-#[cfg(boringssl)]
-use std::convert::TryInto;
 use std::error;
 use std::ffi::CStr;
 use std::fmt;
@@ -11,10 +9,7 @@ use std::io;
 use std::ptr;
 use std::str;
 
-#[cfg(not(boringssl))]
 type ErrType = libc::c_ulong;
-#[cfg(boringssl)]
-type ErrType = libc::c_uint;
 
 /// Collection of [`Error`]s from OpenSSL.
 ///
@@ -24,6 +19,8 @@ pub struct ErrorStack(Vec<Error>);
 
 impl ErrorStack {
     /// Returns the contents of the OpenSSL error stack.
+    #[cold]
+    #[inline(never)]
     pub fn get() -> ErrorStack {
         let mut vec = vec![];
         while let Some(err) = Error::get() {
@@ -184,23 +181,6 @@ impl Error {
                 ffi::ERR_GET_LIB(self.code),
                 ffi::ERR_GET_REASON(self.code),
                 ptr::null(),
-            );
-        }
-    }
-
-    #[cfg(not(ossl300))]
-    fn put_error(&self) {
-        #[cfg(not(boringssl))]
-        let line = self.line;
-        #[cfg(boringssl)]
-        let line = self.line.try_into().unwrap();
-        unsafe {
-            ffi::ERR_put_error(
-                ffi::ERR_GET_LIB(self.code),
-                ffi::ERR_GET_FUNC(self.code),
-                ffi::ERR_GET_REASON(self.code),
-                self.file.as_ptr(),
-                line,
             );
         }
     }
