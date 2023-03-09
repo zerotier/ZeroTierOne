@@ -3,9 +3,8 @@ use std::ptr;
 
 use foreign_types::ForeignType;
 
-use crate::cipher_ctx::CipherCtx;
+use crate::{cipher_ctx::CipherCtx, ZEROES};
 
-pub const ZEROES: [u8; 64] = [0_u8; 64];
 
 /// AES-GMAC-SIV encryptor/decryptor.
 pub struct AesGmacSiv {
