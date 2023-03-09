@@ -83,7 +83,7 @@ pub struct Session<Application: ApplicationLayer> {
     psk: Secret<BASE_KEY_SIZE>,
     send_counter: AtomicU64,
     receive_window: [AtomicU64; COUNTER_WINDOW_MAX_OOO],
-    header_protection_cipher: Mutex<Aes>,
+    header_protection_cipher: Aes,
     state: RwLock<State>,
     defrag: [Mutex<Fragged<Application::IncomingPacketBuffer, MAX_FRAGMENTS>>; COUNTER_WINDOW_MAX_OOO],
 }
@@ -216,7 +216,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     state.remote_session_id,
                                     0,
                                     2,
-                                    Some(&mut *session.get_header_cipher()),
+                                    Some(&session.header_protection_cipher),
                                 );
                             }
                             false
@@ -314,7 +314,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 psk,
                 send_counter: AtomicU64::new(3), // 1 and 2 are reserved for init and final ack
                 receive_window: std::array::from_fn(|_| AtomicU64::new(0)),
-                header_protection_cipher: Mutex::new(Aes::new(&header_protection_key)),
+                header_protection_cipher: Aes::new(&header_protection_key),
                 state: RwLock::new(State {
                     remote_session_id: None,
                     keys: [None, None],
@@ -443,7 +443,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 debug_assert!(!self.sessions.read().unwrap().incoming.contains_key(&local_session_id));
 
                 session
-                    .get_header_cipher()
+                    .header_protection_cipher
                     .decrypt_block_in_place(&mut incoming_packet[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                 let (key_index, packet_type, fragment_count, fragment_no, incoming_counter) = parse_packet_header(&incoming_packet);
 
@@ -834,7 +834,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         Some(alice_session_id),
                         0,
                         1,
-                        Some(&mut Aes::new(&header_protection_key)),
+                        Some(&Aes::new(&header_protection_key)),
                     )?;
 
                     return Ok(ReceiveResult::Ok(session));
@@ -979,7 +979,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     Some(bob_session_id),
                                     0,
                                     2,
-                                    Some(&mut *session.get_header_cipher()),
+                                    Some(&session.header_protection_cipher),
                                 )?;
 
                                 return Ok(ReceiveResult::Ok(Some(session)));
@@ -1076,7 +1076,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             psk,
                             send_counter: AtomicU64::new(2), // 1 was already used during negotiation
                             receive_window: std::array::from_fn(|_| AtomicU64::new(0)),
-                            header_protection_cipher: Mutex::new(Aes::new(&incoming.header_protection_key)),
+                            header_protection_cipher: Aes::new(&incoming.header_protection_key),
                             state: RwLock::new(State {
                                 remote_session_id: Some(incoming.alice_session_id),
                                 keys: [
@@ -1165,7 +1165,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                             drop(c);
 
                                             session
-                                                .get_header_cipher()
+                                                .header_protection_cipher
                                                 .encrypt_block_in_place(&mut reply_buf[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                                             send(Some(&session), &mut reply_buf);
 
@@ -1314,7 +1314,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                         fragment_size = tagged_fragment_size;
                     }
 
-                    self.get_header_cipher()
+                    self.header_protection_cipher
                         .encrypt_block_in_place(&mut mtu_sized_buffer[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                     send(&mut mtu_sized_buffer[..fragment_size]);
                 }
@@ -1340,7 +1340,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                 nop[HEADER_SIZE..].copy_from_slice(&c.finish_encrypt());
                 drop(c);
                 set_packet_header(&mut nop, 1, 0, PACKET_TYPE_NOP, u64::from(remote_session_id), state.current_key, counter);
-                self.get_header_cipher()
+                self.header_protection_cipher
                     .encrypt_block_in_place(&mut nop[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                 send(&mut nop);
             }
@@ -1402,7 +1402,7 @@ impl<Application: ApplicationLayer> Session<Application> {
                         //drop(gcm);
                         //drop(state);
 
-                        self.get_header_cipher()
+                        self.header_protection_cipher
                             .encrypt_block_in_place(&mut rekey_buf[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                         send(&mut rekey_buf);
 
@@ -1432,11 +1432,6 @@ impl<Application: ApplicationLayer> Session<Application> {
     fn update_receive_window(&self, counter: u64) -> bool {
         let prev_counter = self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OOO].fetch_max(counter, Ordering::AcqRel);
         prev_counter < counter && counter.wrapping_sub(prev_counter) < COUNTER_WINDOW_MAX_SKIP_AHEAD
-    }
-
-    #[inline(always)]
-    fn get_header_cipher<'a>(&'a self) -> MutexGuard<'a, Aes>{
-        self.header_protection_cipher.lock().unwrap()
     }
 }
 
@@ -1500,7 +1495,7 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
     remote_session_id: Option<SessionId>,
     key_index: usize,
     counter: u64,
-    mut header_protect_cipher: Option<&mut Aes>,
+    header_protect_cipher: Option<&Aes>,
 ) -> Result<(), Error> {
     let packet_len = packet.len();
     let recipient_session_id = remote_session_id.map_or(SessionId::NONE, |s| u64::from(s));
@@ -1518,7 +1513,7 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
             key_index,
             counter,
         );
-        if let Some(hcc) = &mut header_protect_cipher {
+        if let Some(hcc) = header_protect_cipher {
             hcc.encrypt_block_in_place(&mut fragment[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
         }
         send(fragment);

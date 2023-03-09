@@ -15,7 +15,6 @@ pub mod salsa;
 pub mod typestate;
 pub mod x25519;
 
-/// NOTE: we assume that each aes library is threadsafe
 pub mod aes_fruity;
 pub mod aes_openssl;
 #[cfg(target_os = "macos")]

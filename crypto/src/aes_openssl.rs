@@ -116,14 +116,14 @@ impl Aes {
 
     /// Do not ever encrypt the same plaintext twice. Make sure data is always different between calls.
     #[inline(always)]
-    pub fn encrypt_block_in_place(&mut self, data: &mut [u8]) {
+    pub fn encrypt_block_in_place(&self, data: &mut [u8]) {
         debug_assert_eq!(data.len(), AES_BLOCK_SIZE, "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing.");
         let ptr = data.as_mut_ptr();
         unsafe { self.0.update::<true>(data, ptr).unwrap() }
     }
     /// Do not ever encrypt the same plaintext twice. Make sure data is always different between calls.
     #[inline(always)]
-    pub fn decrypt_block_in_place(&mut self, data: &mut [u8]) {
+    pub fn decrypt_block_in_place(&self, data: &mut [u8]) {
         debug_assert_eq!(data.len(), AES_BLOCK_SIZE, "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing.");
         let ptr = data.as_mut_ptr();
         unsafe { self.1.update::<false>(data, ptr).unwrap() }

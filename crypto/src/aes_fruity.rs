@@ -3,6 +3,7 @@
 // MacOS implementation of AES primitives since CommonCrypto seems to be faster than OpenSSL, especially on ARM64.
 use std::os::raw::{c_int, c_void};
 use std::ptr::{null, null_mut};
+use std::sync::Mutex;
 
 use crate::secret::Secret;
 use crate::secure_eq;
@@ -173,14 +174,14 @@ impl AesGcm<false> {
 
 
 
-pub struct Aes(*mut c_void, *mut c_void);
+pub struct Aes(Mutex<*mut c_void>, Mutex<*mut c_void>);
 
 impl Drop for Aes {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe {
-            CCCryptorRelease(self.0);
-            CCCryptorRelease(self.1);
+            CCCryptorRelease(*self.0.lock().unwrap());
+            CCCryptorRelease(*self.1.lock().unwrap());
         }
     }
 }
@@ -189,7 +190,7 @@ impl Aes {
     pub fn new<const KEY_SIZE: usize>(k: &Secret<KEY_SIZE>) -> Self {
         unsafe {
             debug_assert!(KEY_SIZE == 32 || KEY_SIZE == 24 || KEY_SIZE == 16, "AES supports 128, 192, or 256 bits keys");
-            let mut aes: Self = std::mem::zeroed();
+            let aes: Self = std::mem::zeroed();
             assert_eq!(
                 CCCryptorCreateWithMode(
                     kCCEncrypt,
@@ -203,7 +204,7 @@ impl Aes {
                     0,
                     0,
                     kCCOptionECBMode,
-                    &mut aes.0
+                    &mut *aes.0.lock().unwrap()
                 ),
                 0
             );
@@ -220,7 +221,7 @@ impl Aes {
                     0,
                     0,
                     kCCOptionECBMode,
-                    &mut aes.1
+                    &mut *aes.1.lock().unwrap()
                 ),
                 0
             );
@@ -229,20 +230,20 @@ impl Aes {
     }
 
     #[inline(always)]
-    pub fn encrypt_block_in_place(&mut self, data: &mut [u8]) {
+    pub fn encrypt_block_in_place(&self, data: &mut [u8]) {
         assert_eq!(data.len(), 16);
         unsafe {
             let mut data_out_written = 0;
-            CCCryptorUpdate(self.0, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+            CCCryptorUpdate(*self.0.lock().unwrap(), data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
         }
     }
 
     #[inline(always)]
-    pub fn decrypt_block_in_place(&mut self, data: &mut [u8]) {
+    pub fn decrypt_block_in_place(&self, data: &mut [u8]) {
         assert_eq!(data.len(), 16);
         unsafe {
             let mut data_out_written = 0;
-            CCCryptorUpdate(self.1, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+            CCCryptorUpdate(*self.1.lock().unwrap(), data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
         }
     }
 }
