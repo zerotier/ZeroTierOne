@@ -35,12 +35,9 @@ impl<const L: usize> Secret<L> {
     /// Copy bytes into secret, then nuke the previous value, will panic if the slice does not match the size of this secret.
     #[inline(always)]
     pub fn from_bytes_then_nuke(b: &mut [u8]) -> Self {
-        let mut k = [0u8; L];
-        k.copy_from_slice(b);
-        unsafe {
-            OPENSSL_cleanse(b.as_mut_ptr().cast(), L)
-        };
-        Self (k)
+        let ret = Self (b.try_into().unwrap());
+        unsafe { OPENSSL_cleanse(b.as_mut_ptr().cast(), L) };
+        ret
     }
     #[inline(always)]
     pub unsafe fn from_bytes(b: &[u8]) -> Self {

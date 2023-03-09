@@ -281,7 +281,7 @@ pub fn hmac_sha512_secret<const C: usize>(key: &[u8], msg: &[u8]) -> Secret<C> {
     let mut hm = HMACSHA512::new(key);
     hm.update(msg);
     let buff = hm.finish();
-    unsafe { Secret::from_bytes(&buff) }
+    unsafe { Secret::from_bytes(&buff[..C]) }
 }
 
 #[inline(always)]

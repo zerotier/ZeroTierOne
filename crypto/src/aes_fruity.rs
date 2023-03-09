@@ -97,7 +97,7 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
     }
 
     #[inline(always)]
-    pub fn reset_init_gcm(&self, iv: &[u8]) {
+    pub fn reset_init_gcm(&mut self, iv: &[u8]) {
         assert_eq!(iv.len(), 12);
         unsafe {
             assert_eq!(CCCryptorGCMReset(self.0), 0);
@@ -106,14 +106,14 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
     }
 
     #[inline(always)]
-    pub fn aad(&self, aad: &[u8]) {
+    pub fn aad(&mut self, aad: &[u8]) {
         unsafe {
             assert_eq!(CCCryptorGCMAddAAD(self.0, aad.as_ptr().cast(), aad.len()), 0);
         }
     }
 
     #[inline(always)]
-    pub fn crypt(&self, input: &[u8], output: &mut [u8]) {
+    pub fn crypt(&mut self, input: &[u8], output: &mut [u8]) {
         unsafe {
             assert_eq!(input.len(), output.len());
             if ENCRYPT {
@@ -131,7 +131,7 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
     }
 
     #[inline(always)]
-    pub fn crypt_in_place(&self, data: &mut [u8]) {
+    pub fn crypt_in_place(&mut self, data: &mut [u8]) {
         unsafe {
             if ENCRYPT {
                 assert_eq!(CCCryptorGCMEncrypt(self.0, data.as_ptr().cast(), data.len(), data.as_mut_ptr().cast()), 0);
@@ -142,7 +142,7 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
     }
 
     #[inline(always)]
-    fn finish(&self) -> [u8; 16] {
+    fn finish(&mut self) -> [u8; 16] {
         let mut tag = 0_u128.to_ne_bytes();
         unsafe {
             let mut tag_len = 16;
@@ -159,14 +159,14 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
 impl AesGcm<true> {
     /// Produce the gcm authentication tag.
     #[inline(always)]
-    pub fn finish_encrypt(&self) -> [u8; 16] {
+    pub fn finish_encrypt(&mut self) -> [u8; 16] {
         self.finish()
     }
 }
 impl AesGcm<false> {
     /// Check the gcm authentication tag. Outputs true if it matches the just decrypted message, outputs false otherwise.
     #[inline(always)]
-    pub fn finish_decrypt(&self, expected_tag: &[u8]) -> bool {
+    pub fn finish_decrypt(&mut self, expected_tag: &[u8]) -> bool {
         secure_eq(&self.finish(), expected_tag)
     }
 }
@@ -229,7 +229,7 @@ impl Aes {
     }
 
     #[inline(always)]
-    pub fn encrypt_block_in_place(&self, data: &mut [u8]) {
+    pub fn encrypt_block_in_place(&mut self, data: &mut [u8]) {
         assert_eq!(data.len(), 16);
         unsafe {
             let mut data_out_written = 0;
@@ -238,7 +238,7 @@ impl Aes {
     }
 
     #[inline(always)]
-    pub fn decrypt_block_in_place(&self, data: &mut [u8]) {
+    pub fn decrypt_block_in_place(&mut self, data: &mut [u8]) {
         assert_eq!(data.len(), 16);
         unsafe {
             let mut data_out_written = 0;

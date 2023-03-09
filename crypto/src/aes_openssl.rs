@@ -34,7 +34,7 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
     /// Set the IV of this AesGcm context. This call resets the IV but leaves the key and encryption algorithm alone.
     /// This method must be called before any other method on AesGcm.
     /// `iv` must be exactly 12 bytes in length, because that is what Aes supports.
-    pub fn reset_init_gcm(&self, iv: &[u8]) {
+    pub fn reset_init_gcm(&mut self, iv: &[u8]) {
         debug_assert_eq!(iv.len(), 12, "Aes IV must be 12 bytes long");
         unsafe {
             self.0.cipher_init::<ENCRYPT>(ptr::null(), ptr::null(), iv.as_ptr()).unwrap();
@@ -43,20 +43,20 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
 
     /// Add additional authentication data to AesGcm (same operation with CTR mode).
     #[inline(always)]
-    pub fn aad(&self, aad: &[u8]) {
+    pub fn aad(&mut self, aad: &[u8]) {
         unsafe { self.0.update::<ENCRYPT>(aad, ptr::null_mut()).unwrap() };
     }
 
     /// Encrypt or decrypt (same operation with CTR mode)
     #[inline(always)]
-    pub fn crypt(&self, input: &[u8], output: &mut [u8]) {
+    pub fn crypt(&mut self, input: &[u8], output: &mut [u8]) {
         debug_assert!(output.len() >= input.len(), "output buffer must fit the size of the input buffer");
         unsafe { self.0.update::<ENCRYPT>(input, output.as_mut_ptr()).unwrap() };
     }
 
     /// Encrypt or decrypt in place (same operation with CTR mode).
     #[inline(always)]
-    pub fn crypt_in_place(&self, data: &mut [u8]) {
+    pub fn crypt_in_place(&mut self, data: &mut [u8]) {
         let ptr = data.as_mut_ptr();
         unsafe { self.0.update::<ENCRYPT>(data, ptr).unwrap() }
     }
@@ -64,7 +64,7 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
 impl AesGcm<true> {
     /// Produce the gcm authentication tag.
     #[inline(always)]
-    pub fn finish_encrypt(&self) -> [u8; 16] {
+    pub fn finish_encrypt(&mut self) -> [u8; 16] {
         unsafe {
             let mut tag = MaybeUninit::<[u8; 16]>::uninit();
             self.0.finalize::<true>(tag.as_mut_ptr().cast()).unwrap();
@@ -76,7 +76,7 @@ impl AesGcm<true> {
 impl AesGcm<false> {
     /// Check the gcm authentication tag. Outputs true if it matches the just decrypted message, outputs false otherwise.
     #[inline(always)]
-    pub fn finish_decrypt(&self, expected_tag: &[u8]) -> bool {
+    pub fn finish_decrypt(&mut self, expected_tag: &[u8]) -> bool {
         debug_assert_eq!(expected_tag.len(), 16);
         if self.0.set_tag(expected_tag).is_ok() {
             unsafe { self.0.finalize::<false>(ptr::null_mut()).is_ok() }
@@ -116,14 +116,14 @@ impl Aes {
 
     /// Do not ever encrypt the same plaintext twice. Make sure data is always different between calls.
     #[inline(always)]
-    pub fn encrypt_block_in_place(&self, data: &mut [u8]) {
+    pub fn encrypt_block_in_place(&mut self, data: &mut [u8]) {
         debug_assert_eq!(data.len(), AES_BLOCK_SIZE, "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing.");
         let ptr = data.as_mut_ptr();
         unsafe { self.0.update::<true>(data, ptr).unwrap() }
     }
     /// Do not ever encrypt the same plaintext twice. Make sure data is always different between calls.
     #[inline(always)]
-    pub fn decrypt_block_in_place(&self, data: &mut [u8]) {
+    pub fn decrypt_block_in_place(&mut self, data: &mut [u8]) {
         debug_assert_eq!(data.len(), AES_BLOCK_SIZE, "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing.");
         let ptr = data.as_mut_ptr();
         unsafe { self.1.update::<false>(data, ptr).unwrap() }

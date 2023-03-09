@@ -12,8 +12,8 @@ mod test {
     fn aes_256_gcm() {
         init();
         let key = Secret::move_bytes([1u8; 32]);
-        let enc = AesGcm::<true>::new(&key);
-        let dec = AesGcm::<false>::new(&key);
+        let mut enc = AesGcm::<true>::new(&key);
+        let mut dec = AesGcm::<false>::new(&key);
 
         let plain = [2u8; 127];
         let iv0 = [3u8; 12];
@@ -59,7 +59,7 @@ mod test {
         }
         let iv = [1_u8; 12];
 
-        let c = AesGcm::<true>::new(&Secret::move_bytes([1_u8; 32]));
+        let mut c = AesGcm::<true>::new(&Secret::move_bytes([1_u8; 32]));
 
         let benchmark_iterations: usize = 80000;
         let start = SystemTime::now();
@@ -73,7 +73,7 @@ mod test {
             (((benchmark_iterations * buf.len()) as f64) / 1048576.0) / duration.as_secs_f64()
         );
 
-        let c = AesGcm::<false>::new(&Secret::move_bytes([1_u8; 32]));
+        let mut c = AesGcm::<false>::new(&Secret::move_bytes([1_u8; 32]));
 
         let start = SystemTime::now();
         for _ in 0..benchmark_iterations {
@@ -91,7 +91,7 @@ mod test {
     fn aes_gcm_test_vectors() {
         // Even though we are just wrapping other implementations, it's still good to test thoroughly!
         for tv in NIST_AES_GCM_TEST_VECTORS.iter() {
-            let gcm = AesGcm::new(unsafe { &Secret::<32>::from_bytes(tv.key) });
+            let mut gcm = AesGcm::new(unsafe { &Secret::<32>::from_bytes(tv.key) });
             gcm.reset_init_gcm(tv.nonce);
             gcm.aad(tv.aad);
             let mut ciphertext = Vec::new();
@@ -101,7 +101,7 @@ mod test {
             assert!(tag.eq(tv.tag));
             assert!(ciphertext.as_slice().eq(tv.ciphertext));
 
-            let gcm = AesGcm::new(unsafe { &Secret::<32>::from_bytes(tv.key) });
+            let mut gcm = AesGcm::new(unsafe { &Secret::<32>::from_bytes(tv.key) });
             gcm.reset_init_gcm(tv.nonce);
             gcm.aad(tv.aad);
             let mut ct_copy = ciphertext.clone();
