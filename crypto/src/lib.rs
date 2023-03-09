@@ -15,14 +15,14 @@ pub mod salsa;
 pub mod typestate;
 pub mod x25519;
 
-#[cfg(target_os = "macos")]
+/// NOTE: we assume that each aes library is threadsafe
 pub mod aes_fruity;
 #[cfg(not(target_os = "macos"))]
 pub mod aes_openssl;
-#[cfg(target_os = "macos")]
+//#[cfg(target_os = "macos")]
 pub use aes_fruity as aes;
-#[cfg(not(target_os = "macos"))]
-pub use aes_openssl as aes;
+//#[cfg(not(target_os = "macos"))]
+//pub use aes_openssl as aes;
 
 mod aes_tests;
 

@@ -357,7 +357,7 @@ impl<Application: ApplicationLayer> Context<Application> {
             }
 
             // Encrypt and add authentication tag.
-            let mut gcm = AesGcm::new(
+            let gcm = AesGcm::new(
                 &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES>(noise_es.as_bytes())
             );
             gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_INIT, 1));
@@ -604,7 +604,7 @@ impl<Application: ApplicationLayer> Context<Application> {
             if let Some(session) = session {
                 let state = session.state.read().unwrap();
                 if let Some(key) = state.keys[key_index].as_ref() {
-                    let mut c = key.get_receive_cipher();
+                    let c = key.get_receive_cipher();
                     c.reset_init_gcm(&incoming_message_nonce);
 
                     let mut data_len = 0;
@@ -730,7 +730,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     let noise_h_next = mix_hash(&noise_h, &pkt_assembled[HEADER_SIZE..]);
 
                     // Decrypt and authenticate init packet, also proving that caller knows our static identity.
-                    let mut gcm = AesGcm::new(
+                    let gcm = AesGcm::new(
                         &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES>(noise_es.as_bytes())
                     );
                     gcm.reset_init_gcm(&incoming_message_nonce);
@@ -780,7 +780,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     ack.bob_hk_ciphertext = bob_hk_ciphertext;
 
                     // Encrypt main section of reply and attach tag.
-                    let mut gcm = AesGcm::new(
+                    let gcm = AesGcm::new(
                         &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(noise_es_ee.as_bytes())
                     );
                     gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_BOB_NOISE_XK_ACK, 1));
@@ -882,7 +882,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             let noise_h_next = mix_hash(&mix_hash(&outgoing_offer.noise_h, bob_noise_e.as_bytes()), &pkt_assembled[HEADER_SIZE..]);
 
                             // Decrypt and authenticate Bob's reply.
-                            let mut gcm = AesGcm::new(
+                            let gcm = AesGcm::new(
                                 &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(noise_es_ee.as_bytes())
                             );
                             gcm.reset_init_gcm(&incoming_message_nonce);
@@ -927,7 +927,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 let mut enc_start = reply_len;
                                 reply_len = append_to_slice(&mut reply_buffer, reply_len, alice_s_public_blob)?;
 
-                                let mut gcm = AesGcm::new(
+                                let gcm = AesGcm::new(
                                     &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(&hmac_sha512(
                                         noise_es_ee.as_bytes(),
                                         hk.as_bytes(),
@@ -948,7 +948,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 enc_start = reply_len;
                                 reply_len = append_to_slice(&mut reply_buffer, reply_len, metadata)?;
 
-                                let mut gcm = AesGcm::new(
+                                let gcm = AesGcm::new(
                                     &kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(noise_es_ee_se_hk_psk.as_bytes())
                                 );
                                 gcm.reset_init_gcm(&reply_message_nonce);
@@ -1126,7 +1126,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 // Only the current "Alice" accepts rekeys initiated by the current "Bob." These roles
                                 // flip with each rekey event.
                                 if !key.bob {
-                                    let mut c = key.get_receive_cipher();
+                                    let c = key.get_receive_cipher();
                                     c.reset_init_gcm(&incoming_message_nonce);
                                     c.crypt_in_place(&mut pkt_assembled[RekeyInit::ENC_START..RekeyInit::AUTH_START]);
                                     let aead_authentication_ok = c.finish_decrypt(&pkt_assembled[RekeyInit::AUTH_START..]);
@@ -1158,7 +1158,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                                 counter,
                                             );
 
-                                            let mut c = key.get_send_cipher(counter)?;
+                                            let c = key.get_send_cipher(counter)?;
                                             c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_REKEY_ACK, counter));
                                             c.crypt_in_place(&mut reply_buf[RekeyAck::ENC_START..RekeyAck::AUTH_START]);
                                             reply_buf[RekeyAck::AUTH_START..].copy_from_slice(&c.finish_encrypt());
@@ -1213,7 +1213,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             if let Some(key) = state.keys[key_index].as_ref() {
                                 // Only the current "Bob" initiates rekeys and expects this ACK.
                                 if key.bob {
-                                    let mut c = key.get_receive_cipher();
+                                    let c = key.get_receive_cipher();
                                     c.reset_init_gcm(&incoming_message_nonce);
                                     c.crypt_in_place(&mut pkt_assembled[RekeyAck::ENC_START..RekeyAck::AUTH_START]);
                                     let aead_authentication_ok = c.finish_decrypt(&pkt_assembled[RekeyAck::AUTH_START..]);
@@ -1283,7 +1283,7 @@ impl<Application: ApplicationLayer> Session<Application> {
             if let Some(session_key) = state.keys[state.current_key].as_ref() {
                 let counter = self.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?.get();
 
-                let mut c = session_key.get_send_cipher(counter)?;
+                let c = session_key.get_send_cipher(counter)?;
                 c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_DATA, counter));
 
                 let fragment_count = (((data.len() + AES_GCM_TAG_SIZE) as f32) / (mtu_sized_buffer.len() - HEADER_SIZE) as f32).ceil() as usize;
@@ -1335,7 +1335,7 @@ impl<Application: ApplicationLayer> Session<Application> {
             if let Some(session_key) = state.keys[state.current_key].as_ref() {
                 let counter = self.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?.get();
                 let mut nop = [0u8; HEADER_SIZE + AES_GCM_TAG_SIZE];
-                let mut c = session_key.get_send_cipher(counter)?;
+                let c = session_key.get_send_cipher(counter)?;
                 c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_NOP, counter));
                 nop[HEADER_SIZE..].copy_from_slice(&c.finish_encrypt());
                 session_key.return_send_cipher(c);
@@ -1381,7 +1381,7 @@ impl<Application: ApplicationLayer> Session<Application> {
         if let Some(remote_session_id) = state.remote_session_id {
             if let Some(key) = state.keys[state.current_key].as_ref() {
                 if let Some(counter) = self.get_next_outgoing_counter() {
-                    if let Ok(mut gcm) = key.get_send_cipher(counter.get()) {
+                    if let Ok(gcm) = key.get_send_cipher(counter.get()) {
                         gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_REKEY_INIT, counter.get()));
                         gcm.crypt_in_place(&mut rekey_buf[RekeyInit::ENC_START..RekeyInit::AUTH_START]);
                         rekey_buf[RekeyInit::AUTH_START..].copy_from_slice(&gcm.finish_encrypt());
@@ -1634,7 +1634,7 @@ impl<'a> PktReader<'a> {
     fn read_decrypt_auth<'b>(&'b mut self, l: usize, k: Secret<AES_256_KEY_SIZE>, gcm_aad: &[u8], nonce: &[u8]) -> Result<&'b [u8], Error> {
         let mut tmp = self.1 + l;
         if (tmp + AES_GCM_TAG_SIZE) <= self.0.len() {
-            let mut gcm = AesGcm::new(&k);
+            let gcm = AesGcm::new(&k);
             gcm.reset_init_gcm(nonce);
             gcm.aad(gcm_aad);
             gcm.crypt_in_place(&mut self.0[self.1..tmp]);
