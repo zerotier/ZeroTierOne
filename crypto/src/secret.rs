@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
-use std::ffi::c_void;
+use std::{ffi::c_void, convert::TryInto};
 
 extern "C" {
     fn OPENSSL_cleanse(ptr: *mut c_void, len: usize);
@@ -26,15 +26,31 @@ impl<const L: usize> Secret<L> {
         Self([0_u8; L])
     }
 
-    /// Copy bytes into secret, will panic if the slice does not match the size of this secret.
+    /// Moves bytes into secret, will panic if the slice does not match the size of this secret.
     #[inline(always)]
-    pub fn from_bytes(b: &[u8]) -> Self {
-        Self(b.try_into().unwrap())
+    pub fn move_bytes(b: [u8; L]) -> Self {
+        Self(b)
+    }
+
+    /// Copy bytes into secret, then nuke the previous value, will panic if the slice does not match the size of this secret.
+    #[inline(always)]
+    pub fn from_bytes_then_nuke(b: &mut [u8]) -> Self {
+        let ret = Self (b.try_into().unwrap());
+        unsafe { OPENSSL_cleanse(b.as_mut_ptr().cast(), L) };
+        ret
+    }
+    #[inline(always)]
+    pub unsafe fn from_bytes(b: &[u8]) -> Self {
+        Self (b.try_into().unwrap())
     }
 
     #[inline(always)]
     pub fn as_bytes(&self) -> &[u8; L] {
         &self.0
+    }
+    #[inline(always)]
+    pub fn as_ptr(&self) -> *const u8 {
+        self.0.as_ptr()
     }
 
     #[inline(always)]
@@ -60,7 +76,7 @@ impl<const L: usize> Secret<L> {
     /// This can be used to force a secret to be forgotten under e.g. key lifetime exceeded or error conditions.
     #[inline(always)]
     pub fn nuke(&self) {
-        unsafe { OPENSSL_cleanse(std::mem::transmute(self.0.as_ptr().cast::<c_void>()), L) };
+        unsafe { OPENSSL_cleanse(self.0.as_ptr().cast_mut().cast(), L) };
     }
 }
 
