@@ -2307,8 +2307,10 @@ public:
 				auto same_subnet = [ip](InetAddress i){
 					return ip->network() == i.network();
 				};
+#endif
 
 				if (std::find(n.managedIps().begin(),n.managedIps().end(),*ip) == n.managedIps().end()) {
+#ifdef __APPLE__
 					// if same subnet as a previously added address
 					if (
 						std::find_if(n.managedIps().begin(),n.managedIps().end(), same_subnet) != n.managedIps().end() ||
@@ -2322,15 +2324,17 @@ public:
 					} else {
 						newManagedIps2.push_back(*ip);
 					}
-				}
 #endif
 
-					if (!n.tap()->addIp(*ip))
-						fprintf(stderr,"ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
-
-					#ifdef __WINDOWS__
-					WinFWHelper::newICMPRule(*ip, n.config().nwid);
-					#endif
+					if (! n.tap()->addIp(*ip)) {
+						fprintf(stderr, "ERROR: unable to add ip address %s" ZT_EOL_S, ip->toString(ipbuf));
+					}
+					else {
+#ifdef __WINDOWS__
+						WinFWHelper::newICMPRule(*ip, n.config().nwid);
+#endif
+					}
+				}
 			}
 
 #ifdef __APPLE__
