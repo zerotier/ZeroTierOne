@@ -16,7 +16,6 @@ pub mod error;
 pub mod exitcode;
 pub mod flatsortedmap;
 pub mod gate;
-pub mod gatherarray;
 pub mod hex;
 pub mod io;
 pub mod json;
@@ -26,7 +25,6 @@ pub mod pool;
 #[cfg(feature = "tokio")]
 pub mod reaper;
 pub mod ringbuffer;
-pub mod ringbuffermap;
 pub mod sync;
 pub mod thing;
 pub mod varint;
