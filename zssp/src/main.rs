@@ -46,7 +46,7 @@ fn alice_main(
     alice_out: mpsc::SyncSender<Vec<u8>>,
     alice_in: mpsc::Receiver<Vec<u8>>,
 ) {
-    let context = zssp::Context::<TestApplication>::new(16);
+    let context = zssp::Context::<TestApplication>::new(16, TEST_MTU);
     let mut data_buf = [0u8; 65536];
     let mut next_service = ms_monotonic() + 500;
     let mut last_ratchet_count = 0;
@@ -88,7 +88,6 @@ fn alice_main(
                         &0,
                         &mut data_buf,
                         pkt,
-                        TEST_MTU,
                         current_time,
                     ) {
                         Ok(zssp::ReceiveResult::Ok(_)) => {
@@ -144,7 +143,6 @@ fn alice_main(
                     |_, b| {
                         let _ = alice_out.send(b.to_vec());
                     },
-                    TEST_MTU,
                     current_time,
                 );
         }
@@ -159,7 +157,7 @@ fn bob_main(
     bob_out: mpsc::SyncSender<Vec<u8>>,
     bob_in: mpsc::Receiver<Vec<u8>>,
 ) {
-    let context = zssp::Context::<TestApplication>::new(16);
+    let context = zssp::Context::<TestApplication>::new(16, TEST_MTU);
     let mut data_buf = [0u8; 65536];
     let mut data_buf_2 = [0u8; TEST_MTU];
     let mut last_ratchet_count = 0;
@@ -186,7 +184,6 @@ fn bob_main(
                     &0,
                     &mut data_buf,
                     pkt,
-                    TEST_MTU,
                     current_time,
                 ) {
                     Ok(zssp::ReceiveResult::Ok(_)) => {
@@ -246,7 +243,6 @@ fn bob_main(
                     |_, b| {
                         let _ = bob_out.send(b.to_vec());
                     },
-                    TEST_MTU,
                     current_time,
                 );
         }

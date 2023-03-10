@@ -1,5 +1,3 @@
-// (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
-
 #![allow(
     dead_code,
     mutable_transmutes,
@@ -20,16 +18,14 @@ pub const P384_ECDH_SHARED_SECRET_SIZE: usize = 48;
 mod openssl_based {
     use std::convert::TryInto;
     use std::os::raw::{c_int, c_ulong, c_void};
-    use std::ptr::{null, write_volatile};
+    use std::{mem, ptr};
 
+    use crate::bn::{BigNum, BigNumContext};
+    use crate::ec::{EcGroup, EcKey, EcPoint, EcPointRef};
     use foreign_types::{ForeignType, ForeignTypeRef};
     use lazy_static::lazy_static;
-    use openssl::bn::{BigNum, BigNumContext};
-    use openssl::ec::{EcKey, EcPoint, EcPointRef, PointConversionForm};
-    use openssl::ecdsa::EcdsaSig;
-    use openssl::nid::Nid;
-    use openssl::pkey::{Private, Public};
 
+    use crate::error::cvt_p;
     use crate::hash::SHA384;
     use crate::secret::Secret;
     use crate::secure_eq;
@@ -42,24 +38,26 @@ mod openssl_based {
     }
 
     lazy_static! {
-        static ref GROUP_P384: openssl::ec::EcGroup = openssl::ec::EcGroup::from_curve_name(Nid::SECP384R1).unwrap();
+        pub(crate) static ref GROUP_P384: EcGroup = unsafe { EcGroup::from_ptr(cvt_p(ffi::EC_GROUP_new_by_curve_name(ffi::NID_secp384r1)).unwrap()) };
     }
 
     /// A NIST P-384 ECDH/ECDSA public key.
     #[derive(Clone)]
     pub struct P384PublicKey {
-        key: EcKey<Public>,
+        key: EcKey,
         bytes: [u8; 49],
     }
 
     impl P384PublicKey {
         fn new_from_point(key: &EcPointRef) -> Self {
             let mut bnc = BigNumContext::new().unwrap();
-            let kb = key.to_bytes(GROUP_P384.as_ref(), PointConversionForm::COMPRESSED, &mut bnc).unwrap();
+            let kb = key
+                .to_bytes(&GROUP_P384, ffi::point_conversion_form_t::POINT_CONVERSION_COMPRESSED, &bnc)
+                .unwrap();
             let mut bytes = [0_u8; 49];
             bytes[(49 - kb.len())..].copy_from_slice(kb.as_slice());
             Self {
-                key: EcKey::from_public_key(GROUP_P384.as_ref(), key).unwrap(),
+                key: EcKey::from_public_key(&GROUP_P384, key).unwrap(),
                 bytes,
             }
         }
@@ -67,13 +65,10 @@ mod openssl_based {
         pub fn from_bytes(b: &[u8]) -> Option<P384PublicKey> {
             if b.len() == 49 {
                 let mut bnc = BigNumContext::new().unwrap();
-                let key = EcPoint::from_bytes(GROUP_P384.as_ref(), b, &mut bnc);
-                if key.is_ok() {
-                    let key = key.unwrap();
-                    if key.is_on_curve(GROUP_P384.as_ref(), &mut bnc).unwrap_or(false) {
-                        let key = EcKey::from_public_key(GROUP_P384.as_ref(), key.as_ref());
-                        if key.is_ok() {
-                            return Some(Self { key: key.unwrap(), bytes: b.try_into().unwrap() });
+                if let Ok(point) = EcPoint::from_bytes(&GROUP_P384, b, &mut bnc) {
+                    if point.is_on_curve(&GROUP_P384, &bnc).unwrap_or(false) {
+                        if let Ok(key) = EcKey::from_public_key(&GROUP_P384, &point) {
+                            return Some(Self { key, bytes: b.try_into().unwrap() });
                         }
                     }
                 }
@@ -85,16 +80,22 @@ mod openssl_based {
             if signature.len() == 96 {
                 let r = BigNum::from_slice(&signature[0..48]);
                 let s = BigNum::from_slice(&signature[48..96]);
-                if r.is_ok() && s.is_ok() {
-                    let r = r.unwrap();
-                    let s = s.unwrap();
+                if let (Ok(r), Ok(s)) = (r, s) {
                     let z = BigNum::from_u32(0).unwrap();
                     // Check that r and s are >=1 just in case the OpenSSL version or an OpenSSL API lookalike is
                     // vulnerable to this, since a bunch of vulnerabilities involving zero r/s just made the rounds.
                     if r.gt(&z) && s.gt(&z) {
-                        let sig = EcdsaSig::from_private_components(r, s);
-                        if sig.is_ok() {
-                            return sig.unwrap().verify(&SHA384::hash(msg), self.key.as_ref()).unwrap_or(false);
+                        unsafe {
+                            let sig = ffi::ECDSA_SIG_new();
+                            if !sig.is_null() {
+                                if ffi::ECDSA_SIG_set0(sig, r.as_ptr(), s.as_ptr()) == 1 {
+                                    mem::forget((r, s));
+
+                                    let data = &SHA384::hash(msg);
+
+                                    return ffi::ECDSA_do_verify(data.as_ptr(), data.len() as c_int, sig, self.key.as_ptr()) == 1;
+                                }
+                            }
                         }
                     }
                 }
@@ -120,38 +121,30 @@ mod openssl_based {
     /// A NIST P-384 ECDH/ECDSA public/private key pair.
     #[derive(Clone)]
     pub struct P384KeyPair {
-        pair: EcKey<Private>,
+        pair: EcKey,
         public: P384PublicKey,
     }
 
     impl P384KeyPair {
         pub fn generate() -> P384KeyPair {
-            let pair = EcKey::generate(GROUP_P384.as_ref()).unwrap(); // failure implies a serious problem
-            assert!(pair.check_key().is_ok()); // also would imply a serious problem
+            let pair = EcKey::generate(&GROUP_P384).unwrap(); // failure implies a serious problem
             let public = P384PublicKey::new_from_point(pair.public_key());
             Self { pair, public }
         }
 
         pub fn from_bytes(public_bytes: &[u8], secret_bytes: &[u8]) -> Option<P384KeyPair> {
             if public_bytes.len() == 49 && secret_bytes.len() == 48 {
-                P384PublicKey::from_bytes(public_bytes).map_or(None, |public| {
-                    BigNum::from_slice(secret_bytes).map_or(None, |private| {
-                        let pair = EcKey::from_private_components(GROUP_P384.as_ref(), private.as_ref(), public.key.public_key());
-                        if pair.is_ok() {
-                            let pair = pair.unwrap();
+                if let Some(public) = P384PublicKey::from_bytes(public_bytes) {
+                    if let Ok(private) = BigNum::from_slice(secret_bytes) {
+                        if let Ok(pair) = EcKey::from_private_components(&GROUP_P384, &private, public.key.public_key()) {
                             if pair.check_key().is_ok() {
-                                Some(Self { pair, public })
-                            } else {
-                                None
+                                return Some(Self { pair, public });
                             }
-                        } else {
-                            None
                         }
-                    })
-                })
-            } else {
-                None
+                    }
+                }
             }
+            return None;
         }
 
         pub fn public_key(&self) -> &P384PublicKey {
@@ -164,28 +157,31 @@ mod openssl_based {
 
         pub fn secret_key_bytes(&self) -> Secret<P384_SECRET_KEY_SIZE> {
             let mut tmp: Secret<P384_SECRET_KEY_SIZE> = Secret::default();
-            let mut k = self.pair.private_key().to_vec();
-            tmp.0[(48 - k.len())..].copy_from_slice(k.as_slice());
-            unsafe {
-                // Force zero memory occupied by temporary vector before releasing.
-                let kp = k.as_mut_ptr();
-                for i in 0..k.len() {
-                    write_volatile(kp.add(i), 0);
-                }
-            }
+            let size = self.pair.private_key().to_bytes(&mut tmp.0).unwrap();
+            tmp.0.copy_within(..size, P384_SECRET_KEY_SIZE - size);
             tmp
         }
 
         /// Sign a message with ECDSA/SHA384.
         pub fn sign(&self, msg: &[u8]) -> [u8; P384_ECDSA_SIGNATURE_SIZE] {
-            let sig = EcdsaSig::sign(&SHA384::hash(msg), self.pair.as_ref()).unwrap();
-            let r = sig.r().to_vec();
-            let s = sig.s().to_vec();
-            assert!(!r.is_empty() && !s.is_empty() && r.len() <= 48 && s.len() <= 48);
-            let mut b = [0_u8; P384_ECDSA_SIGNATURE_SIZE];
-            b[(48 - r.len())..48].copy_from_slice(r.as_slice());
-            b[(96 - s.len())..96].copy_from_slice(s.as_slice());
-            b
+            let data = &SHA384::hash(msg);
+            unsafe {
+                let sig = ffi::ECDSA_do_sign(data.as_ptr(), data.len() as c_int, self.pair.as_ref().as_ptr());
+                assert!(!sig.is_null());
+
+                let mut r = ptr::null();
+                let mut s = ptr::null();
+                ffi::ECDSA_SIG_get0(sig, &mut r, &mut s);
+                let r_len = ((ffi::BN_num_bits(r) + 7) / 8) as usize;
+                let s_len = ((ffi::BN_num_bits(s) + 7) / 8) as usize;
+                const CAP: usize = P384_ECDSA_SIGNATURE_SIZE / 2;
+                assert!(r_len > 0 && s_len > 0 && r_len <= CAP && s_len <= CAP);
+
+                let mut b = [0_u8; P384_ECDSA_SIGNATURE_SIZE];
+                ffi::BN_bn2bin(r, b[(CAP - r_len)..CAP].as_mut_ptr());
+                ffi::BN_bn2bin(s, b[(P384_ECDSA_SIGNATURE_SIZE - s_len)..P384_ECDSA_SIGNATURE_SIZE].as_mut_ptr());
+                b
+            }
         }
 
         /// Perform ECDH key agreement, returning the raw (un-hashed!) ECDH secret.
@@ -199,7 +195,7 @@ mod openssl_based {
                     48,
                     other_public.key.public_key().as_ptr().cast(),
                     self.pair.as_ptr().cast(),
-                    null(),
+                    ptr::null(),
                 ) == 48
                 {
                     Some(s)
@@ -1326,10 +1322,11 @@ pub use openssl_based::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::{p384::P384KeyPair, secure_eq};
+    use crate::{init, p384::P384KeyPair, secure_eq};
 
     #[test]
     fn generate_sign_verify_agree() {
+        init();
         let kp = P384KeyPair::generate();
         let kp2 = P384KeyPair::generate();
 
@@ -1347,7 +1344,16 @@ mod tests {
             panic!("ECDH secrets do not match");
         }
 
-        let kp3 = P384KeyPair::from_bytes(kp.public_key_bytes(), kp.secret_key_bytes().as_ref()).unwrap();
+        let pkb = kp.public_key_bytes();
+        let skb = kp.secret_key_bytes();
+        let kp3 = P384KeyPair::from_bytes(pkb, skb.as_ref()).unwrap();
+
+        let pkb3 = kp3.public_key_bytes();
+        let skb3 = kp3.secret_key_bytes();
+
+        assert_eq!(pkb, pkb3);
+        assert_eq!(skb.as_bytes(), skb3.as_bytes());
+
         let sig = kp3.sign(&[3_u8; 16]);
         if !kp.public_key().verify(&[3_u8; 16], &sig) {
             panic!("ECDSA verify failed (from key reconstructed from bytes)");

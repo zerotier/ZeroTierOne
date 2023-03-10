@@ -1,7 +1,7 @@
 local registry = "084037375216.dkr.ecr.us-east-2.amazonaws.com";
 
 local targets = [
-      { "os": "linux",   "name": "sid", "isas": [ "386", "armv7", "amd64", "arm64", "mips64le", "ppc64le", "s390x", "riscv64" ], "events": [ "push", "tag", "custom" ] },
+      { "os": "linux",   "name": "sid", "isas": [ "386", "armv7", "amd64", "arm64" ], "events": [ "push", "tag", "custom" ] },
 ];
 
 local Build(platform, os, isa, events) = {
@@ -19,11 +19,6 @@ local Build(platform, os, isa, events) = {
         "./ci/scripts/build.sh " + platform + " " + isa + " " + "100.0.0+${DRONE_COMMIT_SHA:0:8}" + " " + "${DRONE_BUILD_EVENT}"
       ]
     },
-    // {
-    //   "name": "list",
-    //   "image": registry + "/honda-builder",
-    //   "commands": [ "ls -la " + platform ]
-    // },
   ],  
   [ if isa == "arm64" || isa == "armv7" then "platform" ]: { os: os, arch: "arm64" },
   "trigger": { "event": events }

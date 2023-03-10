@@ -1,13 +1,21 @@
-// (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
-
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use openssl::rand::rand_bytes;
+use libc::c_int;
+
+use crate::error::{cvt, ErrorStack};
+
+/// Fill buffer with cryptographically strong pseudo-random bytes.
+fn rand_bytes(buf: &mut [u8]) -> Result<(), ErrorStack> {
+    unsafe {
+        assert!(buf.len() <= c_int::max_value() as usize);
+        cvt(ffi::RAND_bytes(buf.as_mut_ptr(), buf.len() as c_int)).map(|_| ())
+    }
+}
 
 pub fn next_u32_secure() -> u32 {
     unsafe {
         let mut tmp = [0u32; 1];
-        assert!(rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 4]>())).is_ok());
+        rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 4]>())).unwrap();
         tmp[0]
     }
 }
@@ -15,7 +23,7 @@ pub fn next_u32_secure() -> u32 {
 pub fn next_u64_secure() -> u64 {
     unsafe {
         let mut tmp = [0u64; 1];
-        assert!(rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 8]>())).is_ok());
+        rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 8]>())).unwrap();
         tmp[0]
     }
 }
@@ -23,20 +31,20 @@ pub fn next_u64_secure() -> u64 {
 pub fn next_u128_secure() -> u128 {
     unsafe {
         let mut tmp = [0u128; 1];
-        assert!(rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 16]>())).is_ok());
+        rand_bytes(&mut *(tmp.as_mut_ptr().cast::<[u8; 16]>())).unwrap();
         tmp[0]
     }
 }
 
 #[inline(always)]
 pub fn fill_bytes_secure(dest: &mut [u8]) {
-    assert!(rand_bytes(dest).is_ok());
+    rand_bytes(dest).unwrap();
 }
 
 #[inline(always)]
 pub fn get_bytes_secure<const COUNT: usize>() -> [u8; COUNT] {
     let mut tmp = [0u8; COUNT];
-    assert!(rand_bytes(&mut tmp).is_ok());
+    rand_bytes(&mut tmp).unwrap();
     tmp
 }
 
@@ -79,9 +87,8 @@ impl rand_core::RngCore for SecureRandom {
     }
 }
 
-impl rand_core::CryptoRng for SecureRandom {}
-
-impl rand_core_062::RngCore for SecureRandom {
+/// ed25519-dalek still uses rand_core 0.5.1, and that version is incompatible with 0.6.4, so we need to import and implement both.
+impl rand_core_051::RngCore for SecureRandom {
     #[inline(always)]
     fn next_u32(&mut self) -> u32 {
         next_u32_secure()
@@ -98,13 +105,14 @@ impl rand_core_062::RngCore for SecureRandom {
     }
 
     #[inline(always)]
-    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core_062::Error> {
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand_core_051::Error> {
         fill_bytes_secure(dest);
         Ok(())
     }
 }
 
-impl rand_core_062::CryptoRng for SecureRandom {}
+impl rand_core::CryptoRng for SecureRandom {}
+impl rand_core_051::CryptoRng for SecureRandom {}
 
 unsafe impl Sync for SecureRandom {}
 unsafe impl Send for SecureRandom {}
