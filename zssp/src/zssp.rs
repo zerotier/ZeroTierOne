@@ -1575,7 +1575,7 @@ impl SessionKey {
 
     fn get_send_cipher<'a>(&'a self, counter: u64) -> Result<MutexGuard<'a, AesGcm<true>>, Error> {
         if counter < self.expire_at_counter {
-            for i in 0..(AES_POOL_SIZE - 1) {
+            for i in 0..AES_POOL_SIZE {
                 if let Ok(p) = self.send_cipher_pool[(counter as usize).wrapping_add(i) % AES_POOL_SIZE].try_lock() {
                     return Ok(p);
                 }
@@ -1587,7 +1587,7 @@ impl SessionKey {
     }
 
     fn get_receive_cipher<'a>(&'a self, counter: u64) -> MutexGuard<'a, AesGcm<false>> {
-        for i in 0..(AES_POOL_SIZE - 1) {
+        for i in 0..AES_POOL_SIZE {
             if let Ok(p) = self.receive_cipher_pool[(counter as usize).wrapping_add(i) % AES_POOL_SIZE].try_lock() {
                 return p;
             }
