@@ -138,7 +138,6 @@ struct SessionKey {
     receive_cipher_pool: [Mutex<AesGcm<false>>; AES_POOL_SIZE], // Pool of reusable sending ciphers
     send_cipher_pool: [Mutex<AesGcm<true>>; AES_POOL_SIZE],     // Pool of reusable receiving ciphers
     rekey_at_time: i64,                                         // Rekey at or after this time (ticks)
-    created_at_counter: u64,                                    // Counter at which session was created
     rekey_at_counter: u64,                                      // Rekey at or after this counter
     expire_at_counter: u64,                                     // Hard error when this counter value is reached or exceeded
     ratchet_count: u64,                                         // Number of rekey events
@@ -644,23 +643,12 @@ impl<Application: ApplicationLayer> Context<Application> {
                             // Update the current key to point to this key if it's newer, since having received
                             // a packet encrypted with it proves that the other side has successfully derived it
                             // as well.
-                            if state.current_key == key_index && key.confirmed {
-                                drop(state);
-                            } else {
-                                let current_key_created_at_counter = key.created_at_counter;
-
-                                drop(state);
+                            let confirmed = key.confirmed;
+                            drop(state);
+                            if !confirmed {
                                 let mut state = session.state.write().unwrap();
 
-                                if state.current_key != key_index {
-                                    if let Some(other_session_key) = state.keys[state.current_key].as_ref() {
-                                        if other_session_key.created_at_counter < current_key_created_at_counter {
-                                            state.current_key = key_index;
-                                        }
-                                    } else {
-                                        state.current_key = key_index;
-                                    }
-                                }
+                                state.current_key = key_index;
                                 state.keys[key_index].as_mut().unwrap().confirmed = true;
 
                                 // If we got a valid data packet from Bob, this means we can cancel any offers
@@ -1577,7 +1565,6 @@ impl SessionKey {
                     Application::REKEY_AFTER_TIME_MS + ((random::xorshift64_random() as u32) % Application::REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
                 )
                 .unwrap(),
-            created_at_counter: current_counter,
             rekey_at_counter: current_counter.checked_add(Application::REKEY_AFTER_USES).unwrap(),
             expire_at_counter: current_counter.checked_add(Application::EXPIRE_AFTER_USES).unwrap(),
             ratchet_count,
