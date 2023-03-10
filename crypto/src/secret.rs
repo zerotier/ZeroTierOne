@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
-use std::{ffi::c_void, convert::TryInto};
+use std::{convert::TryInto, ffi::c_void};
 
 extern "C" {
     fn OPENSSL_cleanse(ptr: *mut c_void, len: usize);
@@ -35,13 +35,13 @@ impl<const L: usize> Secret<L> {
     /// Copy bytes into secret, then nuke the previous value, will panic if the slice does not match the size of this secret.
     #[inline(always)]
     pub fn from_bytes_then_nuke(b: &mut [u8]) -> Self {
-        let ret = Self (b.try_into().unwrap());
+        let ret = Self(b.try_into().unwrap());
         unsafe { OPENSSL_cleanse(b.as_mut_ptr().cast(), L) };
         ret
     }
     #[inline(always)]
     pub unsafe fn from_bytes(b: &[u8]) -> Self {
-        Self (b.try_into().unwrap())
+        Self(b.try_into().unwrap())
     }
 
     #[inline(always)]

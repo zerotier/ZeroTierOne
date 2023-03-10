@@ -132,18 +132,18 @@ enum Offer {
 
 const AES_POOL_SIZE: usize = 4;
 struct SessionKey {
-    ratchet_key: Secret<BASE_KEY_SIZE>,            // Key used in derivation of the next session key
+    ratchet_key: Secret<BASE_KEY_SIZE>, // Key used in derivation of the next session key
     //receive_key: Secret<AES_256_KEY_SIZE>,       // Receive side AES-GCM key
     //send_key: Secret<AES_256_KEY_SIZE>,          // Send side AES-GCM key
     receive_cipher_pool: [Mutex<AesGcm<false>>; AES_POOL_SIZE], // Pool of reusable sending ciphers
     send_cipher_pool: [Mutex<AesGcm<true>>; AES_POOL_SIZE],     // Pool of reusable receiving ciphers
-    rekey_at_time: i64,                             // Rekey at or after this time (ticks)
-    created_at_counter: u64,                        // Counter at which session was created
-    rekey_at_counter: u64,                          // Rekey at or after this counter
-    expire_at_counter: u64,                         // Hard error when this counter value is reached or exceeded
-    ratchet_count: u64,                             // Number of rekey events
-    bob: bool,                                      // Was this side "Bob" in this exchange?
-    confirmed: bool,                                // Is this key confirmed by the other side?
+    rekey_at_time: i64,                                         // Rekey at or after this time (ticks)
+    created_at_counter: u64,                                    // Counter at which session was created
+    rekey_at_counter: u64,                                      // Rekey at or after this counter
+    expire_at_counter: u64,                                     // Hard error when this counter value is reached or exceeded
+    ratchet_count: u64,                                         // Number of rekey events
+    bob: bool,                                                  // Was this side "Bob" in this exchange?
+    confirmed: bool,                                            // Is this key confirmed by the other side?
 }
 
 impl<Application: ApplicationLayer> Context<Application> {
@@ -641,7 +641,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     if aead_authentication_ok {
                         // Packet fully authenticated
                         if !session.update_receive_window(incoming_counter) {
-                            return Err(Error::OutOfSequence)
+                            return Err(Error::OutOfSequence);
                         }
                         // Update the current key to point to this key if it's newer, since having received
                         // a packet encrypted with it proves that the other side has successfully derived it
@@ -899,14 +899,11 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                                 // Packet fully authenticated
                                 if !session.update_receive_window(incoming_counter) {
-                                    return Err(Error::OutOfSequence)
+                                    return Err(Error::OutOfSequence);
                                 }
 
                                 let noise_es_ee_se_hk_psk = hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                    hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                        noise_es_ee.as_bytes(),
-                                        noise_se.as_bytes(),
-                                    ).as_bytes(),
+                                    hmac_sha512_secret::<BASE_KEY_SIZE>(noise_es_ee.as_bytes(), noise_se.as_bytes()).as_bytes(),
                                     hmac_sha512_secret::<BASE_KEY_SIZE>(session.psk.as_bytes(), hk.as_bytes()).as_bytes(),
                                 );
 
@@ -1129,7 +1126,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     if aead_authentication_ok {
                                         // Packet fully authenticated
                                         if !session.update_receive_window(incoming_counter) {
-                                            return Err(Error::OutOfSequence)
+                                            return Err(Error::OutOfSequence);
                                         }
 
                                         let pkt: &RekeyInit = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
@@ -1221,7 +1218,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     if aead_authentication_ok {
                                         // Packet fully authenticated
                                         if !session.update_receive_window(incoming_counter) {
-                                            return Err(Error::OutOfSequence)
+                                            return Err(Error::OutOfSequence);
                                         }
 
                                         let pkt: &RekeyAck = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
@@ -1590,11 +1587,11 @@ impl SessionKey {
     fn get_send_cipher<'a>(&'a self, counter: u64) -> Result<MutexGuard<'a, AesGcm<true>>, Error> {
         if counter < self.expire_at_counter {
             for i in 0..(AES_POOL_SIZE - 1) {
-                if let Ok(p) = self.send_cipher_pool[(counter as usize).wrapping_add(i)%AES_POOL_SIZE].try_lock() {
+                if let Ok(p) = self.send_cipher_pool[(counter as usize).wrapping_add(i) % AES_POOL_SIZE].try_lock() {
                     return Ok(p);
                 }
             }
-            Ok(self.send_cipher_pool[(counter as usize)%AES_POOL_SIZE].lock().unwrap())
+            Ok(self.send_cipher_pool[(counter as usize) % AES_POOL_SIZE].lock().unwrap())
         } else {
             Err(Error::MaxKeyLifetimeExceeded)
         }
@@ -1602,11 +1599,11 @@ impl SessionKey {
 
     fn get_receive_cipher<'a>(&'a self, counter: u64) -> MutexGuard<'a, AesGcm<false>> {
         for i in 0..(AES_POOL_SIZE - 1) {
-            if let Ok(p) = self.receive_cipher_pool[(counter as usize).wrapping_add(i)%AES_POOL_SIZE].try_lock() {
+            if let Ok(p) = self.receive_cipher_pool[(counter as usize).wrapping_add(i) % AES_POOL_SIZE].try_lock() {
                 return p;
             }
         }
-        self.receive_cipher_pool[(counter as usize)%AES_POOL_SIZE].lock().unwrap()
+        self.receive_cipher_pool[(counter as usize) % AES_POOL_SIZE].lock().unwrap()
     }
 }
 

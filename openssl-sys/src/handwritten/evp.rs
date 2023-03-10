@@ -66,8 +66,7 @@ cfg_if! {
 }
 
 extern "C" {
-    pub fn EVP_DigestInit_ex(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD, imple: *mut ENGINE)
-        -> c_int;
+    pub fn EVP_DigestInit_ex(ctx: *mut EVP_MD_CTX, typ: *const EVP_MD, imple: *mut ENGINE) -> c_int;
     pub fn EVP_DigestUpdate(ctx: *mut EVP_MD_CTX, data: *const c_void, n: size_t) -> c_int;
     pub fn EVP_DigestFinal_ex(ctx: *mut EVP_MD_CTX, res: *mut u8, n: *mut u32) -> c_int;
     #[cfg(ossl300)]
@@ -86,11 +85,7 @@ extern "C" {
     pub fn EVP_DigestFinalXOF(ctx: *mut EVP_MD_CTX, res: *mut u8, len: usize) -> c_int;
 
     #[cfg(ossl300)]
-    pub fn EVP_MD_fetch(
-        ctx: *mut OSSL_LIB_CTX,
-        algorithm: *const c_char,
-        properties: *const c_char,
-    ) -> *mut EVP_MD;
+    pub fn EVP_MD_fetch(ctx: *mut OSSL_LIB_CTX, algorithm: *const c_char, properties: *const c_char) -> *mut EVP_MD;
 
     #[cfg(ossl300)]
     pub fn EVP_MD_free(md: *mut EVP_MD);
@@ -106,13 +101,7 @@ extern "C" {
         iv: *mut u8,
     ) -> c_int;
 
-    pub fn EVP_CipherInit(
-        ctx: *mut EVP_CIPHER_CTX,
-        evp: *const EVP_CIPHER,
-        key: *const u8,
-        iv: *const u8,
-        mode: c_int,
-    ) -> c_int;
+    pub fn EVP_CipherInit(ctx: *mut EVP_CIPHER_CTX, evp: *const EVP_CIPHER, key: *const u8, iv: *const u8, mode: c_int) -> c_int;
     pub fn EVP_CipherInit_ex(
         ctx: *mut EVP_CIPHER_CTX,
         type_: *const EVP_CIPHER,
@@ -121,30 +110,15 @@ extern "C" {
         iv: *const c_uchar,
         enc: c_int,
     ) -> c_int;
-    pub fn EVP_CipherUpdate(
-        ctx: *mut EVP_CIPHER_CTX,
-        outbuf: *mut u8,
-        outlen: *mut c_int,
-        inbuf: *const u8,
-        inlen: c_int,
-    ) -> c_int;
+    pub fn EVP_CipherUpdate(ctx: *mut EVP_CIPHER_CTX, outbuf: *mut u8, outlen: *mut c_int, inbuf: *const u8, inlen: c_int) -> c_int;
     pub fn EVP_CipherFinal(ctx: *mut EVP_CIPHER_CTX, res: *mut u8, len: *mut c_int) -> c_int;
 
-    pub fn EVP_DigestSignInit(
-        ctx: *mut EVP_MD_CTX,
-        pctx: *mut *mut EVP_PKEY_CTX,
-        type_: *const EVP_MD,
-        e: *mut ENGINE,
-        pkey: *mut EVP_PKEY,
-    ) -> c_int;
+    pub fn EVP_DigestSignInit(ctx: *mut EVP_MD_CTX, pctx: *mut *mut EVP_PKEY_CTX, type_: *const EVP_MD, e: *mut ENGINE, pkey: *mut EVP_PKEY)
+        -> c_int;
 
     #[cfg(ossl300)]
     pub fn EVP_DigestSignUpdate(ctx: *mut EVP_MD_CTX, data: *const c_void, dsize: size_t) -> c_int;
-    pub fn EVP_DigestSignFinal(
-        ctx: *mut EVP_MD_CTX,
-        sig: *mut c_uchar,
-        siglen: *mut size_t,
-    ) -> c_int;
+    pub fn EVP_DigestSignFinal(ctx: *mut EVP_MD_CTX, sig: *mut c_uchar, siglen: *mut size_t) -> c_int;
     pub fn EVP_DigestVerifyInit(
         ctx: *mut EVP_MD_CTX,
         pctx: *mut *mut EVP_PKEY_CTX,
@@ -153,11 +127,7 @@ extern "C" {
         pkey: *mut EVP_PKEY,
     ) -> c_int;
     #[cfg(ossl300)]
-    pub fn EVP_DigestVerifyUpdate(
-        ctx: *mut EVP_MD_CTX,
-        data: *const c_void,
-        dsize: size_t,
-    ) -> c_int;
+    pub fn EVP_DigestVerifyUpdate(ctx: *mut EVP_MD_CTX, data: *const c_void, dsize: size_t) -> c_int;
     pub fn EVP_SealInit(
         ctx: *mut EVP_CIPHER_CTX,
         type_: *const EVP_CIPHER,
@@ -175,18 +145,8 @@ extern "C" {
         key: *const c_uchar,
         iv: *const c_uchar,
     ) -> c_int;
-    pub fn EVP_EncryptUpdate(
-        ctx: *mut EVP_CIPHER_CTX,
-        out: *mut c_uchar,
-        outl: *mut c_int,
-        in_: *const u8,
-        inl: c_int,
-    ) -> c_int;
-    pub fn EVP_EncryptFinal_ex(
-        ctx: *mut EVP_CIPHER_CTX,
-        out: *mut c_uchar,
-        outl: *mut c_int,
-    ) -> c_int;
+    pub fn EVP_EncryptUpdate(ctx: *mut EVP_CIPHER_CTX, out: *mut c_uchar, outl: *mut c_int, in_: *const u8, inl: c_int) -> c_int;
+    pub fn EVP_EncryptFinal_ex(ctx: *mut EVP_CIPHER_CTX, out: *mut c_uchar, outl: *mut c_int) -> c_int;
     pub fn EVP_OpenInit(
         ctx: *mut EVP_CIPHER_CTX,
         type_: *const EVP_CIPHER,
@@ -203,18 +163,8 @@ extern "C" {
         key: *const c_uchar,
         iv: *const c_uchar,
     ) -> c_int;
-    pub fn EVP_DecryptUpdate(
-        ctx: *mut EVP_CIPHER_CTX,
-        out: *mut c_uchar,
-        outl: *mut c_int,
-        in_: *const u8,
-        inl: c_int,
-    ) -> c_int;
-    pub fn EVP_DecryptFinal_ex(
-        ctx: *mut EVP_CIPHER_CTX,
-        outm: *mut c_uchar,
-        outl: *mut c_int,
-    ) -> c_int;
+    pub fn EVP_DecryptUpdate(ctx: *mut EVP_CIPHER_CTX, out: *mut c_uchar, outl: *mut c_int, in_: *const u8, inl: c_int) -> c_int;
+    pub fn EVP_DecryptFinal_ex(ctx: *mut EVP_CIPHER_CTX, outm: *mut c_uchar, outl: *mut c_int) -> c_int;
 }
 cfg_if! {
     if #[cfg(ossl300)] {
@@ -268,12 +218,7 @@ extern "C" {
     pub fn EVP_MD_CTX_reset(ctx: *mut EVP_MD_CTX) -> c_int;
     pub fn EVP_CIPHER_CTX_set_key_length(ctx: *mut EVP_CIPHER_CTX, keylen: c_int) -> c_int;
     pub fn EVP_CIPHER_CTX_set_padding(ctx: *mut EVP_CIPHER_CTX, padding: c_int) -> c_int;
-    pub fn EVP_CIPHER_CTX_ctrl(
-        ctx: *mut EVP_CIPHER_CTX,
-        type_: c_int,
-        arg: c_int,
-        ptr: *mut c_void,
-    ) -> c_int;
+    pub fn EVP_CIPHER_CTX_ctrl(ctx: *mut EVP_CIPHER_CTX, type_: c_int, arg: c_int, ptr: *mut c_void) -> c_int;
     pub fn EVP_CIPHER_CTX_rand_key(ctx: *mut EVP_CIPHER_CTX, key: *mut c_uchar) -> c_int;
 
     pub fn EVP_md_null() -> *const EVP_MD;
@@ -447,11 +392,7 @@ extern "C" {
     #[cfg(any(ossl110, libressl270))]
     pub fn EVP_PKEY_up_ref(pkey: *mut EVP_PKEY) -> c_int;
 
-    pub fn d2i_AutoPrivateKey(
-        a: *mut *mut EVP_PKEY,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut EVP_PKEY;
+    pub fn d2i_AutoPrivateKey(a: *mut *mut EVP_PKEY, pp: *mut *const c_uchar, length: c_long) -> *mut EVP_PKEY;
 
     pub fn EVP_PKEY_cmp(a: *const EVP_PKEY, b: *const EVP_PKEY) -> c_int;
 
@@ -495,68 +436,27 @@ extern "C" {
     pub fn EVP_PKEY_CTX_new_id(id: c_int, e: *mut ENGINE) -> *mut EVP_PKEY_CTX;
     pub fn EVP_PKEY_CTX_free(ctx: *mut EVP_PKEY_CTX);
 
-    pub fn EVP_PKEY_CTX_ctrl(
-        ctx: *mut EVP_PKEY_CTX,
-        keytype: c_int,
-        optype: c_int,
-        cmd: c_int,
-        p1: c_int,
-        p2: *mut c_void,
-    ) -> c_int;
+    pub fn EVP_PKEY_CTX_ctrl(ctx: *mut EVP_PKEY_CTX, keytype: c_int, optype: c_int, cmd: c_int, p1: c_int, p2: *mut c_void) -> c_int;
 
-    pub fn EVP_PKEY_new_mac_key(
-        type_: c_int,
-        e: *mut ENGINE,
-        key: *const c_uchar,
-        keylen: c_int,
-    ) -> *mut EVP_PKEY;
+    pub fn EVP_PKEY_new_mac_key(type_: c_int, e: *mut ENGINE, key: *const c_uchar, keylen: c_int) -> *mut EVP_PKEY;
 
     pub fn EVP_PKEY_derive_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_derive_set_peer(ctx: *mut EVP_PKEY_CTX, peer: *mut EVP_PKEY) -> c_int;
     pub fn EVP_PKEY_derive(ctx: *mut EVP_PKEY_CTX, key: *mut c_uchar, size: *mut size_t) -> c_int;
 
     #[cfg(ossl300)]
-    pub fn EVP_PKEY_Q_keygen(
-        libctx: *mut OSSL_LIB_CTX,
-        propq: *const c_char,
-        type_: *const c_char,
-        ...
-    ) -> *mut EVP_PKEY;
+    pub fn EVP_PKEY_Q_keygen(libctx: *mut OSSL_LIB_CTX, propq: *const c_char, type_: *const c_char, ...) -> *mut EVP_PKEY;
     pub fn EVP_PKEY_keygen_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
     pub fn EVP_PKEY_keygen(ctx: *mut EVP_PKEY_CTX, key: *mut *mut EVP_PKEY) -> c_int;
 
     pub fn EVP_PKEY_sign_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
-    pub fn EVP_PKEY_sign(
-        ctx: *mut EVP_PKEY_CTX,
-        sig: *mut c_uchar,
-        siglen: *mut size_t,
-        tbs: *const c_uchar,
-        tbslen: size_t,
-    ) -> c_int;
+    pub fn EVP_PKEY_sign(ctx: *mut EVP_PKEY_CTX, sig: *mut c_uchar, siglen: *mut size_t, tbs: *const c_uchar, tbslen: size_t) -> c_int;
     pub fn EVP_PKEY_verify_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
-    pub fn EVP_PKEY_verify(
-        ctx: *mut EVP_PKEY_CTX,
-        sig: *const c_uchar,
-        siglen: size_t,
-        tbs: *const c_uchar,
-        tbslen: size_t,
-    ) -> c_int;
+    pub fn EVP_PKEY_verify(ctx: *mut EVP_PKEY_CTX, sig: *const c_uchar, siglen: size_t, tbs: *const c_uchar, tbslen: size_t) -> c_int;
     pub fn EVP_PKEY_encrypt_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
-    pub fn EVP_PKEY_encrypt(
-        ctx: *mut EVP_PKEY_CTX,
-        pout: *mut c_uchar,
-        poutlen: *mut size_t,
-        pin: *const c_uchar,
-        pinlen: size_t,
-    ) -> c_int;
+    pub fn EVP_PKEY_encrypt(ctx: *mut EVP_PKEY_CTX, pout: *mut c_uchar, poutlen: *mut size_t, pin: *const c_uchar, pinlen: size_t) -> c_int;
     pub fn EVP_PKEY_decrypt_init(ctx: *mut EVP_PKEY_CTX) -> c_int;
-    pub fn EVP_PKEY_decrypt(
-        ctx: *mut EVP_PKEY_CTX,
-        pout: *mut c_uchar,
-        poutlen: *mut size_t,
-        pin: *const c_uchar,
-        pinlen: size_t,
-    ) -> c_int;
+    pub fn EVP_PKEY_decrypt(ctx: *mut EVP_PKEY_CTX, pout: *mut c_uchar, poutlen: *mut size_t, pin: *const c_uchar, pinlen: size_t) -> c_int;
 }
 
 const_ptr_api! {

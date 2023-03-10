@@ -141,12 +141,7 @@ extern "C" {
 
     pub fn X509_sign(x: *mut X509, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 
-    pub fn X509_digest(
-        x: *const X509,
-        digest: *const EVP_MD,
-        buf: *mut c_uchar,
-        len: *mut c_uint,
-    ) -> c_int;
+    pub fn X509_digest(x: *const X509, digest: *const EVP_MD, buf: *mut c_uchar, len: *mut c_uint) -> c_int;
 
     pub fn X509_REQ_sign(x: *mut X509_REQ, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
 }
@@ -170,17 +165,9 @@ extern "C" {
     pub fn d2i_PUBKEY(k: *mut *mut EVP_PKEY, buf: *mut *const u8, len: c_long) -> *mut EVP_PKEY;
     pub fn d2i_RSA_PUBKEY(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
     pub fn d2i_DSA_PUBKEY(k: *mut *mut DSA, pp: *mut *const c_uchar, length: c_long) -> *mut DSA;
-    pub fn d2i_EC_PUBKEY(
-        a: *mut *mut EC_KEY,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut EC_KEY;
+    pub fn d2i_EC_PUBKEY(a: *mut *mut EC_KEY, pp: *mut *const c_uchar, length: c_long) -> *mut EC_KEY;
 
-    pub fn d2i_ECPrivateKey(
-        k: *mut *mut EC_KEY,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut EC_KEY;
+    pub fn d2i_ECPrivateKey(k: *mut *mut EC_KEY, pp: *mut *const c_uchar, length: c_long) -> *mut EC_KEY;
 }
 
 const_ptr_api! {
@@ -213,11 +200,7 @@ const_ptr_api! {
 }
 
 extern "C" {
-    pub fn d2i_X509_REVOKED(
-        a: *mut *mut X509_REVOKED,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut X509_REVOKED;
+    pub fn d2i_X509_REVOKED(a: *mut *mut X509_REVOKED, pp: *mut *const c_uchar, length: c_long) -> *mut X509_REVOKED;
 }
 const_ptr_api! {
     extern "C" {
@@ -227,11 +210,7 @@ const_ptr_api! {
 extern "C" {
     pub fn X509_CRL_new() -> *mut X509_CRL;
     pub fn X509_CRL_free(x: *mut X509_CRL);
-    pub fn d2i_X509_CRL(
-        a: *mut *mut X509_CRL,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut X509_CRL;
+    pub fn d2i_X509_CRL(a: *mut *mut X509_CRL, pp: *mut *const c_uchar, length: c_long) -> *mut X509_CRL;
 }
 const_ptr_api! {
     extern "C" {
@@ -244,11 +223,7 @@ const_ptr_api! {
 extern "C" {
     pub fn X509_REQ_new() -> *mut X509_REQ;
     pub fn X509_REQ_free(x: *mut X509_REQ);
-    pub fn d2i_X509_REQ(
-        a: *mut *mut X509_REQ,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut X509_REQ;
+    pub fn d2i_X509_REQ(a: *mut *mut X509_REQ, pp: *mut *const c_uchar, length: c_long) -> *mut X509_REQ;
 }
 const_ptr_api! {
     extern "C" {
@@ -380,18 +355,9 @@ extern "C" {
     pub fn X509_REVOKED_set_revocationDate(r: *mut X509_REVOKED, tm: *mut ASN1_TIME) -> c_int;
 
     pub fn X509_CRL_sign(x: *mut X509_CRL, pkey: *mut EVP_PKEY, md: *const EVP_MD) -> c_int;
-    pub fn X509_CRL_digest(
-        x: *const X509_CRL,
-        digest: *const EVP_MD,
-        md: *mut c_uchar,
-        len: *mut c_uint,
-    ) -> c_int;
+    pub fn X509_CRL_digest(x: *const X509_CRL, digest: *const EVP_MD, md: *mut c_uchar, len: *mut c_uint) -> c_int;
     pub fn X509_CRL_verify(crl: *mut X509_CRL, pkey: *mut EVP_PKEY) -> c_int;
-    pub fn X509_CRL_get0_by_cert(
-        x: *mut X509_CRL,
-        ret: *mut *mut X509_REVOKED,
-        cert: *mut X509,
-    ) -> c_int;
+    pub fn X509_CRL_get0_by_cert(x: *mut X509_CRL, ret: *mut *mut X509_REVOKED, cert: *mut X509) -> c_int;
 }
 const_ptr_api! {
     extern "C" {
@@ -474,11 +440,7 @@ extern "C" {
         loc: c_int,
         set: c_int,
     ) -> c_int;
-    pub fn d2i_X509_NAME(
-        n: *mut *mut X509_NAME,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut X509_NAME;
+    pub fn d2i_X509_NAME(n: *mut *mut X509_NAME, pp: *mut *const c_uchar, length: c_long) -> *mut X509_NAME;
 }
 
 // "raw" X509_EXTENSION related functions
@@ -486,65 +448,26 @@ extern "C" {
     // in X509
     pub fn X509_delete_ext(x: *mut X509, loc: c_int) -> *mut X509_EXTENSION;
     pub fn X509_add_ext(x: *mut X509, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
-    pub fn X509_add1_ext_i2d(
-        x: *mut X509,
-        nid: c_int,
-        value: *mut c_void,
-        crit: c_int,
-        flags: c_ulong,
-    ) -> c_int;
+    pub fn X509_add1_ext_i2d(x: *mut X509, nid: c_int, value: *mut c_void, crit: c_int, flags: c_ulong) -> c_int;
     // in X509_CRL
     pub fn X509_CRL_delete_ext(x: *mut X509_CRL, loc: c_int) -> *mut X509_EXTENSION;
     pub fn X509_CRL_add_ext(x: *mut X509_CRL, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
-    pub fn X509_CRL_add1_ext_i2d(
-        x: *mut X509_CRL,
-        nid: c_int,
-        value: *mut c_void,
-        crit: c_int,
-        flags: c_ulong,
-    ) -> c_int;
+    pub fn X509_CRL_add1_ext_i2d(x: *mut X509_CRL, nid: c_int, value: *mut c_void, crit: c_int, flags: c_ulong) -> c_int;
     // in X509_REVOKED
     pub fn X509_REVOKED_delete_ext(x: *mut X509_REVOKED, loc: c_int) -> *mut X509_EXTENSION;
-    pub fn X509_REVOKED_add_ext(
-        x: *mut X509_REVOKED,
-        ext: *mut X509_EXTENSION,
-        loc: c_int,
-    ) -> c_int;
-    pub fn X509_REVOKED_add1_ext_i2d(
-        x: *mut X509_REVOKED,
-        nid: c_int,
-        value: *mut c_void,
-        crit: c_int,
-        flags: c_ulong,
-    ) -> c_int;
+    pub fn X509_REVOKED_add_ext(x: *mut X509_REVOKED, ext: *mut X509_EXTENSION, loc: c_int) -> c_int;
+    pub fn X509_REVOKED_add1_ext_i2d(x: *mut X509_REVOKED, nid: c_int, value: *mut c_void, crit: c_int, flags: c_ulong) -> c_int;
     // X509_EXTENSION stack
     // - these getters always used *const STACK
     pub fn X509v3_get_ext_count(x: *const stack_st_X509_EXTENSION) -> c_int;
-    pub fn X509v3_get_ext_by_NID(
-        x: *const stack_st_X509_EXTENSION,
-        nid: c_int,
-        lastpos: c_int,
-    ) -> c_int;
-    pub fn X509v3_get_ext_by_critical(
-        x: *const stack_st_X509_EXTENSION,
-        crit: c_int,
-        lastpos: c_int,
-    ) -> c_int;
+    pub fn X509v3_get_ext_by_NID(x: *const stack_st_X509_EXTENSION, nid: c_int, lastpos: c_int) -> c_int;
+    pub fn X509v3_get_ext_by_critical(x: *const stack_st_X509_EXTENSION, crit: c_int, lastpos: c_int) -> c_int;
     pub fn X509v3_get_ext(x: *const stack_st_X509_EXTENSION, loc: c_int) -> *mut X509_EXTENSION;
     pub fn X509v3_delete_ext(x: *mut stack_st_X509_EXTENSION, loc: c_int) -> *mut X509_EXTENSION;
-    pub fn X509v3_add_ext(
-        x: *mut *mut stack_st_X509_EXTENSION,
-        ex: *mut X509_EXTENSION,
-        loc: c_int,
-    ) -> *mut stack_st_X509_EXTENSION;
+    pub fn X509v3_add_ext(x: *mut *mut stack_st_X509_EXTENSION, ex: *mut X509_EXTENSION, loc: c_int) -> *mut stack_st_X509_EXTENSION;
     // - X509V3_add1_i2d in x509v3.rs
     // X509_EXTENSION itself
-    pub fn X509_EXTENSION_create_by_NID(
-        ex: *mut *mut X509_EXTENSION,
-        nid: c_int,
-        crit: c_int,
-        data: *mut ASN1_OCTET_STRING,
-    ) -> *mut X509_EXTENSION;
+    pub fn X509_EXTENSION_create_by_NID(ex: *mut *mut X509_EXTENSION, nid: c_int, crit: c_int, data: *mut ASN1_OCTET_STRING) -> *mut X509_EXTENSION;
     pub fn X509_EXTENSION_set_critical(ex: *mut X509_EXTENSION, crit: c_int) -> c_int;
     pub fn X509_EXTENSION_set_data(ex: *mut X509_EXTENSION, data: *mut ASN1_OCTET_STRING) -> c_int;
     pub fn X509_EXTENSION_get_object(ext: *mut X509_EXTENSION) -> *mut ASN1_OBJECT;
@@ -651,8 +574,7 @@ pub struct X509_PURPOSE {
     pub purpose: c_int,
     pub trust: c_int, // Default trust ID
     pub flags: c_int,
-    pub check_purpose:
-        Option<unsafe extern "C" fn(*const X509_PURPOSE, *const X509, c_int) -> c_int>,
+    pub check_purpose: Option<unsafe extern "C" fn(*const X509_PURPOSE, *const X509, c_int) -> c_int>,
     pub name: *mut c_char,
     pub sname: *mut c_char,
     pub usr_data: *mut c_void,

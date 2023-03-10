@@ -13,13 +13,7 @@ extern "C" {
     pub fn X509_LOOKUP_free(ctx: *mut X509_LOOKUP);
     pub fn X509_LOOKUP_hash_dir() -> *mut X509_LOOKUP_METHOD;
     pub fn X509_LOOKUP_file() -> *mut X509_LOOKUP_METHOD;
-    pub fn X509_LOOKUP_ctrl(
-        ctx: *mut X509_LOOKUP,
-        cmd: c_int,
-        argc: *const c_char,
-        argl: c_long,
-        ret: *mut *mut c_char,
-    ) -> c_int;
+    pub fn X509_LOOKUP_ctrl(ctx: *mut X509_LOOKUP, cmd: c_int, argc: *const c_char, argl: c_long, ret: *mut *mut c_char) -> c_int;
     pub fn X509_load_cert_file(ctx: *mut X509_LOOKUP, file: *const c_char, _type: c_int) -> c_int;
     pub fn X509_load_crl_file(ctx: *mut X509_LOOKUP, file: *const c_char, _type: c_int) -> c_int;
 }
@@ -31,20 +25,12 @@ extern "C" {
     pub fn X509_STORE_CTX_new() -> *mut X509_STORE_CTX;
 
     pub fn X509_STORE_CTX_free(ctx: *mut X509_STORE_CTX);
-    pub fn X509_STORE_CTX_init(
-        ctx: *mut X509_STORE_CTX,
-        store: *mut X509_STORE,
-        x509: *mut X509,
-        chain: *mut stack_st_X509,
-    ) -> c_int;
+    pub fn X509_STORE_CTX_init(ctx: *mut X509_STORE_CTX, store: *mut X509_STORE, x509: *mut X509, chain: *mut stack_st_X509) -> c_int;
     pub fn X509_STORE_CTX_cleanup(ctx: *mut X509_STORE_CTX);
 
     pub fn X509_STORE_add_cert(store: *mut X509_STORE, x: *mut X509) -> c_int;
 
-    pub fn X509_STORE_add_lookup(
-        store: *mut X509_STORE,
-        meth: *mut X509_LOOKUP_METHOD,
-    ) -> *mut X509_LOOKUP;
+    pub fn X509_STORE_add_lookup(store: *mut X509_STORE, meth: *mut X509_LOOKUP_METHOD) -> *mut X509_LOOKUP;
 
     pub fn X509_STORE_set_default_paths(store: *mut X509_STORE) -> c_int;
     pub fn X509_STORE_set_flags(store: *mut X509_STORE, flags: c_ulong) -> c_int;
@@ -110,19 +96,11 @@ const_ptr_api! {
 
 extern "C" {
     #[cfg(any(ossl102, libressl261))]
-    pub fn X509_VERIFY_PARAM_set1_host(
-        param: *mut X509_VERIFY_PARAM,
-        name: *const c_char,
-        namelen: size_t,
-    ) -> c_int;
+    pub fn X509_VERIFY_PARAM_set1_host(param: *mut X509_VERIFY_PARAM, name: *const c_char, namelen: size_t) -> c_int;
     #[cfg(any(ossl102, libressl261))]
     pub fn X509_VERIFY_PARAM_set_hostflags(param: *mut X509_VERIFY_PARAM, flags: c_uint);
     #[cfg(any(ossl102, libressl261))]
-    pub fn X509_VERIFY_PARAM_set1_ip(
-        param: *mut X509_VERIFY_PARAM,
-        ip: *const c_uchar,
-        iplen: size_t,
-    ) -> c_int;
+    pub fn X509_VERIFY_PARAM_set1_ip(param: *mut X509_VERIFY_PARAM, ip: *const c_uchar, iplen: size_t) -> c_int;
     #[cfg(ossl110)]
     pub fn X509_VERIFY_PARAM_set_auth_level(param: *mut X509_VERIFY_PARAM, lvl: c_int);
     #[cfg(ossl110)]

@@ -1,8 +1,7 @@
-
 use std::ptr;
 
-use crate::error::{ErrorStack, cvt_p, cvt};
-use foreign_types::{ForeignType, foreign_type, ForeignTypeRef};
+use crate::error::{cvt, cvt_p, ErrorStack};
+use foreign_types::{foreign_type, ForeignType, ForeignTypeRef};
 use libc::c_int;
 
 foreign_type! {
@@ -22,22 +21,18 @@ impl CipherCtx {
     }
 }
 impl CipherCtxRef {
-
     /// Initializes the context for encryption or decryption.
     /// All pointer fields can be null, in which case the corresponding field in the context is not updated.
-    pub unsafe fn cipher_init<const ENCRYPT: bool>(&self, t: *const ffi::EVP_CIPHER, key: *const u8, iv: *const u8) -> Result<(), ErrorStack>{
-        let evp_f = if ENCRYPT { ffi::EVP_EncryptInit_ex } else { ffi::EVP_DecryptInit_ex };
+    pub unsafe fn cipher_init<const ENCRYPT: bool>(&self, t: *const ffi::EVP_CIPHER, key: *const u8, iv: *const u8) -> Result<(), ErrorStack> {
+        let evp_f = if ENCRYPT {
+            ffi::EVP_EncryptInit_ex
+        } else {
+            ffi::EVP_DecryptInit_ex
+        };
 
-        cvt(evp_f(
-            self.as_ptr(),
-            t,
-            ptr::null_mut(),
-            key,
-            iv,
-        ))?;
+        cvt(evp_f(self.as_ptr(), t, ptr::null_mut(), key, iv))?;
         Ok(())
     }
-
 
     /// Writes data into the context.
     ///
@@ -54,26 +49,19 @@ impl CipherCtxRef {
     /// ciphers the output buffer size should be at least as big as
     /// the input buffer. For block ciphers the size of the output
     /// buffer depends on the state of partially updated blocks.
-    pub unsafe fn update<const ENCRYPT: bool>(
-        &self,
-        input: &[u8],
-        output: *mut u8,
-    ) -> Result<(), ErrorStack> {
-        let evp_f = if ENCRYPT { ffi::EVP_EncryptUpdate } else { ffi::EVP_DecryptUpdate };
+    pub unsafe fn update<const ENCRYPT: bool>(&self, input: &[u8], output: *mut u8) -> Result<(), ErrorStack> {
+        let evp_f = if ENCRYPT {
+            ffi::EVP_EncryptUpdate
+        } else {
+            ffi::EVP_DecryptUpdate
+        };
 
         let mut outlen = 0;
 
-        cvt(evp_f(
-            self.as_ptr(),
-            output,
-            &mut outlen,
-            input.as_ptr(),
-            input.len() as c_int,
-        ))?;
+        cvt(evp_f(self.as_ptr(), output, &mut outlen, input.as_ptr(), input.len() as c_int))?;
 
         Ok(())
     }
-
 
     /// Finalizes the encryption or decryption process.
     ///
@@ -88,18 +76,15 @@ impl CipherCtxRef {
     /// large enough to contain correct number of bytes. For streaming
     /// ciphers the output buffer can be empty, for block ciphers the
     /// output buffer should be at least as big as the block.
-    pub unsafe fn finalize<const ENCRYPT: bool>(
-        &self,
-        output: *mut u8,
-    ) -> Result<(), ErrorStack> {
-        let evp_f = if ENCRYPT { ffi::EVP_EncryptFinal_ex } else { ffi::EVP_DecryptFinal_ex };
+    pub unsafe fn finalize<const ENCRYPT: bool>(&self, output: *mut u8) -> Result<(), ErrorStack> {
+        let evp_f = if ENCRYPT {
+            ffi::EVP_EncryptFinal_ex
+        } else {
+            ffi::EVP_DecryptFinal_ex
+        };
         let mut outl = 0;
 
-        cvt(evp_f(
-            self.as_ptr(),
-            output,
-            &mut outl,
-        ))?;
+        cvt(evp_f(self.as_ptr(), output, &mut outl))?;
 
         Ok(())
     }
@@ -111,7 +96,6 @@ impl CipherCtxRef {
     /// The size of the buffer indicates the size of the tag. While some ciphers support a range of tag sizes, it is
     /// recommended to pick the maximum size.
     pub fn tag(&self, tag: &mut [u8]) -> Result<(), ErrorStack> {
-
         unsafe {
             cvt(ffi::EVP_CIPHER_CTX_ctrl(
                 self.as_ptr(),
@@ -141,8 +125,8 @@ impl CipherCtxRef {
 
 #[cfg(test)]
 mod test {
-    use crate::init;
     use super::*;
+    use crate::init;
 
     #[test]
     fn aes_128_ecb() {

@@ -33,12 +33,7 @@ extern "C" {
         data: *mut *const c_char,
         flags: *mut c_int,
     ) -> c_ulong;
-    pub fn ERR_get_error_line_data(
-        file: *mut *const c_char,
-        line: *mut c_int,
-        data: *mut *const c_char,
-        flags: *mut c_int,
-    ) -> c_ulong;
+    pub fn ERR_get_error_line_data(file: *mut *const c_char, line: *mut c_int, data: *mut *const c_char, flags: *mut c_int) -> c_ulong;
     pub fn ERR_peek_last_error() -> c_ulong;
     pub fn ERR_clear_error();
     pub fn ERR_lib_error_string(err: c_ulong) -> *const c_char;

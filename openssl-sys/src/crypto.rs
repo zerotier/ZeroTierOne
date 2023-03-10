@@ -4,9 +4,7 @@ use libc::*;
 extern "C" {
     #[deprecated(note = "use CRYPTO_set_locking_callback__fixed_rust instead")]
     #[cfg(not(ossl110))]
-    pub fn CRYPTO_set_locking_callback(
-        func: unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int),
-    );
+    pub fn CRYPTO_set_locking_callback(func: unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int));
 
     #[deprecated(note = "use CRYPTO_set_id_callback__fixed_rust instead")]
     #[cfg(not(ossl110))]
@@ -48,46 +46,28 @@ pub type CRYPTO_EX_dup = unsafe extern "C" fn(
     argl: c_long,
     argp: *mut c_void,
 ) -> c_int;
-pub type CRYPTO_EX_free = unsafe extern "C" fn(
-    parent: *mut c_void,
-    ptr: *mut c_void,
-    ad: *mut CRYPTO_EX_DATA,
-    idx: c_int,
-    argl: c_long,
-    argp: *mut c_void,
-);
+pub type CRYPTO_EX_free =
+    unsafe extern "C" fn(parent: *mut c_void, ptr: *mut c_void, ad: *mut CRYPTO_EX_DATA, idx: c_int, argl: c_long, argp: *mut c_void);
 
 #[cfg(ossl110)]
 #[inline]
 #[track_caller]
 pub unsafe fn OPENSSL_malloc(num: usize) -> *mut c_void {
-    CRYPTO_malloc(
-        num,
-        concat!(file!(), "\0").as_ptr() as *const _,
-        line!() as _,
-    )
+    CRYPTO_malloc(num, concat!(file!(), "\0").as_ptr() as *const _, line!() as _)
 }
 
 #[cfg(not(ossl110))]
 #[inline]
 #[track_caller]
 pub unsafe fn OPENSSL_malloc(num: c_int) -> *mut c_void {
-    CRYPTO_malloc(
-        num,
-        concat!(file!(), "\0").as_ptr() as *const _,
-        line!() as _,
-    )
+    CRYPTO_malloc(num, concat!(file!(), "\0").as_ptr() as *const _, line!() as _)
 }
 
 #[cfg(ossl110)]
 #[inline]
 #[track_caller]
 pub unsafe fn OPENSSL_free(addr: *mut c_void) {
-    CRYPTO_free(
-        addr,
-        concat!(file!(), "\0").as_ptr() as *const _,
-        line!() as _,
-    )
+    CRYPTO_free(addr, concat!(file!(), "\0").as_ptr() as *const _, line!() as _)
 }
 
 #[cfg(not(ossl110))]

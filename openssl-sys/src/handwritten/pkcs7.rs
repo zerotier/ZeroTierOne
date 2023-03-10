@@ -19,52 +19,20 @@ const_ptr_api! {
 }
 
 extern "C" {
-    pub fn PKCS7_encrypt(
-        certs: *mut stack_st_X509,
-        b: *mut BIO,
-        cipher: *const EVP_CIPHER,
-        flags: c_int,
-    ) -> *mut PKCS7;
+    pub fn PKCS7_encrypt(certs: *mut stack_st_X509, b: *mut BIO, cipher: *const EVP_CIPHER, flags: c_int) -> *mut PKCS7;
 
-    pub fn PKCS7_verify(
-        pkcs7: *mut PKCS7,
-        certs: *mut stack_st_X509,
-        store: *mut X509_STORE,
-        indata: *mut BIO,
-        out: *mut BIO,
-        flags: c_int,
-    ) -> c_int;
+    pub fn PKCS7_verify(pkcs7: *mut PKCS7, certs: *mut stack_st_X509, store: *mut X509_STORE, indata: *mut BIO, out: *mut BIO, flags: c_int)
+        -> c_int;
 
-    pub fn PKCS7_get0_signers(
-        pkcs7: *mut PKCS7,
-        certs: *mut stack_st_X509,
-        flags: c_int,
-    ) -> *mut stack_st_X509;
+    pub fn PKCS7_get0_signers(pkcs7: *mut PKCS7, certs: *mut stack_st_X509, flags: c_int) -> *mut stack_st_X509;
 
-    pub fn PKCS7_sign(
-        signcert: *mut X509,
-        pkey: *mut EVP_PKEY,
-        certs: *mut stack_st_X509,
-        data: *mut BIO,
-        flags: c_int,
-    ) -> *mut PKCS7;
+    pub fn PKCS7_sign(signcert: *mut X509, pkey: *mut EVP_PKEY, certs: *mut stack_st_X509, data: *mut BIO, flags: c_int) -> *mut PKCS7;
 
-    pub fn PKCS7_decrypt(
-        pkcs7: *mut PKCS7,
-        pkey: *mut EVP_PKEY,
-        cert: *mut X509,
-        data: *mut BIO,
-        flags: c_int,
-    ) -> c_int;
+    pub fn PKCS7_decrypt(pkcs7: *mut PKCS7, pkey: *mut EVP_PKEY, cert: *mut X509, data: *mut BIO, flags: c_int) -> c_int;
 
     pub fn PKCS7_free(pkcs7: *mut PKCS7);
 
-    pub fn SMIME_write_PKCS7(
-        out: *mut BIO,
-        pkcs7: *mut PKCS7,
-        data: *mut BIO,
-        flags: c_int,
-    ) -> c_int;
+    pub fn SMIME_write_PKCS7(out: *mut BIO, pkcs7: *mut PKCS7, data: *mut BIO, flags: c_int) -> c_int;
 
     pub fn SMIME_read_PKCS7(bio: *mut BIO, bcont: *mut *mut BIO) -> *mut PKCS7;
 }

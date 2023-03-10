@@ -15,13 +15,7 @@ const_ptr_api! {
 extern "C" {
     pub fn d2i_PKCS12(a: *mut *mut PKCS12, pp: *mut *const u8, length: c_long) -> *mut PKCS12;
 
-    pub fn PKCS12_parse(
-        p12: *mut PKCS12,
-        pass: *const c_char,
-        pkey: *mut *mut EVP_PKEY,
-        cert: *mut *mut X509,
-        ca: *mut *mut stack_st_X509,
-    ) -> c_int;
+    pub fn PKCS12_parse(p12: *mut PKCS12, pass: *const c_char, pkey: *mut *mut EVP_PKEY, cert: *mut *mut X509, ca: *mut *mut stack_st_X509) -> c_int;
 
     pub fn PKCS12_set_mac(
         p12: *mut PKCS12,

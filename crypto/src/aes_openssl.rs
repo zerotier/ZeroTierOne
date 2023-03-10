@@ -1,16 +1,16 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
-use std::{ptr, mem::MaybeUninit};
+use std::{mem::MaybeUninit, ptr};
 
 use foreign_types::ForeignType;
 
-use crate::{secret::Secret, cipher_ctx::CipherCtx};
+use crate::{cipher_ctx::CipherCtx, secret::Secret};
 
 /// An OpenSSL AES_GCM context. Automatically frees itself on drop.
 /// The current interface is custom made for ZeroTier, but could easily be adapted for other uses.
 /// Whether `ENCRYPT` is true or false decides respectively whether this context encrypts or decrypts.
 /// Even though OpenSSL lets you set this dynamically almost no operations work when you do this without resetting the context.
-pub struct AesGcm<const ENCRYPT: bool> (CipherCtx);
+pub struct AesGcm<const ENCRYPT: bool>(CipherCtx);
 
 impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
     /// Create an AesGcm context with the given key, key must be 16, 24 or 32 bytes long.
@@ -22,7 +22,7 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
                 16 => ffi::EVP_aes_128_gcm(),
                 24 => ffi::EVP_aes_192_gcm(),
                 32 => ffi::EVP_aes_256_gcm(),
-                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32")
+                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
             };
             ctx.cipher_init::<ENCRYPT>(t, key.as_ptr(), ptr::null()).unwrap();
             ffi::EVP_CIPHER_CTX_set_padding(ctx.as_ptr(), 0);
@@ -103,7 +103,7 @@ impl Aes {
                 16 => ffi::EVP_aes_128_ecb(),
                 24 => ffi::EVP_aes_192_ecb(),
                 32 => ffi::EVP_aes_256_ecb(),
-                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32")
+                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
             };
             ctx0.cipher_init::<true>(t, key.as_ptr(), ptr::null()).unwrap();
             ffi::EVP_CIPHER_CTX_set_padding(ctx0.as_ptr(), 0);
@@ -117,14 +117,22 @@ impl Aes {
     /// Do not ever encrypt the same plaintext twice. Make sure data is always different between calls.
     #[inline(always)]
     pub fn encrypt_block_in_place(&self, data: &mut [u8]) {
-        debug_assert_eq!(data.len(), AES_BLOCK_SIZE, "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing.");
+        debug_assert_eq!(
+            data.len(),
+            AES_BLOCK_SIZE,
+            "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing."
+        );
         let ptr = data.as_mut_ptr();
         unsafe { self.0.update::<true>(data, ptr).unwrap() }
     }
     /// Do not ever encrypt the same plaintext twice. Make sure data is always different between calls.
     #[inline(always)]
     pub fn decrypt_block_in_place(&self, data: &mut [u8]) {
-        debug_assert_eq!(data.len(), AES_BLOCK_SIZE, "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing.");
+        debug_assert_eq!(
+            data.len(),
+            AES_BLOCK_SIZE,
+            "AesEcb should not be used to encrypt more than one block at a time unless you really know what you are doing."
+        );
         let ptr = data.as_mut_ptr();
         unsafe { self.1.update::<false>(data, ptr).unwrap() }
     }
