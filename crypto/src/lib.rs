@@ -1,24 +1,26 @@
-
-mod error;
-mod cipher_ctx;
 mod bn;
+mod cipher_ctx;
 mod ec;
+mod error;
 
-pub mod secret;
-pub mod random;
 pub mod hash;
 pub mod mimcvdf;
 pub mod p384;
+pub mod random;
+pub mod secret;
 
 pub mod poly1305;
 pub mod salsa;
 pub mod typestate;
 pub mod x25519;
 
+#[cfg(target_os = "macos")]
 pub mod aes_fruity;
-pub mod aes_openssl;
 #[cfg(target_os = "macos")]
 pub use aes_fruity as aes;
+
+#[cfg(not(target_os = "macos"))]
+pub mod aes_openssl;
 #[cfg(not(target_os = "macos"))]
 pub use aes_openssl as aes;
 
@@ -30,9 +32,6 @@ pub mod aes_gmac_siv_openssl;
 pub use aes_gmac_siv_fruity as aes_gmac_siv;
 #[cfg(not(target_os = "macos"))]
 pub use aes_gmac_siv_openssl as aes_gmac_siv;
-
-
-
 
 /// This must be called before using any function from this library.
 pub fn init() {

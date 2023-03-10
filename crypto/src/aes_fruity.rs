@@ -3,7 +3,7 @@
 // MacOS implementation of AES primitives since CommonCrypto seems to be faster than OpenSSL, especially on ARM64.
 use std::os::raw::{c_int, c_void};
 use std::ptr::{null, null_mut};
-use std::sync::Mutex;
+use std::sync::atomic::AtomicPtr;
 
 use crate::secret::Secret;
 use crate::secure_eq;
@@ -172,14 +172,26 @@ impl AesGcm<false> {
     }
 }
 
-pub struct Aes(Mutex<*mut c_void>, Mutex<*mut c_void>);
+pub struct Aes(AtomicPtr<c_void>, AtomicPtr<c_void>);
 
 impl Drop for Aes {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe {
-            CCCryptorRelease(*self.0.lock().unwrap());
-            CCCryptorRelease(*self.1.lock().unwrap());
+            loop {
+                let p = self.0.load(std::sync::atomic::Ordering::Acquire);
+                if !p.is_null() {
+                    CCCryptorRelease(p);
+                    break;
+                }
+            }
+            loop {
+                let p = self.1.load(std::sync::atomic::Ordering::Acquire);
+                if !p.is_null() {
+                    CCCryptorRelease(p);
+                    break;
+                }
+            }
         }
     }
 }
@@ -191,7 +203,7 @@ impl Aes {
                 KEY_SIZE == 32 || KEY_SIZE == 24 || KEY_SIZE == 16,
                 "AES supports 128, 192, or 256 bits keys"
             );
-            let aes: Self = std::mem::zeroed();
+            let (mut p0, mut p1) = (null_mut(), null_mut());
             assert_eq!(
                 CCCryptorCreateWithMode(
                     kCCEncrypt,
@@ -205,7 +217,7 @@ impl Aes {
                     0,
                     0,
                     kCCOptionECBMode,
-                    &mut *aes.0.lock().unwrap()
+                    &mut p0,
                 ),
                 0
             );
@@ -222,11 +234,11 @@ impl Aes {
                     0,
                     0,
                     kCCOptionECBMode,
-                    &mut *aes.1.lock().unwrap()
+                    &mut p1,
                 ),
                 0
             );
-            aes
+            Self(AtomicPtr::new(p0), AtomicPtr::new(p1))
         }
     }
 
@@ -235,8 +247,16 @@ impl Aes {
         assert_eq!(data.len(), 16);
         unsafe {
             let mut data_out_written = 0;
-            let e = self.0.lock().unwrap();
-            CCCryptorUpdate(*e, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+            loop {
+                let p = self.0.load(std::sync::atomic::Ordering::Acquire);
+                if !p.is_null() {
+                    CCCryptorUpdate(p, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+                    self.0.store(p, std::sync::atomic::Ordering::Release);
+                    break;
+                } else {
+                    std::thread::yield_now();
+                }
+            }
         }
     }
 
@@ -245,8 +265,16 @@ impl Aes {
         assert_eq!(data.len(), 16);
         unsafe {
             let mut data_out_written = 0;
-            let d = self.1.lock().unwrap();
-            CCCryptorUpdate(*d, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+            loop {
+                let p = self.1.load(std::sync::atomic::Ordering::Acquire);
+                if !p.is_null() {
+                    CCCryptorUpdate(p, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+                    self.1.store(p, std::sync::atomic::Ordering::Release);
+                    break;
+                } else {
+                    std::thread::yield_now();
+                }
+            }
         }
     }
 }
