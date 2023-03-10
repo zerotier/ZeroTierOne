@@ -125,7 +125,7 @@ struct OutgoingSessionOffer {
 struct OutgoingSessionAck {
     last_retry_time: AtomicI64,
     ack: [u8; MAX_NOISE_HANDSHAKE_SIZE],
-    ack_size: usize,
+    ack_len: usize,
 }
 
 enum Offer {
@@ -214,7 +214,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 ack.last_retry_time.store(current_time, Ordering::Relaxed);
                                 let _ = send_with_fragmentation(
                                     |b| send(&session, b),
-                                    &mut (ack.ack.clone())[..ack.ack_size],
+                                    &mut (ack.ack.clone())[..ack.ack_len],
                                     state.physical_mtu,
                                     PACKET_TYPE_ALICE_NOISE_XK_ACK,
                                     state.remote_session_id,
@@ -747,6 +747,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                     let mut sessions = self.sessions.write().unwrap();
 
+                    // Pick an unused session ID on this side.
                     let mut bob_session_id;
                     loop {
                         bob_session_id = SessionId::random();
@@ -895,44 +896,41 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                                     // Create reply informing Bob of our static identity now that we've verified Bob and set
                                     // up forward secrecy. Also return Bob's opaque note.
-                                    let mut reply_buffer = [0u8; MAX_NOISE_HANDSHAKE_SIZE];
-                                    reply_buffer[HEADER_SIZE] = SESSION_PROTOCOL_VERSION;
-                                    let mut reply_len = HEADER_SIZE + 1;
+                                    let mut ack = [0u8; MAX_NOISE_HANDSHAKE_SIZE];
+                                    ack[HEADER_SIZE] = SESSION_PROTOCOL_VERSION;
+                                    let mut ack_len = HEADER_SIZE + 1;
 
                                     let alice_s_public_blob = app.get_local_s_public_blob();
                                     assert!(alice_s_public_blob.len() <= (u16::MAX as usize));
-                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, &(alice_s_public_blob.len() as u16).to_le_bytes())?;
-                                    let mut enc_start = reply_len;
-                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, alice_s_public_blob)?;
+                                    ack_len = append_to_slice(&mut ack, ack_len, &(alice_s_public_blob.len() as u16).to_le_bytes())?;
+                                    let mut enc_start = ack_len;
+                                    ack_len = append_to_slice(&mut ack, ack_len, alice_s_public_blob)?;
 
                                     let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(
                                         hmac_sha512_secret::<BASE_KEY_SIZE>(noise_es_ee.as_bytes(), hk.as_bytes()).as_bytes(),
                                     ));
                                     gcm.reset_init_gcm(&reply_message_nonce);
                                     gcm.aad(&noise_h_next);
-                                    gcm.crypt_in_place(&mut reply_buffer[enc_start..reply_len]);
-                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, &gcm.finish_encrypt())?;
+                                    gcm.crypt_in_place(&mut ack[enc_start..ack_len]);
+                                    ack_len = append_to_slice(&mut ack, ack_len, &gcm.finish_encrypt())?;
 
                                     let metadata = outgoing_offer.metadata.as_ref().map_or(&[][..0], |md| md.as_slice());
 
                                     assert!(metadata.len() <= (u16::MAX as usize));
-                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, &(metadata.len() as u16).to_le_bytes())?;
+                                    ack_len = append_to_slice(&mut ack, ack_len, &(metadata.len() as u16).to_le_bytes())?;
 
-                                    let noise_h_next = mix_hash(
-                                        &mix_hash(&noise_h_next, &reply_buffer[HEADER_SIZE..reply_len]),
-                                        outgoing_offer.psk.as_bytes(),
-                                    );
+                                    let noise_h_next = mix_hash(&mix_hash(&noise_h_next, &ack[HEADER_SIZE..ack_len]), outgoing_offer.psk.as_bytes());
 
-                                    enc_start = reply_len;
-                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, metadata)?;
+                                    enc_start = ack_len;
+                                    ack_len = append_to_slice(&mut ack, ack_len, metadata)?;
 
                                     let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(
                                         noise_es_ee_se_hk_psk.as_bytes(),
                                     ));
                                     gcm.reset_init_gcm(&reply_message_nonce);
                                     gcm.aad(&noise_h_next);
-                                    gcm.crypt_in_place(&mut reply_buffer[enc_start..reply_len]);
-                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, &gcm.finish_encrypt())?;
+                                    gcm.crypt_in_place(&mut ack[enc_start..ack_len]);
+                                    ack_len = append_to_slice(&mut ack, ack_len, &gcm.finish_encrypt())?;
 
                                     let mtu = state.physical_mtu;
 
@@ -952,14 +950,14 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         state.current_key = 0;
                                         state.current_offer = Offer::NoiseXKAck(Box::new(OutgoingSessionAck {
                                             last_retry_time: AtomicI64::new(current_time),
-                                            ack: reply_buffer,
-                                            ack_size: reply_len,
+                                            ack,
+                                            ack_len,
                                         }));
                                     }
 
                                     send_with_fragmentation(
                                         |b| send(Some(&session), b),
-                                        &mut reply_buffer[..reply_len],
+                                        &mut ack[..ack_len],
                                         mtu,
                                         PACKET_TYPE_ALICE_NOISE_XK_ACK,
                                         Some(bob_session_id),
@@ -1575,7 +1573,7 @@ impl SessionKey {
             rekey_at_counter: current_counter.checked_add(Application::REKEY_AFTER_USES).unwrap(),
             expire_at_counter: current_counter.checked_add(Application::EXPIRE_AFTER_USES).unwrap(),
             ratchet_count,
-            initiate_rekey: bob,
+            my_turn_to_rekey: bob,
             confirmed,
         }
     }
