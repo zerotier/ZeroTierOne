@@ -80,3 +80,22 @@ trigger:
   - tag
   - custom
 type: docker
+---
+clone:
+  depth: 1
+kind: pipeline
+name: sid mips64le build
+pull: always
+steps:
+- commands:
+  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
+    084037375216.dkr.ecr.us-east-2.amazonaws.com
+  - ./ci/scripts/build.sh sid mips64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: build
+trigger:
+  event:
+  - push
+  - tag
+  - custom
+type: docker
