@@ -82,16 +82,10 @@ pub fn run(include_dirs: &[PathBuf]) {
         .header_contents("includes.h", INCLUDES);
 
     for include_dir in include_dirs {
-        builder = builder
-            .clang_arg("-I")
-            .clang_arg(include_dir.display().to_string());
+        builder = builder.clang_arg("-I").clang_arg(include_dir.display().to_string());
     }
 
-    builder
-        .generate()
-        .unwrap()
-        .write_to_file(out_dir.join("bindgen.rs"))
-        .unwrap();
+    builder.generate().unwrap().write_to_file(out_dir.join("bindgen.rs")).unwrap();
 }
 
 #[derive(Debug)]

@@ -1,9 +1,8 @@
-
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use libc::c_int;
 
-use crate::error::{ErrorStack, cvt};
+use crate::error::{cvt, ErrorStack};
 
 /// Fill buffer with cryptographically strong pseudo-random bytes.
 fn rand_bytes(buf: &mut [u8]) -> Result<(), ErrorStack> {
@@ -12,7 +11,6 @@ fn rand_bytes(buf: &mut [u8]) -> Result<(), ErrorStack> {
         cvt(ffi::RAND_bytes(buf.as_mut_ptr(), buf.len() as c_int)).map(|_| ())
     }
 }
-
 
 pub fn next_u32_secure() -> u32 {
     unsafe {

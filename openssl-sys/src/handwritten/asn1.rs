@@ -32,12 +32,7 @@ extern "C" {
     pub fn ASN1_GENERALIZEDTIME_print(b: *mut BIO, tm: *const ASN1_GENERALIZEDTIME) -> c_int;
     pub fn ASN1_TIME_new() -> *mut ASN1_TIME;
     #[cfg(ossl102)]
-    pub fn ASN1_TIME_diff(
-        pday: *mut c_int,
-        psec: *mut c_int,
-        from: *const ASN1_TIME,
-        to: *const ASN1_TIME,
-    ) -> c_int;
+    pub fn ASN1_TIME_diff(pday: *mut c_int, psec: *mut c_int, from: *const ASN1_TIME, to: *const ASN1_TIME) -> c_int;
     pub fn ASN1_TIME_free(tm: *mut ASN1_TIME);
     pub fn ASN1_TIME_print(b: *mut BIO, tm: *const ASN1_TIME) -> c_int;
     pub fn ASN1_TIME_set(from: *mut ASN1_TIME, to: time_t) -> *mut ASN1_TIME;

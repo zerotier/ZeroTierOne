@@ -133,17 +133,7 @@ pub const X509_V_FLAG_NO_ALT_CHAINS: c_ulong = 0x100000;
 #[cfg(ossl110)]
 pub const X509_V_FLAG_NO_CHECK_TIME: c_ulong = 0x200000;
 
-pub unsafe fn X509_LOOKUP_add_dir(
-    ctx: *mut X509_LOOKUP,
-    name: *const c_char,
-    _type: c_int,
-) -> c_int {
+pub unsafe fn X509_LOOKUP_add_dir(ctx: *mut X509_LOOKUP, name: *const c_char, _type: c_int) -> c_int {
     const X509_L_ADD_DIR: c_int = 2;
-    X509_LOOKUP_ctrl(
-        ctx,
-        X509_L_ADD_DIR,
-        name,
-        _type as c_long,
-        std::ptr::null_mut(),
-    )
+    X509_LOOKUP_ctrl(ctx, X509_L_ADD_DIR, name, _type as c_long, std::ptr::null_mut())
 }

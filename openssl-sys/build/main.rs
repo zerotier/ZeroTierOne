@@ -1,8 +1,4 @@
-#![allow(
-    clippy::inconsistent_digit_grouping,
-    clippy::uninlined_format_args,
-    clippy::unusual_byte_groupings
-)]
+#![allow(clippy::inconsistent_digit_grouping, clippy::uninlined_format_args, clippy::unusual_byte_groupings)]
 
 extern crate autocfg;
 #[cfg(feature = "bindgen")]
@@ -87,17 +83,11 @@ fn main() {
         panic!("OpenSSL library directory does not exist: {:?}", lib_dirs);
     }
     if !Path::new(&include_dir).exists() {
-        panic!(
-            "OpenSSL include directory does not exist: {}",
-            include_dir.to_string_lossy()
-        );
+        panic!("OpenSSL include directory does not exist: {}", include_dir.to_string_lossy());
     }
 
     for lib_dir in lib_dirs.iter() {
-        println!(
-            "cargo:rustc-link-search=native={}",
-            lib_dir.to_string_lossy()
-        );
+        println!("cargo:rustc-link-search=native={}", lib_dir.to_string_lossy());
     }
     println!("cargo:include={}", include_dir.to_string_lossy());
 
@@ -391,11 +381,9 @@ fn determine_mode(libdirs: &[PathBuf], libs: &[&str]) -> &'static str {
     let can_static = libs
         .iter()
         .all(|l| files.contains(&format!("lib{}.a", l)) || files.contains(&format!("{}.lib", l)));
-    let can_dylib = libs.iter().all(|l| {
-        files.contains(&format!("lib{}.so", l))
-            || files.contains(&format!("{}.dll", l))
-            || files.contains(&format!("lib{}.dylib", l))
-    });
+    let can_dylib = libs
+        .iter()
+        .all(|l| files.contains(&format!("lib{}.so", l)) || files.contains(&format!("{}.dll", l)) || files.contains(&format!("lib{}.dylib", l)));
     match (can_static, can_dylib) {
         (true, false) => return "static",
         (false, true) => return "dylib",
