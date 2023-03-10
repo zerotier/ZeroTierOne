@@ -56,9 +56,7 @@ extern "C" {
     fn CCCryptorGCMReset(cryptor_ref: *mut c_void) -> i32;
 }
 
-
-
-pub struct AesGcm<const ENCRYPT: bool> (*mut c_void);
+pub struct AesGcm<const ENCRYPT: bool>(*mut c_void);
 
 impl<const ENCRYPT: bool> Drop for AesGcm<ENCRYPT> {
     #[inline(always)]
@@ -69,7 +67,10 @@ impl<const ENCRYPT: bool> Drop for AesGcm<ENCRYPT> {
 
 impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
     pub fn new<const KEY_SIZE: usize>(k: &Secret<KEY_SIZE>) -> Self {
-        debug_assert!(KEY_SIZE == 32 || KEY_SIZE == 24 || KEY_SIZE == 16, "AES supports 128, 192, or 256 bits keys");
+        debug_assert!(
+            KEY_SIZE == 32 || KEY_SIZE == 24 || KEY_SIZE == 16,
+            "AES supports 128, 192, or 256 bits keys"
+        );
         unsafe {
             let mut ptr: *mut c_void = null_mut();
             assert_eq!(
@@ -154,7 +155,6 @@ impl<const ENCRYPT: bool> AesGcm<ENCRYPT> {
         }
         tag
     }
-
 }
 
 impl AesGcm<true> {
@@ -172,8 +172,6 @@ impl AesGcm<false> {
     }
 }
 
-
-
 pub struct Aes(Mutex<*mut c_void>, Mutex<*mut c_void>);
 
 impl Drop for Aes {
@@ -189,7 +187,10 @@ impl Drop for Aes {
 impl Aes {
     pub fn new<const KEY_SIZE: usize>(k: &Secret<KEY_SIZE>) -> Self {
         unsafe {
-            debug_assert!(KEY_SIZE == 32 || KEY_SIZE == 24 || KEY_SIZE == 16, "AES supports 128, 192, or 256 bits keys");
+            debug_assert!(
+                KEY_SIZE == 32 || KEY_SIZE == 24 || KEY_SIZE == 16,
+                "AES supports 128, 192, or 256 bits keys"
+            );
             let aes: Self = std::mem::zeroed();
             assert_eq!(
                 CCCryptorCreateWithMode(
@@ -234,7 +235,8 @@ impl Aes {
         assert_eq!(data.len(), 16);
         unsafe {
             let mut data_out_written = 0;
-            CCCryptorUpdate(*self.0.lock().unwrap(), data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+            let e = self.0.lock().unwrap();
+            CCCryptorUpdate(*e, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
         }
     }
 
@@ -243,7 +245,8 @@ impl Aes {
         assert_eq!(data.len(), 16);
         unsafe {
             let mut data_out_written = 0;
-            CCCryptorUpdate(*self.1.lock().unwrap(), data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
+            let d = self.1.lock().unwrap();
+            CCCryptorUpdate(*d, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
         }
     }
 }
