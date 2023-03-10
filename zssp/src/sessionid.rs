@@ -10,7 +10,6 @@ use std::fmt::Display;
 use std::num::NonZeroU64;
 
 use zerotier_crypto::random;
-use zerotier_utils::memory::{array_range, as_byte_array};
 
 /// 48-bit session ID (most significant 16 bits of u64 are unused)
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
@@ -25,6 +24,7 @@ impl SessionId {
     pub const MAX: u64 = 0xffffffffffff;
 
     /// Create a new session ID, panicing if 'i' is zero or exceeds MAX.
+    #[inline(always)]
     pub fn new(i: u64) -> SessionId {
         assert!(i <= Self::MAX);
         Self(NonZeroU64::new(i.to_le()).unwrap())
@@ -35,22 +35,23 @@ impl SessionId {
         Self(NonZeroU64::new(((random::xorshift64_random() % (Self::MAX - 1)) + 1).to_le()).unwrap())
     }
 
-    pub(crate) fn new_from_bytes(b: &[u8; Self::SIZE]) -> Option<SessionId> {
-        let mut tmp = [0u8; 8];
+    #[inline(always)]
+    pub fn to_bytes(&self) -> [u8; Self::SIZE] {
+        self.0.get().to_ne_bytes()[..Self::SIZE].try_into().unwrap()
+    }
+
+    #[inline(always)]
+    pub fn new_from_bytes(b: &[u8]) -> Option<SessionId> {
+        let mut tmp = 0u64.to_ne_bytes();
         tmp[..SESSION_ID_SIZE_BYTES].copy_from_slice(b);
-        Self::new_from_u64_le(u64::from_ne_bytes(tmp))
+        NonZeroU64::new(u64::from_ne_bytes(tmp)).map(|i| Self(i))
     }
 
-    /// Create from a u64 that is already in little-endian byte order.
     #[inline(always)]
-    pub(crate) fn new_from_u64_le(i: u64) -> Option<SessionId> {
-        NonZeroU64::new(i & Self::MAX.to_le()).map(|i| Self(i))
-    }
-
-    /// Get this session ID as a little-endian byte array.
-    #[inline(always)]
-    pub(crate) fn as_bytes(&self) -> &[u8; Self::SIZE] {
-        array_range::<u8, 8, 0, SESSION_ID_SIZE_BYTES>(as_byte_array(&self.0))
+    pub fn new_from_array(b: &[u8; Self::SIZE]) -> Option<SessionId> {
+        let mut tmp = 0u64.to_ne_bytes();
+        tmp[..SESSION_ID_SIZE_BYTES].copy_from_slice(b);
+        NonZeroU64::new(u64::from_ne_bytes(tmp)).map(|i| Self(i))
     }
 }
 
