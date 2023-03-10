@@ -6,9 +6,8 @@ use std::hash::Hash;
 use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::InetAddress;
-use zerotier_network_hypervisor::vl2::networkconfig::IpRoute;
 use zerotier_network_hypervisor::vl2::rule::Rule;
-use zerotier_network_hypervisor::vl2::NetworkId;
+use zerotier_network_hypervisor::vl2::{IpRoute, NetworkId};
 
 use crate::database::Database;
 use crate::model::Member;

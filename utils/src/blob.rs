@@ -7,6 +7,7 @@
  */
 
 use std::fmt::Debug;
+use std::hash::Hash;
 
 use serde::ser::SerializeTuple;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -72,6 +73,27 @@ impl<const L: usize> ToString for Blob<L> {
     }
 }
 
+impl<const L: usize> PartialOrd for Blob<L> {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.0.partial_cmp(&other.0)
+    }
+}
+
+impl<const L: usize> Ord for Blob<L> {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl<const L: usize> Hash for Blob<L> {
+    #[inline(always)]
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
+    }
+}
+
 impl<const L: usize> Debug for Blob<L> {
     #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -118,7 +140,7 @@ impl<'de, const L: usize> serde::de::Visitor<'de> for BlobVisitor<L> {
 
 impl<'de, const L: usize> Deserialize<'de> for Blob<L> {
     #[inline]
-    fn deserialize<D>(deserializer: D) -> Result<Blob<L>, D::Error>
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {

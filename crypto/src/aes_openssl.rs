@@ -125,6 +125,7 @@ impl Aes {
         let ptr = data.as_mut_ptr();
         unsafe { self.0.update::<true>(data, ptr).unwrap() }
     }
+
     /// Do not ever encrypt the same plaintext twice. Make sure data is always different between calls.
     #[inline(always)]
     pub fn decrypt_block_in_place(&self, data: &mut [u8]) {

@@ -13,9 +13,8 @@ use zerotier_crypto::secure_eq;
 use zerotier_crypto::typestate::Valid;
 
 use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress};
-use zerotier_network_hypervisor::vl2::networkconfig::IpRoute;
 use zerotier_network_hypervisor::vl2::rule::Rule;
-use zerotier_network_hypervisor::vl2::NetworkId;
+use zerotier_network_hypervisor::vl2::{IpRoute, NetworkId};
 
 use zerotier_utils::futures_util::{Stream, StreamExt};
 use zerotier_utils::tokio;

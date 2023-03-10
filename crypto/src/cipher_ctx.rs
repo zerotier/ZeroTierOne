@@ -109,6 +109,7 @@ impl CipherCtxRef {
     }
 
     /// Sets the authentication tag for verification during decryption.
+    #[allow(unused)]
     pub fn set_tag(&self, tag: &[u8]) -> Result<(), ErrorStack> {
         unsafe {
             cvt(ffi::EVP_CIPHER_CTX_ctrl(

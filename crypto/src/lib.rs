@@ -14,10 +14,13 @@ pub mod salsa;
 pub mod typestate;
 pub mod x25519;
 
+#[cfg(target_os = "macos")]
 pub mod aes_fruity;
-pub mod aes_openssl;
 #[cfg(target_os = "macos")]
 pub use aes_fruity as aes;
+
+#[cfg(not(target_os = "macos"))]
+pub mod aes_openssl;
 #[cfg(not(target_os = "macos"))]
 pub use aes_openssl as aes;
 

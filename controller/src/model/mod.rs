@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::{Address, Endpoint};
-use zerotier_network_hypervisor::vl2::networkconfig::NetworkConfig;
+use zerotier_network_hypervisor::vl2::v1::networkconfig::NetworkConfig;
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 
