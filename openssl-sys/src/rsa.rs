@@ -54,22 +54,11 @@ cfg_if! {
 
 #[cfg(any(ossl102, libressl310))]
 pub unsafe fn EVP_PKEY_CTX_set_rsa_oaep_md(ctx: *mut EVP_PKEY_CTX, md: *mut EVP_MD) -> c_int {
-    EVP_PKEY_CTX_ctrl(
-        ctx,
-        EVP_PKEY_RSA,
-        EVP_PKEY_OP_TYPE_CRYPT,
-        EVP_PKEY_CTRL_RSA_OAEP_MD,
-        0,
-        md as *mut c_void,
-    )
+    EVP_PKEY_CTX_ctrl(ctx, EVP_PKEY_RSA, EVP_PKEY_OP_TYPE_CRYPT, EVP_PKEY_CTRL_RSA_OAEP_MD, 0, md as *mut c_void)
 }
 
 #[cfg(any(ossl102, libressl310))]
-pub unsafe fn EVP_PKEY_CTX_set0_rsa_oaep_label(
-    ctx: *mut EVP_PKEY_CTX,
-    label: *mut c_void,
-    len: c_int,
-) -> c_int {
+pub unsafe fn EVP_PKEY_CTX_set0_rsa_oaep_label(ctx: *mut EVP_PKEY_CTX, label: *mut c_void, len: c_int) -> c_int {
     EVP_PKEY_CTX_ctrl(
         ctx,
         EVP_PKEY_RSA,

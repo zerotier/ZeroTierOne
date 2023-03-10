@@ -1,10 +1,8 @@
-
 use std::ptr;
 
-use foreign_types::{ForeignType, foreign_type, ForeignTypeRef};
-use crate::bn::{BigNumContext, BigNumRef, BigNumContextRef};
-use crate::error::{ErrorStack, cvt_p, cvt, cvt_n};
-
+use crate::bn::{BigNumContext, BigNumContextRef, BigNumRef};
+use crate::error::{cvt, cvt_n, cvt_p, ErrorStack};
+use foreign_types::{foreign_type, ForeignType, ForeignTypeRef};
 
 foreign_type! {
     #[derive(Clone)]
@@ -52,62 +50,31 @@ impl EcKey {
     pub fn generate(group: &EcGroupRef) -> Result<EcKey, ErrorStack> {
         unsafe {
             cvt_p(ffi::EC_KEY_new())
-            .map(|p| EcKey::from_ptr(p))
-            .and_then(|key| {
-                cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
-            })
-            .and_then(|key| cvt(ffi::EC_KEY_generate_key(key.as_ptr())).map(|_| key))
+                .map(|p| EcKey::from_ptr(p))
+                .and_then(|key| cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key))
+                .and_then(|key| cvt(ffi::EC_KEY_generate_key(key.as_ptr())).map(|_| key))
         }
     }
     /// Constructs an `EcKey` from the specified group with the associated [`EcPoint`]: `public_key`.
     ///
     /// This will only have the associated `public_key`.
-    pub fn from_public_key(
-        group: &EcGroupRef,
-        public_key: &EcPointRef,
-    ) -> Result<EcKey, ErrorStack> {
+    pub fn from_public_key(group: &EcGroupRef, public_key: &EcPointRef) -> Result<EcKey, ErrorStack> {
         unsafe {
             cvt_p(ffi::EC_KEY_new())
-            .map(|p| EcKey::from_ptr(p))
-            .and_then(|key| {
-                cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
-            })
-            .and_then(|key| {
-                cvt(ffi::EC_KEY_set_public_key(
-                    key.as_ptr(),
-                    public_key.as_ptr(),
-                ))
-                .map(|_| key)
-            })
+                .map(|p| EcKey::from_ptr(p))
+                .and_then(|key| cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key))
+                .and_then(|key| cvt(ffi::EC_KEY_set_public_key(key.as_ptr(), public_key.as_ptr())).map(|_| key))
         }
     }
 
     /// Constructs an public/private key pair given a curve, a private key and a public key point.
-    pub fn from_private_components(
-        group: &EcGroupRef,
-        private_number: &BigNumRef,
-        public_key: &EcPointRef,
-    ) -> Result<EcKey, ErrorStack> {
+    pub fn from_private_components(group: &EcGroupRef, private_number: &BigNumRef, public_key: &EcPointRef) -> Result<EcKey, ErrorStack> {
         unsafe {
             cvt_p(ffi::EC_KEY_new())
-            .map(|p| EcKey::from_ptr(p))
-            .and_then(|key| {
-                cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key)
-            })
-            .and_then(|key| {
-                cvt(ffi::EC_KEY_set_private_key(
-                    key.as_ptr(),
-                    private_number.as_ptr(),
-                ))
-                .map(|_| key)
-            })
-            .and_then(|key| {
-                cvt(ffi::EC_KEY_set_public_key(
-                    key.as_ptr(),
-                    public_key.as_ptr(),
-                ))
-                .map(|_| key)
-            })
+                .map(|p| EcKey::from_ptr(p))
+                .and_then(|key| cvt(ffi::EC_KEY_set_group(key.as_ptr(), group.as_ptr())).map(|_| key))
+                .and_then(|key| cvt(ffi::EC_KEY_set_private_key(key.as_ptr(), private_number.as_ptr())).map(|_| key))
+                .and_then(|key| cvt(ffi::EC_KEY_set_public_key(key.as_ptr(), public_key.as_ptr())).map(|_| key))
         }
     }
 }
@@ -118,11 +85,7 @@ impl EcPoint {
         unsafe { cvt_p(ffi::EC_POINT_new(group.as_ptr())).map(|x| EcPoint::from_ptr(x)) }
     }
     /// Creates point from a binary representation
-    pub fn from_bytes(
-        group: &EcGroupRef,
-        buf: &[u8],
-        ctx: &mut BigNumContext,
-    ) -> Result<EcPoint, ErrorStack> {
+    pub fn from_bytes(group: &EcGroupRef, buf: &[u8], ctx: &mut BigNumContext) -> Result<EcPoint, ErrorStack> {
         let point = EcPoint::new(group)?;
         unsafe {
             cvt(ffi::EC_POINT_oct2point(
@@ -139,33 +102,14 @@ impl EcPoint {
 
 impl EcPointRef {
     /// Serializes the point to a binary representation.
-    pub fn to_bytes(
-        &self,
-        group: &EcGroupRef,
-        form: ffi::point_conversion_form_t,
-        ctx: &BigNumContextRef,
-    ) -> Result<Vec<u8>, ErrorStack> {
+    pub fn to_bytes(&self, group: &EcGroupRef, form: ffi::point_conversion_form_t, ctx: &BigNumContextRef) -> Result<Vec<u8>, ErrorStack> {
         unsafe {
-            let len = ffi::EC_POINT_point2oct(
-                group.as_ptr(),
-                self.as_ptr(),
-                form,
-                ptr::null_mut(),
-                0,
-                ctx.as_ptr(),
-            );
+            let len = ffi::EC_POINT_point2oct(group.as_ptr(), self.as_ptr(), form, ptr::null_mut(), 0, ctx.as_ptr());
             if len == 0 {
                 return Err(ErrorStack::get());
             }
             let mut buf = vec![0; len];
-            let len = ffi::EC_POINT_point2oct(
-                group.as_ptr(),
-                self.as_ptr(),
-                form,
-                buf.as_mut_ptr(),
-                len,
-                ctx.as_ptr(),
-            );
+            let len = ffi::EC_POINT_point2oct(group.as_ptr(), self.as_ptr(), form, buf.as_mut_ptr(), len, ctx.as_ptr());
             if len == 0 {
                 Err(ErrorStack::get())
             } else {
@@ -174,17 +118,9 @@ impl EcPointRef {
         }
     }
     /// Checks if point is on a given curve
-    pub fn is_on_curve(
-        &self,
-        group: &EcGroupRef,
-        ctx: &BigNumContextRef,
-    ) -> Result<bool, ErrorStack> {
+    pub fn is_on_curve(&self, group: &EcGroupRef, ctx: &BigNumContextRef) -> Result<bool, ErrorStack> {
         unsafe {
-            let res = cvt_n(ffi::EC_POINT_is_on_curve(
-                group.as_ptr(),
-                self.as_ptr(),
-                ctx.as_ptr(),
-            ))?;
+            let res = cvt_n(ffi::EC_POINT_is_on_curve(group.as_ptr(), self.as_ptr(), ctx.as_ptr()))?;
             Ok(res == 1)
         }
     }

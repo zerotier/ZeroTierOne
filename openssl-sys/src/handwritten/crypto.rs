@@ -36,9 +36,7 @@ extern "C" {
 extern "C" {
     #[cfg(not(ossl110))]
     #[link_name = "CRYPTO_set_locking_callback"]
-    pub fn CRYPTO_set_locking_callback__fixed_rust(
-        func: Option<unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int)>,
-    );
+    pub fn CRYPTO_set_locking_callback__fixed_rust(func: Option<unsafe extern "C" fn(mode: c_int, n: c_int, file: *const c_char, line: c_int)>);
 
     #[cfg(not(ossl110))]
     #[link_name = "CRYPTO_set_id_callback"]
@@ -47,13 +45,7 @@ extern "C" {
 
 extern "C" {
     #[cfg(not(ossl110))]
-    pub fn CRYPTO_add_lock(
-        pointer: *mut c_int,
-        amount: c_int,
-        type_: c_int,
-        file: *const c_char,
-        line: c_int,
-    ) -> c_int;
+    pub fn CRYPTO_add_lock(pointer: *mut c_int, amount: c_int, type_: c_int, file: *const c_char, line: c_int) -> c_int;
 }
 
 cfg_if! {

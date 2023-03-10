@@ -53,14 +53,7 @@ extern "C" {
 
     pub fn X509V3_set_nconf(ctx: *mut X509V3_CTX, conf: *mut CONF);
 
-    pub fn X509V3_set_ctx(
-        ctx: *mut X509V3_CTX,
-        issuer: *mut X509,
-        subject: *mut X509,
-        req: *mut X509_REQ,
-        crl: *mut X509_CRL,
-        flags: c_int,
-    );
+    pub fn X509V3_set_ctx(ctx: *mut X509V3_CTX, issuer: *mut X509, subject: *mut X509, req: *mut X509_REQ, crl: *mut X509_CRL, flags: c_int);
 
     pub fn X509_get1_ocsp(x: *mut X509) -> *mut stack_st_OPENSSL_STRING;
 }
@@ -81,19 +74,8 @@ extern "C" {
     pub fn X509V3_EXT_add_alias(nid_to: c_int, nid_from: c_int) -> c_int;
     pub fn X509V3_EXT_d2i(ext: *mut X509_EXTENSION) -> *mut c_void;
     pub fn X509V3_EXT_i2d(ext_nid: c_int, crit: c_int, ext: *mut c_void) -> *mut X509_EXTENSION;
-    pub fn X509V3_add1_i2d(
-        x: *mut *mut stack_st_X509_EXTENSION,
-        nid: c_int,
-        value: *mut c_void,
-        crit: c_int,
-        flags: c_ulong,
-    ) -> c_int;
-    pub fn X509V3_EXT_print(
-        out: *mut BIO,
-        ext: *mut X509_EXTENSION,
-        flag: c_ulong,
-        indent: c_int,
-    ) -> c_int;
+    pub fn X509V3_add1_i2d(x: *mut *mut stack_st_X509_EXTENSION, nid: c_int, value: *mut c_void, crit: c_int, flags: c_ulong) -> c_int;
+    pub fn X509V3_EXT_print(out: *mut BIO, ext: *mut X509_EXTENSION, flag: c_ulong, indent: c_int) -> c_int;
 
     #[cfg(ossl110)]
     pub fn X509_get_extension_flags(x: *mut X509) -> u32;

@@ -33,46 +33,12 @@ extern "C" {
     #[cfg(any(ossl110, libressl350))]
     pub fn BN_is_negative(b: *const BIGNUM) -> c_int;
 
-    pub fn BN_div(
-        dv: *mut BIGNUM,
-        rem: *mut BIGNUM,
-        a: *const BIGNUM,
-        b: *const BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
-    pub fn BN_nnmod(
-        rem: *mut BIGNUM,
-        a: *const BIGNUM,
-        m: *const BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
-    pub fn BN_mod_add(
-        r: *mut BIGNUM,
-        a: *const BIGNUM,
-        b: *const BIGNUM,
-        m: *const BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
-    pub fn BN_mod_sub(
-        r: *mut BIGNUM,
-        a: *const BIGNUM,
-        b: *const BIGNUM,
-        m: *const BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
-    pub fn BN_mod_mul(
-        r: *mut BIGNUM,
-        a: *const BIGNUM,
-        b: *const BIGNUM,
-        m: *const BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
-    pub fn BN_mod_sqr(
-        r: *mut BIGNUM,
-        a: *const BIGNUM,
-        m: *const BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
+    pub fn BN_div(dv: *mut BIGNUM, rem: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn BN_nnmod(rem: *mut BIGNUM, a: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn BN_mod_add(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn BN_mod_sub(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn BN_mod_mul(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
+    pub fn BN_mod_sqr(r: *mut BIGNUM, a: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
 
     pub fn BN_mod_word(r: *const BIGNUM, w: BN_ULONG) -> BN_ULONG;
     pub fn BN_div_word(r: *mut BIGNUM, w: BN_ULONG) -> BN_ULONG;
@@ -88,13 +54,7 @@ extern "C" {
     pub fn BN_lshift1(r: *mut BIGNUM, a: *const BIGNUM) -> c_int;
     pub fn BN_exp(r: *mut BIGNUM, a: *const BIGNUM, p: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
 
-    pub fn BN_mod_exp(
-        r: *mut BIGNUM,
-        a: *const BIGNUM,
-        p: *const BIGNUM,
-        m: *const BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> c_int;
+    pub fn BN_mod_exp(r: *mut BIGNUM, a: *const BIGNUM, p: *const BIGNUM, m: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
 
     pub fn BN_mask_bits(a: *mut BIGNUM, n: c_int) -> c_int;
     pub fn BN_rshift(r: *mut BIGNUM, a: *const BIGNUM, n: c_int) -> c_int;
@@ -104,41 +64,18 @@ extern "C" {
     pub fn BN_hex2bn(a: *mut *mut BIGNUM, s: *const c_char) -> c_int;
     pub fn BN_dec2bn(a: *mut *mut BIGNUM, s: *const c_char) -> c_int;
     pub fn BN_gcd(r: *mut BIGNUM, a: *const BIGNUM, b: *const BIGNUM, ctx: *mut BN_CTX) -> c_int;
-    pub fn BN_mod_inverse(
-        r: *mut BIGNUM,
-        a: *const BIGNUM,
-        n: *const BIGNUM,
-        ctx: *mut BN_CTX,
-    ) -> *mut BIGNUM;
+    pub fn BN_mod_inverse(r: *mut BIGNUM, a: *const BIGNUM, n: *const BIGNUM, ctx: *mut BN_CTX) -> *mut BIGNUM;
     pub fn BN_clear(bn: *mut BIGNUM);
     pub fn BN_dup(n: *const BIGNUM) -> *mut BIGNUM;
     pub fn BN_ucmp(a: *const BIGNUM, b: *const BIGNUM) -> c_int;
     pub fn BN_set_bit(a: *mut BIGNUM, n: c_int) -> c_int;
     pub fn BN_clear_bit(a: *mut BIGNUM, n: c_int) -> c_int;
 
-    pub fn BN_generate_prime_ex(
-        r: *mut BIGNUM,
-        bits: c_int,
-        safe: c_int,
-        add: *const BIGNUM,
-        rem: *const BIGNUM,
-        cb: *mut BN_GENCB,
-    ) -> c_int;
+    pub fn BN_generate_prime_ex(r: *mut BIGNUM, bits: c_int, safe: c_int, add: *const BIGNUM, rem: *const BIGNUM, cb: *mut BN_GENCB) -> c_int;
     #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
-    pub fn BN_is_prime_ex(
-        p: *const BIGNUM,
-        checks: c_int,
-        ctx: *mut BN_CTX,
-        cb: *mut BN_GENCB,
-    ) -> c_int;
+    pub fn BN_is_prime_ex(p: *const BIGNUM, checks: c_int, ctx: *mut BN_CTX, cb: *mut BN_GENCB) -> c_int;
     #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
-    pub fn BN_is_prime_fasttest_ex(
-        p: *const BIGNUM,
-        checks: c_int,
-        ctx: *mut BN_CTX,
-        do_trial_division: c_int,
-        cb: *mut BN_GENCB,
-    ) -> c_int;
+    pub fn BN_is_prime_fasttest_ex(p: *const BIGNUM, checks: c_int, ctx: *mut BN_CTX, do_trial_division: c_int, cb: *mut BN_GENCB) -> c_int;
 }
 
 cfg_if! {

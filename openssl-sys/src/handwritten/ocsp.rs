@@ -31,12 +31,7 @@ extern "C" {
         thisupd: *mut *mut ASN1_GENERALIZEDTIME,
         nextupd: *mut *mut ASN1_GENERALIZEDTIME,
     ) -> c_int;
-    pub fn OCSP_check_validity(
-        thisupd: *mut ASN1_GENERALIZEDTIME,
-        nextupd: *mut ASN1_GENERALIZEDTIME,
-        sec: c_long,
-        maxsec: c_long,
-    ) -> c_int;
+    pub fn OCSP_check_validity(thisupd: *mut ASN1_GENERALIZEDTIME, nextupd: *mut ASN1_GENERALIZEDTIME, sec: c_long, maxsec: c_long) -> c_int;
 
     pub fn OCSP_response_status(resp: *mut OCSP_RESPONSE) -> c_int;
     pub fn OCSP_response_get1_basic(resp: *mut OCSP_RESPONSE) -> *mut OCSP_BASICRESP;
@@ -56,11 +51,7 @@ const_ptr_api! {
 }
 
 extern "C" {
-    pub fn d2i_OCSP_RESPONSE(
-        a: *mut *mut OCSP_RESPONSE,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut OCSP_RESPONSE;
+    pub fn d2i_OCSP_RESPONSE(a: *mut *mut OCSP_RESPONSE, pp: *mut *const c_uchar, length: c_long) -> *mut OCSP_RESPONSE;
     pub fn OCSP_ONEREQ_free(r: *mut OCSP_ONEREQ);
     pub fn OCSP_CERTID_free(id: *mut OCSP_CERTID);
     pub fn OCSP_REQUEST_new() -> *mut OCSP_REQUEST;
@@ -74,16 +65,7 @@ const_ptr_api! {
 }
 
 extern "C" {
-    pub fn d2i_OCSP_REQUEST(
-        a: *mut *mut OCSP_REQUEST,
-        pp: *mut *const c_uchar,
-        length: c_long,
-    ) -> *mut OCSP_REQUEST;
+    pub fn d2i_OCSP_REQUEST(a: *mut *mut OCSP_REQUEST, pp: *mut *const c_uchar, length: c_long) -> *mut OCSP_REQUEST;
 
-    pub fn OCSP_basic_verify(
-        bs: *mut OCSP_BASICRESP,
-        certs: *mut stack_st_X509,
-        st: *mut X509_STORE,
-        flags: c_ulong,
-    ) -> c_int;
+    pub fn OCSP_basic_verify(bs: *mut OCSP_BASICRESP, certs: *mut stack_st_X509, st: *mut X509_STORE, flags: c_ulong) -> c_int;
 }

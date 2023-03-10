@@ -28,6 +28,7 @@ use crate::fragged::Fragged;
 use crate::proto::*;
 use crate::sessionid::SessionId;
 
+/// Number of GCM ciphers to pool for send/receive concurrency.
 const GCM_CIPHER_POOL_SIZE: usize = 4;
 
 /// Session context for local application.
@@ -139,11 +140,10 @@ struct SessionKey {
     receive_cipher_pool: [Mutex<AesGcm<false>>; GCM_CIPHER_POOL_SIZE], // Pool of reusable sending ciphers
     send_cipher_pool: [Mutex<AesGcm<true>>; GCM_CIPHER_POOL_SIZE],     // Pool of reusable receiving ciphers
     rekey_at_time: i64,                                                // Rekey at or after this time (ticks)
-    created_at_counter: u64,                                           // Counter at which session was created
     rekey_at_counter: u64,                                             // Rekey at or after this counter
     expire_at_counter: u64,                                            // Hard error when this counter value is reached or exceeded
     ratchet_count: u64,                                                // Number of rekey events
-    initiate_rekey: bool,                                              // My turn to initiate rekey next?
+    my_turn_to_rekey: bool,                                            // Was this side "Bob" in this exchange?
     confirmed: bool,                                                   // Is this key confirmed by the other side yet?
 }
 
@@ -230,7 +230,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         // Check whether we need to rekey if there is no pending offer or if the last rekey
                         // offer was before retry_cutoff (checked in the 'match' above).
                         if let Some(key) = state.keys[state.current_key].as_ref() {
-                            if key.initiate_rekey
+                            if key.my_turn_to_rekey
                                 && (current_time >= key.rekey_at_time || session.send_counter.load(Ordering::Relaxed) >= key.rekey_at_counter)
                             {
                                 drop(state);
@@ -636,27 +636,17 @@ impl<Application: ApplicationLayer> Context<Application> {
                     drop(c);
 
                     if aead_authentication_ok {
+                        // Packet fully authenticated
                         if session.update_receive_window(incoming_counter) {
                             // Update the current key to point to this key if it's newer, since having received
                             // a packet encrypted with it proves that the other side has successfully derived it
                             // as well.
-                            if state.current_key == key_index && key.confirmed {
-                                drop(state);
-                            } else {
-                                let current_key_created_at_counter = key.created_at_counter;
-
-                                drop(state);
+                            let confirmed = key.confirmed;
+                            drop(state);
+                            if !confirmed {
                                 let mut state = session.state.write().unwrap();
 
-                                if state.current_key != key_index {
-                                    if let Some(other_session_key) = state.keys[state.current_key].as_ref() {
-                                        if other_session_key.created_at_counter < current_key_created_at_counter {
-                                            state.current_key = key_index;
-                                        }
-                                    } else {
-                                        state.current_key = key_index;
-                                    }
-                                }
+                                state.current_key = key_index;
                                 state.keys[key_index].as_mut().unwrap().confirmed = true;
 
                                 // If we got a valid data packet from Bob, this means we can cancel any offers
@@ -892,90 +882,96 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 let hk = pqc_kyber::decapsulate(&pkt.bob_hk_ciphertext, outgoing_offer.alice_hk_secret.as_bytes())
                                     .map_err(|_| Error::FailedAuthentication)
                                     .map(|k| Secret(k))?;
-                                let noise_es_ee_se_hk_psk = hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                    hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                        noise_es_ee.as_bytes(),
-                                        app.get_local_s_keypair()
-                                            .agree(&bob_noise_e)
-                                            .ok_or(Error::FailedAuthentication)?
-                                            .as_bytes(),
-                                    )
-                                    .as_bytes(),
-                                    hmac_sha512_secret::<BASE_KEY_SIZE>(outgoing_offer.psk.as_bytes(), hk.as_bytes()).as_bytes(),
-                                );
+                                let noise_se = app.get_local_s_keypair().agree(&bob_noise_e).ok_or(Error::FailedAuthentication)?;
 
-                                let reply_message_nonce = create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_ACK, 2);
+                                // Packet fully authenticated
+                                if session.update_receive_window(incoming_counter) {
+                                    let noise_es_ee_se_hk_psk = hmac_sha512_secret::<BASE_KEY_SIZE>(
+                                        hmac_sha512_secret::<BASE_KEY_SIZE>(noise_es_ee.as_bytes(), noise_se.as_bytes()).as_bytes(),
+                                        hmac_sha512_secret::<BASE_KEY_SIZE>(outgoing_offer.psk.as_bytes(), hk.as_bytes()).as_bytes(),
+                                    );
 
-                                // Create reply informing Bob of our static identity now that we've verified Bob and set
-                                // up forward secrecy. Also return Bob's opaque note.
-                                let mut reply_buffer = [0u8; MAX_NOISE_HANDSHAKE_SIZE];
-                                reply_buffer[HEADER_SIZE] = SESSION_PROTOCOL_VERSION;
-                                let mut reply_len = HEADER_SIZE + 1;
+                                    let reply_message_nonce = create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_ACK, 2);
 
-                                let alice_s_public_blob = app.get_local_s_public_blob();
-                                assert!(alice_s_public_blob.len() <= (u16::MAX as usize));
-                                reply_len = append_to_slice(&mut reply_buffer, reply_len, &(alice_s_public_blob.len() as u16).to_le_bytes())?;
-                                let mut enc_start = reply_len;
-                                reply_len = append_to_slice(&mut reply_buffer, reply_len, alice_s_public_blob)?;
+                                    // Create reply informing Bob of our static identity now that we've verified Bob and set
+                                    // up forward secrecy. Also return Bob's opaque note.
+                                    let mut reply_buffer = [0u8; MAX_NOISE_HANDSHAKE_SIZE];
+                                    reply_buffer[HEADER_SIZE] = SESSION_PROTOCOL_VERSION;
+                                    let mut reply_len = HEADER_SIZE + 1;
 
-                                let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(
-                                    hmac_sha512_secret::<BASE_KEY_SIZE>(noise_es_ee.as_bytes(), hk.as_bytes()).as_bytes(),
-                                ));
-                                gcm.reset_init_gcm(&reply_message_nonce);
-                                gcm.aad(&noise_h_next);
-                                gcm.crypt_in_place(&mut reply_buffer[enc_start..reply_len]);
-                                reply_len = append_to_slice(&mut reply_buffer, reply_len, &gcm.finish_encrypt())?;
+                                    let alice_s_public_blob = app.get_local_s_public_blob();
+                                    assert!(alice_s_public_blob.len() <= (u16::MAX as usize));
+                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, &(alice_s_public_blob.len() as u16).to_le_bytes())?;
+                                    let mut enc_start = reply_len;
+                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, alice_s_public_blob)?;
 
-                                let metadata = outgoing_offer.metadata.as_ref().map_or(&[][..0], |md| md.as_slice());
+                                    let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(
+                                        hmac_sha512_secret::<BASE_KEY_SIZE>(noise_es_ee.as_bytes(), hk.as_bytes()).as_bytes(),
+                                    ));
+                                    gcm.reset_init_gcm(&reply_message_nonce);
+                                    gcm.aad(&noise_h_next);
+                                    gcm.crypt_in_place(&mut reply_buffer[enc_start..reply_len]);
+                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, &gcm.finish_encrypt())?;
 
-                                assert!(metadata.len() <= (u16::MAX as usize));
-                                reply_len = append_to_slice(&mut reply_buffer, reply_len, &(metadata.len() as u16).to_le_bytes())?;
+                                    let metadata = outgoing_offer.metadata.as_ref().map_or(&[][..0], |md| md.as_slice());
 
-                                let noise_h_next = mix_hash(
-                                    &mix_hash(&noise_h_next, &reply_buffer[HEADER_SIZE..reply_len]),
-                                    outgoing_offer.psk.as_bytes(),
-                                );
+                                    assert!(metadata.len() <= (u16::MAX as usize));
+                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, &(metadata.len() as u16).to_le_bytes())?;
 
-                                enc_start = reply_len;
-                                reply_len = append_to_slice(&mut reply_buffer, reply_len, metadata)?;
+                                    let noise_h_next = mix_hash(
+                                        &mix_hash(&noise_h_next, &reply_buffer[HEADER_SIZE..reply_len]),
+                                        outgoing_offer.psk.as_bytes(),
+                                    );
 
-                                let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(
-                                    noise_es_ee_se_hk_psk.as_bytes(),
-                                ));
-                                gcm.reset_init_gcm(&reply_message_nonce);
-                                gcm.aad(&noise_h_next);
-                                gcm.crypt_in_place(&mut reply_buffer[enc_start..reply_len]);
-                                reply_len = append_to_slice(&mut reply_buffer, reply_len, &gcm.finish_encrypt())?;
+                                    enc_start = reply_len;
+                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, metadata)?;
 
-                                let mtu = state.physical_mtu;
+                                    let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(
+                                        noise_es_ee_se_hk_psk.as_bytes(),
+                                    ));
+                                    gcm.reset_init_gcm(&reply_message_nonce);
+                                    gcm.aad(&noise_h_next);
+                                    gcm.crypt_in_place(&mut reply_buffer[enc_start..reply_len]);
+                                    reply_len = append_to_slice(&mut reply_buffer, reply_len, &gcm.finish_encrypt())?;
 
-                                drop(state);
-                                {
-                                    let mut state = session.state.write().unwrap();
-                                    let _ = state.remote_session_id.insert(bob_session_id);
-                                    let _ =
-                                        state.keys[0].insert(SessionKey::new::<Application>(noise_es_ee_se_hk_psk, 1, current_time, 2, false, false));
-                                    debug_assert!(state.keys[1].is_none());
-                                    state.current_key = 0;
-                                    state.current_offer = Offer::NoiseXKAck(Box::new(OutgoingSessionAck {
-                                        last_retry_time: AtomicI64::new(current_time),
-                                        ack: reply_buffer,
-                                        ack_size: reply_len,
-                                    }));
+                                    let mtu = state.physical_mtu;
+
+                                    drop(state);
+                                    {
+                                        let mut state = session.state.write().unwrap();
+                                        let _ = state.remote_session_id.insert(bob_session_id);
+                                        let _ = state.keys[0].insert(SessionKey::new::<Application>(
+                                            noise_es_ee_se_hk_psk,
+                                            1,
+                                            current_time,
+                                            2,
+                                            false,
+                                            false,
+                                        ));
+                                        debug_assert!(state.keys[1].is_none());
+                                        state.current_key = 0;
+                                        state.current_offer = Offer::NoiseXKAck(Box::new(OutgoingSessionAck {
+                                            last_retry_time: AtomicI64::new(current_time),
+                                            ack: reply_buffer,
+                                            ack_size: reply_len,
+                                        }));
+                                    }
+
+                                    send_with_fragmentation(
+                                        |b| send(Some(&session), b),
+                                        &mut reply_buffer[..reply_len],
+                                        mtu,
+                                        PACKET_TYPE_ALICE_NOISE_XK_ACK,
+                                        Some(bob_session_id),
+                                        0,
+                                        2,
+                                        Some(&session.header_protection_cipher),
+                                    )?;
+
+                                    return Ok(ReceiveResult::Ok(Some(session)));
+                                } else {
+                                    return Err(Error::OutOfSequence);
                                 }
-
-                                send_with_fragmentation(
-                                    |b| send(Some(&session), b),
-                                    &mut reply_buffer[..reply_len],
-                                    mtu,
-                                    PACKET_TYPE_ALICE_NOISE_XK_ACK,
-                                    Some(bob_session_id),
-                                    0,
-                                    2,
-                                    Some(&session.header_protection_cipher),
-                                )?;
-
-                                return Ok(ReceiveResult::Ok(Some(session)));
                             } else {
                                 return Err(Error::InvalidPacket);
                             }
@@ -1067,7 +1063,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             id: incoming.bob_session_id,
                             application_data,
                             send_counter: AtomicU64::new(2), // 1 was already used during negotiation
-                            receive_window: std::array::from_fn(|_| AtomicU64::new(0)),
+                            receive_window: std::array::from_fn(|_| AtomicU64::new(incoming_counter)),
                             header_protection_cipher: Aes::new(&incoming.header_protection_key),
                             state: RwLock::new(State {
                                 physical_mtu: self.default_physical_mtu.load(Ordering::Relaxed),
@@ -1118,7 +1114,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             if let Some(key) = state.keys[key_index].as_ref() {
                                 // Only the current "Alice" accepts rekeys initiated by the current "Bob." These roles
                                 // flip with each rekey event.
-                                if !key.initiate_rekey {
+                                if !key.my_turn_to_rekey {
                                     let mut c = key.get_receive_cipher(incoming_counter);
                                     c.reset_init_gcm(&incoming_message_nonce);
                                     c.crypt_in_place(&mut pkt_assembled[RekeyInit::ENC_START..RekeyInit::AUTH_START]);
@@ -1134,52 +1130,57 @@ impl<Application: ApplicationLayer> Context<Application> {
                                                 bob_e_secret.agree(&alice_e).ok_or(Error::FailedAuthentication)?.as_bytes(),
                                             );
 
-                                            let mut reply_buf = [0u8; RekeyAck::SIZE];
-                                            let reply: &mut RekeyAck = byte_array_as_proto_buffer_mut(&mut reply_buf).unwrap();
-                                            reply.session_protocol_version = SESSION_PROTOCOL_VERSION;
-                                            reply.bob_e = *bob_e_secret.public_key_bytes();
-                                            reply.next_key_fingerprint = SHA384::hash(next_session_key.as_bytes());
+                                            // Packet fully authenticated
+                                            if session.update_receive_window(incoming_counter) {
+                                                let mut reply_buf = [0u8; RekeyAck::SIZE];
+                                                let reply: &mut RekeyAck = byte_array_as_proto_buffer_mut(&mut reply_buf).unwrap();
+                                                reply.session_protocol_version = SESSION_PROTOCOL_VERSION;
+                                                reply.bob_e = *bob_e_secret.public_key_bytes();
+                                                reply.next_key_fingerprint = SHA384::hash(next_session_key.as_bytes());
 
-                                            let counter = session.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?.get();
-                                            set_packet_header(
-                                                &mut reply_buf,
-                                                1,
-                                                0,
-                                                PACKET_TYPE_REKEY_ACK,
-                                                u64::from(remote_session_id),
-                                                state.current_key,
-                                                counter,
-                                            );
+                                                let counter = session.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?.get();
+                                                set_packet_header(
+                                                    &mut reply_buf,
+                                                    1,
+                                                    0,
+                                                    PACKET_TYPE_REKEY_ACK,
+                                                    u64::from(remote_session_id),
+                                                    state.current_key,
+                                                    counter,
+                                                );
 
-                                            let mut c = key.get_send_cipher(counter)?;
-                                            c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_REKEY_ACK, counter));
-                                            c.crypt_in_place(&mut reply_buf[RekeyAck::ENC_START..RekeyAck::AUTH_START]);
-                                            reply_buf[RekeyAck::AUTH_START..].copy_from_slice(&c.finish_encrypt());
-                                            drop(c);
+                                                let mut c = key.get_send_cipher(counter)?;
+                                                c.reset_init_gcm(&create_message_nonce(PACKET_TYPE_REKEY_ACK, counter));
+                                                c.crypt_in_place(&mut reply_buf[RekeyAck::ENC_START..RekeyAck::AUTH_START]);
+                                                reply_buf[RekeyAck::AUTH_START..].copy_from_slice(&c.finish_encrypt());
+                                                drop(c);
 
-                                            session
-                                                .header_protection_cipher
-                                                .encrypt_block_in_place(&mut reply_buf[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
-                                            send(Some(&session), &mut reply_buf);
+                                                session
+                                                    .header_protection_cipher
+                                                    .encrypt_block_in_place(&mut reply_buf[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
+                                                send(Some(&session), &mut reply_buf);
 
-                                            // The new "Bob" doesn't know yet if Alice has received the new key, so the
-                                            // new key is recorded as the "alt" (key_index ^ 1) but the current key is
-                                            // not advanced yet. This happens automatically the first time we receive a
-                                            // valid packet with the new key.
-                                            let next_ratchet_count = key.ratchet_count + 1;
-                                            drop(state);
-                                            let mut state = session.state.write().unwrap();
-                                            let _ = state.keys[key_index ^ 1].replace(SessionKey::new::<Application>(
-                                                next_session_key,
-                                                next_ratchet_count,
-                                                current_time,
-                                                counter,
-                                                false,
-                                                false,
-                                            ));
+                                                // The new "Bob" doesn't know yet if Alice has received the new key, so the
+                                                // new key is recorded as the "alt" (key_index ^ 1) but the current key is
+                                                // not advanced yet. This happens automatically the first time we receive a
+                                                // valid packet with the new key.
+                                                let next_ratchet_count = key.ratchet_count + 1;
+                                                drop(state);
+                                                let mut state = session.state.write().unwrap();
+                                                let _ = state.keys[key_index ^ 1].replace(SessionKey::new::<Application>(
+                                                    next_session_key,
+                                                    next_ratchet_count,
+                                                    current_time,
+                                                    counter,
+                                                    false,
+                                                    false,
+                                                ));
 
-                                            drop(state);
-                                            return Ok(ReceiveResult::Ok(Some(session)));
+                                                drop(state);
+                                                return Ok(ReceiveResult::Ok(Some(session)));
+                                            } else {
+                                                return Err(Error::OutOfSequence);
+                                            }
                                         }
                                     }
                                     return Err(Error::FailedAuthentication);
@@ -1205,7 +1206,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         if let Offer::RekeyInit(alice_e_secret, _) = &state.current_offer {
                             if let Some(key) = state.keys[key_index].as_ref() {
                                 // Only the current "Bob" initiates rekeys and expects this ACK.
-                                if key.initiate_rekey {
+                                if key.my_turn_to_rekey {
                                     let mut c = key.get_receive_cipher(incoming_counter);
                                     c.reset_init_gcm(&incoming_message_nonce);
                                     c.crypt_in_place(&mut pkt_assembled[RekeyAck::ENC_START..RekeyAck::AUTH_START]);
@@ -1213,6 +1214,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     drop(c);
 
                                     if aead_authentication_ok {
+                                        // Packet fully authenticated
+
                                         let pkt: &RekeyAck = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
                                         if let Some(bob_e) = P384PublicKey::from_bytes(&pkt.bob_e) {
                                             let next_session_key = hmac_sha512_secret(
@@ -1221,26 +1224,30 @@ impl<Application: ApplicationLayer> Context<Application> {
                                             );
 
                                             if secure_eq(&pkt.next_key_fingerprint, &SHA384::hash(next_session_key.as_bytes())) {
-                                                // The new "Alice" knows Bob has the key since this is an ACK, so she can go
-                                                // ahead and set current_key to the new key. Then when she sends something
-                                                // to Bob the other side will automatically advance to the new key as well.
-                                                let next_ratchet_count = key.ratchet_count + 1;
-                                                drop(state);
-                                                let next_key_index = key_index ^ 1;
-                                                let mut state = session.state.write().unwrap();
-                                                let _ = state.keys[next_key_index].replace(SessionKey::new::<Application>(
-                                                    next_session_key,
-                                                    next_ratchet_count,
-                                                    current_time,
-                                                    session.send_counter.load(Ordering::Acquire),
-                                                    true,
-                                                    true,
-                                                ));
-                                                state.current_key = next_key_index; // this is an ACK so it's confirmed
-                                                state.current_offer = Offer::None;
+                                                if session.update_receive_window(incoming_counter) {
+                                                    // The new "Alice" knows Bob has the key since this is an ACK, so she can go
+                                                    // ahead and set current_key to the new key. Then when she sends something
+                                                    // to Bob the other side will automatically advance to the new key as well.
+                                                    let next_ratchet_count = key.ratchet_count + 1;
+                                                    drop(state);
+                                                    let next_key_index = key_index ^ 1;
+                                                    let mut state = session.state.write().unwrap();
+                                                    let _ = state.keys[next_key_index].replace(SessionKey::new::<Application>(
+                                                        next_session_key,
+                                                        next_ratchet_count,
+                                                        current_time,
+                                                        session.send_counter.load(Ordering::Relaxed),
+                                                        true,
+                                                        true,
+                                                    ));
+                                                    state.current_key = next_key_index; // this is an ACK so it's confirmed
+                                                    state.current_offer = Offer::None;
 
-                                                drop(state);
-                                                return Ok(ReceiveResult::Ok(Some(session)));
+                                                    drop(state);
+                                                    return Ok(ReceiveResult::Ok(Some(session)));
+                                                } else {
+                                                    return Err(Error::OutOfSequence);
+                                                }
                                             }
                                         }
                                     }
@@ -1407,13 +1414,13 @@ impl<Application: ApplicationLayer> Session<Application> {
     /// Get the next outgoing counter value.
     #[inline(always)]
     fn get_next_outgoing_counter(&self) -> Option<NonZeroU64> {
-        NonZeroU64::new(self.send_counter.fetch_add(1, Ordering::SeqCst))
+        NonZeroU64::new(self.send_counter.fetch_add(1, Ordering::Relaxed))
     }
 
     /// Check the receive window without mutating state.
     #[inline(always)]
     fn check_receive_window(&self, counter: u64) -> bool {
-        let prev_counter = self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OOO].load(Ordering::Acquire);
+        let prev_counter = self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OOO].load(Ordering::Relaxed);
         prev_counter < counter && counter.wrapping_sub(prev_counter) < COUNTER_WINDOW_MAX_SKIP_AHEAD
     }
 
@@ -1421,7 +1428,7 @@ impl<Application: ApplicationLayer> Session<Application> {
     /// This should only be called after the packet is authenticated.
     #[inline(always)]
     fn update_receive_window(&self, counter: u64) -> bool {
-        let prev_counter = self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OOO].fetch_max(counter, Ordering::AcqRel);
+        let prev_counter = self.receive_window[(counter as usize) % COUNTER_WINDOW_MAX_OOO].fetch_max(counter, Ordering::Relaxed);
         prev_counter < counter && counter.wrapping_sub(prev_counter) < COUNTER_WINDOW_MAX_SKIP_AHEAD
     }
 }
@@ -1565,7 +1572,6 @@ impl SessionKey {
                     Application::REKEY_AFTER_TIME_MS + ((random::xorshift64_random() as u32) % Application::REKEY_AFTER_TIME_MS_MAX_JITTER) as i64,
                 )
                 .unwrap(),
-            created_at_counter: current_counter,
             rekey_at_counter: current_counter.checked_add(Application::REKEY_AFTER_USES).unwrap(),
             expire_at_counter: current_counter.checked_add(Application::EXPIRE_AFTER_USES).unwrap(),
             ratchet_count,

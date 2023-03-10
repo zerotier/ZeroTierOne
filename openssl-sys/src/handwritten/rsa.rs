@@ -22,72 +22,23 @@ extern "C" {
     #[cfg(any(ossl110, libressl273))]
     pub fn RSA_set0_factors(r: *mut RSA, p: *mut BIGNUM, q: *mut BIGNUM) -> c_int;
     #[cfg(any(ossl110, libressl273))]
-    pub fn RSA_set0_crt_params(
-        r: *mut RSA,
-        dmp1: *mut BIGNUM,
-        dmq1: *mut BIGNUM,
-        iqmp: *mut BIGNUM,
-    ) -> c_int;
+    pub fn RSA_set0_crt_params(r: *mut RSA, dmp1: *mut BIGNUM, dmq1: *mut BIGNUM, iqmp: *mut BIGNUM) -> c_int;
     #[cfg(any(ossl110, libressl273))]
-    pub fn RSA_get0_key(
-        r: *const RSA,
-        n: *mut *const BIGNUM,
-        e: *mut *const BIGNUM,
-        d: *mut *const BIGNUM,
-    );
+    pub fn RSA_get0_key(r: *const RSA, n: *mut *const BIGNUM, e: *mut *const BIGNUM, d: *mut *const BIGNUM);
     #[cfg(any(ossl110, libressl273))]
     pub fn RSA_get0_factors(r: *const RSA, p: *mut *const BIGNUM, q: *mut *const BIGNUM);
     #[cfg(any(ossl110, libressl273))]
-    pub fn RSA_get0_crt_params(
-        r: *const RSA,
-        dmp1: *mut *const BIGNUM,
-        dmq1: *mut *const BIGNUM,
-        iqmp: *mut *const BIGNUM,
-    );
+    pub fn RSA_get0_crt_params(r: *const RSA, dmp1: *mut *const BIGNUM, dmq1: *mut *const BIGNUM, iqmp: *mut *const BIGNUM);
 
     #[cfg(not(ossl110))]
-    pub fn RSA_generate_key(
-        modsz: c_int,
-        e: c_ulong,
-        cb: Option<extern "C" fn(c_int, c_int, *mut c_void)>,
-        cbarg: *mut c_void,
-    ) -> *mut RSA;
+    pub fn RSA_generate_key(modsz: c_int, e: c_ulong, cb: Option<extern "C" fn(c_int, c_int, *mut c_void)>, cbarg: *mut c_void) -> *mut RSA;
 
-    pub fn RSA_generate_key_ex(
-        rsa: *mut RSA,
-        bits: c_int,
-        e: *mut BIGNUM,
-        cb: *mut BN_GENCB,
-    ) -> c_int;
+    pub fn RSA_generate_key_ex(rsa: *mut RSA, bits: c_int, e: *mut BIGNUM, cb: *mut BN_GENCB) -> c_int;
 
-    pub fn RSA_public_encrypt(
-        flen: c_int,
-        from: *const u8,
-        to: *mut u8,
-        k: *mut RSA,
-        pad: c_int,
-    ) -> c_int;
-    pub fn RSA_private_encrypt(
-        flen: c_int,
-        from: *const u8,
-        to: *mut u8,
-        k: *mut RSA,
-        pad: c_int,
-    ) -> c_int;
-    pub fn RSA_public_decrypt(
-        flen: c_int,
-        from: *const u8,
-        to: *mut u8,
-        k: *mut RSA,
-        pad: c_int,
-    ) -> c_int;
-    pub fn RSA_private_decrypt(
-        flen: c_int,
-        from: *const u8,
-        to: *mut u8,
-        k: *mut RSA,
-        pad: c_int,
-    ) -> c_int;
+    pub fn RSA_public_encrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA, pad: c_int) -> c_int;
+    pub fn RSA_private_encrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA, pad: c_int) -> c_int;
+    pub fn RSA_public_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA, pad: c_int) -> c_int;
+    pub fn RSA_private_decrypt(flen: c_int, from: *const u8, to: *mut u8, k: *mut RSA, pad: c_int) -> c_int;
     pub fn RSA_check_key(r: *const RSA) -> c_int;
     pub fn RSA_free(rsa: *mut RSA);
     pub fn RSA_up_ref(rsa: *mut RSA) -> c_int;
@@ -97,28 +48,8 @@ extern "C" {
     pub fn i2d_RSAPrivateKey(k: *const RSA, buf: *mut *mut u8) -> c_int;
     pub fn d2i_RSAPrivateKey(k: *mut *mut RSA, buf: *mut *const u8, len: c_long) -> *mut RSA;
 
-    pub fn RSA_sign(
-        t: c_int,
-        m: *const u8,
-        mlen: c_uint,
-        sig: *mut u8,
-        siglen: *mut c_uint,
-        k: *mut RSA,
-    ) -> c_int;
-    pub fn RSA_verify(
-        t: c_int,
-        m: *const u8,
-        mlen: c_uint,
-        sig: *const u8,
-        siglen: c_uint,
-        k: *mut RSA,
-    ) -> c_int;
+    pub fn RSA_sign(t: c_int, m: *const u8, mlen: c_uint, sig: *mut u8, siglen: *mut c_uint, k: *mut RSA) -> c_int;
+    pub fn RSA_verify(t: c_int, m: *const u8, mlen: c_uint, sig: *const u8, siglen: c_uint, k: *mut RSA) -> c_int;
 
-    pub fn RSA_padding_check_PKCS1_type_2(
-        to: *mut c_uchar,
-        tlen: c_int,
-        f: *const c_uchar,
-        fl: c_int,
-        rsa_len: c_int,
-    ) -> c_int;
+    pub fn RSA_padding_check_PKCS1_type_2(to: *mut c_uchar, tlen: c_int, f: *const c_uchar, fl: c_int, rsa_len: c_int) -> c_int;
 }

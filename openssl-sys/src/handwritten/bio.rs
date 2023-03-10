@@ -6,8 +6,7 @@ extern "C" {
     pub fn BIO_clear_flags(b: *mut BIO, flags: c_int);
 }
 
-pub type bio_info_cb =
-    Option<unsafe extern "C" fn(*mut BIO, c_int, *const c_char, c_int, c_long, c_long)>;
+pub type bio_info_cb = Option<unsafe extern "C" fn(*mut BIO, c_int, *const c_char, c_int, c_long, c_long)>;
 
 cfg_if! {
     if #[cfg(any(ossl110, libressl280))] {
@@ -76,16 +75,10 @@ extern "C" {
     ) -> c_int;
     #[cfg(any(ossl110, libressl273))]
     #[link_name = "BIO_meth_set_read"]
-    pub fn BIO_meth_set_read__fixed_rust(
-        biom: *mut BIO_METHOD,
-        read: Option<unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int>,
-    ) -> c_int;
+    pub fn BIO_meth_set_read__fixed_rust(biom: *mut BIO_METHOD, read: Option<unsafe extern "C" fn(*mut BIO, *mut c_char, c_int) -> c_int>) -> c_int;
     #[cfg(any(ossl110, libressl273))]
     #[link_name = "BIO_meth_set_puts"]
-    pub fn BIO_meth_set_puts__fixed_rust(
-        biom: *mut BIO_METHOD,
-        read: Option<unsafe extern "C" fn(*mut BIO, *const c_char) -> c_int>,
-    ) -> c_int;
+    pub fn BIO_meth_set_puts__fixed_rust(biom: *mut BIO_METHOD, read: Option<unsafe extern "C" fn(*mut BIO, *const c_char) -> c_int>) -> c_int;
     #[cfg(any(ossl110, libressl273))]
     #[link_name = "BIO_meth_set_ctrl"]
     pub fn BIO_meth_set_ctrl__fixed_rust(
@@ -94,14 +87,8 @@ extern "C" {
     ) -> c_int;
     #[cfg(any(ossl110, libressl273))]
     #[link_name = "BIO_meth_set_create"]
-    pub fn BIO_meth_set_create__fixed_rust(
-        biom: *mut BIO_METHOD,
-        create: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
-    ) -> c_int;
+    pub fn BIO_meth_set_create__fixed_rust(biom: *mut BIO_METHOD, create: Option<unsafe extern "C" fn(*mut BIO) -> c_int>) -> c_int;
     #[cfg(any(ossl110, libressl273))]
     #[link_name = "BIO_meth_set_destroy"]
-    pub fn BIO_meth_set_destroy__fixed_rust(
-        biom: *mut BIO_METHOD,
-        destroy: Option<unsafe extern "C" fn(*mut BIO) -> c_int>,
-    ) -> c_int;
+    pub fn BIO_meth_set_destroy__fixed_rust(biom: *mut BIO_METHOD, destroy: Option<unsafe extern "C" fn(*mut BIO) -> c_int>) -> c_int;
 }

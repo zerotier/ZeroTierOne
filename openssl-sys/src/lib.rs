@@ -91,12 +91,7 @@ mod openssl {
     static INIT: Once = Once::new();
 
     // FIXME remove
-    pub type PasswordCallback = unsafe extern "C" fn(
-        buf: *mut c_char,
-        size: c_int,
-        rwflag: c_int,
-        user_data: *mut c_void,
-    ) -> c_int;
+    pub type PasswordCallback = unsafe extern "C" fn(buf: *mut c_char, size: c_int, rwflag: c_int, user_data: *mut c_void) -> c_int;
 
     #[cfg(ossl110)]
     pub fn init() {
@@ -120,26 +115,16 @@ mod openssl {
         use std::sync::{Mutex, MutexGuard};
 
         static mut MUTEXES: *mut Vec<Mutex<()>> = 0 as *mut Vec<Mutex<()>>;
-        static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> =
-            0 as *mut Vec<Option<MutexGuard<'static, ()>>>;
+        static mut GUARDS: *mut Vec<Option<MutexGuard<'static, ()>>> = 0 as *mut Vec<Option<MutexGuard<'static, ()>>>;
 
-        unsafe extern "C" fn locking_function(
-            mode: c_int,
-            n: c_int,
-            _file: *const c_char,
-            _line: c_int,
-        ) {
+        unsafe extern "C" fn locking_function(mode: c_int, n: c_int, _file: *const c_char, _line: c_int) {
             let mutex = &(*MUTEXES)[n as usize];
 
             if mode & CRYPTO_LOCK != 0 {
                 (*GUARDS)[n as usize] = Some(mutex.lock().unwrap());
             } else {
                 if let None = (*GUARDS)[n as usize].take() {
-                    let _ = writeln!(
-                        io::stderr(),
-                        "BUG: rust-openssl lock {} already unlocked, aborting",
-                        n
-                    );
+                    let _ = writeln!(io::stderr(), "BUG: rust-openssl lock {} already unlocked, aborting", n);
                     process::abort();
                 }
             }
@@ -172,8 +157,7 @@ mod openssl {
                 mutexes.push(Mutex::new(()));
             }
             MUTEXES = mem::transmute(mutexes);
-            let guards: Box<Vec<Option<MutexGuard<()>>>> =
-                Box::new((0..num_locks).map(|_| None).collect());
+            let guards: Box<Vec<Option<MutexGuard<()>>>> = Box::new((0..num_locks).map(|_| None).collect());
             GUARDS = mem::transmute(guards);
 
             CRYPTO_set_locking_callback__fixed_rust(Some(locking_function));

@@ -1,5 +1,3 @@
-
-
 #[cfg(test)]
 mod test {
     use crate::aes::AesGcm;
