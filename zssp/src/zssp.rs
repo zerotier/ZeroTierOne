@@ -1153,12 +1153,10 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         let noise_se = bob_e_secret.agree(&session.static_public_key).ok_or(Error::FailedAuthentication)?;
                                         let noise_psk_se_ee_es = hmac_sha512_secret::<BASE_KEY_SIZE>(
                                             hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                                hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                                    key.ratchet_key.as_bytes(),
-                                                    noise_es.as_bytes(),
-                                                ).as_bytes(),
+                                                hmac_sha512_secret::<BASE_KEY_SIZE>(key.ratchet_key.as_bytes(), noise_es.as_bytes()).as_bytes(),
                                                 noise_ee.as_bytes(),
-                                            ).as_bytes(),
+                                            )
+                                            .as_bytes(),
                                             noise_se.as_bytes(),
                                         );
 
@@ -1244,7 +1242,6 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                                     let pkt: &RekeyAck = byte_array_as_proto_buffer(&pkt_assembled).unwrap();
                                     if let Some(bob_e) = P384PublicKey::from_bytes(&pkt.bob_e) {
-
                                         // Complete Noise_KKpsk0 on Alice's side.
                                         // We do not mix noise_ss for two reasons:
                                         // 1) PACKET_TYPE_REKEY_INIT does not have a payload that would require noise_ss authentication.
@@ -1254,12 +1251,10 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         let noise_se = app.get_local_s_keypair().agree(&bob_e).ok_or(Error::FailedAuthentication)?;
                                         let noise_psk_se_ee_es = hmac_sha512_secret::<BASE_KEY_SIZE>(
                                             hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                                hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                                    key.ratchet_key.as_bytes(),
-                                                    noise_es.as_bytes(),
-                                                ).as_bytes(),
+                                                hmac_sha512_secret::<BASE_KEY_SIZE>(key.ratchet_key.as_bytes(), noise_es.as_bytes()).as_bytes(),
                                                 noise_ee.as_bytes(),
-                                            ).as_bytes(),
+                                            )
+                                            .as_bytes(),
                                             noise_se.as_bytes(),
                                         );
 
