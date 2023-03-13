@@ -62,7 +62,7 @@ fn alice_main(
             },
             TEST_MTU,
             bob_app.identity_key.public_key_bytes(),
-            bob_app.identity_key.public_key(),
+            bob_app.identity_key.public_key().clone(),
             Secret::default(),
             None,
             (),
