@@ -504,14 +504,6 @@ impl InnerProtocolLayer for Controller {
         true
     }
 
-    fn has_trust_relationship(&self, id: &Valid<Identity>) -> bool {
-        self.recently_authorized
-            .read()
-            .unwrap()
-            .get(&id.fingerprint)
-            .map_or(false, |by_network| by_network.values().any(|t| *t > ms_monotonic()))
-    }
-
     fn handle_packet<HostSystemImpl: ApplicationLayer + ?Sized>(
         &self,
         host_system: &HostSystemImpl,

@@ -75,6 +75,8 @@ pub type MessageId = u64;
 
 /// ZeroTier VL1 and VL2 wire protocol message types.
 pub mod message_type {
+    // VL1: Virtual Layer 1, the peer to peer network
+
     pub const VL1_NOP: u8 = 0x00;
     pub const VL1_HELLO: u8 = 0x01;
     pub const VL1_ERROR: u8 = 0x02;
@@ -85,11 +87,18 @@ pub mod message_type {
     pub const VL1_PUSH_DIRECT_PATHS: u8 = 0x10;
     pub const VL1_USER_MESSAGE: u8 = 0x14;
 
+    // VL2: Virtual Layer 2, the virtual Ethernet network
+
     pub const VL2_MULTICAST_LIKE: u8 = 0x09;
     pub const VL2_NETWORK_CREDENTIALS: u8 = 0x0a;
     pub const VL2_NETWORK_CONFIG_REQUEST: u8 = 0x0b;
     pub const VL2_NETWORK_CONFIG: u8 = 0x0c;
     pub const VL2_MULTICAST_GATHER: u8 = 0x0d;
+
+    // DR: Data replication protocol (scatter-gather based)
+
+    pub const DR_REQUEST: u8 = 0x1e;
+    pub const DR_DATA: u8 = 0x1f;
 
     pub fn name(verb: u8) -> &'static str {
         match verb {
@@ -106,6 +115,8 @@ pub mod message_type {
             VL2_NETWORK_CONFIG_REQUEST => "VL2_NETWORK_CONFIG_REQUEST",
             VL2_NETWORK_CONFIG => "VL2_NETWORK_CONFIG",
             VL2_MULTICAST_GATHER => "VL2_MULTICAST_GATHER",
+            DR_REQUEST => "DR_REQUEST",
+            DR_DATA => "DR_DATA",
             _ => "???",
         }
     }

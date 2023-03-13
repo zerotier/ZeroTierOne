@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::io::{Read, Write};
 
 use zerotier_utils::blob::Blob;
 use zerotier_utils::flatsortedmap::FlatSortedMap;
@@ -18,6 +19,11 @@ pub struct Member<'a> {
     #[serde(skip_serializing_if = "cow_str_is_empty")]
     #[serde(default)]
     pub name: Cow<'a, str>,
+}
+
+#[allow(unused)]
+pub mod member_flag {
+    pub const BRIDGING_ALLOWED: u64 = 0x0001;
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Clone)]
@@ -43,6 +49,16 @@ pub struct Topology<'a> {
     #[serde(skip_serializing_if = "FlatSortedMap::is_empty")]
     #[serde(default)]
     pub members: FlatSortedMap<'a, Blob<IDENTITY_FINGERPRINT_SIZE>, Member<'a>>,
+}
+
+impl<'a> Topology<'a> {
+    pub fn new_from_bytes(b: &[u8]) -> Result<Self, rmp_serde::decode::Error> {
+        rmp_serde::from_slice(b)
+    }
+
+    pub fn write_bytes_to<W: Write>(&self, w: &mut W) {
+        rmp_serde::encode::write_named(w, self).unwrap()
+    }
 }
 
 #[inline(always)]

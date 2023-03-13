@@ -16,6 +16,8 @@ lz4_flex = { version = "^0", features = ["safe-encode", "safe-decode", "checked-
 serde = { version = "^1", features = ["derive"], default-features = false }
 phf = { version = "^0", features = ["macros", "std"], default-features = false }
 num-traits = "^0"
+rmp-serde = "^1"
+fastcdc = "^3"
 
 [dev-dependencies]
 rand = "*"

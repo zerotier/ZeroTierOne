@@ -137,17 +137,6 @@ pub trait InnerProtocolLayer: Sync + Send {
         true
     }
 
-    /// Check if this node has any trust relationship with the provided identity.
-    ///
-    /// This should return true if there is any special trust relationship. It controls things
-    /// like sharing of detailed P2P connectivity data, which should be limited to peers with
-    /// some privileged relationship like mutual membership in a network.
-    ///
-    /// The default implementation always returns true.
-    fn has_trust_relationship(&self, id: &Valid<Identity>) -> bool {
-        true
-    }
-
     /// Handle a packet, returning true if it was handled by the next layer.
     ///
     /// Do not attempt to handle OK or ERROR. Instead implement handle_ok() and handle_error().
