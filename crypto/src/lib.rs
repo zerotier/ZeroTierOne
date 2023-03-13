@@ -33,8 +33,11 @@ pub use aes_gmac_siv_fruity as aes_gmac_siv;
 #[cfg(not(target_os = "macos"))]
 pub use aes_gmac_siv_openssl as aes_gmac_siv;
 
-/// This must be called before using any function from this library.
-pub fn init() {
+use ctor::ctor;
+
+#[ctor]
+fn openssl_init() {
+    println!("OpenSSL init()");
     ffi::init();
 }
 
@@ -52,4 +55,5 @@ pub fn secure_eq<A: AsRef<[u8]> + ?Sized, B: AsRef<[u8]> + ?Sized>(a: &A, b: &B)
         false
     }
 }
+
 pub const ZEROES: [u8; 64] = [0_u8; 64];

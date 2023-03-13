@@ -127,11 +127,9 @@ impl CipherCtxRef {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::init;
 
     #[test]
     fn aes_128_ecb() {
-        init();
         let key = [1u8; 16];
         let ctx = CipherCtx::new().unwrap();
         unsafe {

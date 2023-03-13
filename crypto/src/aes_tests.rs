@@ -1,14 +1,12 @@
 #[cfg(test)]
 mod test {
     use crate::aes::AesGcm;
-    use crate::init;
     use crate::secret::Secret;
     use hex_literal::hex;
     use std::time::SystemTime;
 
     #[test]
     fn aes_256_gcm() {
-        init();
         let key = Secret::move_bytes([1u8; 32]);
         let mut enc = AesGcm::<true>::new(&key);
         let mut dec = AesGcm::<false>::new(&key);
