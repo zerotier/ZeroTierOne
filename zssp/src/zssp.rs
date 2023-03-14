@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicI64, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, RwLock, Weak};
 
 use zerotier_crypto::aes::{Aes, AesGcm};
-use zerotier_crypto::hash::{SHA512, hmac_sha512_secret, hmac_sha512_secret256};
+use zerotier_crypto::hash::{hmac_sha512_secret, hmac_sha512_secret256, SHA512};
 use zerotier_crypto::p384::{P384KeyPair, P384PublicKey};
 use zerotier_crypto::secret::Secret;
 use zerotier_crypto::{random, secure_eq};
@@ -935,9 +935,10 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     let mut enc_start = ack_len;
                                     ack_len = append_to_slice(&mut ack, ack_len, alice_s_public_blob)?;
 
-                                    let mut gcm = AesGcm::new(&kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(
-                                        &hmac_sha512_secret(noise_ck_es_ee.as_bytes(), hk.as_bytes()),
-                                    ));
+                                    let mut gcm = AesGcm::new(&kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(&hmac_sha512_secret(
+                                        noise_ck_es_ee.as_bytes(),
+                                        hk.as_bytes(),
+                                    )));
                                     gcm.reset_init_gcm(&reply_message_nonce);
                                     gcm.aad(&noise_h_next);
                                     gcm.crypt_in_place(&mut ack[enc_start..ack_len]);
@@ -953,9 +954,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     enc_start = ack_len;
                                     ack_len = append_to_slice(&mut ack, ack_len, metadata)?;
 
-                                    let mut gcm = AesGcm::new(&kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(
-                                        &noise_ck_es_ee_se_hk_psk,
-                                    ));
+                                    let mut gcm = AesGcm::new(&kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(&noise_ck_es_ee_se_hk_psk));
                                     gcm.reset_init_gcm(&reply_message_nonce);
                                     gcm.aad(&noise_h_next);
                                     gcm.crypt_in_place(&mut ack[enc_start..ack_len]);
@@ -1041,9 +1040,10 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                         let alice_static_public_blob = r.read_decrypt_auth(
                             alice_static_public_blob_size,
-                            kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(
-                                &hmac_sha512_secret(incoming.noise_ck_es_ee.as_bytes(), incoming.hk.as_bytes()),
-                            ),
+                            kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(&hmac_sha512_secret(
+                                incoming.noise_ck_es_ee.as_bytes(),
+                                incoming.hk.as_bytes(),
+                            )),
                             &incoming.noise_h,
                             &incoming_message_nonce,
                         )?;
@@ -1706,34 +1706,10 @@ fn mix_hash(h: &[u8; NOISE_HASHLEN], m: &[u8]) -> [u8; NOISE_HASHLEN] {
 /// These are the values we have assigned to the 5 variables involved in https://csrc.nist.gov/publications/detail/sp/800-108/final:
 /// K_in = key, i = 1u8, Label = b'Z'||b'T'||LABEL, Context = 0u8, L = 512u16 or 256u16
 fn kbkdf512<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<NOISE_HASHLEN> {
-    hmac_sha512_secret(
-        key.as_bytes(),
-        &[
-            1,
-            b'Z',
-            b'T',
-            LABEL,
-            0x00,
-            0,
-            2u8,
-            0u8,
-        ],
-    )
+    hmac_sha512_secret(key.as_bytes(), &[1, b'Z', b'T', LABEL, 0x00, 0, 2u8, 0u8])
 }
 fn kbkdf256<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<32> {
-    hmac_sha512_secret256(
-        key.as_bytes(),
-        &[
-            1,
-            b'Z',
-            b'T',
-            LABEL,
-            0x00,
-            0,
-            1u8,
-            0u8,
-        ],
-    )
+    hmac_sha512_secret256(key.as_bytes(), &[1, b'Z', b'T', LABEL, 0x00, 0, 1u8, 0u8])
 }
 
 fn prng32(mut x: u32) -> u32 {

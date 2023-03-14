@@ -27,14 +27,12 @@ pub const MAX_INIT_PAYLOAD_SIZE: usize = MAX_NOISE_HANDSHAKE_SIZE - ALICE_NOISE_
 
 /// Initial value of 'h'
 /// echo -n 'Noise_XKpsk3_P384_AESGCM_SHA512_hybridKyber1024' | shasum -a 512
-pub(crate) const INITIAL_H: [u8; SHA512_HASH_SIZE] = hex!(
-    "12ae70954e8d93bf7f73d0fe48d487155666f541e532f9461af5ef52ab90c8fd9259ef9e48f5adcf9af63f869805a570004ae095655dcaddbc226a50623b2b25"
-);
+pub(crate) const INITIAL_H: [u8; SHA512_HASH_SIZE] =
+    hex!("12ae70954e8d93bf7f73d0fe48d487155666f541e532f9461af5ef52ab90c8fd9259ef9e48f5adcf9af63f869805a570004ae095655dcaddbc226a50623b2b25");
 /// Initial value of 'h'
 /// echo -n 'Noise_KKpsk0_P384_AESGCM_SHA512' | shasum -a 512
-pub(crate) const INITIAL_H_REKEY: [u8; SHA512_HASH_SIZE] = hex!(
-    "daeedd651ac9c5173f2eaaff996beebac6f3f1bfe9a70bb1cc54fa1fb2bf46260d71a3c4fb4d4ee36f654c31773a8a15e5d5be974a0668dc7db70f4e13ed172e"
-);
+pub(crate) const INITIAL_H_REKEY: [u8; SHA512_HASH_SIZE] =
+    hex!("daeedd651ac9c5173f2eaaff996beebac6f3f1bfe9a70bb1cc54fa1fb2bf46260d71a3c4fb4d4ee36f654c31773a8a15e5d5be974a0668dc7db70f4e13ed172e");
 
 /// Version 0: Noise_XK with NIST P-384 plus Kyber1024 hybrid exchange on session init.
 pub(crate) const SESSION_PROTOCOL_VERSION: u8 = 0x00;
