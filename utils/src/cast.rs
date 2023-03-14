@@ -9,11 +9,13 @@
 use std::any::TypeId;
 use std::mem::size_of;
 
+/// Returns true if two types are in fact the same type.
 #[inline(always)]
 pub fn same_type<U: 'static, V: 'static>() -> bool {
     TypeId::of::<U>() == TypeId::of::<V>() && size_of::<U>() == size_of::<V>()
 }
 
+/// Cast a reference if the types are equal, such as from a specific type to a generic that it implements.
 #[inline(always)]
 pub fn cast_ref<U: 'static, V: 'static>(u: &U) -> Option<&V> {
     if same_type::<U, V>() {
@@ -23,6 +25,7 @@ pub fn cast_ref<U: 'static, V: 'static>(u: &U) -> Option<&V> {
     }
 }
 
+/// Cast a reference if the types are equal, such as from a specific type to a generic that it implements.
 #[inline(always)]
 pub fn cast_mut<U: 'static, V: 'static>(u: &mut U) -> Option<&mut V> {
     if same_type::<U, V>() {
