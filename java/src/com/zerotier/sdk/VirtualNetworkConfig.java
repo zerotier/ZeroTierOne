@@ -38,7 +38,7 @@ import java.util.Collections;
 
 /**
  * Virtual network configuration
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_VirtualNetworkConfig
  */
 public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
@@ -374,11 +374,11 @@ public class VirtualNetworkConfig implements Comparable<VirtualNetworkConfig> {
 
     /**
      * ZeroTier-assigned addresses (in {@link InetSocketAddress} objects)
-     *
+     * <p>
      * For IP, the port number of the sockaddr_XX structure contains the number
      * of bits in the address netmask. Only the IP address and port are used.
      * Other fields like interface number can be ignored.
-     *
+     * <p>
      * This is only used for ZeroTier-managed address assignments sent by the
      * virtual network's configuration master.
      */

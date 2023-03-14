@@ -10,7 +10,7 @@ import java.util.ArrayList;
 
 /**
  * DNS configuration to be pushed on a virtual network
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_VirtualNetworkDNS
  */
 public class VirtualNetworkDNS implements Comparable<VirtualNetworkDNS> {
@@ -45,6 +45,7 @@ public class VirtualNetworkDNS implements Comparable<VirtualNetworkDNS> {
             return false;
         }
 
+        //noinspection RedundantIfStatement
         if (!servers.equals(d.servers)) {
             return false;
         }

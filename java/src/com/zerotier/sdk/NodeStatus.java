@@ -31,7 +31,7 @@ import com.zerotier.sdk.util.StringUtils;
 
 /**
  * Current node status
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_NodeStatus
  */
 public class NodeStatus {
