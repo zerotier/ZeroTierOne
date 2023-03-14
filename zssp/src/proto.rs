@@ -9,7 +9,7 @@
 use std::mem::size_of;
 
 use pqc_kyber::{KYBER_CIPHERTEXTBYTES, KYBER_PUBLICKEYBYTES};
-use zerotier_crypto::hash::SHA384_HASH_SIZE;
+use zerotier_crypto::hash::SHA512_HASH_SIZE;
 use zerotier_crypto::p384::P384_PUBLIC_KEY_SIZE;
 
 use crate::error::Error;
@@ -26,9 +26,8 @@ pub const MAX_INIT_PAYLOAD_SIZE: usize = MAX_NOISE_HANDSHAKE_SIZE - ALICE_NOISE_
 
 /// Initial value of 'h'
 /// echo -n 'Noise_XKpsk3_P384_AESGCM_SHA384_hybridKyber1024' | shasum -a 384
-pub(crate) const INITIAL_H: [u8; SHA384_HASH_SIZE] = [
-    0x35, 0x27, 0x16, 0x62, 0x58, 0x04, 0x0c, 0x7a, 0x99, 0xa8, 0x0b, 0x49, 0xb2, 0x6b, 0x25, 0xfb, 0xf5, 0x26, 0x2a, 0x26, 0xe7, 0xb3, 0x70, 0xcb,
-    0x2c, 0x3c, 0xcb, 0x7f, 0xca, 0x20, 0x06, 0x91, 0x20, 0x55, 0x52, 0x8e, 0xd4, 0x3c, 0x97, 0xc3, 0xd5, 0x6c, 0xb4, 0x13, 0x02, 0x54, 0x83, 0x12,
+pub(crate) const INITIAL_H: [u8; SHA512_HASH_SIZE] = [
+    0xd3, 0x18, 0x1c, 0xee, 0x05, 0x8d, 0x35, 0x06, 0x22, 0xcd, 0xfc, 0x46, 0x82, 0x2a, 0x60, 0x81, 0xf5, 0xe0, 0x47, 0x65, 0x57, 0x66, 0x53, 0x17, 0x95, 0xae, 0x33, 0x3c, 0x90, 0x83, 0x3b, 0xbf, 0x7f, 0x5e, 0xd7, 0x3d, 0x03, 0x39, 0x10, 0x03, 0x29, 0xfd, 0x2d, 0x59, 0xa0, 0x99, 0x56, 0x63, 0x18, 0x2d, 0x63, 0xb7, 0x8d, 0xd1, 0x7a, 0x2c, 0xf7, 0x92, 0x16, 0xdd, 0xfa, 0xf1, 0x05, 0x37,
 ];
 
 /// Version 0: Noise_XK with NIST P-384 plus Kyber1024 hybrid exchange on session init.
@@ -65,7 +64,7 @@ pub(crate) const MAX_NOISE_HANDSHAKE_FRAGMENTS: usize = 16; // enough room for p
 pub(crate) const MAX_NOISE_HANDSHAKE_SIZE: usize = MAX_NOISE_HANDSHAKE_FRAGMENTS * MIN_TRANSPORT_MTU;
 
 /// Size of keys used during derivation, mixing, etc. process.
-pub(crate) const BASE_KEY_SIZE: usize = 64;
+pub(crate) const NOISE_HASHLEN: usize = SHA512_HASH_SIZE;
 
 pub(crate) const AES_256_KEY_SIZE: usize = 32;
 pub(crate) const AES_HEADER_PROTECTION_KEY_SIZE: usize = 16;
@@ -160,14 +159,14 @@ pub(crate) struct RekeyAck {
     pub session_protocol_version: u8,
     // -- start AES-GCM encrypted portion (using current key)
     pub bob_e: [u8; P384_PUBLIC_KEY_SIZE],
-    pub next_key_fingerprint: [u8; SHA384_HASH_SIZE], // SHA384(next secret)
+    pub next_key_fingerprint: [u8; SHA512_HASH_SIZE], // SHA384(next secret)
     // -- end AES-GCM encrypted portion
     pub gcm_tag: [u8; AES_GCM_TAG_SIZE],
 }
 
 impl RekeyAck {
     pub const ENC_START: usize = HEADER_SIZE + 1;
-    pub const AUTH_START: usize = Self::ENC_START + P384_PUBLIC_KEY_SIZE + SHA384_HASH_SIZE;
+    pub const AUTH_START: usize = Self::ENC_START + P384_PUBLIC_KEY_SIZE + SHA512_HASH_SIZE;
     pub const SIZE: usize = Self::AUTH_START + AES_GCM_TAG_SIZE;
 }
 

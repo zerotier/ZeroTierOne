@@ -276,12 +276,10 @@ pub fn hmac_sha512_into(key: &[u8], msg: &[u8], md: &mut [u8]) {
     hm.finish_into(md);
 }
 
-pub fn hmac_sha512_secret<const C: usize>(key: &[u8], msg: &[u8]) -> Secret<C> {
-    debug_assert!(C <= HMAC_SHA512_SIZE);
+pub fn hmac_sha512_secret(key: &[u8], msg: &[u8]) -> Secret<HMAC_SHA512_SIZE> {
     let mut hm = HMACSHA512::new(key);
     hm.update(msg);
-    let buff = hm.finish();
-    unsafe { Secret::from_bytes(&buff[..C]) }
+    Secret::move_bytes(hm.finish())
 }
 
 #[inline(always)]
