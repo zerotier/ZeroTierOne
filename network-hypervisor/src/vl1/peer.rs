@@ -385,10 +385,6 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
     ///
     /// If explicit_endpoint is not None the packet will be sent directly to this endpoint.
     /// Otherwise it will be sent via the best direct or indirect path known.
-    ///
-    /// Unlike other messages HELLO is sent partially in the clear and always with the long-lived
-    /// static identity key. Authentication in old versions is via Poly1305 and in new versions
-    /// via HMAC-SHA512.
     pub(crate) fn send_hello(&self, app: &Application, node: &Node<Application>, explicit_endpoint: Option<&Endpoint>) -> bool {
         let mut path = None;
         let destination = if let Some(explicit_endpoint) = explicit_endpoint {
@@ -415,7 +411,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
                 f.0.dest = self.identity.address.to_bytes();
                 f.0.src = node.identity.address.to_bytes();
                 f.0.flags_cipher_hops = v1::CIPHER_NOCRYPT_POLY1305;
-                f.1.verb = message_type::VL1_HELLO | v1::VERB_FLAG_EXTENDED_AUTHENTICATION;
+                f.1.verb = message_type::VL1_HELLO;
                 f.1.version_proto = PROTOCOL_VERSION;
                 f.1.version_major = VERSION_MAJOR;
                 f.1.version_minor = VERSION_MINOR;
@@ -498,7 +494,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
             };
 
             if let Ok(mut verb) = payload.u8_at(0) {
-                if (verb & v1::VERB_FLAG_COMPRESSED) != 0 {
+                if (verb & MESSAGE_FLAG_COMPRESSED) != 0 {
                     let mut decompressed_payload = [0u8; v1::SIZE_MAX];
                     decompressed_payload[0] = verb;
                     if let Ok(dlen) = lz4_flex::block::decompress_into(&payload.as_bytes()[1..], &mut decompressed_payload[1..]) {
@@ -523,7 +519,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
                     }
                 }
 
-                verb &= v1::VERB_MASK; // mask off flags
+                verb &= MESSAGE_TYPE_MASK; // mask off flags
                 debug_event!(
                     app,
                     "[vl1] #{:0>16x} decrypted and authenticated, verb: {} ({:0>2x})",
@@ -891,7 +887,7 @@ fn v1_proto_try_aead_decrypt(
                 if cipher == v1::CIPHER_SALSA2012_POLY1305 {
                     salsa.crypt_in_place(payload.as_bytes_mut());
                     Some(message_id)
-                } else if (payload.u8_at(0).unwrap_or(0) & v1::VERB_MASK) == message_type::VL1_HELLO {
+                } else if (payload.u8_at(0).unwrap_or(0) & MESSAGE_TYPE_MASK) == message_type::VL1_HELLO {
                     Some(message_id)
                 } else {
                     // SECURITY: fail if there is no encryption and the message is not HELLO. No other types are allowed

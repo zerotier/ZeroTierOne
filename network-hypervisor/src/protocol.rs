@@ -12,8 +12,6 @@ use zerotier_crypto::aes_gmac_siv::AesGmacSiv;
 use zerotier_crypto::hash::hmac_sha384;
 use zerotier_crypto::secret::Secret;
 
-use self::v1::VERB_FLAG_COMPRESSED;
-
 /*
  * Legacy V1 protocol versions:
  *
@@ -95,11 +93,6 @@ pub mod message_type {
     pub const VL2_NETWORK_CONFIG: u8 = 0x0c;
     pub const VL2_MULTICAST_GATHER: u8 = 0x0d;
 
-    // DR: Data replication protocol (scatter-gather based)
-
-    pub const DR_REQUEST: u8 = 0x1e;
-    pub const DR_DATA: u8 = 0x1f;
-
     pub fn name(verb: u8) -> &'static str {
         match verb {
             VL1_NOP => "VL1_NOP",
@@ -115,12 +108,16 @@ pub mod message_type {
             VL2_NETWORK_CONFIG_REQUEST => "VL2_NETWORK_CONFIG_REQUEST",
             VL2_NETWORK_CONFIG => "VL2_NETWORK_CONFIG",
             VL2_MULTICAST_GATHER => "VL2_MULTICAST_GATHER",
-            DR_REQUEST => "DR_REQUEST",
-            DR_DATA => "DR_DATA",
             _ => "???",
         }
     }
 }
+
+/// Verb (inner) flag indicating that the packet's payload (after the verb) is LZ4 compressed.
+pub const MESSAGE_FLAG_COMPRESSED: u8 = 0x80;
+
+/// Mask to get only the verb from the verb + verb flags byte.
+pub const MESSAGE_TYPE_MASK: u8 = 0x1f;
 
 /// Default maximum payload size for UDP transport.
 ///
@@ -212,18 +209,6 @@ pub mod v1 {
     /// Byte found at FRAGMENT_INDICATOR_INDEX to indicate a fragment.
     pub const FRAGMENT_INDICATOR: u8 = 0xff;
 
-    /// Verb (inner) flag indicating that the packet's payload (after the verb) is LZ4 compressed.
-    pub const VERB_FLAG_COMPRESSED: u8 = 0x80;
-
-    /// Verb (inner) flag indicating that payload is authenticated with HMAC-SHA384.
-    pub const VERB_FLAG_EXTENDED_AUTHENTICATION: u8 = 0x40;
-
-    /// Mask to get only the verb from the verb + verb flags byte.
-    pub const VERB_MASK: u8 = 0x1f;
-
-    /// Maximum number of verbs that the protocol can support.
-    pub const VERB_MAX_COUNT: usize = 32;
-
     /// Header (outer) flag indicating that this packet has additional fragments.
     pub const HEADER_FLAG_FRAGMENTED: u8 = 0x40;
 
@@ -255,30 +240,6 @@ pub mod v1 {
 
     /// Maximum number of hops to allow.
     pub const FORWARD_MAX_HOPS: u8 = 3;
-
-    /// Attempt to compress a packet's payload with LZ4
-    ///
-    /// If this returns true the destination buffer will contain a compressed packet. If false is
-    /// returned the contents of 'dest' are entirely undefined. This indicates that the data was not
-    /// compressable or some other error occurred.
-    pub fn compress_packet<const S: usize>(src: &[u8], dest: &mut Buffer<S>) -> bool {
-        if src.len() > (VERB_INDEX + 16) {
-            let compressed_data_size = {
-                let d = unsafe { dest.entire_buffer_mut() };
-                d[..VERB_INDEX].copy_from_slice(&src[..VERB_INDEX]);
-                d[VERB_INDEX] = src[VERB_INDEX] | VERB_FLAG_COMPRESSED;
-                lz4_flex::block::compress_into(&src[VERB_INDEX + 1..], &mut d[VERB_INDEX + 1..])
-            };
-            if compressed_data_size.is_ok() {
-                let compressed_data_size = compressed_data_size.unwrap();
-                if compressed_data_size > 0 && compressed_data_size < (src.len() - VERB_INDEX) {
-                    unsafe { dest.set_size_unchecked(VERB_INDEX + 1 + compressed_data_size) };
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
     /// Set header flag indicating that a packet is fragmented.
     ///
@@ -545,7 +506,7 @@ pub fn compress(payload: &mut [u8]) -> usize {
         let mut tmp = [0u8; 65536];
         if let Ok(mut compressed_size) = lz4_flex::block::compress_into(&payload[1..], &mut tmp) {
             if compressed_size < (payload.len() - 1) {
-                payload[0] |= VERB_FLAG_COMPRESSED;
+                payload[0] |= MESSAGE_FLAG_COMPRESSED;
                 payload[1..(1 + compressed_size)].copy_from_slice(&tmp[..compressed_size]);
                 return 1 + compressed_size;
             }
