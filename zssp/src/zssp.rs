@@ -1703,7 +1703,7 @@ fn mix_hash(h: &[u8; NOISE_HASHLEN], m: &[u8]) -> [u8; NOISE_HASHLEN] {
 
 /// HMAC-SHA512 key derivation based on: https://csrc.nist.gov/publications/detail/sp/800-108/final (page 7)
 /// Cryptographically this isn't meaningfully different from HMAC(key, [label]) but this is how NIST rolls.
-/// These are the values we have assigned to the 5 variables involved in https://csrc.nist.gov/publications/detail/sp/800-108/final:
+/// These are the values we have assigned to the 5 variables involved in their KDF:
 /// K_in = key, i = 1u8, Label = b'Z'||b'T'||LABEL, Context = 0u8, L = 512u16 or 256u16
 fn kbkdf512<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<NOISE_HASHLEN> {
     hmac_sha512_secret(key.as_bytes(), &[1, b'Z', b'T', LABEL, 0x00, 0, 2u8, 0u8])
