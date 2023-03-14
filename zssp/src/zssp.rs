@@ -15,7 +15,7 @@ use std::sync::atomic::{AtomicI64, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, RwLock, Weak};
 
 use zerotier_crypto::aes::{Aes, AesGcm};
-use zerotier_crypto::hash::{SHA512, hmac_sha512_secret};
+use zerotier_crypto::hash::{SHA512, hmac_sha512_secret, hmac_sha512_secret256};
 use zerotier_crypto::p384::{P384KeyPair, P384PublicKey};
 use zerotier_crypto::secret::Secret;
 use zerotier_crypto::{random, secure_eq};
@@ -1157,9 +1157,13 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         let noise_es = app.get_local_s_keypair().agree(&alice_e).ok_or(Error::FailedAuthentication)?;
                                         let noise_ee = bob_e_secret.agree(&alice_e).ok_or(Error::FailedAuthentication)?;
                                         let noise_se = bob_e_secret.agree(&session.static_public_key).ok_or(Error::FailedAuthentication)?;
-                                        let noise_psk_se_ee_es = hmac_sha512_secret(
+                                        let noise_ck_psk_es_ee_se = hmac_sha512_secret(
                                             hmac_sha512_secret(
-                                                hmac_sha512_secret(key.ratchet_key.as_bytes(), noise_es.as_bytes()).as_bytes(),
+                                                hmac_sha512_secret(
+                                                    hmac_sha512_secret(&INITIAL_H_REKEY, key.ratchet_key.as_bytes()).as_bytes(),
+                                                    noise_es.as_bytes(),
+                                                )
+                                                .as_bytes(),
                                                 noise_ee.as_bytes(),
                                             )
                                             .as_bytes(),
@@ -1172,7 +1176,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                             let reply: &mut RekeyAck = byte_array_as_proto_buffer_mut(&mut reply_buf).unwrap();
                                             reply.session_protocol_version = SESSION_PROTOCOL_VERSION;
                                             reply.bob_e = *bob_e_secret.public_key_bytes();
-                                            reply.next_key_fingerprint = SHA512::hash(noise_psk_se_ee_es.as_bytes());
+                                            reply.next_key_fingerprint = SHA512::hash(noise_ck_psk_es_ee_se.as_bytes());
 
                                             let counter = session.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?.get();
                                             set_packet_header(
@@ -1204,7 +1208,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                             drop(state);
                                             let mut state = session.state.write().unwrap();
                                             let _ = state.keys[key_index ^ 1].replace(SessionKey::new::<Application>(
-                                                noise_psk_se_ee_es,
+                                                noise_ck_psk_es_ee_se,
                                                 next_ratchet_count,
                                                 current_time,
                                                 counter,
@@ -1255,9 +1259,13 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         let noise_es = alice_e_secret.agree(&session.static_public_key).ok_or(Error::FailedAuthentication)?;
                                         let noise_ee = alice_e_secret.agree(&bob_e).ok_or(Error::FailedAuthentication)?;
                                         let noise_se = app.get_local_s_keypair().agree(&bob_e).ok_or(Error::FailedAuthentication)?;
-                                        let noise_psk_se_ee_es = hmac_sha512_secret(
+                                        let noise_ck_psk_es_ee_se = hmac_sha512_secret(
                                             hmac_sha512_secret(
-                                                hmac_sha512_secret(key.ratchet_key.as_bytes(), noise_es.as_bytes()).as_bytes(),
+                                                hmac_sha512_secret(
+                                                    hmac_sha512_secret(&INITIAL_H_REKEY, key.ratchet_key.as_bytes()).as_bytes(),
+                                                    noise_es.as_bytes(),
+                                                )
+                                                .as_bytes(),
                                                 noise_ee.as_bytes(),
                                             )
                                             .as_bytes(),
@@ -1266,7 +1274,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                                         // We need to check that the key Bob is acknowledging matches the latest sent offer.
                                         // Because of OOO, it might not, in which case this rekey must be cancelled and retried.
-                                        if secure_eq(&pkt.next_key_fingerprint, &SHA512::hash(noise_psk_se_ee_es.as_bytes())) {
+                                        if secure_eq(&pkt.next_key_fingerprint, &SHA512::hash(noise_ck_psk_es_ee_se.as_bytes())) {
                                             if session.update_receive_window(incoming_counter) {
                                                 // The new "Alice" knows Bob has the key since this is an ACK, so she can go
                                                 // ahead and set current_key to the new key. Then when she sends something
@@ -1276,7 +1284,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                                 let next_key_index = key_index ^ 1;
                                                 let mut state = session.state.write().unwrap();
                                                 let _ = state.keys[next_key_index].replace(SessionKey::new::<Application>(
-                                                    noise_psk_se_ee_es,
+                                                    noise_ck_psk_es_ee_se,
                                                     next_ratchet_count,
                                                     current_time,
                                                     session.send_counter.load(Ordering::Relaxed),
@@ -1696,7 +1704,7 @@ fn mix_hash(h: &[u8; NOISE_HASHLEN], m: &[u8]) -> [u8; NOISE_HASHLEN] {
 /// HMAC-SHA512 key derivation based on: https://csrc.nist.gov/publications/detail/sp/800-108/final (page 7)
 /// Cryptographically this isn't meaningfully different from HMAC(key, [label]) but this is how NIST rolls.
 /// These are the values we have assigned to the 5 variables involved in https://csrc.nist.gov/publications/detail/sp/800-108/final:
-/// K_in = key, i = 0x01, Label = 'Z'||'T'||LABEL, Context = 0x00, L = 512 or 256 as a u16
+/// K_in = key, i = 1u8, Label = b'Z'||b'T'||LABEL, Context = 0u8, L = 512u16 or 256u16
 fn kbkdf512<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<NOISE_HASHLEN> {
     hmac_sha512_secret(
         key.as_bytes(),
@@ -1713,7 +1721,7 @@ fn kbkdf512<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<NOISE_HASHLE
     )
 }
 fn kbkdf256<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<32> {
-    hmac_sha512_secret(
+    hmac_sha512_secret256(
         key.as_bytes(),
         &[
             1,
@@ -1725,7 +1733,7 @@ fn kbkdf256<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<32> {
             1u8,
             0u8,
         ],
-    ).first_n_clone()
+    )
 }
 
 fn prng32(mut x: u32) -> u32 {

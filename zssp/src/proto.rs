@@ -8,6 +8,7 @@
 
 use std::mem::size_of;
 
+use hex_literal::hex;
 use pqc_kyber::{KYBER_CIPHERTEXTBYTES, KYBER_PUBLICKEYBYTES};
 use zerotier_crypto::hash::SHA512_HASH_SIZE;
 use zerotier_crypto::p384::P384_PUBLIC_KEY_SIZE;
@@ -25,10 +26,11 @@ pub const MIN_TRANSPORT_MTU: usize = 128;
 pub const MAX_INIT_PAYLOAD_SIZE: usize = MAX_NOISE_HANDSHAKE_SIZE - ALICE_NOISE_XK_ACK_MIN_SIZE;
 
 /// Initial value of 'h'
-/// echo -n 'Noise_XKpsk3_P384_AESGCM_SHA384_hybridKyber1024' | shasum -a 384
-pub(crate) const INITIAL_H: [u8; SHA512_HASH_SIZE] = [
-    0xd3, 0x18, 0x1c, 0xee, 0x05, 0x8d, 0x35, 0x06, 0x22, 0xcd, 0xfc, 0x46, 0x82, 0x2a, 0x60, 0x81, 0xf5, 0xe0, 0x47, 0x65, 0x57, 0x66, 0x53, 0x17, 0x95, 0xae, 0x33, 0x3c, 0x90, 0x83, 0x3b, 0xbf, 0x7f, 0x5e, 0xd7, 0x3d, 0x03, 0x39, 0x10, 0x03, 0x29, 0xfd, 0x2d, 0x59, 0xa0, 0x99, 0x56, 0x63, 0x18, 0x2d, 0x63, 0xb7, 0x8d, 0xd1, 0x7a, 0x2c, 0xf7, 0x92, 0x16, 0xdd, 0xfa, 0xf1, 0x05, 0x37,
-];
+/// echo -n 'Noise_XKpsk3_P384_AESGCM_SHA512_hybridKyber1024' | shasum -a 512
+pub(crate) const INITIAL_H: [u8; SHA512_HASH_SIZE] = hex!("12ae70954e8d93bf7f73d0fe48d487155666f541e532f9461af5ef52ab90c8fd9259ef9e48f5adcf9af63f869805a570004ae095655dcaddbc226a50623b2b25");
+/// Initial value of 'h'
+/// echo -n 'Noise_KKpsk0_P384_AESGCM_SHA512' | shasum -a 512
+pub(crate) const INITIAL_H_REKEY: [u8; SHA512_HASH_SIZE] = hex!("daeedd651ac9c5173f2eaaff996beebac6f3f1bfe9a70bb1cc54fa1fb2bf46260d71a3c4fb4d4ee36f654c31773a8a15e5d5be974a0668dc7db70f4e13ed172e");
 
 /// Version 0: Noise_XK with NIST P-384 plus Kyber1024 hybrid exchange on session init.
 pub(crate) const SESSION_PROTOCOL_VERSION: u8 = 0x00;
