@@ -33,36 +33,3 @@ impl<const FREQ: i64> IntervalGate<FREQ> {
         }
     }
 }
-
-/*
-/// Boolean rate limiter with atomic semantics.
-#[repr(transparent)]
-pub struct AtomicIntervalGate<const FREQ: i64>(AtomicI64);
-
-impl<const FREQ: i64> Default for AtomicIntervalGate<FREQ> {
-    #[inline(always)]
-    fn default() -> Self {
-        Self(AtomicI64::new(crate::util::NEVER_HAPPENED_TICKS))
-    }
-}
-
-impl<const FREQ: i64> AtomicIntervalGate<FREQ> {
-    #[inline(always)]
-    #[allow(unused)]
-    pub fn new(initial_ts: i64) -> Self {
-        Self(AtomicI64::new(initial_ts))
-    }
-
-    #[inline(always)]
-    #[allow(unused)]
-    pub fn gate(&self, mut time: i64) -> bool {
-        let prev_time = self.0.load(Ordering::Acquire);
-        if (time - prev_time) < FREQ {
-            false
-        } else {
-            self.0.store(time, Ordering::Release);
-            true
-        }
-    }
-}
-*/

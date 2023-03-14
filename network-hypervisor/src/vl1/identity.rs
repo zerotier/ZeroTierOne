@@ -16,10 +16,11 @@ use zerotier_crypto::x25519::*;
 use zerotier_crypto::{hash::*, secure_eq};
 
 use zerotier_utils::arrayvec::ArrayVec;
+use zerotier_utils::base64;
 use zerotier_utils::buffer::Buffer;
 use zerotier_utils::error::{InvalidFormatError, InvalidParameterError};
+use zerotier_utils::hex;
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
-use zerotier_utils::{base64_decode_url_nopad, base64_encode_url_nopad, hex};
 
 use crate::protocol::{ADDRESS_SIZE, ADDRESS_SIZE_STRING, IDENTITY_POW_THRESHOLD};
 use crate::vl1::Address;
@@ -492,7 +493,7 @@ impl Identity {
                 &p384.ecdsa_self_signature,
                 &p384.ed25519_self_signature,
             );
-            s.push_str(base64_encode_url_nopad(&p384_joined).as_str());
+            s.push_str(base64::encode_url_nopad(&p384_joined).as_str());
             if self.secret.is_some() && include_private {
                 let secret = self.secret.as_ref().unwrap();
                 if secret.p384.is_some() {
@@ -502,7 +503,7 @@ impl Identity {
                         p384_secret.ecdsa.secret_key_bytes().as_bytes(),
                     );
                     s.push(':');
-                    s.push_str(base64_encode_url_nopad(&p384_secret_joined).as_str());
+                    s.push_str(base64::encode_url_nopad(&p384_secret_joined).as_str());
                 }
             }
         }
@@ -586,8 +587,8 @@ impl FromStr for Identity {
         let keys = [
             hex::from_string(keys[0].unwrap_or("")),
             hex::from_string(keys[1].unwrap_or("")),
-            base64_decode_url_nopad(keys[2].unwrap_or("")).unwrap_or_else(|| Vec::new()),
-            base64_decode_url_nopad(keys[3].unwrap_or("")).unwrap_or_else(|| Vec::new()),
+            base64::decode_url_nopad(keys[2].unwrap_or("")).unwrap_or_else(|| Vec::new()),
+            base64::decode_url_nopad(keys[3].unwrap_or("")).unwrap_or_else(|| Vec::new()),
         ];
         if keys[0].len() != C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE {
             return Err(InvalidFormatError);

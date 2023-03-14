@@ -17,6 +17,7 @@ use zerotier_network_hypervisor::vl2::v1::Revocation;
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 use zerotier_utils::buffer::OutOfBoundsError;
+use zerotier_utils::cast::cast_ref;
 use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio;
@@ -139,62 +140,56 @@ impl Controller {
     }
 
     /// Compose and send network configuration packet (either V1 or V2)
-    fn send_network_config(
+    fn send_network_config<Application: ApplicationLayer + ?Sized>(
         &self,
-        peer: &Peer,
+        app: &Application,
+        node: &Node<Application>,
+        peer: &Peer<Application>,
         config: &NetworkConfig,
         in_re_message_id: Option<u64>, // None for unsolicited push
     ) {
-        if let Some(host_system) = self.service.read().unwrap().upgrade() {
-            peer.send(
-                host_system.as_ref(),
-                host_system.node(),
-                None,
-                ms_monotonic(),
-                |packet| -> Result<(), OutOfBoundsError> {
-                    let payload_start = packet.len();
+        peer.send(app, node, None, ms_monotonic(), |packet| -> Result<(), OutOfBoundsError> {
+            let payload_start = packet.len();
 
-                    if let Some(in_re_message_id) = in_re_message_id {
-                        let ok_header = packet.append_struct_get_mut::<protocol::OkHeader>()?;
-                        ok_header.verb = protocol::message_type::VL1_OK;
-                        ok_header.in_re_verb = protocol::message_type::VL2_NETWORK_CONFIG_REQUEST;
-                        ok_header.in_re_message_id = in_re_message_id.to_be_bytes();
-                    } else {
-                        packet.append_u8(protocol::message_type::VL2_NETWORK_CONFIG)?;
-                    }
+            if let Some(in_re_message_id) = in_re_message_id {
+                let ok_header = packet.append_struct_get_mut::<protocol::OkHeader>()?;
+                ok_header.verb = protocol::message_type::VL1_OK;
+                ok_header.in_re_verb = protocol::message_type::VL2_NETWORK_CONFIG_REQUEST;
+                ok_header.in_re_message_id = in_re_message_id.to_be_bytes();
+            } else {
+                packet.append_u8(protocol::message_type::VL2_NETWORK_CONFIG)?;
+            }
 
-                    if peer.is_v2() {
-                        todo!()
-                    } else {
-                        let config_data = if let Some(config_dict) = config.v1_proto_to_dictionary(&self.local_identity) {
-                            config_dict.to_bytes()
-                        } else {
-                            eprintln!("WARNING: unexpected error serializing network config into V1 format dictionary");
-                            return Err(OutOfBoundsError); // abort
-                        };
-                        if config_data.len() > (u16::MAX as usize) {
-                            eprintln!("WARNING: network config is larger than 65536 bytes!");
-                            return Err(OutOfBoundsError); // abort
-                        }
+            if peer.is_v2() {
+                todo!()
+            } else {
+                let config_data = if let Some(config_dict) = config.v1_proto_to_dictionary(&self.local_identity) {
+                    config_dict.to_bytes()
+                } else {
+                    eprintln!("WARNING: unexpected error serializing network config into V1 format dictionary");
+                    return Err(OutOfBoundsError); // abort
+                };
+                if config_data.len() > (u16::MAX as usize) {
+                    eprintln!("WARNING: network config is larger than 65536 bytes!");
+                    return Err(OutOfBoundsError); // abort
+                }
 
-                        packet.append_u64(config.network_id.into())?;
-                        packet.append_u16(config_data.len() as u16)?;
-                        packet.append_bytes(config_data.as_slice())?;
+                packet.append_u64(config.network_id.into())?;
+                packet.append_u16(config_data.len() as u16)?;
+                packet.append_bytes(config_data.as_slice())?;
 
-                        // TODO: for V1 we may need to introduce use of the chunking mechanism for large configs.
-                    }
+                // TODO: for V1 we may need to introduce use of the chunking mechanism for large configs.
+            }
 
-                    let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);
-                    packet.set_size(payload_start + new_payload_len);
+            let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);
+            packet.set_size(payload_start + new_payload_len);
 
-                    Ok(())
-                },
-            );
-        }
+            Ok(())
+        });
     }
 
     /// Send one or more revocation object(s) to a peer. The provided vector is drained.
-    fn send_revocations(&self, peer: &Peer, revocations: &mut Vec<Revocation>) {
+    fn send_revocations(&self, peer: &Peer<VL1Service<Self>>, revocations: &mut Vec<Revocation>) {
         if let Some(host_system) = self.service.read().unwrap().upgrade() {
             let time_ticks = ms_monotonic();
             while !revocations.is_empty() {
@@ -496,28 +491,12 @@ impl Controller {
 }
 
 impl InnerProtocolLayer for Controller {
-    #[inline(always)]
-    fn should_respond_to(&self, _: &Valid<Identity>) -> bool {
-        // Controllers always have to establish sessions to process requests. We don't really know if
-        // a member is relevant until we have looked up both the network and the member, since whether
-        // or not to "learn" unknown members is a network level option.
-        true
-    }
-
-    fn has_trust_relationship(&self, id: &Valid<Identity>) -> bool {
-        self.recently_authorized
-            .read()
-            .unwrap()
-            .get(&id.fingerprint)
-            .map_or(false, |by_network| by_network.values().any(|t| *t > ms_monotonic()))
-    }
-
-    fn handle_packet<HostSystemImpl: ApplicationLayer + ?Sized>(
+    fn handle_packet<Application: ApplicationLayer + ?Sized>(
         &self,
-        host_system: &HostSystemImpl,
-        _: &Node,
-        source: &Arc<Peer>,
-        source_path: &Arc<Path>,
+        app: &Application,
+        node: &Node<Application>,
+        source: &Arc<Peer<Application>>,
+        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         source_hops: u8,
         message_id: u64,
         verb: u8,
@@ -526,10 +505,6 @@ impl InnerProtocolLayer for Controller {
     ) -> PacketHandlerResult {
         match verb {
             protocol::message_type::VL2_NETWORK_CONFIG_REQUEST => {
-                if !self.should_respond_to(&source.identity) {
-                    return PacketHandlerResult::Ok; // handled and ignored
-                }
-
                 let network_id = payload.read_u64(&mut cursor);
                 if network_id.is_err() {
                     return PacketHandlerResult::Error;
@@ -541,7 +516,7 @@ impl InnerProtocolLayer for Controller {
                 let network_id = network_id.unwrap();
 
                 debug_event!(
-                    host_system,
+                    app,
                     "[vl2] NETWORK_CONFIG_REQUEST from {}({}) for {:0>16x}",
                     source.identity.address.to_string(),
                     source_path.endpoint.to_string(),
@@ -573,7 +548,8 @@ impl InnerProtocolLayer for Controller {
                         let (result, config) = match self2.authorize(&source.identity, network_id, now).await {
                             Result::Ok((result, Some(config))) => {
                                 //println!("{}", serde_yaml::to_string(&config).unwrap());
-                                self2.send_network_config(source.as_ref(), &config, Some(message_id));
+                                let app = self2.service.read().unwrap().upgrade().unwrap();
+                                self2.send_network_config(app.as_ref(), app.node(), cast_ref(source.as_ref()).unwrap(), &config, Some(message_id));
                                 (result, Some(config))
                             }
                             Result::Ok((result, None)) => (result, None),
@@ -626,23 +602,21 @@ impl InnerProtocolLayer for Controller {
             }
 
             protocol::message_type::VL2_MULTICAST_GATHER => {
-                if let Some(service) = self.service.read().unwrap().upgrade() {
-                    let auth = self.recently_authorized.read().unwrap();
-                    let time_ticks = ms_monotonic();
-                    self.multicast_authority.handle_vl2_multicast_gather(
-                        |network_id, identity| {
-                            auth.get(&identity.fingerprint)
-                                .map_or(false, |t| t.get(&network_id).map_or(false, |t| *t > time_ticks))
-                        },
-                        time_ticks,
-                        service.as_ref(),
-                        service.node(),
-                        source,
-                        message_id,
-                        payload,
-                        cursor,
-                    );
-                }
+                let auth = self.recently_authorized.read().unwrap();
+                let time_ticks = ms_monotonic();
+                self.multicast_authority.handle_vl2_multicast_gather(
+                    |network_id, identity| {
+                        auth.get(&identity.fingerprint)
+                            .map_or(false, |t| t.get(&network_id).map_or(false, |t| *t > time_ticks))
+                    },
+                    time_ticks,
+                    app,
+                    node,
+                    source,
+                    message_id,
+                    payload,
+                    cursor,
+                );
                 PacketHandlerResult::Ok
             }
 

@@ -14,7 +14,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use crate::hex;
 
-/// Fixed size byte array with Serde serializer/deserializer for sizes over 32 elements and hex to_string().
+/// Fixed size Serde serializable byte array.
+/// This makes it easier to deal with blobs larger than 32 bytes (due to serde array limitations)
 #[repr(transparent)]
 #[derive(Clone, Eq, PartialEq)]
 pub struct Blob<const L: usize>([u8; L]);

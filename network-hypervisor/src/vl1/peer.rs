@@ -24,11 +24,11 @@ use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 
-pub struct Peer {
+pub struct Peer<Application: ApplicationLayer + ?Sized> {
     pub identity: Valid<Identity>,
 
     v1_proto_static_secret: v1::SymmetricSecret,
-    paths: Mutex<Vec<PeerPath>>,
+    paths: Mutex<Vec<PeerPath<Application>>>,
 
     pub(crate) last_send_time_ticks: AtomicI64,
     pub(crate) last_receive_time_ticks: AtomicI64,
@@ -41,8 +41,8 @@ pub struct Peer {
     remote_node_info: RwLock<RemoteNodeInfo>,
 }
 
-struct PeerPath {
-    path: Weak<Path>,
+struct PeerPath<Application: ApplicationLayer + ?Sized> {
+    path: Weak<Path<Application::LocalSocket, Application::LocalInterface>>,
     last_receive_time_ticks: i64,
 }
 
@@ -53,11 +53,11 @@ struct RemoteNodeInfo {
 }
 
 /// Sort a list of paths by quality or priority, with best paths first.
-fn prioritize_paths<Application: ApplicationLayer + ?Sized>(paths: &mut Vec<PeerPath>) {
+fn prioritize_paths<Application: ApplicationLayer + ?Sized>(paths: &mut Vec<PeerPath<Application>>) {
     paths.sort_unstable_by(|a, b| a.last_receive_time_ticks.cmp(&b.last_receive_time_ticks).reverse());
 }
 
-impl Peer {
+impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
     /// Create a new peer.
     ///
     /// This only returns None if this_node_identity does not have its secrets or if some
@@ -113,7 +113,7 @@ impl Peer {
 
     /// Get current best path or None if there are no direct paths to this peer.
     #[inline]
-    pub fn direct_path(&self) -> Option<Arc<Path>> {
+    pub fn direct_path(&self) -> Option<Arc<Path<Application::LocalSocket, Application::LocalInterface>>> {
         for p in self.paths.lock().unwrap().iter() {
             let pp = p.path.upgrade();
             if pp.is_some() {
@@ -125,7 +125,7 @@ impl Peer {
 
     /// Get either the current best direct path or an indirect path via e.g. a root.
     #[inline]
-    pub fn path(&self, node: &Node) -> Option<Arc<Path>> {
+    pub fn path(&self, node: &Node<Application>) -> Option<Arc<Path<Application::LocalSocket, Application::LocalInterface>>> {
         let direct_path = self.direct_path();
         if direct_path.is_some() {
             return direct_path;
@@ -136,7 +136,7 @@ impl Peer {
         return None;
     }
 
-    fn learn_path<Application: ApplicationLayer + ?Sized>(&self, app: &Application, new_path: &Arc<Path>, time_ticks: i64) {
+    fn learn_path(&self, app: &Application, new_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>, time_ticks: i64) {
         let mut paths = self.paths.lock().unwrap();
 
         // TODO: check path filter
@@ -202,7 +202,7 @@ impl Peer {
     }
 
     /// Called every SERVICE_INTERVAL_MS by the background service loop in Node.
-    pub(crate) fn service<Application: ApplicationLayer + ?Sized>(&self, _: &Application, _: &Node, time_ticks: i64) -> bool {
+    pub(crate) fn service(&self, _: &Application, _: &Node<Application>, time_ticks: i64) -> bool {
         // Prune dead paths and sort in descending order of quality.
         {
             let mut paths = self.paths.lock().unwrap();
@@ -223,7 +223,7 @@ impl Peer {
     }
 
     /// Send a prepared and encrypted packet using the V1 protocol with fragmentation if needed.
-    fn v1_proto_internal_send<Application: ApplicationLayer + ?Sized>(
+    fn v1_proto_internal_send(
         &self,
         app: &Application,
         endpoint: &Endpoint,
@@ -281,11 +281,11 @@ impl Peer {
     /// The builder function must append the verb (with any verb flags) and packet payload. If it returns
     /// an error, the error is returned immediately and the send is aborted. None is returned if the send
     /// function itself fails for some reason such as no paths being available.
-    pub fn send<Application: ApplicationLayer + ?Sized, R, E, BuilderFunction: FnOnce(&mut PacketBuffer) -> Result<R, E>>(
+    pub fn send<R, E, BuilderFunction: FnOnce(&mut PacketBuffer) -> Result<R, E>>(
         &self,
         app: &Application,
-        node: &Node,
-        path: Option<&Arc<Path>>,
+        node: &Node<Application>,
+        path: Option<&Arc<Path<Application::LocalSocket, Application::LocalInterface>>>,
         time_ticks: i64,
         builder_function: BuilderFunction,
     ) -> Option<Result<R, E>> {
@@ -369,8 +369,8 @@ impl Peer {
             self.v1_proto_internal_send(
                 app,
                 &path.endpoint,
-                Some(path.local_socket::<Application>()),
-                Some(path.local_interface::<Application>()),
+                Some(&path.local_socket),
+                Some(&path.local_interface),
                 max_fragment_size,
                 packet,
             );
@@ -385,16 +385,7 @@ impl Peer {
     ///
     /// If explicit_endpoint is not None the packet will be sent directly to this endpoint.
     /// Otherwise it will be sent via the best direct or indirect path known.
-    ///
-    /// Unlike other messages HELLO is sent partially in the clear and always with the long-lived
-    /// static identity key. Authentication in old versions is via Poly1305 and in new versions
-    /// via HMAC-SHA512.
-    pub(crate) fn send_hello<Application: ApplicationLayer + ?Sized>(
-        &self,
-        app: &Application,
-        node: &Node,
-        explicit_endpoint: Option<&Endpoint>,
-    ) -> bool {
+    pub(crate) fn send_hello(&self, app: &Application, node: &Node<Application>, explicit_endpoint: Option<&Endpoint>) -> bool {
         let mut path = None;
         let destination = if let Some(explicit_endpoint) = explicit_endpoint {
             explicit_endpoint
@@ -420,7 +411,7 @@ impl Peer {
                 f.0.dest = self.identity.address.to_bytes();
                 f.0.src = node.identity.address.to_bytes();
                 f.0.flags_cipher_hops = v1::CIPHER_NOCRYPT_POLY1305;
-                f.1.verb = message_type::VL1_HELLO | v1::VERB_FLAG_EXTENDED_AUTHENTICATION;
+                f.1.verb = message_type::VL1_HELLO;
                 f.1.version_proto = PROTOCOL_VERSION;
                 f.1.version_major = VERSION_MAJOR;
                 f.1.version_minor = VERSION_MINOR;
@@ -454,8 +445,8 @@ impl Peer {
             self.v1_proto_internal_send(
                 app,
                 destination,
-                Some(p.local_socket::<Application>()),
-                Some(p.local_interface::<Application>()),
+                Some(&p.local_socket),
+                Some(&p.local_interface),
                 max_fragment_size,
                 packet,
             );
@@ -473,13 +464,13 @@ impl Peer {
     /// those fragments after the main packet header and first chunk.
     ///
     /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) fn v1_proto_receive<Application: ApplicationLayer + ?Sized, Inner: InnerProtocolLayer + ?Sized>(
+    pub(crate) fn v1_proto_receive<Inner: InnerProtocolLayer + ?Sized>(
         self: &Arc<Self>,
-        node: &Node,
+        node: &Node<Application>,
         app: &Application,
         inner: &Inner,
         time_ticks: i64,
-        source_path: &Arc<Path>,
+        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         packet_header: &v1::PacketHeader,
         frag0: &PacketBuffer,
         fragments: &[Option<PooledPacketBuffer>],
@@ -503,7 +494,7 @@ impl Peer {
             };
 
             if let Ok(mut verb) = payload.u8_at(0) {
-                if (verb & v1::VERB_FLAG_COMPRESSED) != 0 {
+                if (verb & MESSAGE_FLAG_COMPRESSED) != 0 {
                     let mut decompressed_payload = [0u8; v1::SIZE_MAX];
                     decompressed_payload[0] = verb;
                     if let Ok(dlen) = lz4_flex::block::decompress_into(&payload.as_bytes()[1..], &mut decompressed_payload[1..]) {
@@ -528,7 +519,7 @@ impl Peer {
                     }
                 }
 
-                verb &= v1::VERB_MASK; // mask off flags
+                verb &= MESSAGE_TYPE_MASK; // mask off flags
                 debug_event!(
                     app,
                     "[vl1] #{:0>16x} decrypted and authenticated, verb: {} ({:0>2x})",
@@ -539,7 +530,7 @@ impl Peer {
 
                 return match verb {
                     message_type::VL1_NOP => PacketHandlerResult::Ok,
-                    message_type::VL1_HELLO => self.handle_incoming_hello(app, inner, node, time_ticks, message_id, source_path, &payload),
+                    message_type::VL1_HELLO => self.handle_incoming_hello(app, node, time_ticks, message_id, source_path, &payload),
                     message_type::VL1_ERROR => {
                         self.handle_incoming_error(app, inner, node, time_ticks, source_path, packet_header.hops(), message_id, &payload)
                     }
@@ -554,9 +545,9 @@ impl Peer {
                         path_is_known,
                         &payload,
                     ),
-                    message_type::VL1_WHOIS => self.handle_incoming_whois(app, inner, node, time_ticks, message_id, &payload),
+                    message_type::VL1_WHOIS => self.handle_incoming_whois(app, node, time_ticks, message_id, &payload),
                     message_type::VL1_RENDEZVOUS => self.handle_incoming_rendezvous(app, node, time_ticks, message_id, source_path, &payload),
-                    message_type::VL1_ECHO => self.handle_incoming_echo(app, inner, node, time_ticks, message_id, &payload),
+                    message_type::VL1_ECHO => self.handle_incoming_echo(app, node, time_ticks, message_id, &payload),
                     message_type::VL1_PUSH_DIRECT_PATHS => self.handle_incoming_push_direct_paths(app, node, time_ticks, source_path, &payload),
                     message_type::VL1_USER_MESSAGE => self.handle_incoming_user_message(app, node, time_ticks, source_path, &payload),
                     _ => inner.handle_packet(app, node, self, &source_path, packet_header.hops(), message_id, verb, &payload, 1),
@@ -567,17 +558,16 @@ impl Peer {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_hello<Application: ApplicationLayer + ?Sized, Inner: InnerProtocolLayer + ?Sized>(
+    fn handle_incoming_hello(
         &self,
         app: &Application,
-        inner: &Inner,
-        node: &Node,
+        node: &Node<Application>,
         time_ticks: i64,
         message_id: MessageId,
-        source_path: &Arc<Path>,
+        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
-        if !(inner.should_respond_to(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
+        if !(app.should_respond_to(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
             debug_event!(
                 app,
                 "[vl1] dropping HELLO from {} due to lack of trust relationship",
@@ -621,13 +611,13 @@ impl Peer {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_error<Application: ApplicationLayer + ?Sized, Inner: InnerProtocolLayer + ?Sized>(
+    fn handle_incoming_error<Inner: InnerProtocolLayer + ?Sized>(
         self: &Arc<Self>,
         app: &Application,
         inner: &Inner,
-        node: &Node,
+        node: &Node<Application>,
         _time_ticks: i64,
-        source_path: &Arc<Path>,
+        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         source_hops: u8,
         message_id: u64,
         payload: &PacketBuffer,
@@ -659,13 +649,13 @@ impl Peer {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_ok<Application: ApplicationLayer + ?Sized, Inner: InnerProtocolLayer + ?Sized>(
+    fn handle_incoming_ok<Inner: InnerProtocolLayer + ?Sized>(
         self: &Arc<Self>,
         app: &Application,
         inner: &Inner,
-        node: &Node,
+        node: &Node<Application>,
         time_ticks: i64,
-        source_path: &Arc<Path>,
+        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         source_hops: u8,
         message_id: u64,
         path_is_known: bool,
@@ -761,16 +751,15 @@ impl Peer {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_whois<Application: ApplicationLayer + ?Sized, Inner: InnerProtocolLayer + ?Sized>(
+    fn handle_incoming_whois(
         self: &Arc<Self>,
         app: &Application,
-        inner: &Inner,
-        node: &Node,
+        node: &Node<Application>,
         time_ticks: i64,
         _message_id: MessageId,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
-        if node.this_node_is_root() || inner.should_respond_to(&self.identity) {
+        if node.this_node_is_root() || app.should_respond_to(&self.identity) {
             let mut addresses = payload.as_bytes();
             while addresses.len() >= ADDRESS_SIZE {
                 if !self
@@ -794,29 +783,28 @@ impl Peer {
         return PacketHandlerResult::Ok;
     }
 
-    fn handle_incoming_rendezvous<Application: ApplicationLayer + ?Sized>(
+    fn handle_incoming_rendezvous(
         self: &Arc<Self>,
         _app: &Application,
-        node: &Node,
+        node: &Node<Application>,
         _time_ticks: i64,
         _message_id: MessageId,
-        _source_path: &Arc<Path>,
+        _source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         _payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if node.is_peer_root(self) {}
         return PacketHandlerResult::Ok;
     }
 
-    fn handle_incoming_echo<Application: ApplicationLayer + ?Sized, Inner: InnerProtocolLayer + ?Sized>(
+    fn handle_incoming_echo(
         &self,
         app: &Application,
-        inner: &Inner,
-        node: &Node,
+        node: &Node<Application>,
         time_ticks: i64,
         message_id: MessageId,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
-        if inner.should_respond_to(&self.identity) || node.is_peer_root(self) {
+        if app.should_respond_to(&self.identity) || node.is_peer_root(self) {
             self.send(app, node, None, time_ticks, |packet| {
                 let mut f: &mut OkHeader = packet.append_struct_get_mut().unwrap();
                 f.verb = message_type::VL1_OK;
@@ -834,44 +822,44 @@ impl Peer {
         return PacketHandlerResult::Ok;
     }
 
-    fn handle_incoming_push_direct_paths<Application: ApplicationLayer + ?Sized>(
+    fn handle_incoming_push_direct_paths(
         self: &Arc<Self>,
         _app: &Application,
-        _node: &Node,
+        _node: &Node<Application>,
         _time_ticks: i64,
-        _source_path: &Arc<Path>,
+        _source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         _payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         PacketHandlerResult::Ok
     }
 
-    fn handle_incoming_user_message<Application: ApplicationLayer + ?Sized>(
+    fn handle_incoming_user_message(
         self: &Arc<Self>,
         _app: &Application,
-        _node: &Node,
+        _node: &Node<Application>,
         _time_ticks: i64,
-        _source_path: &Arc<Path>,
+        _source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         _payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         PacketHandlerResult::Ok
     }
 }
 
-impl Hash for Peer {
+impl<Application: ApplicationLayer + ?Sized> Hash for Peer<Application> {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         state.write_u64(self.identity.address.into());
     }
 }
 
-impl PartialEq for Peer {
+impl<Application: ApplicationLayer + ?Sized> PartialEq for Peer<Application> {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.identity.fingerprint.eq(&other.identity.fingerprint)
     }
 }
 
-impl Eq for Peer {}
+impl<Application: ApplicationLayer + ?Sized> Eq for Peer<Application> {}
 
 fn v1_proto_try_aead_decrypt(
     secret: &v1::SymmetricSecret,
@@ -899,7 +887,7 @@ fn v1_proto_try_aead_decrypt(
                 if cipher == v1::CIPHER_SALSA2012_POLY1305 {
                     salsa.crypt_in_place(payload.as_bytes_mut());
                     Some(message_id)
-                } else if (payload.u8_at(0).unwrap_or(0) & v1::VERB_MASK) == message_type::VL1_HELLO {
+                } else if (payload.u8_at(0).unwrap_or(0) & MESSAGE_TYPE_MASK) == message_type::VL1_HELLO {
                     Some(message_id)
                 } else {
                     // SECURITY: fail if there is no encryption and the message is not HELLO. No other types are allowed

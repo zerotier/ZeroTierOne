@@ -20,6 +20,11 @@ pub struct Member<'a> {
     pub name: Cow<'a, str>,
 }
 
+#[allow(unused)]
+pub mod member_flag {
+    pub const BRIDGING_ALLOWED: u64 = 0x0001;
+}
+
 #[derive(Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct Topology<'a> {
     pub timestamp: i64,

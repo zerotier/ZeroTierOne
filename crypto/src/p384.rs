@@ -1322,11 +1322,10 @@ pub use openssl_based::*;
 
 #[cfg(test)]
 mod tests {
-    use crate::{init, p384::P384KeyPair, secure_eq};
+    use crate::{p384::P384KeyPair, secure_eq};
 
     #[test]
     fn generate_sign_verify_agree() {
-        init();
         let kp = P384KeyPair::generate();
         let kp2 = P384KeyPair::generate();
 

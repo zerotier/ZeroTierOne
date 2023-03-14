@@ -7,10 +7,8 @@ use std::sync::Mutex;
 
 use crate::protocol;
 use crate::vl1::endpoint::Endpoint;
-use crate::vl1::node::*;
 
 use zerotier_crypto::random;
-use zerotier_utils::thing::Thing;
 use zerotier_utils::NEVER_HAPPENED_TICKS;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = protocol::PATH_KEEPALIVE_INTERVAL;
@@ -26,42 +24,27 @@ pub(crate) enum PathServiceResult {
 /// These are maintained in Node and canonicalized so that all unique paths have
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.
-pub struct Path {
+pub struct Path<LocalSocket, LocalInterface> {
     pub endpoint: Endpoint,
-    local_socket: Thing<64>,
-    local_interface: Thing<64>,
+    pub local_socket: LocalSocket,
+    pub local_interface: LocalInterface,
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
     fragmented_packets: Mutex<HashMap<u64, protocol::v1::FragmentedPacket, PacketIdHasher>>,
 }
 
-impl Path {
-    pub(crate) fn new<Application: ApplicationLayer + ?Sized>(
-        endpoint: Endpoint,
-        local_socket: Application::LocalSocket,
-        local_interface: Application::LocalInterface,
-        time_ticks: i64,
-    ) -> Self {
+impl<LocalSocket, LocalInterface> Path<LocalSocket, LocalInterface> {
+    pub(crate) fn new(endpoint: Endpoint, local_socket: LocalSocket, local_interface: LocalInterface, time_ticks: i64) -> Self {
         Self {
             endpoint,
-            local_socket: Thing::new(local_socket),       // enlarge Thing<> if this panics
-            local_interface: Thing::new(local_interface), // enlarge Thing<> if this panics
+            local_socket,
+            local_interface,
             last_send_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             last_receive_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             create_time_ticks: time_ticks,
             fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, PacketIdHasher(random::xorshift64_random()))),
         }
-    }
-
-    #[inline(always)]
-    pub(crate) fn local_socket<Application: ApplicationLayer + ?Sized>(&self) -> &Application::LocalSocket {
-        self.local_socket.get()
-    }
-
-    #[inline(always)]
-    pub(crate) fn local_interface<Application: ApplicationLayer + ?Sized>(&self) -> &Application::LocalInterface {
-        self.local_interface.get()
     }
 
     /// Receive a fragment and return a FragmentedPacket if the entire packet was assembled.

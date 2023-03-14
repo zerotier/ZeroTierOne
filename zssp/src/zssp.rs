@@ -155,7 +155,6 @@ impl<Application: ApplicationLayer> Context<Application> {
     ///
     /// * `max_incomplete_session_queue_size` - Maximum number of incomplete sessions in negotiation phase
     pub fn new(max_incomplete_session_queue_size: usize, default_physical_mtu: usize) -> Self {
-        zerotier_crypto::init();
         Self {
             max_incomplete_session_queue_size,
             default_physical_mtu: AtomicUsize::new(default_physical_mtu),

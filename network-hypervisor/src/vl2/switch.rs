@@ -11,20 +11,12 @@ pub struct Switch {}
 
 #[allow(unused_variables)]
 impl InnerProtocolLayer for Switch {
-    fn should_respond_to(&self, id: &zerotier_crypto::typestate::Valid<crate::vl1::Identity>) -> bool {
-        true
-    }
-
-    fn has_trust_relationship(&self, id: &zerotier_crypto::typestate::Valid<crate::vl1::Identity>) -> bool {
-        true
-    }
-
     fn handle_packet<Application: ApplicationLayer + ?Sized>(
         &self,
         app: &Application,
-        node: &Node,
-        source: &Arc<Peer>,
-        source_path: &Arc<Path>,
+        node: &Node<Application>,
+        source: &Arc<Peer<Application>>,
+        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         source_hops: u8,
         message_id: u64,
         verb: u8,
@@ -37,9 +29,9 @@ impl InnerProtocolLayer for Switch {
     fn handle_error<Application: ApplicationLayer + ?Sized>(
         &self,
         app: &Application,
-        node: &Node,
-        source: &Arc<Peer>,
-        source_path: &Arc<Path>,
+        node: &Node<Application>,
+        source: &Arc<Peer<Application>>,
+        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         source_hops: u8,
         message_id: u64,
         in_re_verb: u8,
@@ -54,9 +46,9 @@ impl InnerProtocolLayer for Switch {
     fn handle_ok<Application: ApplicationLayer + ?Sized>(
         &self,
         app: &Application,
-        node: &Node,
-        source: &Arc<Peer>,
-        source_path: &Arc<Path>,
+        node: &Node<Application>,
+        source: &Arc<Peer<Application>>,
+        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
         source_hops: u8,
         message_id: u64,
         in_re_verb: u8,

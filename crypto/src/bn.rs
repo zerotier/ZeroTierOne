@@ -845,14 +845,10 @@ impl Neg for BigNum {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        bn::{BigNum, BigNumContext},
-        init,
-    };
+    use crate::bn::{BigNum, BigNumContext};
 
     #[test]
     fn test_to_from_slice() {
-        init();
         let v0 = BigNum::from_u32(10_203_004).unwrap();
         let vec = v0.to_vec();
         let v1 = BigNum::from_slice(&vec).unwrap();
@@ -862,7 +858,6 @@ mod tests {
 
     #[test]
     fn test_negation() {
-        init();
         let a = BigNum::from_u32(909_829_283).unwrap();
 
         assert!(!a.is_negative());
@@ -871,7 +866,6 @@ mod tests {
 
     #[test]
     fn test_shift() {
-        init();
         let a = BigNum::from_u32(909_829_283).unwrap();
 
         assert!(a == &(&a << 1) >> 1);
@@ -880,7 +874,6 @@ mod tests {
     #[cfg(not(osslconf = "OPENSSL_NO_DEPRECATED_3_0"))]
     #[test]
     fn test_prime_numbers() {
-        init();
         let a = BigNum::from_u32(19_029_017).unwrap();
         let mut p = BigNum::new().unwrap();
         p.generate_prime(128, true, None, Some(&a)).unwrap();
@@ -893,7 +886,6 @@ mod tests {
     #[cfg(ossl110)]
     #[test]
     fn test_secure_bn() {
-        init();
         let a = BigNum::new().unwrap();
         assert!(!a.is_secure());
 
@@ -904,7 +896,6 @@ mod tests {
     #[cfg(ossl110)]
     #[test]
     fn test_const_time_bn() {
-        init();
         let a = BigNum::new().unwrap();
         assert!(!a.is_const_time());
 

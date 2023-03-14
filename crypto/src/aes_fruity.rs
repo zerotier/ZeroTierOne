@@ -3,7 +3,7 @@
 // MacOS implementation of AES primitives since CommonCrypto seems to be faster than OpenSSL, especially on ARM64.
 use std::os::raw::{c_int, c_void};
 use std::ptr::{null, null_mut};
-use std::sync::atomic::AtomicPtr;
+use std::sync::Mutex;
 
 use crate::secret::Secret;
 use crate::secure_eq;
@@ -172,25 +172,18 @@ impl AesGcm<false> {
     }
 }
 
-pub struct Aes(AtomicPtr<c_void>, AtomicPtr<c_void>);
+pub struct Aes(Mutex<(*mut c_void, *mut c_void)>);
 
 impl Drop for Aes {
     #[inline(always)]
     fn drop(&mut self) {
         unsafe {
-            loop {
-                let p = self.0.load(std::sync::atomic::Ordering::Acquire);
-                if !p.is_null() {
-                    CCCryptorRelease(p);
-                    break;
-                }
+            let p = self.0.lock().unwrap();
+            if !p.0.is_null() {
+                CCCryptorRelease(p.0);
             }
-            loop {
-                let p = self.1.load(std::sync::atomic::Ordering::Acquire);
-                if !p.is_null() {
-                    CCCryptorRelease(p);
-                    break;
-                }
+            if !p.1.is_null() {
+                CCCryptorRelease(p.1);
             }
         }
     }
@@ -238,7 +231,7 @@ impl Aes {
                 ),
                 0
             );
-            Self(AtomicPtr::new(p0), AtomicPtr::new(p1))
+            Self(Mutex::new((p0, p1)))
         }
     }
 
@@ -247,16 +240,8 @@ impl Aes {
         assert_eq!(data.len(), 16);
         unsafe {
             let mut data_out_written = 0;
-            loop {
-                let p = self.0.load(std::sync::atomic::Ordering::Acquire);
-                if !p.is_null() {
-                    CCCryptorUpdate(p, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
-                    self.0.store(p, std::sync::atomic::Ordering::Release);
-                    break;
-                } else {
-                    std::thread::yield_now();
-                }
-            }
+            let p = self.0.lock().unwrap();
+            CCCryptorUpdate(p.0, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
         }
     }
 
@@ -265,16 +250,8 @@ impl Aes {
         assert_eq!(data.len(), 16);
         unsafe {
             let mut data_out_written = 0;
-            loop {
-                let p = self.1.load(std::sync::atomic::Ordering::Acquire);
-                if !p.is_null() {
-                    CCCryptorUpdate(p, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
-                    self.1.store(p, std::sync::atomic::Ordering::Release);
-                    break;
-                } else {
-                    std::thread::yield_now();
-                }
-            }
+            let p = self.0.lock().unwrap();
+            CCCryptorUpdate(p.1, data.as_ptr().cast(), 16, data.as_mut_ptr().cast(), 16, &mut data_out_written);
         }
     }
 }

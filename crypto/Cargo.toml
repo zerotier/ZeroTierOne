@@ -19,6 +19,7 @@ foreign-types = "0.5.0"
 libc = "0.2"
 lazy_static = "^1"
 rand_core = "0.6.4"
+ctor = "^0"
 #ed25519-dalek still uses rand_core 0.5.1, and that version is incompatible with 0.6.4, so we need to import and implement both.
 rand_core_051 = { package = "rand_core", version = "0.5.1" }
 

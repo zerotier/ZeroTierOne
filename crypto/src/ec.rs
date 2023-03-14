@@ -1,3 +1,4 @@
+use core::fmt;
 use std::ptr;
 
 use crate::bn::{BigNumContext, BigNumContextRef, BigNumRef};
@@ -5,13 +6,11 @@ use crate::error::{cvt, cvt_n, cvt_p, ErrorStack};
 use foreign_types::{foreign_type, ForeignType, ForeignTypeRef};
 
 foreign_type! {
-    #[derive(Clone)]
     pub unsafe type EcGroup: Send + Sync {
         type CType = ffi::EC_GROUP;
         fn drop = ffi::EC_GROUP_free;
     }
     /// Public and optional private key on the given curve.
-    #[derive(Clone)]
     pub unsafe type EcKey {
         type CType = ffi::EC_KEY;
         fn drop = ffi::EC_KEY_free;
@@ -123,5 +122,29 @@ impl EcPointRef {
             let res = cvt_n(ffi::EC_POINT_is_on_curve(group.as_ptr(), self.as_ptr(), ctx.as_ptr()))?;
             Ok(res == 1)
         }
+    }
+}
+
+impl ToOwned for EcKeyRef {
+    type Owned = EcKey;
+
+    fn to_owned(&self) -> EcKey {
+        unsafe {
+            let r = ffi::EC_KEY_up_ref(self.as_ptr());
+            assert!(r == 1);
+            EcKey::from_ptr(self.as_ptr())
+        }
+    }
+}
+
+impl Clone for EcKey {
+    fn clone(&self) -> EcKey {
+        (**self).to_owned()
+    }
+}
+
+impl fmt::Debug for EcKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "EcKey")
     }
 }
