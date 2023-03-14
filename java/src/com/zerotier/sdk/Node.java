@@ -299,7 +299,7 @@ public class Node {
 
     /**
      * Add or update a moon
-     *
+     * <p>
      * Moons are persisted in the data store in moons.d/, so this can persist
      * across invocations if the contents of moon.d are scanned and orbit is
      * called for each on startup.

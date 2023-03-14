@@ -33,7 +33,7 @@ import java.util.Arrays;
 
 /**
  * Peer status result buffer
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_Peer
  */
 public class Peer {

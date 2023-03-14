@@ -29,7 +29,7 @@ package com.zerotier.sdk;
 
 /**
  * Virtual network type codes
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_VirtualNetworkType
  */
 public enum VirtualNetworkType {

@@ -36,14 +36,14 @@ public interface VirtualNetworkConfigListener {
      * <p>This can be called at any time to update the configuration of a virtual
      * network port. The parameter after the network ID specifies whether this
      * port is being brought up, updated, brought down, or permanently deleted.
-     *
+     * <p>
      * This in turn should be used by the underlying implementation to create
      * and configure tap devices at the OS (or virtual network stack) layer.</P>
      *
      * This should not call {@link Node#multicastSubscribe(long, long)} or other network-modifying
      * methods, as this could cause a deadlock in multithreaded or interrupt
      * driven environments.
-     *
+     * <p>
      * This must return 0 on success. It can return any OS-dependent error code
      * on failure, and this results in the network being placed into the
      * PORT_ERROR state.
