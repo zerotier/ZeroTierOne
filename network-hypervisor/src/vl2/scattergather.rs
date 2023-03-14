@@ -1,17 +1,20 @@
-use fastcdc::v2020;
 use std::io::Write;
+
+use fastcdc::v2020;
+
 use zerotier_crypto::hash::{SHA384, SHA384_HASH_SIZE};
 use zerotier_utils::error::{InvalidFormatError, InvalidParameterError};
+use zerotier_utils::memory::byte_array_chunks_exact;
 
-const MAX_RECURSION_DEPTH: usize = 64;
+const MAX_RECURSION_DEPTH: u8 = 64; // sanity limit, object would have to be quite huge to hit this
 
-/// Recursively scatter/gather chunked object assembler.
-pub struct ObjectAssembler {
+/// Re-assembler for scattered objects.
+pub struct ScatteredObject {
     data_chunks: Vec<Vec<u8>>,
     need: Vec<u8>,
 }
 
-impl ObjectAssembler {
+impl ScatteredObject {
     /// Create a new assembler to gather an object given its root hash list.
     pub fn init(hash_list: Vec<u8>) -> Self {
         Self { data_chunks: Vec::new(), need: hash_list }
@@ -22,15 +25,14 @@ impl ObjectAssembler {
         new_hl: &mut Vec<u8>,
         get_chunk: &mut GetChunk,
         have_all_data_chunk_hashes: &mut bool,
-        depth: usize,
+        depth: u8,
     ) -> Result<(), InvalidFormatError> {
         if (hl.len() % SHA384_HASH_SIZE) != 0 || hl.is_empty() {
             return Err(InvalidFormatError);
         }
-        for h in hl.chunks_exact(SHA384_HASH_SIZE) {
+        for h in byte_array_chunks_exact::<SHA384_HASH_SIZE>(hl) {
             if (h[SHA384_HASH_SIZE - 1] & 0x01) != 0 {
-                debug_assert_eq!(h.len(), SHA384_HASH_SIZE);
-                if let Some(chunk) = get_chunk(unsafe { &*h.as_ptr().cast() }) {
+                if let Some(chunk) = get_chunk(h) {
                     if depth < MAX_RECURSION_DEPTH {
                         Self::gather_recursive(chunk.as_slice(), new_hl, get_chunk, have_all_data_chunk_hashes, depth + 1)?;
                         continue;
@@ -45,31 +47,36 @@ impl ObjectAssembler {
         return Ok(());
     }
 
-    /// Try to assemble this object, using the supplied function to request chunks we don't have.
+    /// Try to assemble this object using the supplied function to request chunks we don't have.
     ///
     /// Once all chunks are retrieved this will return Ok(Some(object)). A return of Ok(None) means there are
     /// still missing chunks that couldn't be resolved with the supplied getter. In that case this should be
-    /// called again once more chunks are fetched. An error return indicates invalid chunk data or that the
-    /// maximum recursion depth has been exceeded.
+    /// called again once more chunks are fetched. Use need() to get an iterator over chunks that are still
+    /// outstanding.
+    ///
+    /// Once a result is returned this assembler object should be discarded. An error return indicates an
+    /// invalid object due to either invalid chunk data or too many recursions.
     pub fn gather<GetChunk: FnMut(&[u8; SHA384_HASH_SIZE]) -> Option<Vec<u8>>>(
         &mut self,
         mut get_chunk: GetChunk,
     ) -> Result<Option<Vec<u8>>, InvalidFormatError> {
+        // First attempt to resolve all chunks of hashes until we have a complete in-order list of all data chunks.
         let mut new_need = Vec::with_capacity(self.need.len());
-        let mut have_all_data_chunk_hashes = true;
+        let mut have_all_data_chunk_hashes = true; // set to false if we still need to get chunks of hashes
         Self::gather_recursive(self.need.as_slice(), &mut new_need, &mut get_chunk, &mut have_all_data_chunk_hashes, 0)?;
         std::mem::swap(&mut self.need, &mut new_need);
 
+        // Once we have all data chunks, resolve those until the entire object is re-assembled.
         if have_all_data_chunk_hashes {
             self.data_chunks.resize(self.need.len() / SHA384_HASH_SIZE, Vec::new());
 
-            let mut cn = 0;
+            let mut chunk_no = 0;
             let mut missing_chunks = false;
-            for h in self.need.chunks_exact(SHA384_HASH_SIZE) {
-                let dc = self.data_chunks.get_mut(cn).unwrap();
+            for h in byte_array_chunks_exact::<SHA384_HASH_SIZE>(self.need.as_slice()) {
+                let dc = self.data_chunks.get_mut(chunk_no).unwrap();
                 if dc.is_empty() {
                     debug_assert_eq!(h.len(), SHA384_HASH_SIZE);
-                    if let Some(chunk) = get_chunk(unsafe { &*h.as_ptr().cast() }) {
+                    if let Some(chunk) = get_chunk(h) {
                         if !chunk.is_empty() {
                             *dc = chunk;
                         } else {
@@ -79,7 +86,7 @@ impl ObjectAssembler {
                         missing_chunks = true;
                     }
                 }
-                cn += 1;
+                chunk_no += 1;
             }
 
             if !missing_chunks {
@@ -99,9 +106,11 @@ impl ObjectAssembler {
     }
 
     /// Get an iterator of hashes currently known to be needed to reassemble this object.
-    #[inline]
+    ///
+    /// This list can get longer through the course of object retrival since incoming chunks can
+    /// be chunks of hashes instead of chunks of data.
     pub fn need(&self) -> impl Iterator<Item = &[u8; SHA384_HASH_SIZE]> {
-        self.need.chunks_exact(SHA384_HASH_SIZE).map(|c| unsafe { &*c.as_ptr().cast() })
+        byte_array_chunks_exact::<SHA384_HASH_SIZE>(self.need.as_slice())
     }
 }
 
@@ -109,9 +118,9 @@ impl ObjectAssembler {
 ///
 /// This splits the supplied binary object into chunks using the FastCDC2020 content defined chunking
 /// algorithm. For each chunk a SHA384 hash is computed and added to a hash list. If the resulting
-/// hash list is larger than max_chunk_size it is further chunked in a simple deterministic way to
-/// yield hashes that point to further lists of hashes. The least significant bit in each hash is
-/// set to 0 if the hash points to a chunk of data or 1 if it points to a chunk of hashes.
+/// hash list is larger than max_chunk_size it is recurisvely chunked into chunks of hashes. Chunking
+/// of the hash list is done deterministically rather than using FastCDC since the record size in these
+/// chunks is always a multiple of the hash size.
 ///
 /// The supplied function is called to output each chunk except for the root hash list, which is
 /// returned. It's technically possible for the same chunk to be output more than once if there are
@@ -184,7 +193,7 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
-    fn rcdcb_random_blobs() {
+    fn scatter_gather_random_blobs() {
         let mut random_data = Vec::new();
         random_data.resize(1024 * 1024 * 8, 0);
         zerotier_crypto::random::fill_bytes_secure(random_data.as_mut());
@@ -201,7 +210,7 @@ mod tests {
             })
             .unwrap();
 
-            let mut assembler = ObjectAssembler::init(root_hash_list);
+            let mut assembler = ScatteredObject::init(root_hash_list);
             let mut gathered_blob;
             loop {
                 gathered_blob = assembler

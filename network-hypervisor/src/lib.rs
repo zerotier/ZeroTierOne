@@ -4,7 +4,6 @@ pub const VERSION_MAJOR: u8 = 1;
 pub const VERSION_MINOR: u8 = 99;
 pub const VERSION_REVISION: u16 = 1;
 
-pub mod dr;
 #[allow(unused)]
 pub mod protocol;
 pub mod vl1;

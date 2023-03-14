@@ -6,6 +6,9 @@
  * https://www.zerotier.com/
  */
 
+// This is a collection of functions that use "unsafe" to do things with memory that should in fact
+// be safe. Some of these may eventually get stable standard library replacements.
+
 #[allow(unused_imports)]
 use std::mem::{needs_drop, size_of, MaybeUninit};
 
@@ -54,6 +57,23 @@ pub fn load_raw<T: Copy>(src: &[u8]) -> T {
         copy_nonoverlapping(src.as_ptr(), (&mut tmp as *mut T).cast(), size_of::<T>());
         tmp
     }
+}
+
+/// Our version of the not-yet-stable array_chunks method in slice, but only for byte arrays.
+#[inline(always)]
+pub fn byte_array_chunks_exact<const S: usize>(a: &[u8]) -> impl Iterator<Item = &[u8; S]> {
+    let mut i = 0;
+    let l = a.len();
+    std::iter::from_fn(move || {
+        let j = i + S;
+        if j <= l {
+            let next = unsafe { &*a.as_ptr().add(i).cast() };
+            i = j;
+            Some(next)
+        } else {
+            None
+        }
+    })
 }
 
 /// Obtain a view into an array cast as another array.

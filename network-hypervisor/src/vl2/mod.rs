@@ -3,6 +3,7 @@
 mod iproute;
 mod multicastgroup;
 mod networkid;
+mod scattergather;
 mod switch;
 mod topology;
 
