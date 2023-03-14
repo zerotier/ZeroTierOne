@@ -9,6 +9,7 @@
 pub mod arrayvec;
 pub mod blob;
 pub mod buffer;
+pub mod cast;
 pub mod defer;
 pub mod dictionary;
 pub mod error;
@@ -26,7 +27,6 @@ pub mod pool;
 pub mod reaper;
 pub mod ringbuffer;
 pub mod sync;
-pub mod thing;
 pub mod varint;
 
 #[cfg(feature = "tokio")]

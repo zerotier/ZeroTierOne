@@ -37,7 +37,7 @@ pub struct VL1Service<Inner: InnerProtocolLayer + ?Sized + 'static> {
     vl1_data_storage: Arc<dyn VL1DataStorage>,
     inner: Arc<Inner>,
     buffer_pool: Arc<PacketBufferPool>,
-    node_container: Option<Node>, // never None, set in new()
+    node_container: Option<Node<Self>>, // never None, set in new()
 }
 
 struct VL1ServiceMutableState {
@@ -79,7 +79,7 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
     }
 
     #[inline(always)]
-    pub fn node(&self) -> &Node {
+    pub fn node(&self) -> &Node<Self> {
         debug_assert!(self.node_container.is_some());
         unsafe { self.node_container.as_ref().unwrap_unchecked() }
     }
@@ -214,6 +214,12 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Servi
     #[inline]
     fn local_socket_is_valid(&self, socket: &Self::LocalSocket) -> bool {
         socket.is_valid()
+    }
+
+    #[inline]
+    fn should_respond_to(&self, _: &Valid<Identity>) -> bool {
+        // TODO: provide a way for the user of VL1Service to control this
+        true
     }
 
     #[inline]

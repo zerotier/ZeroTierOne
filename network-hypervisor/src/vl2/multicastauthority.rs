@@ -3,19 +3,13 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::protocol;
 use crate::protocol::PacketBuffer;
-use crate::vl1::{Address, ApplicationLayer, Identity, Node, PacketHandlerResult, Peer, MAC};
+use crate::vl1::*;
 use crate::vl2::{MulticastGroup, NetworkId};
 
 use zerotier_utils::buffer::OutOfBoundsError;
 use zerotier_utils::sync::RMaybeWLockGuard;
 
 /// Handler implementations for VL2_MULTICAST_LIKE and VL2_MULTICAST_GATHER.
-///
-/// Both controllers and roots will want to handle these, with the latter supporting them for legacy
-/// reasons only. Regular nodes may also want to handle them in the future. So, break this out to allow
-/// easy code reuse. To integrate call the appropriate method when the appropriate message type is
-/// received and pass in a function to check whether specific network/identity combinations should be
-/// processed. The GATHER implementation will send reply packets to the source peer.
 pub struct MulticastAuthority {
     subscriptions: RwLock<HashMap<(NetworkId, MulticastGroup), Mutex<HashMap<Address, i64>>>>,
 }
@@ -47,11 +41,11 @@ impl MulticastAuthority {
     }
 
     /// Call for VL2_MULTICAST_LIKE packets.
-    pub fn handle_vl2_multicast_like<Authenticator: Fn(NetworkId, &Identity) -> bool>(
+    pub fn handle_vl2_multicast_like<Application: ApplicationLayer + ?Sized, Authenticator: Fn(NetworkId, &Identity) -> bool>(
         &self,
         auth: Authenticator,
         time_ticks: i64,
-        source: &Arc<Peer>,
+        source: &Arc<Peer<Application>>,
         payload: &PacketBuffer,
         mut cursor: usize,
     ) -> PacketHandlerResult {
@@ -84,13 +78,13 @@ impl MulticastAuthority {
     }
 
     /// Call for VL2_MULTICAST_GATHER packets.
-    pub fn handle_vl2_multicast_gather<HostSystemImpl: ApplicationLayer + ?Sized, Authenticator: Fn(NetworkId, &Identity) -> bool>(
+    pub fn handle_vl2_multicast_gather<Application: ApplicationLayer + ?Sized, Authenticator: Fn(NetworkId, &Identity) -> bool>(
         &self,
         auth: Authenticator,
         time_ticks: i64,
-        host_system: &HostSystemImpl,
-        node: &Node,
-        source: &Arc<Peer>,
+        app: &Application,
+        node: &Node<Application>,
+        source: &Arc<Peer<Application>>,
         message_id: u64,
         payload: &PacketBuffer,
         mut cursor: usize,
@@ -114,7 +108,7 @@ impl MulticastAuthority {
                     }
 
                     while !gathered.is_empty() {
-                        source.send(host_system, node, None, time_ticks, |packet| -> Result<(), OutOfBoundsError> {
+                        source.send(app, node, None, time_ticks, |packet| -> Result<(), OutOfBoundsError> {
                             let ok_header = packet.append_struct_get_mut::<protocol::OkHeader>()?;
                             ok_header.verb = protocol::message_type::VL1_OK;
                             ok_header.in_re_verb = protocol::message_type::VL2_MULTICAST_GATHER;
