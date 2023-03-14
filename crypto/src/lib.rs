@@ -26,10 +26,13 @@ pub use aes_openssl as aes;
 
 mod aes_tests;
 
+#[cfg(target_os = "macos")]
 pub mod aes_gmac_siv_fruity;
-pub mod aes_gmac_siv_openssl;
 #[cfg(target_os = "macos")]
 pub use aes_gmac_siv_fruity as aes_gmac_siv;
+
+#[cfg(not(target_os = "macos"))]
+pub mod aes_gmac_siv_openssl;
 #[cfg(not(target_os = "macos"))]
 pub use aes_gmac_siv_openssl as aes_gmac_siv;
 
