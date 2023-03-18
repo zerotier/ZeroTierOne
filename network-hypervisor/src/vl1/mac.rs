@@ -7,7 +7,7 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use zerotier_utils::buffer::Buffer;
+use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::error::InvalidFormatError;
 use zerotier_utils::hex;
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
@@ -75,9 +75,8 @@ impl Marshalable for MAC {
     const MAX_MARSHAL_SIZE: usize = 6;
 
     #[inline(always)]
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), OutOfBoundsError> {
         buf.append_bytes(&self.0.get().to_be_bytes()[2..])
-            .map_err(|_| UnmarshalError::OutOfBounds)
     }
 
     #[inline(always)]

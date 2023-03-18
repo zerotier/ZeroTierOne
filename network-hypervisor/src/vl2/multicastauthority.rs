@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::protocol;
 use crate::protocol::PacketBuffer;
+use crate::vl1::identity::Identity;
 use crate::vl1::*;
 use crate::vl2::{MulticastGroup, NetworkId};
 
@@ -59,7 +60,7 @@ impl MulticastAuthority {
                     if auth(network_id, &source.identity) {
                         let sub_key = (network_id, MulticastGroup { mac, adi: payload.read_u32(&mut cursor).unwrap() });
                         if let Some(sub) = subscriptions.read().get(&sub_key) {
-                            let _ = sub.lock().unwrap().insert(source.identity.address, time_ticks);
+                            let _ = sub.lock().unwrap().insert(source.identity.address.clone(), time_ticks);
                         } else {
                             let _ = subscriptions
                                 .write(&self.subscriptions)
@@ -67,7 +68,7 @@ impl MulticastAuthority {
                                 .or_insert_with(|| Mutex::new(HashMap::new()))
                                 .lock()
                                 .unwrap()
-                                .insert(source.identity.address, time_ticks);
+                                .insert(source.identity.address.clone(), time_ticks);
                         }
                     }
                 }
@@ -103,7 +104,7 @@ impl MulticastAuthority {
                     if let Some(sub) = subscriptions.get(&(network_id, MulticastGroup { mac, adi })) {
                         let sub = sub.lock().unwrap();
                         for a in sub.keys() {
-                            gathered.push(*a);
+                            gathered.push(a.clone());
                         }
                     }
 
@@ -126,7 +127,7 @@ impl MulticastAuthority {
 
                             packet.append_u16(in_this_packet as u16)?;
                             for _ in 0..in_this_packet {
-                                packet.append_bytes_fixed(&gathered.pop().unwrap().to_bytes())?;
+                                packet.append_bytes_fixed(gathered.pop().unwrap().as_bytes_v1())?;
                             }
 
                             Ok(())

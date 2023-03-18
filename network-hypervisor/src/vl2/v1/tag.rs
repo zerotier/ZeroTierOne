@@ -1,6 +1,6 @@
 use std::io::Write;
 
-use crate::vl1::identity::Identity;
+use crate::vl1::identity::{Identity, IdentitySecret};
 use crate::vl1::Address;
 use crate::vl2::NetworkId;
 
@@ -21,24 +21,29 @@ pub struct Tag {
 }
 
 impl Tag {
-    pub fn new(id: u32, value: u32, issuer: &Identity, network_id: NetworkId, issued_to: &Identity, timestamp: i64) -> Option<Self> {
+    pub fn new(
+        id: u32,
+        value: u32,
+        issuer_address: &Address,
+        issuer: &IdentitySecret,
+        network_id: NetworkId,
+        issued_to: &Identity,
+        timestamp: i64,
+    ) -> Self {
         let mut tag = Self {
             network_id,
             timestamp,
-            issued_to: issued_to.address,
+            issued_to: issued_to.address.clone(),
             id,
             value,
             signature: Blob::default(),
         };
-        let to_sign = tag.internal_to_bytes(true, issuer.address);
-        if let Some(signature) = issuer.sign(to_sign.as_ref(), true) {
-            tag.signature.as_mut().copy_from_slice(signature.as_bytes());
-            return Some(tag);
-        }
-        return None;
+        let to_sign = tag.internal_to_bytes(true, issuer_address);
+        tag.signature.as_mut().copy_from_slice(issuer.sign(to_sign.as_ref()).as_bytes());
+        tag
     }
 
-    fn internal_to_bytes(&self, for_sign: bool, signed_by: Address) -> ArrayVec<u8, 256> {
+    fn internal_to_bytes(&self, for_sign: bool, signed_by: &Address) -> ArrayVec<u8, 256> {
         let mut v = ArrayVec::new();
         if for_sign {
             let _ = v.write_all(&[0x7f; 8]);
@@ -47,8 +52,8 @@ impl Tag {
         let _ = v.write_all(&self.timestamp.to_be_bytes());
         let _ = v.write_all(&self.id.to_be_bytes());
         let _ = v.write_all(&self.value.to_be_bytes());
-        let _ = v.write_all(&self.issued_to.to_bytes());
-        let _ = v.write_all(&signed_by.to_bytes());
+        let _ = v.write_all(self.issued_to.as_bytes_v1());
+        let _ = v.write_all(signed_by.as_bytes_v1());
         if !for_sign {
             v.push(1);
             v.push(0);
@@ -64,7 +69,7 @@ impl Tag {
     }
 
     #[inline(always)]
-    pub fn to_bytes(&self, signed_by: Address) -> ArrayVec<u8, 256> {
+    pub fn to_bytes(&self, signed_by: &Address) -> ArrayVec<u8, 256> {
         self.internal_to_bytes(false, signed_by)
     }
 
@@ -77,7 +82,7 @@ impl Tag {
             Self {
                 network_id: NetworkId::from_bytes(&b[0..8]).ok_or(InvalidParameterError("invalid network ID"))?,
                 timestamp: i64::from_be_bytes(b[8..16].try_into().unwrap()),
-                issued_to: Address::from_bytes(&b[24..29]).ok_or(InvalidParameterError("invalid address"))?,
+                issued_to: Address::from_bytes_v1(&b[24..29]).ok_or(InvalidParameterError("invalid address"))?,
                 id: u32::from_be_bytes(b[16..20].try_into().unwrap()),
                 value: u32::from_be_bytes(b[20..24].try_into().unwrap()),
                 signature: {

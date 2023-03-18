@@ -3,7 +3,6 @@
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::hash::Hash;
-use std::io::Write;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex, RwLock, Weak};
 use std::time::Duration;
@@ -13,17 +12,15 @@ use crate::vl1::address::Address;
 use crate::vl1::debug_event;
 use crate::vl1::endpoint::Endpoint;
 use crate::vl1::event::Event;
-use crate::vl1::identity::Identity;
+use crate::vl1::identity::{Identity, IdentitySecret};
 use crate::vl1::path::{Path, PathServiceResult};
 use crate::vl1::peer::Peer;
 use crate::vl1::rootset::RootSet;
 
 use zerotier_crypto::random;
 use zerotier_crypto::typestate::{Valid, Verified};
-use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::gate::IntervalGate;
 use zerotier_utils::hex;
-use zerotier_utils::marshalable::Marshalable;
 use zerotier_utils::ringbuffer::RingBuffer;
 
 /// Interface trait to be implemented by code that's using the ZeroTier network hypervisor.
@@ -39,12 +36,6 @@ pub trait ApplicationLayer: Sync + Send + 'static {
 
     /// A VL1 level event occurred.
     fn event(&self, event: Event);
-
-    /// Load this node's identity from the data store.
-    fn load_node_identity(&self) -> Option<Valid<Identity>>;
-
-    /// Save this node's identity to the data store, returning true on success.
-    fn save_node_identity(&self, id: &Valid<Identity>) -> bool;
 
     /// Get a pooled packet buffer for internal use.
     fn get_buffer(&self) -> PooledPacketBuffer;
@@ -141,7 +132,7 @@ pub trait InnerProtocolLayer: Sync + Send {
         app: &Application,
         node: &Node<Application>,
         source: &Arc<Peer<Application>>,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         source_hops: u8,
         message_id: u64,
         verb: u8,
@@ -158,7 +149,7 @@ pub trait InnerProtocolLayer: Sync + Send {
         app: &Application,
         node: &Node<Application>,
         source: &Arc<Peer<Application>>,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         source_hops: u8,
         message_id: u64,
         in_re_verb: u8,
@@ -177,7 +168,7 @@ pub trait InnerProtocolLayer: Sync + Send {
         app: &Application,
         node: &Node<Application>,
         source: &Arc<Peer<Application>>,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         source_hops: u8,
         message_id: u64,
         in_re_verb: u8,
@@ -221,70 +212,30 @@ struct BackgroundTaskIntervals {
 }
 
 struct WhoisQueueItem<Application: ApplicationLayer + ?Sized> {
-    v1_proto_waiting_packets:
-        RingBuffer<(Weak<Path<Application::LocalSocket, Application::LocalInterface>>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
+    v1_proto_waiting_packets: RingBuffer<(Weak<Path<Application>>, PooledPacketBuffer), WHOIS_MAX_WAITING_PACKETS>,
     last_retry_time: i64,
     retry_count: u16,
 }
 
 /// A ZeroTier VL1 node that can communicate securely with the ZeroTier peer-to-peer network.
 pub struct Node<Application: ApplicationLayer + ?Sized> {
-    /// A random ID generated to identify this particular running instance.
     pub instance_id: [u8; 16],
-
-    /// This node's identity and permanent keys.
     pub identity: Valid<Identity>,
-
-    /// Interval latches for periodic background tasks.
+    identity_secret: IdentitySecret,
     intervals: Mutex<BackgroundTaskIntervals>,
-
-    /// Canonicalized network paths, held as Weak<> to be automatically cleaned when no longer in use.
-    paths: RwLock<HashMap<PathKey<'static, 'static, Application::LocalSocket>, Arc<Path<Application::LocalSocket, Application::LocalInterface>>>>,
-
-    /// Peers with which we are currently communicating.
+    paths: RwLock<HashMap<PathKey<'static, 'static, Application::LocalSocket>, Arc<Path<Application>>>>,
     peers: RwLock<HashMap<Address, Arc<Peer<Application>>>>,
-
-    /// This node's trusted roots, sorted in ascending order of quality/preference, and cluster definitions.
     roots: RwLock<RootInfo<Application>>,
-
-    /// Current best root.
     best_root: RwLock<Option<Arc<Peer<Application>>>>,
-
-    /// Queue of identities being looked up.
     whois_queue: Mutex<HashMap<Address, WhoisQueueItem<Application>>>,
 }
 
 impl<Application: ApplicationLayer + ?Sized> Node<Application> {
-    pub fn new(app: &Application, auto_generate_identity: bool, auto_upgrade_identity: bool) -> Result<Self, InvalidParameterError> {
-        let mut id = {
-            let id = app.load_node_identity();
-            if id.is_none() {
-                if !auto_generate_identity {
-                    return Err(InvalidParameterError("no identity found and auto-generate not enabled"));
-                } else {
-                    let id = Identity::generate();
-                    app.event(Event::IdentityAutoGenerated(id.as_ref().clone()));
-                    app.save_node_identity(&id);
-                    id
-                }
-            } else {
-                id.unwrap()
-            }
-        };
-
-        if auto_upgrade_identity {
-            let old = id.clone();
-            if id.upgrade()? {
-                app.save_node_identity(&id);
-                app.event(Event::IdentityAutoUpgraded(old.remove_typestate(), id.as_ref().clone()));
-            }
-        }
-
-        debug_event!(app, "[vl1] loaded identity {}", id.to_string());
-
-        Ok(Self {
+    pub fn new(identity: Valid<Identity>, identity_secret: IdentitySecret) -> Self {
+        Self {
             instance_id: random::get_bytes_secure(),
-            identity: id,
+            identity,
+            identity_secret,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
             paths: RwLock::new(HashMap::new()),
             peers: RwLock::new(HashMap::new()),
@@ -297,11 +248,11 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
             }),
             best_root: RwLock::new(None),
             whois_queue: Mutex::new(HashMap::new()),
-        })
+        }
     }
 
     #[inline]
-    pub fn peer(&self, a: Address) -> Option<Arc<Peer<Application>>> {
+    pub fn peer(&self, a: &Address) -> Option<Arc<Peer<Application>>> {
         self.peers.read().unwrap().get(&a).cloned()
     }
 
@@ -398,7 +349,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
             } {
                 debug_event!(app, "[vl1] root sets modified, synchronizing internal data structures");
 
-                let (mut old_root_identities, address_collisions, new_roots, bad_identities, my_root_sets) = {
+                let (mut old_root_identities, new_roots, bad_identities, my_root_sets) = {
                     let roots = self.roots.read().unwrap();
 
                     let old_root_identities: Vec<Identity> = roots.roots.iter().map(|(p, _)| p.identity.as_ref().clone()).collect();
@@ -406,35 +357,9 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                     let mut bad_identities = Vec::new();
                     let mut my_root_sets: Option<Vec<u8>> = None;
 
-                    // This is a sanity check to make sure we don't have root sets that contain roots with the same address
-                    // but a different identity. If we do, the offending address is blacklisted. This would indicate something
-                    // weird and possibly nasty happening with whomever is making your root set definitions.
-                    let mut address_collisions = Vec::new();
-                    {
-                        let mut address_collision_check = HashMap::with_capacity(roots.sets.len() * 8);
-                        for (_, rs) in roots.sets.iter() {
-                            for m in rs.members.iter() {
-                                if m.identity.eq(&self.identity) {
-                                    let _ = my_root_sets.get_or_insert_with(|| Vec::new()).write_all(rs.to_bytes().as_slice());
-                                } else if self
-                                    .peers
-                                    .read()
-                                    .unwrap()
-                                    .get(&m.identity.address)
-                                    .map_or(false, |p| !p.identity.as_ref().eq(&m.identity))
-                                    || address_collision_check
-                                        .insert(m.identity.address, &m.identity)
-                                        .map_or(false, |old_id| !old_id.eq(&m.identity))
-                                {
-                                    address_collisions.push(m.identity.address);
-                                }
-                            }
-                        }
-                    }
-
                     for (_, rs) in roots.sets.iter() {
                         for m in rs.members.iter() {
-                            if m.endpoints.is_some() && !address_collisions.contains(&m.identity.address) && !m.identity.eq(&self.identity) {
+                            if m.endpoints.is_some() && !m.identity.eq(&self.identity) {
                                 debug_event!(
                                     app,
                                     "[vl1] examining root {} with {} endpoints",
@@ -445,13 +370,13 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                                 if let Some(peer) = peers.get(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
-                                    if let Some(peer) = Peer::new(&self.identity, Valid::mark_valid(m.identity.clone()), time_ticks) {
+                                    if let Some(peer) = Peer::new(&self.identity_secret, Valid::mark_valid(m.identity.clone()), time_ticks) {
                                         drop(peers);
                                         new_roots.insert(
                                             self.peers
                                                 .write()
                                                 .unwrap()
-                                                .entry(m.identity.address)
+                                                .entry(m.identity.address.clone())
                                                 .or_insert_with(|| Arc::new(peer))
                                                 .clone(),
                                             m.endpoints.as_ref().unwrap().iter().cloned().collect(),
@@ -464,15 +389,9 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                         }
                     }
 
-                    (old_root_identities, address_collisions, new_roots, bad_identities, my_root_sets)
+                    (old_root_identities, new_roots, bad_identities, my_root_sets)
                 };
 
-                for c in address_collisions.iter() {
-                    app.event(Event::SecurityWarning(format!(
-                        "address/identity collision in root sets! address {} collides across root sets or with an existing peer and is being ignored as a root!",
-                        c.to_string()
-                    )));
-                }
                 for i in bad_identities.iter() {
                     app.event(Event::SecurityWarning(format!(
                         "bad identity detected for address {} in at least one root set, ignoring (error creating peer object)",
@@ -586,7 +505,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                 let roots = self.roots.read().unwrap();
                 for (a, peer) in self.peers.read().unwrap().iter() {
                     if !peer.service(app, self, time_ticks) && !roots.roots.contains_key(peer) {
-                        dead_peers.push(*a);
+                        dead_peers.push(a.clone());
                     }
                 }
             }
@@ -633,7 +552,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                     if (time_ticks - qi.last_retry_time) >= WHOIS_RETRY_INTERVAL {
                         qi.retry_count += 1;
                         qi.last_retry_time = time_ticks;
-                        need_whois.push(*address);
+                        need_whois.push(address.clone());
                     }
                 }
                 need_whois
@@ -672,7 +591,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
 
         // Legacy ZeroTier V1 packet handling
         if let Ok(fragment_header) = packet.struct_mut_at::<v1::FragmentHeader>(0) {
-            if let Some(dest) = Address::from_bytes_fixed(&fragment_header.dest) {
+            if let Some(dest) = Address::from_bytes_v1(&fragment_header.dest) {
                 // Packet is addressed to this node.
 
                 if dest == self.identity.address {
@@ -703,8 +622,8 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                                 debug_event!(app, "[vl1] [v1] #{:0>16x} packet fully assembled!", fragment_header_id);
 
                                 if let Ok(packet_header) = frag0.struct_at::<v1::PacketHeader>(0) {
-                                    if let Some(source) = Address::from_bytes(&packet_header.src) {
-                                        if let Some(peer) = self.peer(source) {
+                                    if let Some(source) = Address::from_bytes_v1(&packet_header.src) {
+                                        if let Some(peer) = self.peer(&source) {
                                             peer.v1_proto_receive(
                                                 self,
                                                 app,
@@ -728,7 +647,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                                                 }
                                             }
                                             if ok {
-                                                self.whois(app, source, Some((Arc::downgrade(&path), combined_packet)), time_ticks);
+                                                self.whois(app, source.clone(), Some((Arc::downgrade(&path), combined_packet)), time_ticks);
                                             }
                                         }
                                     } // else source address invalid
@@ -738,8 +657,8 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                     } else if let Ok(packet_header) = packet.struct_at::<v1::PacketHeader>(0) {
                         debug_event!(app, "[vl1] [v1] #{:0>16x} is unfragmented", u64::from_be_bytes(packet_header.id));
 
-                        if let Some(source) = Address::from_bytes(&packet_header.src) {
-                            if let Some(peer) = self.peer(source) {
+                        if let Some(source) = Address::from_bytes_v1(&packet_header.src) {
+                            if let Some(peer) = self.peer(&source) {
                                 peer.v1_proto_receive(self, app, inner, time_ticks, &path, packet_header, packet.as_ref(), &[]);
                             } else {
                                 self.whois(app, source, Some((Arc::downgrade(&path), packet)), time_ticks);
@@ -788,7 +707,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                         return;
                     }
 
-                    if let Some(peer) = self.peer(dest) {
+                    if let Some(peer) = self.peer(&dest) {
                         if let Some(forward_path) = peer.direct_path() {
                             app.wire_send(
                                 &forward_path.endpoint,
@@ -810,16 +729,10 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
     }
 
     /// Enqueue and send a WHOIS query for a given address, adding the supplied packet (if any) to the list to be processed on reply.
-    fn whois(
-        &self,
-        app: &Application,
-        address: Address,
-        waiting_packet: Option<(Weak<Path<Application::LocalSocket, Application::LocalInterface>>, PooledPacketBuffer)>,
-        time_ticks: i64,
-    ) {
+    fn whois(&self, app: &Application, address: Address, waiting_packet: Option<(Weak<Path<Application>>, PooledPacketBuffer)>, time_ticks: i64) {
         {
             let mut whois_queue = self.whois_queue.lock().unwrap();
-            let qi = whois_queue.entry(address).or_insert_with(|| WhoisQueueItem {
+            let qi = whois_queue.entry(address.clone()).or_insert_with(|| WhoisQueueItem {
                 v1_proto_waiting_packets: RingBuffer::new(),
                 last_retry_time: 0,
                 retry_count: 0,
@@ -856,7 +769,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                     .send(app, self, None, time_ticks, |packet| -> Result<(), Infallible> {
                         assert!(packet.append_u8(message_type::VL1_WHOIS).is_ok());
                         while !addresses.is_empty() && (packet.len() + ADDRESS_SIZE) <= UDP_DEFAULT_MTU {
-                            assert!(packet.append_bytes_fixed(&addresses[0].to_bytes()).is_ok());
+                            assert!(packet.append_bytes_fixed(addresses[0].as_bytes_v1()).is_ok());
                             addresses = &addresses[1..];
                         }
                         Ok(())
@@ -882,13 +795,13 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
             if let Some(received_identity) = received_identity.validate() {
                 let mut whois_queue = self.whois_queue.lock().unwrap();
                 if let Some(qi) = whois_queue.get_mut(&received_identity.address) {
-                    let address = received_identity.address;
+                    let address = received_identity.address.clone();
                     if app.should_respond_to(&received_identity) {
                         let mut peers = self.peers.write().unwrap();
                         if let Some(peer) = peers.get(&address).cloned().or_else(|| {
-                            Peer::new(&self.identity, received_identity, time_ticks)
+                            Peer::new(&self.identity_secret, received_identity, time_ticks)
                                 .map(|p| Arc::new(p))
-                                .and_then(|peer| Some(peers.entry(address).or_insert(peer).clone()))
+                                .and_then(|peer| Some(peers.entry(address.clone()).or_insert(peer).clone()))
                         }) {
                             drop(peers);
                             for p in qi.v1_proto_waiting_packets.iter() {
@@ -928,7 +841,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
         local_socket: &Application::LocalSocket,
         local_interface: &Application::LocalInterface,
         time_ticks: i64,
-    ) -> Arc<Path<Application::LocalSocket, Application::LocalInterface>> {
+    ) -> Arc<Path<Application>> {
         let paths = self.paths.read().unwrap();
         if let Some(path) = paths.get(&PathKey::Ref(ep, local_socket)) {
             path.clone()

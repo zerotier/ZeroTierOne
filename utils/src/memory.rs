@@ -59,9 +59,9 @@ pub fn load_raw<T: Copy>(src: &[u8]) -> T {
     }
 }
 
-/// Our version of the not-yet-stable array_chunks method in slice, but only for byte arrays.
+/// Our version of the not-yet-stable array_chunks method in slice.
 #[inline(always)]
-pub fn byte_array_chunks_exact<const S: usize>(a: &[u8]) -> impl Iterator<Item = &[u8; S]> {
+pub fn array_chunks_exact<T, const S: usize>(a: &[T]) -> impl Iterator<Item = &[T; S]> {
     let mut i = 0;
     let l = a.len();
     std::iter::from_fn(move || {

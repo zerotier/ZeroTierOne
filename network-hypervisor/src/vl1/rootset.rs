@@ -3,15 +3,17 @@
 use std::collections::BTreeSet;
 use std::io::Write;
 
-use crate::vl1::identity::{Identity, IDENTITY_MAX_SIGNATURE_SIZE};
+use crate::vl1::identity::Identity;
 use crate::vl1::Endpoint;
 
 use zerotier_crypto::typestate::Verified;
 use zerotier_utils::arrayvec::ArrayVec;
-use zerotier_utils::buffer::Buffer;
+use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 use serde::{Deserialize, Serialize};
+
+use super::identity::IdentitySecret;
 
 /// Description of a member of a root cluster.
 ///
@@ -32,7 +34,7 @@ pub struct Root {
     /// This is populated by the sign() method when the completed root set is signed by each member.
     /// All member roots must sign.
     #[serde(default)]
-    pub signature: ArrayVec<u8, IDENTITY_MAX_SIGNATURE_SIZE>,
+    pub signature: ArrayVec<u8, { Identity::MAX_SIGNATURE_SIZE }>,
 
     /// Priority (higher number is lower priority, 0 is default).
     ///
@@ -132,7 +134,7 @@ impl RootSet {
     ) {
         self.members.retain(|m| m.identity.address != member_identity.address);
         let _ = self.members.push(Root {
-            identity: member_identity.clone_without_secret(),
+            identity: member_identity.clone(),
             endpoints: endpoints.map(|endpoints| {
                 let mut tmp = BTreeSet::new();
                 for a in endpoints {
@@ -154,8 +156,8 @@ impl RootSet {
     ///
     /// All current members must sign whether they are disabled (witnessing) or active. The verify()
     /// method will return true when signing is complete.
-    pub fn sign(&mut self, member_identity: &Identity) -> bool {
-        let signature = member_identity.sign(self.marshal_for_signing().as_bytes(), false);
+    pub fn sign(&mut self, member_identity: &Identity, member_identity_secret: &IdentitySecret) -> bool {
+        let signature = member_identity_secret.sign(self.marshal_for_signing().as_bytes());
         let unsigned_entry = self.members.iter().find_map(|m| {
             if m.identity.eq(member_identity) {
                 Some(m.clone())
@@ -163,13 +165,13 @@ impl RootSet {
                 None
             }
         });
-        if unsigned_entry.is_some() && signature.is_some() {
+        if unsigned_entry.is_some() {
             let unsigned_entry = unsigned_entry.unwrap();
             self.members.retain(|m| !m.identity.eq(member_identity));
             let _ = self.members.push(Root {
                 identity: unsigned_entry.identity,
                 endpoints: unsigned_entry.endpoints,
-                signature: signature.unwrap(),
+                signature: signature,
                 priority: unsigned_entry.priority,
                 protocol_version: unsigned_entry.protocol_version,
             });
@@ -197,9 +199,9 @@ impl RootSet {
     /// new root cluster definition and 'previous' being the current/old one.
     pub fn should_replace(&self, previous: &Self) -> bool {
         if self.name.eq(&previous.name) && self.revision > previous.revision {
-            let mut my_signers = BTreeSet::new();
+            let mut my_signers = Vec::with_capacity(self.members.len());
             for m in self.members.iter() {
-                my_signers.insert(m.identity.fingerprint.clone());
+                my_signers.push(&m.identity);
             }
 
             let mut previous_count: isize = 0;
@@ -207,7 +209,7 @@ impl RootSet {
             for m in previous.members.iter() {
                 if m.endpoints.is_some() {
                     previous_count += 1;
-                    witness_count += my_signers.contains(&m.identity.fingerprint) as isize;
+                    witness_count += my_signers.iter().any(|id| (*id).eq(&m.identity)) as isize;
                 }
             }
 
@@ -217,7 +219,7 @@ impl RootSet {
         }
     }
 
-    fn marshal_internal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_signatures: bool) -> Result<(), UnmarshalError> {
+    fn marshal_internal<const BL: usize>(&self, buf: &mut Buffer<BL>, include_signatures: bool) -> Result<(), OutOfBoundsError> {
         buf.append_u8(0)?; // version byte for future use
 
         buf.append_varint(self.name.as_bytes().len() as u64)?;
@@ -265,7 +267,7 @@ impl Marshalable for RootSet {
     const MAX_MARSHAL_SIZE: usize = crate::protocol::v1::SIZE_MAX;
 
     #[inline(always)]
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), OutOfBoundsError> {
         self.marshal_internal(buf, true)
     }
 

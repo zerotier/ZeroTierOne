@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 use std::io::Write;
 
-use crate::vl1::{Address, Identity, InetAddress, MAC};
+use crate::vl1::identity::{Identity, IdentitySecret};
+use crate::vl1::{Address, InetAddress, MAC};
 use crate::vl2::NetworkId;
 
 use serde::{Deserialize, Serialize};
@@ -33,7 +34,7 @@ pub struct CertificateOfOwnership {
     pub timestamp: i64,
     pub things: HashSet<Thing>,
     pub issued_to: Address,
-    pub signature: ArrayVec<u8, { crate::vl1::identity::IDENTITY_MAX_SIGNATURE_SIZE }>,
+    pub signature: ArrayVec<u8, { Identity::MAX_SIGNATURE_SIZE }>,
 }
 
 impl CertificateOfOwnership {
@@ -62,7 +63,7 @@ impl CertificateOfOwnership {
         let _ = self.things.insert(Thing::Mac(mac));
     }
 
-    fn internal_to_bytes(&self, for_sign: bool, signed_by: Address) -> Option<Vec<u8>> {
+    fn internal_to_bytes(&self, for_sign: bool, signed_by: &Address) -> Option<Vec<u8>> {
         if self.things.len() > 0xffff {
             return None;
         }
@@ -93,8 +94,8 @@ impl CertificateOfOwnership {
                 }
             }
         }
-        let _ = v.write_all(&self.issued_to.to_bytes());
-        let _ = v.write_all(&signed_by.to_bytes());
+        let _ = v.write_all(self.issued_to.as_bytes_v1());
+        let _ = v.write_all(signed_by.as_bytes_v1());
         if for_sign {
             v.push(0);
             v.push(0);
@@ -111,7 +112,7 @@ impl CertificateOfOwnership {
     }
 
     #[inline(always)]
-    pub fn to_bytes(&self, signed_by: Address) -> Option<Vec<u8>> {
+    pub fn to_bytes(&self, signed_by: &Address) -> Option<Vec<u8>> {
         self.internal_to_bytes(false, signed_by)
     }
 
@@ -155,7 +156,7 @@ impl CertificateOfOwnership {
                 network_id: NetworkId::from_u64(network_id).ok_or(InvalidParameterError("invalid network ID"))?,
                 timestamp,
                 things,
-                issued_to: Address::from_bytes(&b[..5]).ok_or(InvalidParameterError("invalid address"))?,
+                issued_to: Address::from_bytes_v1(&b[..5]).ok_or(InvalidParameterError("invalid address"))?,
                 signature: {
                     let mut s = ArrayVec::new();
                     s.push_slice(&b[13..109]);
@@ -167,13 +168,11 @@ impl CertificateOfOwnership {
     }
 
     /// Sign certificate of ownership for use by V1 nodes.
-    pub fn sign(&mut self, issuer: &Identity, issued_to: &Identity) -> bool {
-        self.issued_to = issued_to.address;
-        if let Some(to_sign) = self.internal_to_bytes(true, issuer.address) {
-            if let Some(signature) = issuer.sign(&to_sign.as_slice(), true) {
-                self.signature = signature;
-                return true;
-            }
+    pub fn sign(&mut self, issuer_address: &Address, issuer: &IdentitySecret, issued_to: &Identity) -> bool {
+        self.issued_to = issued_to.address.clone();
+        if let Some(to_sign) = self.internal_to_bytes(true, issuer_address) {
+            self.signature = issuer.sign(&to_sign.as_slice());
+            return true;
         }
         return false;
     }

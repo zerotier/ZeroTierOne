@@ -15,7 +15,6 @@ pub mod inetaddress;
 pub use address::Address;
 pub use endpoint::Endpoint;
 pub use event::Event;
-pub use identity::Identity;
 pub use inetaddress::InetAddress;
 pub use mac::MAC;
 pub use node::{ApplicationLayer, InnerProtocolLayer, Node, PacketHandlerResult};

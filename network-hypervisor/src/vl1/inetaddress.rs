@@ -12,7 +12,7 @@ use num_traits::AsPrimitive;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use zerotier_utils::buffer::Buffer;
+use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::error::{InvalidFormatError, InvalidParameterError};
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
@@ -879,7 +879,7 @@ impl InetAddress {
 impl Marshalable for InetAddress {
     const MAX_MARSHAL_SIZE: usize = 19;
 
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), OutOfBoundsError> {
         unsafe {
             match self.sa.sa_family as AddressFamilyType {
                 AF_INET => {

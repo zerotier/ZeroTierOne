@@ -6,16 +6,17 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
-use crate::vl1::{Address, Identity, InetAddress};
+use crate::vl1::identity::Identity;
+use crate::vl1::{Address, InetAddress};
 use crate::vl2::iproute::IpRoute;
 use crate::vl2::rule::Rule;
 use crate::vl2::v1::{CertificateOfMembership, CertificateOfOwnership, Tag};
 use crate::vl2::NetworkId;
 
-use zerotier_utils::buffer::Buffer;
+use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::dictionary::Dictionary;
 use zerotier_utils::error::InvalidParameterError;
-use zerotier_utils::marshalable::Marshalable;
+use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 /// Network configuration object sent to nodes by network controllers.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -130,24 +131,18 @@ impl NetworkConfig {
 
         if !self.routes.is_empty() {
             let r: Vec<IpRoute> = self.routes.iter().cloned().collect();
-            d.set_bytes(
-                proto_v1_field_name::network_config::ROUTES,
-                IpRoute::marshal_multiple_to_bytes(r.as_slice()).unwrap(),
-            );
+            d.set_bytes(proto_v1_field_name::network_config::ROUTES, marshal_multiple_to_bytes(r.as_slice()));
         }
 
         if !self.static_ips.is_empty() {
             let ips: Vec<InetAddress> = self.static_ips.iter().cloned().collect();
-            d.set_bytes(
-                proto_v1_field_name::network_config::STATIC_IPS,
-                InetAddress::marshal_multiple_to_bytes(ips.as_slice()).unwrap(),
-            );
+            d.set_bytes(proto_v1_field_name::network_config::STATIC_IPS, marshal_multiple_to_bytes(ips.as_slice()));
         }
 
         if !self.rules.is_empty() {
             d.set_bytes(
                 proto_v1_field_name::network_config::RULES,
-                Rule::marshal_multiple_to_bytes(self.rules.as_slice()).unwrap(),
+                marshal_multiple_to_bytes(self.rules.as_slice()),
             );
         }
 
@@ -188,7 +183,7 @@ impl NetworkConfig {
             if !v1cred.certificates_of_ownership.is_empty() {
                 let mut certs = Vec::with_capacity(v1cred.certificates_of_ownership.len() * 256);
                 for c in v1cred.certificates_of_ownership.iter() {
-                    let _ = certs.write_all(c.to_bytes(controller_identity.address)?.as_slice());
+                    let _ = certs.write_all(c.to_bytes(&controller_identity.address)?.as_slice());
                 }
                 d.set_bytes(proto_v1_field_name::network_config::CERTIFICATES_OF_OWNERSHIP, certs);
             }
@@ -196,7 +191,7 @@ impl NetworkConfig {
             if !v1cred.tags.is_empty() {
                 let mut tags = Vec::with_capacity(v1cred.tags.len() * 256);
                 for (_, t) in v1cred.tags.iter() {
-                    let _ = tags.write_all(t.to_bytes(controller_identity.address).as_ref());
+                    let _ = tags.write_all(t.to_bytes(&controller_identity.address).as_ref());
                 }
                 d.set_bytes(proto_v1_field_name::network_config::TAGS, tags);
             }
@@ -256,7 +251,7 @@ impl NetworkConfig {
         nc.multicast_limit = d.get_u64(proto_v1_field_name::network_config::MULTICAST_LIMIT).unwrap_or(0) as u32;
 
         if let Some(routes_bin) = d.get_bytes(proto_v1_field_name::network_config::ROUTES) {
-            for r in IpRoute::unmarshal_multiple_from_bytes(routes_bin)
+            for r in unmarshal_multiple_from_bytes(routes_bin)
                 .map_err(|_| InvalidParameterError("invalid route object(s)"))?
                 .drain(..)
             {
@@ -265,7 +260,7 @@ impl NetworkConfig {
         }
 
         if let Some(static_ips_bin) = d.get_bytes(proto_v1_field_name::network_config::STATIC_IPS) {
-            for ip in InetAddress::unmarshal_multiple_from_bytes(static_ips_bin)
+            for ip in unmarshal_multiple_from_bytes(static_ips_bin)
                 .map_err(|_| InvalidParameterError("invalid route object(s)"))?
                 .drain(..)
             {
@@ -274,7 +269,7 @@ impl NetworkConfig {
         }
 
         if let Some(rules_bin) = d.get_bytes(proto_v1_field_name::network_config::RULES) {
-            nc.rules = Rule::unmarshal_multiple_from_bytes(rules_bin).map_err(|_| InvalidParameterError("invalid route object(s)"))?;
+            nc.rules = unmarshal_multiple_from_bytes(rules_bin).map_err(|_| InvalidParameterError("invalid route object(s)"))?;
         }
 
         if let Some(dns_bin) = d.get_bytes(proto_v1_field_name::network_config::DNS) {
@@ -434,7 +429,7 @@ pub struct V1Credentials {
 impl Marshalable for IpRoute {
     const MAX_MARSHAL_SIZE: usize = (InetAddress::MAX_MARSHAL_SIZE * 2) + 2 + 2;
 
-    fn marshal<const BL: usize>(&self, buf: &mut zerotier_utils::buffer::Buffer<BL>) -> Result<(), zerotier_utils::marshalable::UnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut zerotier_utils::buffer::Buffer<BL>) -> Result<(), OutOfBoundsError> {
         self.target.marshal(buf)?;
         if let Some(via) = self.via.as_ref() {
             via.marshal(buf)?;
@@ -476,4 +471,35 @@ impl Marshalable for IpRoute {
             })?,
         })
     }
+}
+
+const TEMP_BUF_SIZE: usize = 1024;
+
+fn marshal_multiple_to_bytes<M: Marshalable>(multiple: &[M]) -> Vec<u8> {
+    debug_assert!(M::MAX_MARSHAL_SIZE <= TEMP_BUF_SIZE);
+    let mut tmp = Vec::with_capacity(M::MAX_MARSHAL_SIZE * multiple.len());
+    for m in multiple.iter() {
+        let _ = tmp.write_all(m.to_buffer::<TEMP_BUF_SIZE>().unwrap().as_bytes());
+    }
+    tmp
+}
+
+fn unmarshal_multiple_from_bytes<M: Marshalable>(mut bytes: &[u8]) -> Result<Vec<M>, UnmarshalError> {
+    debug_assert!(M::MAX_MARSHAL_SIZE <= TEMP_BUF_SIZE);
+    let mut tmp: Buffer<TEMP_BUF_SIZE> = Buffer::new();
+    let mut v: Vec<M> = Vec::new();
+    while bytes.len() > 0 {
+        let chunk_size = bytes.len().min(M::MAX_MARSHAL_SIZE);
+        if tmp.append_bytes(&bytes[..chunk_size]).is_err() {
+            return Err(UnmarshalError::OutOfBounds);
+        }
+        let mut cursor = 0;
+        v.push(M::unmarshal(&mut tmp, &mut cursor)?);
+        if cursor == 0 {
+            return Err(UnmarshalError::InvalidData);
+        }
+        let _ = tmp.erase_first_n(cursor);
+        bytes = &bytes[chunk_size..];
+    }
+    Ok(v)
 }

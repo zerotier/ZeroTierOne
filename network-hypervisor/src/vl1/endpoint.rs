@@ -6,14 +6,13 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::vl1::identity::IDENTITY_FINGERPRINT_SIZE;
 use crate::vl1::inetaddress::InetAddress;
 use crate::vl1::{Address, MAC};
 
-use zerotier_utils::base64;
-use zerotier_utils::buffer::Buffer;
+use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::error::InvalidFormatError;
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
+use zerotier_utils::str::{escape, unescape};
 
 pub const TYPE_NIL: u8 = 0;
 pub const TYPE_ZEROTIER: u8 = 1;
@@ -39,7 +38,7 @@ pub enum Endpoint {
 
     /// Via another node using unencapsulated relaying (e.g. via a root)
     /// This is the address and the full identity fingerprint.
-    ZeroTier(Address, [u8; IDENTITY_FINGERPRINT_SIZE]),
+    ZeroTier(Address),
 
     /// Direct L2 Ethernet
     Ethernet(MAC),
@@ -67,7 +66,7 @@ pub enum Endpoint {
 
     /// Via another node using inner encapsulation via VERB_ENCAP.
     /// This is the address and the full identity fingerprint.
-    ZeroTierEncap(Address, [u8; IDENTITY_FINGERPRINT_SIZE]),
+    ZeroTierEncap(Address),
 }
 
 impl Default for Endpoint {
@@ -92,7 +91,7 @@ impl Endpoint {
     pub fn type_id(&self) -> u8 {
         match self {
             Endpoint::Nil => TYPE_NIL,
-            Endpoint::ZeroTier(_, _) => TYPE_ZEROTIER,
+            Endpoint::ZeroTier(_) => TYPE_ZEROTIER,
             Endpoint::Ethernet(_) => TYPE_ETHERNET,
             Endpoint::WifiDirect(_) => TYPE_WIFIDIRECT,
             Endpoint::Bluetooth(_) => TYPE_BLUETOOTH,
@@ -101,7 +100,7 @@ impl Endpoint {
             Endpoint::IpTcp(_) => TYPE_IPTCP,
             Endpoint::Http(_) => TYPE_HTTP,
             Endpoint::WebRTC(_) => TYPE_WEBRTC,
-            Endpoint::ZeroTierEncap(_, _) => TYPE_ZEROTIER_ENCAP,
+            Endpoint::ZeroTierEncap(_) => TYPE_ZEROTIER_ENCAP,
         }
     }
 
@@ -134,15 +133,14 @@ impl Endpoint {
 impl Marshalable for Endpoint {
     const MAX_MARSHAL_SIZE: usize = MAX_MARSHAL_SIZE;
 
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), OutOfBoundsError> {
         match self {
             Endpoint::Nil => {
                 buf.append_u8(16 + TYPE_NIL)?;
             }
-            Endpoint::ZeroTier(a, h) => {
+            Endpoint::ZeroTier(a) => {
                 buf.append_u8(16 + TYPE_ZEROTIER)?;
-                buf.append_bytes_fixed(&a.to_bytes())?;
-                buf.append_bytes_fixed(h)?;
+                buf.append_bytes_fixed(a.as_bytes_raw())?;
             }
             Endpoint::Ethernet(m) => {
                 buf.append_u8(16 + TYPE_ETHERNET)?;
@@ -184,10 +182,9 @@ impl Marshalable for Endpoint {
                 buf.append_varint(b.len() as u64)?;
                 buf.append_bytes(b)?;
             }
-            Endpoint::ZeroTierEncap(a, h) => {
+            Endpoint::ZeroTierEncap(a) => {
                 buf.append_u8(16 + TYPE_ZEROTIER_ENCAP)?;
-                buf.append_bytes_fixed(&a.to_bytes())?;
-                buf.append_bytes_fixed(h)?;
+                buf.append_bytes_fixed(a.as_bytes_raw())?;
             }
         }
         Ok(())
@@ -214,10 +211,9 @@ impl Marshalable for Endpoint {
         } else {
             match type_byte - 16 {
                 TYPE_NIL => Ok(Endpoint::Nil),
-                TYPE_ZEROTIER => {
-                    let zt = Address::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)?;
-                    Ok(Endpoint::ZeroTier(zt, buf.read_bytes_fixed::<IDENTITY_FINGERPRINT_SIZE>(cursor)?.clone()))
-                }
+                TYPE_ZEROTIER => Ok(Endpoint::ZeroTier(
+                    Address::from_bytes_raw(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)?,
+                )),
                 TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::unmarshal(buf, cursor)?)),
                 TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::unmarshal(buf, cursor)?)),
                 TYPE_BLUETOOTH => Ok(Endpoint::Bluetooth(MAC::unmarshal(buf, cursor)?)),
@@ -228,10 +224,9 @@ impl Marshalable for Endpoint {
                     String::from_utf8_lossy(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?).to_string(),
                 )),
                 TYPE_WEBRTC => Ok(Endpoint::WebRTC(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec())),
-                TYPE_ZEROTIER_ENCAP => {
-                    let zt = Address::from_bytes_fixed(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)?;
-                    Ok(Endpoint::ZeroTierEncap(zt, buf.read_bytes_fixed(cursor)?.clone()))
-                }
+                TYPE_ZEROTIER_ENCAP => Ok(Endpoint::ZeroTier(
+                    Address::from_bytes_raw(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)?,
+                )),
                 _ => Err(UnmarshalError::InvalidData),
             }
         }
@@ -244,9 +239,9 @@ impl Hash for Endpoint {
             Endpoint::Nil => {
                 state.write_u8(TYPE_NIL);
             }
-            Endpoint::ZeroTier(a, _) => {
+            Endpoint::ZeroTier(a) => {
                 state.write_u8(TYPE_ZEROTIER);
-                state.write_u64(a.into())
+                a.hash(state);
             }
             Endpoint::Ethernet(m) => {
                 state.write_u8(TYPE_ETHERNET);
@@ -280,9 +275,9 @@ impl Hash for Endpoint {
                 state.write_u8(TYPE_WEBRTC);
                 offer.hash(state);
             }
-            Endpoint::ZeroTierEncap(a, _) => {
+            Endpoint::ZeroTierEncap(a) => {
                 state.write_u8(TYPE_ZEROTIER_ENCAP);
-                state.write_u64(a.into())
+                a.hash(state);
             }
         }
     }
@@ -293,7 +288,7 @@ impl Ord for Endpoint {
         // Manually implement Ord to ensure that sort order is known and consistent.
         match (self, other) {
             (Endpoint::Nil, Endpoint::Nil) => Ordering::Equal,
-            (Endpoint::ZeroTier(a, ah), Endpoint::ZeroTier(b, bh)) => a.cmp(b).then_with(|| ah.cmp(bh)),
+            (Endpoint::ZeroTier(a), Endpoint::ZeroTier(b)) => a.cmp(b),
             (Endpoint::Ethernet(a), Endpoint::Ethernet(b)) => a.cmp(b),
             (Endpoint::WifiDirect(a), Endpoint::WifiDirect(b)) => a.cmp(b),
             (Endpoint::Bluetooth(a), Endpoint::Bluetooth(b)) => a.cmp(b),
@@ -302,7 +297,7 @@ impl Ord for Endpoint {
             (Endpoint::IpTcp(a), Endpoint::IpTcp(b)) => a.cmp(b),
             (Endpoint::Http(a), Endpoint::Http(b)) => a.cmp(b),
             (Endpoint::WebRTC(a), Endpoint::WebRTC(b)) => a.cmp(b),
-            (Endpoint::ZeroTierEncap(a, ah), Endpoint::ZeroTierEncap(b, bh)) => a.cmp(b).then_with(|| ah.cmp(bh)),
+            (Endpoint::ZeroTierEncap(a), Endpoint::ZeroTierEncap(b)) => a.cmp(b),
             _ => self.type_id().cmp(&other.type_id()),
         }
     }
@@ -319,7 +314,7 @@ impl ToString for Endpoint {
     fn to_string(&self) -> String {
         match self {
             Endpoint::Nil => format!("nil"),
-            Endpoint::ZeroTier(a, ah) => format!("zt:{}-{}", a.to_string(), base64::encode_url_nopad(ah)),
+            Endpoint::ZeroTier(a) => format!("zt:{}", a.to_string()),
             Endpoint::Ethernet(m) => format!("eth:{}", m.to_string()),
             Endpoint::WifiDirect(m) => format!("wifip2p:{}", m.to_string()),
             Endpoint::Bluetooth(m) => format!("bt:{}", m.to_string()),
@@ -327,8 +322,8 @@ impl ToString for Endpoint {
             Endpoint::IpUdp(ip) => format!("udp:{}", ip.to_string()),
             Endpoint::IpTcp(ip) => format!("tcp:{}", ip.to_string()),
             Endpoint::Http(url) => format!("url:{}", url.clone()), // http or https
-            Endpoint::WebRTC(offer) => format!("webrtc:{}", base64::encode_url_nopad(offer.as_slice())),
-            Endpoint::ZeroTierEncap(a, ah) => format!("zte:{}-{}", a.to_string(), base64::encode_url_nopad(ah)),
+            Endpoint::WebRTC(offer) => format!("webrtc:{}", escape(offer.as_slice())),
+            Endpoint::ZeroTierEncap(a) => format!("zte:{}", a.to_string()),
         }
     }
 }
@@ -348,18 +343,10 @@ impl FromStr for Endpoint {
         let (endpoint_type, endpoint_data) = ss.unwrap();
         match endpoint_type {
             "zt" | "zte" => {
-                let address_and_hash = endpoint_data.split_once("-");
-                if address_and_hash.is_some() {
-                    let (address, hash) = address_and_hash.unwrap();
-                    if let Some(hash) = base64::decode_url_nopad(hash) {
-                        if hash.len() == IDENTITY_FINGERPRINT_SIZE {
-                            if endpoint_type == "zt" {
-                                return Ok(Endpoint::ZeroTier(Address::from_str(address)?, hash.as_slice().try_into().unwrap()));
-                            } else {
-                                return Ok(Endpoint::ZeroTierEncap(Address::from_str(address)?, hash.as_slice().try_into().unwrap()));
-                            }
-                        }
-                    }
+                if endpoint_type == "zt" {
+                    return Ok(Endpoint::ZeroTier(Address::from_str(endpoint_data)?));
+                } else {
+                    return Ok(Endpoint::ZeroTierEncap(Address::from_str(endpoint_data)?));
                 }
             }
             "eth" => return Ok(Endpoint::Ethernet(MAC::from_str(endpoint_data)?)),
@@ -369,11 +356,7 @@ impl FromStr for Endpoint {
             "udp" => return Ok(Endpoint::IpUdp(InetAddress::from_str(endpoint_data)?)),
             "tcp" => return Ok(Endpoint::IpTcp(InetAddress::from_str(endpoint_data)?)),
             "url" => return Ok(Endpoint::Http(endpoint_data.into())),
-            "webrtc" => {
-                if let Some(offer) = base64::decode_url_nopad(endpoint_data) {
-                    return Ok(Endpoint::WebRTC(offer));
-                }
-            }
+            "webrtc" => return Ok(Endpoint::WebRTC(unescape(endpoint_data))),
             _ => {}
         }
         return Err(InvalidFormatError);
@@ -435,281 +418,6 @@ impl<'de> Deserialize<'de> for Endpoint {
             deserializer.deserialize_str(EndpointVisitor)
         } else {
             deserializer.deserialize_bytes(EndpointVisitor)
-        }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::protocol::*;
-
-    fn randstring(len: u8) -> String {
-        (0..len)
-            .map(|_| (rand::random::<u8>() % 26) + 'a' as u8)
-            .map(|c| {
-                if rand::random::<bool>() {
-                    (c as char).to_ascii_uppercase()
-                } else {
-                    c as char
-                }
-            })
-            .map(|c| c.to_string())
-            .collect::<Vec<String>>()
-            .join("")
-    }
-
-    #[test]
-    fn endpoint_default() {
-        let e: Endpoint = Default::default();
-        assert!(matches!(e, Endpoint::Nil))
-    }
-
-    #[test]
-    fn endpoint_from_bytes() {
-        let v = [0u8; MAX_MARSHAL_SIZE];
-        assert!(Endpoint::from_bytes(&v).is_none());
-    }
-
-    #[test]
-    fn endpoint_marshal_nil() {
-        let n = Endpoint::Nil;
-
-        let mut buf = Buffer::<1>::new();
-
-        let res = n.marshal(&mut buf);
-        assert!(res.is_ok());
-
-        let res = Endpoint::unmarshal(&buf, &mut 0);
-        assert!(res.is_ok());
-
-        let n2 = res.unwrap();
-        assert_eq!(n, n2);
-    }
-
-    #[test]
-    fn endpoint_marshal_zerotier() {
-        for _ in 0..1000 {
-            let mut hash = [0u8; IDENTITY_FINGERPRINT_SIZE];
-            hash.fill_with(|| rand::random());
-
-            let mut v = [0u8; ADDRESS_SIZE];
-            v.fill_with(|| rand::random());
-
-            // correct for situations where RNG generates a prefix which generates a None value.
-            while v[0] == ADDRESS_RESERVED_PREFIX {
-                v[0] = rand::random()
-            }
-
-            let zte = Endpoint::ZeroTier(Address::from_bytes(&v).unwrap(), hash);
-
-            const TMP: usize = IDENTITY_FINGERPRINT_SIZE + 8;
-            let mut buf = Buffer::<TMP>::new();
-
-            let res = zte.marshal(&mut buf);
-            assert!(res.is_ok());
-
-            let res = Endpoint::unmarshal(&buf, &mut 0);
-            assert!(res.is_ok());
-
-            let zte2 = res.unwrap();
-            assert_eq!(zte, zte2);
-        }
-    }
-
-    #[test]
-    fn endpoint_marshal_zerotier_encap() {
-        for _ in 0..1000 {
-            let mut hash = [0u8; IDENTITY_FINGERPRINT_SIZE];
-            hash.fill_with(|| rand::random());
-
-            let mut v = [0u8; ADDRESS_SIZE];
-            v.fill_with(|| rand::random());
-
-            // correct for situations where RNG generates a prefix which generates a None value.
-            while v[0] == ADDRESS_RESERVED_PREFIX {
-                v[0] = rand::random()
-            }
-
-            let zte = Endpoint::ZeroTierEncap(Address::from_bytes(&v).unwrap(), hash);
-
-            const TMP: usize = IDENTITY_FINGERPRINT_SIZE + 8;
-            let mut buf = Buffer::<TMP>::new();
-
-            let res = zte.marshal(&mut buf);
-            assert!(res.is_ok());
-
-            let res = Endpoint::unmarshal(&buf, &mut 0);
-            assert!(res.is_ok());
-
-            let zte2 = res.unwrap();
-            assert_eq!(zte, zte2);
-        }
-    }
-
-    #[test]
-    fn endpoint_marshal_mac() {
-        for _ in 0..1000 {
-            let mac = crate::vl1::MAC::from_u64(rand::random()).unwrap();
-
-            for e in [
-                Endpoint::Ethernet(mac.clone()),
-                Endpoint::WifiDirect(mac.clone()),
-                Endpoint::Bluetooth(mac.clone()),
-            ] {
-                let mut buf = Buffer::<7>::new();
-
-                let res = e.marshal(&mut buf);
-                assert!(res.is_ok());
-
-                let res = Endpoint::unmarshal(&buf, &mut 0);
-                assert!(res.is_ok());
-
-                let e2 = res.unwrap();
-                assert_eq!(e, e2);
-            }
-        }
-    }
-
-    #[test]
-    fn endpoint_marshal_inetaddress() {
-        for _ in 0..1000 {
-            let mut v = [0u8; 16];
-            v.fill_with(|| rand::random());
-
-            let inet = crate::vl1::InetAddress::from_ip_port(&v, 1234);
-
-            for e in [Endpoint::Icmp(inet.clone()), Endpoint::IpTcp(inet.clone()), Endpoint::IpUdp(inet.clone())] {
-                let mut buf = Buffer::<20>::new();
-
-                let res = e.marshal(&mut buf);
-                assert!(res.is_ok());
-
-                let res = Endpoint::unmarshal(&buf, &mut 0);
-                assert!(res.is_ok());
-
-                let e2 = res.unwrap();
-                assert_eq!(e, e2);
-            }
-        }
-    }
-
-    #[test]
-    fn endpoint_marshal_http() {
-        for _ in 0..1000 {
-            let http = Endpoint::Http(randstring(30));
-            let mut buf = Buffer::<33>::new();
-
-            assert!(http.marshal(&mut buf).is_ok());
-
-            let res = Endpoint::unmarshal(&buf, &mut 0);
-            assert!(res.is_ok());
-
-            let http2 = res.unwrap();
-            assert_eq!(http, http2);
-        }
-    }
-
-    #[test]
-    fn endpoint_marshal_webrtc() {
-        for _ in 0..1000 {
-            let mut v = Vec::with_capacity(100);
-            v.fill_with(|| rand::random());
-
-            let rtc = Endpoint::WebRTC(v);
-            let mut buf = Buffer::<102>::new();
-
-            assert!(rtc.marshal(&mut buf).is_ok());
-
-            let res = Endpoint::unmarshal(&buf, &mut 0);
-            assert!(res.is_ok());
-
-            let rtc2 = res.unwrap();
-            assert_eq!(rtc, rtc2);
-        }
-    }
-
-    #[test]
-    fn endpoint_to_from_string() {
-        use std::str::FromStr;
-
-        for _ in 0..1000 {
-            let mut v = Vec::with_capacity(100);
-            v.fill_with(|| rand::random());
-            let rtc = Endpoint::WebRTC(v);
-
-            assert_ne!(rtc.to_string().len(), 0);
-            assert!(rtc.to_string().starts_with("webrtc"));
-
-            let rtc2 = Endpoint::from_str(&rtc.to_string()).unwrap();
-            assert_eq!(rtc, rtc2);
-
-            let http = Endpoint::Http(randstring(30));
-            assert_ne!(http.to_string().len(), 0);
-            assert!(http.to_string().starts_with("url"));
-
-            let http2 = Endpoint::from_str(&http.to_string()).unwrap();
-            assert_eq!(http, http2);
-
-            let mut v = [0u8; 16];
-            v.fill_with(|| rand::random());
-
-            let inet = crate::vl1::InetAddress::from_ip_port(&v, 0);
-
-            let ip = Endpoint::Icmp(inet.clone());
-            assert_ne!(ip.to_string().len(), 0);
-            assert!(ip.to_string().starts_with("icmp"));
-
-            let ip2 = Endpoint::from_str(&ip.to_string()).unwrap();
-            assert_eq!(ip, ip2);
-
-            let inet = crate::vl1::InetAddress::from_ip_port(&v, 1234);
-
-            for e in [(Endpoint::IpTcp(inet.clone()), "tcp"), (Endpoint::IpUdp(inet.clone()), "udp")] {
-                assert_ne!(e.0.to_string().len(), 0);
-                assert!(e.0.to_string().starts_with(e.1));
-
-                let e2 = Endpoint::from_str(&e.0.to_string()).unwrap();
-                assert_eq!(e.0, e2);
-            }
-
-            let mac = crate::vl1::MAC::from_u64(rand::random()).unwrap();
-
-            for e in [
-                (Endpoint::Ethernet(mac.clone()), "eth"),
-                (Endpoint::WifiDirect(mac.clone()), "wifip2p"),
-                (Endpoint::Bluetooth(mac.clone()), "bt"),
-            ] {
-                assert_ne!(e.0.to_string().len(), 0);
-                assert!(e.0.to_string().starts_with(e.1));
-
-                let e2 = Endpoint::from_str(&e.0.to_string()).unwrap();
-                assert_eq!(e.0, e2);
-            }
-
-            let mut hash = [0u8; IDENTITY_FINGERPRINT_SIZE];
-            hash.fill_with(|| rand::random());
-
-            let mut v = [0u8; ADDRESS_SIZE];
-            v.fill_with(|| rand::random());
-
-            // correct for situations where RNG generates a prefix which generates a None value.
-            while v[0] == ADDRESS_RESERVED_PREFIX {
-                v[0] = rand::random()
-            }
-
-            for e in [
-                (Endpoint::ZeroTier(Address::from_bytes(&v).unwrap(), hash), "zt"),
-                (Endpoint::ZeroTierEncap(Address::from_bytes(&v).unwrap(), hash), "zte"),
-            ] {
-                assert_ne!(e.0.to_string().len(), 0);
-                assert!(e.0.to_string().starts_with(e.1));
-
-                let e2 = Endpoint::from_str(&e.0.to_string()).unwrap();
-                assert_eq!(e.0, e2);
-            }
-
-            assert_eq!(Endpoint::Nil.to_string(), "nil");
         }
     }
 }

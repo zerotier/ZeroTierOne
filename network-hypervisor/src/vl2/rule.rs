@@ -6,7 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use phf::phf_map;
 
-use zerotier_utils::buffer::Buffer;
+use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 use crate::protocol;
@@ -239,7 +239,7 @@ impl Rule {
         Self {
             t: action::TEE,
             v: RuleValue {
-                forward: rule_value::Forward { address: address.into(), flags, length },
+                forward: rule_value::Forward { address: address.as_u64_v1(), flags, length },
             },
         }
     }
@@ -248,7 +248,7 @@ impl Rule {
         Self {
             t: action::TEE,
             v: RuleValue {
-                forward: rule_value::Forward { address: address.into(), flags, length },
+                forward: rule_value::Forward { address: address.as_u64_v1(), flags, length },
             },
         }
     }
@@ -257,7 +257,7 @@ impl Rule {
         Self {
             t: action::TEE,
             v: RuleValue {
-                forward: rule_value::Forward { address: address.into(), flags, length },
+                forward: rule_value::Forward { address: address.as_u64_v1(), flags, length },
             },
         }
     }
@@ -273,14 +273,14 @@ impl Rule {
     pub fn match_source_zerotier_address(not: bool, or: bool, address: Address) -> Self {
         Self {
             t: t(not, or, match_cond::SOURCE_ZEROTIER_ADDRESS),
-            v: RuleValue { zt: address.into() },
+            v: RuleValue { zt: address.as_u64_v1() },
         }
     }
 
     pub fn match_dest_zerotier_address(not: bool, or: bool, address: Address) -> Self {
         Self {
             t: t(not, or, match_cond::DEST_ZEROTIER_ADDRESS),
-            v: RuleValue { zt: address.into() },
+            v: RuleValue { zt: address.as_u64_v1() },
         }
     }
 
@@ -306,21 +306,21 @@ impl Rule {
                     return v.action_accept();
                 }
                 action::TEE => {
-                    if let Some(a) = Address::from_u64(self.v.forward.address) {
+                    if let Some(a) = Address::from_u64_v1(self.v.forward.address) {
                         return v.action_tee(a, self.v.forward.flags, self.v.forward.length);
                     } else {
                         return v.invalid_rule();
                     }
                 }
                 action::WATCH => {
-                    if let Some(a) = Address::from_u64(self.v.forward.address) {
+                    if let Some(a) = Address::from_u64_v1(self.v.forward.address) {
                         return v.action_watch(a, self.v.forward.flags, self.v.forward.length);
                     } else {
                         return v.invalid_rule();
                     }
                 }
                 action::REDIRECT => {
-                    if let Some(a) = Address::from_u64(self.v.forward.address) {
+                    if let Some(a) = Address::from_u64_v1(self.v.forward.address) {
                         return v.action_redirect(a, self.v.forward.flags, self.v.forward.length);
                     } else {
                         return v.invalid_rule();
@@ -333,14 +333,14 @@ impl Rule {
                     return v.action_priority(self.v.qos_bucket);
                 }
                 match_cond::SOURCE_ZEROTIER_ADDRESS => {
-                    if let Some(a) = Address::from_u64(self.v.zt) {
+                    if let Some(a) = Address::from_u64_v1(self.v.zt) {
                         v.match_source_zerotier_address(not, or, a);
                     } else {
                         return v.invalid_rule();
                     }
                 }
                 match_cond::DEST_ZEROTIER_ADDRESS => {
-                    if let Some(a) = Address::from_u64(self.v.zt) {
+                    if let Some(a) = Address::from_u64_v1(self.v.zt) {
                         v.match_dest_zerotier_address(not, or, a);
                     } else {
                         return v.invalid_rule();
@@ -447,7 +447,7 @@ impl Rule {
 impl Marshalable for Rule {
     const MAX_MARSHAL_SIZE: usize = 21;
 
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), OutOfBoundsError> {
         buf.append_u8(self.t)?;
         unsafe {
             match self.t & 0x3f {
@@ -837,7 +837,7 @@ impl<'a> HumanReadableRule<'a> {
             unsafe {
                 match *t {
                     action::TEE | action::WATCH | action::REDIRECT => {
-                        r.v.forward.address = self.address?.into();
+                        r.v.forward.address = self.address.as_ref()?.as_u64_v1();
                         r.v.forward.flags = self.flags?;
                         r.v.forward.length = self.length?;
                     }
@@ -845,7 +845,7 @@ impl<'a> HumanReadableRule<'a> {
                         r.v.qos_bucket = self.qosBucket?;
                     }
                     match_cond::SOURCE_ZEROTIER_ADDRESS | match_cond::DEST_ZEROTIER_ADDRESS => {
-                        r.v.zt = self.address?.into();
+                        r.v.zt = self.address.as_ref()?.as_u64_v1();
                     }
                     match_cond::VLAN_ID => {
                         r.v.vlan_id = self.vlanId?;

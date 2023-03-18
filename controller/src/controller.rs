@@ -496,7 +496,7 @@ impl InnerProtocolLayer for Controller {
         app: &Application,
         node: &Node<Application>,
         source: &Arc<Peer<Application>>,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         source_hops: u8,
         message_id: u64,
         verb: u8,

@@ -138,9 +138,6 @@ pub const ADDRESS_SIZE: usize = 5;
 /// Length of an address in string format.
 pub const ADDRESS_SIZE_STRING: usize = 10;
 
-/// Prefix indicating reserved addresses (that can't actually be addresses).
-pub const ADDRESS_RESERVED_PREFIX: u8 = 0xff;
-
 /// Bit mask for address bits in a u64.
 pub const ADDRESS_MASK: u64 = 0xffffffffff;
 
@@ -307,10 +304,10 @@ pub mod v1 {
     }
 
     #[inline(always)]
-    pub fn get_packet_aad_bytes(destination: Address, source: Address, flags_cipher_hops: u8) -> [u8; 11] {
+    pub fn get_packet_aad_bytes(destination: &Address, source: &Address, flags_cipher_hops: u8) -> [u8; 11] {
         let mut id = [0u8; 11];
-        id[0..5].copy_from_slice(&destination.to_bytes());
-        id[5..10].copy_from_slice(&source.to_bytes());
+        id[0..5].copy_from_slice(destination.as_bytes_v1());
+        id[5..10].copy_from_slice(source.as_bytes_v1());
         id[10] = flags_cipher_hops & FLAGS_FIELD_MASK_HIDE_HOPS;
         id
     }
@@ -558,9 +555,6 @@ pub(crate) const PEER_HELLO_INTERVAL_MAX: i64 = 300000;
 
 /// Timeout for path association with peers and for peers themselves.
 pub(crate) const PEER_EXPIRATION_TIME: i64 = (PEER_HELLO_INTERVAL_MAX * 2) + 10000;
-
-/// Proof of work difficulty (threshold) for identity generation.
-pub(crate) const IDENTITY_POW_THRESHOLD: u8 = 17;
 
 // Multicast LIKE expire time in milliseconds.
 pub const VL2_DEFAULT_MULTICAST_LIKE_EXPIRE: i64 = 600000;
