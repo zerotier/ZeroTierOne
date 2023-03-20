@@ -12,8 +12,10 @@ source "$(dirname $0)/lib.sh"
 
 if [ -f "ci/Dockerfile-build.${ZT_NAME}" ]; then
     DOCKERFILE="ci/Dockerfile-build.${ZT_NAME}"
+    echo "USING DOCKERFILE ${DOCKERFILE}"
 else
     DOCKERFILE="ci/Dockerfile-build.${PKGFMT}"
+    echo "USING DOCKERFILE ${DOCKERFILE}"    
 fi
 
 echo "#~~~~~~~~~~~~~~~~~~~~"
