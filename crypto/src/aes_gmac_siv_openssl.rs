@@ -9,69 +9,95 @@ use crate::{cipher_ctx::CipherCtx, ZEROES};
 pub struct AesGmacSiv {
     tag: [u8; 16],
     tmp: [u8; 16],
-    k0: Vec<u8>,
-    k1: Vec<u8>,
-    ctr: Option<CipherCtx>,
-    gmac: Option<CipherCtx>,
+    ecb_enc: CipherCtx,
+    ecb_dec: CipherCtx,
+    ctr: CipherCtx,
+    gmac: CipherCtx,
 }
 
 impl AesGmacSiv {
     /// Create a new keyed instance of AES-GMAC-SIV
     /// The key may be of size 16, 24, or 32 bytes (128, 192, or 256 bits). Any other size will panic.
     pub fn new(k0: &[u8], k1: &[u8]) -> Self {
-        if k0.len() != 32 && k0.len() != 24 && k0.len() != 16 {
-            panic!("AES supports 128, 192, or 256 bits keys");
+        let gmac = CipherCtx::new().unwrap();
+        unsafe {
+            let t = match k0.len() {
+                16 => ffi::EVP_aes_128_gcm(),
+                24 => ffi::EVP_aes_192_gcm(),
+                32 => ffi::EVP_aes_256_gcm(),
+                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
+            };
+            gmac.cipher_init::<true>(t, k0.as_ptr(), ptr::null_mut()).unwrap();
         }
-        if k1.len() != k0.len() {
-            panic!("k0 and k1 must be of the same size");
+        let ctr = CipherCtx::new().unwrap();
+        unsafe {
+            let t = match k1.len() {
+                16 => ffi::EVP_aes_128_ctr(),
+                24 => ffi::EVP_aes_192_ctr(),
+                32 => ffi::EVP_aes_256_ctr(),
+                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
+            };
+            ctr.cipher_init::<true>(t, k1.as_ptr(), ptr::null_mut()).unwrap();
         }
+        let ecb_enc = CipherCtx::new().unwrap();
+        unsafe {
+            let t = match k1.len() {
+                16 => ffi::EVP_aes_128_ecb(),
+                24 => ffi::EVP_aes_192_ecb(),
+                32 => ffi::EVP_aes_256_ecb(),
+                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
+            };
+            ecb_enc.cipher_init::<true>(t, k1.as_ptr(), ptr::null_mut()).unwrap();
+            ffi::EVP_CIPHER_CTX_set_padding(ecb_enc.as_ptr(), 0);
+        }
+        let ecb_dec = CipherCtx::new().unwrap();
+        unsafe {
+            let t = match k1.len() {
+                16 => ffi::EVP_aes_128_ecb(),
+                24 => ffi::EVP_aes_192_ecb(),
+                32 => ffi::EVP_aes_256_ecb(),
+                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
+            };
+            ecb_dec.cipher_init::<false>(t, k1.as_ptr(), ptr::null_mut()).unwrap();
+            ffi::EVP_CIPHER_CTX_set_padding(ecb_dec.as_ptr(), 0);
+        }
+
         AesGmacSiv {
             tag: [0_u8; 16],
             tmp: [0_u8; 16],
-            k0: k0.to_vec(),
-            k1: k1.to_vec(),
-            ctr: None,
-            gmac: None,
+            ecb_dec,
+            ecb_enc,
+            ctr,
+            gmac,
         }
     }
 
     /// Reset to prepare for another encrypt or decrypt operation.
     #[inline(always)]
-    pub fn reset(&mut self) {
-        let _ = self.ctr.take();
-        let _ = self.gmac.take();
-    }
+    pub fn reset(&mut self) {}
 
     /// Initialize for encryption.
     #[inline(always)]
     pub fn encrypt_init(&mut self, iv: &[u8]) {
         self.tag[0..8].copy_from_slice(iv);
         self.tag[8..12].fill(0);
-
-        let ctx = CipherCtx::new().unwrap();
         unsafe {
-            let t = match self.k0.len() {
-                16 => ffi::EVP_aes_128_gcm(),
-                24 => ffi::EVP_aes_192_gcm(),
-                32 => ffi::EVP_aes_256_gcm(),
-                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
-            };
-            ctx.cipher_init::<true>(t, self.k0.as_mut_ptr(), self.tag[0..12].as_ptr()).unwrap();
+            self.gmac
+                .cipher_init::<true>(ptr::null_mut(), ptr::null_mut(), self.tag[0..12].as_ptr())
+                .unwrap();
         }
-        let _ = self.gmac.replace(ctx);
     }
 
     /// Set additional authenticated data (data to be authenticated but not encrypted).
     /// This can currently only be called once. Multiple calls will result in corrupt data.
     #[inline(always)]
     pub fn encrypt_set_aad(&mut self, data: &[u8]) {
-        let gmac = self.gmac.as_mut().unwrap();
         unsafe {
-            gmac.update::<true>(data, ptr::null_mut()).unwrap();
+            self.gmac.update::<true>(data, ptr::null_mut()).unwrap();
             let mut pad = data.len() & 0xf;
             if pad != 0 {
                 pad = 16 - pad;
-                gmac.update::<true>(&ZEROES[0..pad], ptr::null_mut()).unwrap();
+                self.gmac.update::<true>(&ZEROES[0..pad], ptr::null_mut()).unwrap();
             }
         }
     }
@@ -81,17 +107,16 @@ impl AesGmacSiv {
     #[inline(always)]
     pub fn encrypt_first_pass(&mut self, plaintext: &[u8]) {
         unsafe {
-            self.gmac.as_mut().unwrap().update::<true>(plaintext, ptr::null_mut()).unwrap();
+            self.gmac.update::<true>(plaintext, ptr::null_mut()).unwrap();
         }
     }
 
     /// Finish first pass and begin second pass.
     #[inline(always)]
     pub fn encrypt_first_pass_finish(&mut self) {
-        let gmac = self.gmac.as_mut().unwrap();
         unsafe {
-            gmac.finalize::<true>(self.tmp.as_mut_ptr()).unwrap();
-            gmac.tag(&mut self.tmp).unwrap();
+            self.gmac.finalize::<true>(ptr::null_mut()).unwrap();
+            self.gmac.tag(&mut self.tmp).unwrap();
         }
 
         self.tag[8] = self.tmp[0] ^ self.tmp[8];
@@ -103,36 +128,19 @@ impl AesGmacSiv {
         self.tag[14] = self.tmp[6] ^ self.tmp[14];
         self.tag[15] = self.tmp[7] ^ self.tmp[15];
 
-        let mut tag_tmp = [0_u8; 32];
+        let mut tag_tmp = [0_u8; 16];
 
-        let ctx = CipherCtx::new().unwrap();
         unsafe {
-            let t = match self.k1.len() {
-                16 => ffi::EVP_aes_128_ecb(),
-                24 => ffi::EVP_aes_192_ecb(),
-                32 => ffi::EVP_aes_256_ecb(),
-                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
-            };
-            ctx.cipher_init::<true>(t, self.k1.as_mut_ptr(), ptr::null_mut()).unwrap();
-            ffi::EVP_CIPHER_CTX_set_padding(ctx.as_ptr(), 0);
-            ctx.update::<true>(&self.tag, tag_tmp.as_mut_ptr()).unwrap();
+            self.ecb_enc.update::<true>(&self.tag, tag_tmp.as_mut_ptr()).unwrap();
         }
-        self.tag.copy_from_slice(&tag_tmp[0..16]);
-        self.tmp.copy_from_slice(&tag_tmp[0..16]);
+        self.tag.copy_from_slice(&tag_tmp);
+        self.tmp.copy_from_slice(&tag_tmp);
 
         self.tmp[12] &= 0x7f;
 
-        let ctx = CipherCtx::new().unwrap();
         unsafe {
-            let t = match self.k1.len() {
-                16 => ffi::EVP_aes_128_ctr(),
-                24 => ffi::EVP_aes_192_ctr(),
-                32 => ffi::EVP_aes_256_ctr(),
-                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
-            };
-            ctx.cipher_init::<true>(t, self.k1.as_mut_ptr(), self.tmp.as_ptr()).unwrap();
+            self.ctr.cipher_init::<true>(ptr::null_mut(), ptr::null_mut(), self.tmp.as_ptr()).unwrap();
         }
-        let _ = self.ctr.replace(ctx);
     }
 
     /// Feed plaintext for second pass and write ciphertext to supplied buffer.
@@ -140,7 +148,7 @@ impl AesGmacSiv {
     #[inline(always)]
     pub fn encrypt_second_pass(&mut self, plaintext: &[u8], ciphertext: &mut [u8]) {
         unsafe {
-            self.ctr.as_mut().unwrap().update::<true>(plaintext, ciphertext.as_mut_ptr()).unwrap();
+            self.ctr.update::<true>(plaintext, ciphertext.as_mut_ptr()).unwrap();
         }
     }
 
@@ -150,7 +158,7 @@ impl AesGmacSiv {
     pub fn encrypt_second_pass_in_place(&mut self, plaintext_to_ciphertext: &mut [u8]) {
         unsafe {
             let out = plaintext_to_ciphertext.as_mut_ptr();
-            self.ctr.as_mut().unwrap().update::<true>(plaintext_to_ciphertext, out).unwrap();
+            self.ctr.update::<true>(plaintext_to_ciphertext, out).unwrap();
         }
     }
 
@@ -168,46 +176,23 @@ impl AesGmacSiv {
         self.tmp.copy_from_slice(tag);
         self.tmp[12] &= 0x7f;
 
-        let ctx = CipherCtx::new().unwrap();
         unsafe {
-            let t = match self.k1.len() {
-                16 => ffi::EVP_aes_128_ctr(),
-                24 => ffi::EVP_aes_192_ctr(),
-                32 => ffi::EVP_aes_256_ctr(),
-                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
-            };
-            ctx.cipher_init::<false>(t, self.k1.as_mut_ptr(), self.tmp.as_ptr()).unwrap();
+            self.ctr
+                .cipher_init::<false>(ptr::null_mut(), ptr::null_mut(), self.tmp.as_ptr())
+                .unwrap();
         }
-        let _ = self.ctr.replace(ctx);
 
-        let mut tag_tmp = [0_u8; 32];
+        let mut tag_tmp = [0_u8; 16];
 
-        let ctx = CipherCtx::new().unwrap();
         unsafe {
-            let t = match self.k1.len() {
-                16 => ffi::EVP_aes_128_ecb(),
-                24 => ffi::EVP_aes_192_ecb(),
-                32 => ffi::EVP_aes_256_ecb(),
-                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
-            };
-            ctx.cipher_init::<false>(t, self.k1.as_mut_ptr(), ptr::null_mut()).unwrap();
-            ffi::EVP_CIPHER_CTX_set_padding(ctx.as_ptr(), 0);
-            ctx.update::<false>(&self.tag, tag_tmp.as_mut_ptr()).unwrap();
+            self.ecb_dec.update::<false>(&tag, tag_tmp.as_mut_ptr()).unwrap();
         }
-        self.tag.copy_from_slice(&tag_tmp[0..16]);
+        self.tag.copy_from_slice(&tag_tmp);
         tag_tmp[8..12].fill(0);
 
-        let ctx = CipherCtx::new().unwrap();
         unsafe {
-            let t = match self.k0.len() {
-                16 => ffi::EVP_aes_128_gcm(),
-                24 => ffi::EVP_aes_192_gcm(),
-                32 => ffi::EVP_aes_256_gcm(),
-                _ => panic!("Aes KEY_SIZE must be 16, 24 or 32"),
-            };
-            ctx.cipher_init::<true>(t, self.k0.as_mut_ptr(), self.tag[0..12].as_ptr()).unwrap();
+            self.gmac.cipher_init::<true>(ptr::null_mut(), ptr::null_mut(), tag_tmp.as_ptr()).unwrap();
         }
-        let _ = self.gmac.replace(ctx);
     }
 
     /// Set additional authenticated data to be checked.
@@ -221,8 +206,8 @@ impl AesGmacSiv {
     #[inline(always)]
     pub fn decrypt(&mut self, ciphertext: &[u8], plaintext: &mut [u8]) {
         unsafe {
-            self.ctr.as_mut().unwrap().update::<false>(ciphertext, plaintext.as_mut_ptr()).unwrap();
-            self.gmac.as_mut().unwrap().update::<false>(plaintext, ptr::null_mut()).unwrap();
+            self.ctr.update::<false>(ciphertext, plaintext.as_mut_ptr()).unwrap();
+            self.gmac.update::<true>(plaintext, ptr::null_mut()).unwrap();
         }
     }
 
@@ -240,10 +225,9 @@ impl AesGmacSiv {
     /// If this returns false the message should be dropped.
     #[inline(always)]
     pub fn decrypt_finish(&mut self) -> Option<&[u8; 16]> {
-        let gmac = self.gmac.as_mut().unwrap();
         unsafe {
-            gmac.finalize::<false>(self.tmp.as_mut_ptr()).unwrap();
-            gmac.tag(&mut self.tmp).unwrap();
+            self.gmac.finalize::<true>(self.tmp.as_mut_ptr()).unwrap();
+            self.gmac.tag(&mut self.tmp).unwrap();
         }
         if (self.tag[8] == self.tmp[0] ^ self.tmp[8])
             && (self.tag[9] == self.tmp[1] ^ self.tmp[9])
