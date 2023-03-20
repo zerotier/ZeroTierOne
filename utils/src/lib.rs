@@ -29,6 +29,8 @@ pub mod reaper;
 pub mod ringbuffer;
 pub mod sync;
 pub mod varint;
+pub mod arc_pool;
+
 
 #[cfg(feature = "tokio")]
 pub use tokio;
