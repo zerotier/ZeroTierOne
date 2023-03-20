@@ -33,7 +33,7 @@ echo "DOCKERFILE: ${DOCKERFILE}"
 echo "#~~~~~~~~~~~~~~~~~~~~"
 
 # if [ ${BUILD_EVENT} == "push" ]; then
-    make munge_rpm bytey.spec VERSION=${VERSION}
+    make munge_rpm zerotier.spec VERSION=${VERSION}
     make munge_deb debian/changelog VERSION=${VERSION}
 # fi
 

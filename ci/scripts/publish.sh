@@ -11,9 +11,9 @@ BUILD_EVENT="$1" ; shift
 source "$(dirname $0)/lib.sh"
 
 if [ ${BUILD_EVENT} == "tag" ]; then
-    CHANNEL="bytey-releases"
+    CHANNEL="zerotier-releases"
 else
-    CHANNEL="bytey-builds"
+    CHANNEL="zerotier-builds"
 fi
 
 function publish_rpm {

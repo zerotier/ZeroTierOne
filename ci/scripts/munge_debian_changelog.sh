@@ -31,7 +31,7 @@ else
 fi
 
 awk -v version=${VERSION} -v date=${DATE} -v name=${NAME} -v message=${MESSAGE} \
-    'BEGIN{print "bytey (" version ") unstable; urgency=medium\n\n  * " message "\n\n -- " name "  " date "\n" }{ print }' \
+    'BEGIN{print "ZeroTierOne (" version ") stable; urgency=medium\n\n  * " message "\n\n -- " name "  " date "\n" }{ print }' \
     ${FILE} > ${FILE}.new
 
 mv ${FILE}.new ${FILE}
