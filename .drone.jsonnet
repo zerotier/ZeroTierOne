@@ -7,7 +7,7 @@ local build_channel = "zerotier-builds";
 local release_channel = "zerotier-releases";
 
 local targets = [
-    { "os": "linux", distro: "redhat", "name": "el9",      "isas": [                 "amd64", "arm64", "ppc64le", "s390x" ],                        "events": [ "tag", "custom" ] },
+    // { "os": "linux", distro: "redhat", "name": "el9",      "isas": [                 "amd64", "arm64", "ppc64le", "s390x" ],                        "events": [ "tag", "custom" ] },
     // { "os": "linux", distro: "redhat", "name": "el8",      "isas": [                 "amd64", "arm64", "ppc64le", "s390x" ],                        "events": [ "tag" ] },
     // { "os": "linux", distro: "redhat", "name": "el7",      "isas": [ "386",          "amd64",          "ppc64le"],                                  "events": [ "tag" ] },
     // { "os": "linux", distro: "amazon", "name": "amzn2",    "isas": [                 "amd64", "arm64" ],                                            "events": [ "tag" ] },
@@ -26,8 +26,8 @@ local targets = [
     // { "os": "linux", distro: "debian", "name": "stretch",  "isas": [ "386", "armv7", "amd64", "arm64" ],                                            "events": [ "tag" ] },
     // { "os": "linux", distro: "debian", "name": "jessie",   "isas": [ "386", "armv7", "amd64" ],                                                     "events": [ "tag" ] },
 
- // { "os": "linux", distro: "redhat", "name": "el9",      "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
- // { "os": "linux", distro: "ubuntu", "name": "jammy",    "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
+    { "os": "linux", distro: "redhat", "name": "el9",      "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
+    { "os": "linux", distro: "ubuntu", "name": "jammy",    "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
  // { "os": "windows", distro: "windows", "name": "windows",  "isas": [ "amd64" ], "events": [ "push", "tag", "custom" ] },
  // { "os": "darwin", distro: "darwin", "name": "darwin",  "isas": [ "amd64" ], "events": [ "push", "tag", "custom" ] },
 
