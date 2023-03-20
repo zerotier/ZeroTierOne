@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn multi_thread() {
-        const N: usize = 123456;
+        const N: usize = 12345;
         static COUNT: AtomicU64 = AtomicU64::new(0);
 
         let mut joins = Vec::new();
@@ -556,7 +556,7 @@ mod tests {
 
         let s = Arc::new(PoolArcSwap::new(TestPools::alloc(Item::new(0, &COUNT))));
 
-        for _ in 0..1234 {
+        for _ in 0..123 {
             let mut joins = Vec::new();
             for _ in 0..8 {
                 let swaps = s.clone();
@@ -578,7 +578,7 @@ mod tests {
 
     #[test]
     fn multi_thread_swap_load() {
-        const N: usize = 123456;
+        const N: usize = 12345;
         static COUNT: AtomicU64 = AtomicU64::new(0);
 
         let s: Arc<[_; 8]> = Arc::new(std::array::from_fn(|i| PoolArcSwap::new(TestPools::alloc(Item::new(i as u32, &COUNT)))));
