@@ -519,14 +519,6 @@ synology-pkg: FORCE
 synology-docker: FORCE
 	cd pkg/synology/dsm7-docker/; ./build.sh build-and-push
 
-check_defined = \
-    $(strip $(foreach 1,$1, \
-        $(call __check_defined,$1,$(strip $(value 2)))))
-
-__check_defined = \
-$(if $(value $1),, \
-      $(error Undefined $1$(if $2, ($2))))
-
 munge_rpm:
 	@:$(call check_defined, VERSION)
 	@echo "Updating rpm spec to $(VERSION)"
