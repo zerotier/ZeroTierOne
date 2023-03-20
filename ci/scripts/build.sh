@@ -12,10 +12,8 @@ source "$(dirname $0)/lib.sh"
 
 if [ -f "ci/Dockerfile-build.${ZT_NAME}" ]; then
     DOCKERFILE="ci/Dockerfile-build.${ZT_NAME}"
-    echo "USING DOCKERFILE ${DOCKERFILE}"
 else
     DOCKERFILE="ci/Dockerfile-build.${PKGFMT}"
-    echo "USING DOCKERFILE ${DOCKERFILE}"    
 fi
 
 echo "#~~~~~~~~~~~~~~~~~~~~"
@@ -34,10 +32,8 @@ echo "PWD: ${PWD}"
 echo "DOCKERFILE: ${DOCKERFILE}"
 echo "#~~~~~~~~~~~~~~~~~~~~"
 
-# if [ ${BUILD_EVENT} == "push" ]; then
-    make munge_rpm zerotier-one.spec VERSION=${VERSION}
-    make munge_deb debian/changelog VERSION=${VERSION}
-# fi
+make munge_rpm zerotier-one.spec VERSION=${VERSION}
+make munge_deb debian/changelog VERSION=${VERSION}
 
 docker buildx build \
        --build-arg ZT_NAME="${ZT_NAME}" \
