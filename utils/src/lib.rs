@@ -6,6 +6,7 @@
  * https://www.zerotier.com/
  */
 
+pub mod arc_pool;
 pub mod arrayvec;
 pub mod base64;
 pub mod blob;
@@ -29,8 +30,6 @@ pub mod reaper;
 pub mod ringbuffer;
 pub mod sync;
 pub mod varint;
-pub mod arc_pool;
-
 
 #[cfg(feature = "tokio")]
 pub use tokio;

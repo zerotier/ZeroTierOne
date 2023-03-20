@@ -1,9 +1,12 @@
-use std::sync::{Mutex, RwLock, RwLockReadGuard, atomic::{AtomicU32, Ordering, AtomicPtr}};
-use std::mem::{self, MaybeUninit, ManuallyDrop};
-use std::ptr::{self, NonNull};
 use std::marker::PhantomData;
+use std::mem::{self, ManuallyDrop, MaybeUninit};
 use std::num::NonZeroU64;
 use std::ops::Deref;
+use std::ptr::{self, NonNull};
+use std::sync::{
+    atomic::{AtomicPtr, AtomicU32, Ordering},
+    Mutex, RwLock, RwLockReadGuard,
+};
 
 const DEFAULT_L: usize = 64;
 
@@ -32,7 +35,7 @@ struct PoolMem<T, const L: usize = DEFAULT_L> {
 /// Atomic reference counting is also implemented allowing for exceedingly complex models of shared ownership. Multiple copies of both strong and weak references to the underlying `T` can be generated that are all memory safe and borrow-checked.
 ///
 /// Allocating from a pool results in very little internal and external fragmentation in the global heap, thus saving significant amounts of memory from being used by one's program. Pools also allocate memory significantly faster on average than the global allocator. This specific pool implementation supports guaranteed constant time `alloc` and `free`.
-pub struct Pool<T, const L: usize = DEFAULT_L> (Mutex<(*mut Slot<T>, u64, *mut PoolMem<T, L>, usize)>);
+pub struct Pool<T, const L: usize = DEFAULT_L>(Mutex<(*mut Slot<T>, u64, *mut PoolMem<T, L>, usize)>);
 unsafe impl<T, const L: usize> Send for Pool<T, L> {}
 unsafe impl<T, const L: usize> Sync for Pool<T, L> {}
 
@@ -44,9 +47,8 @@ impl<T, const L: usize> Pool<T, L> {
     /// A `Pool<T>` cannot be interacted with directly, it requires a `impl StaticPool<T> for Pool<T>` implementation. See the `static_pool!` macro for automatically generated trait implementation.
     #[inline]
     pub const fn new() -> Self {
-        Pool (Mutex::new((ptr::null_mut(), 1, ptr::null_mut(), usize::MAX)))
+        Pool(Mutex::new((ptr::null_mut(), 1, ptr::null_mut(), usize::MAX)))
     }
-
 
     #[inline(always)]
     fn create_arr() -> [MaybeUninit<Slot<T>>; L] {
@@ -68,15 +70,12 @@ impl<T, const L: usize> Pool<T, L> {
             slot_ptr
         } else {
             if head_size >= L {
-                let new = Box::leak(Box::new(PoolMem {
-                    pre: head_arena,
-                    mem: Self::create_arr(),
-                }));
+                let new = Box::leak(Box::new(PoolMem { pre: head_arena, mem: Self::create_arr() }));
                 head_arena = new;
                 head_size = 0;
             }
             let slot = Slot {
-                obj: SlotState {full_obj: ManuallyDrop::new(obj)},
+                obj: SlotState { full_obj: ManuallyDrop::new(obj) },
                 free_lock: RwLock::new(()),
                 ref_count: AtomicU32::new(1),
                 uid,
@@ -122,7 +121,6 @@ impl<T, const L: usize> Drop for Pool<T, L> {
 }
 
 pub trait StaticPool<T, const L: usize = DEFAULT_L> {
-
     /// Must return a pointer to an instance of a `Pool<T, L>` with a static lifetime. That pointer must be cast to a `*const ()` to make the borrow-checker happy.
     ///
     /// **Safety**: The returned pointer must have originally been a `&'static Pool<T, L>` reference. So it must have had a matching `T` and `L` and it must have the static lifetime.
@@ -135,21 +133,23 @@ pub trait StaticPool<T, const L: usize = DEFAULT_L> {
     ///
     /// This `PoolArc` supports the ability to generate weak, non-owning references to the allocated `T`.
     #[inline(always)]
-    fn alloc(obj: T) -> PoolArc<T, Self, L> where Self: Sized {
+    fn alloc(obj: T) -> PoolArc<T, Self, L>
+    where
+        Self: Sized,
+    {
         unsafe {
             PoolArc {
                 ptr: (*Self::get_static_pool().cast::<Pool<T, L>>()).alloc_ptr(obj),
-                _p: PhantomData
+                _p: PhantomData,
             }
         }
     }
 }
 
-
 /// A multithreading lock guard that prevents another thread from freeing the underlying `T` while it is held. It does not prevent other threads from accessing the underlying `T`.
 ///
 /// If the same thread that holds this guard attempts to free `T` before dropping the guard, it will deadlock.
-pub struct PoolGuard<'a, T> (RwLockReadGuard<'a, ()>, &'a T);
+pub struct PoolGuard<'a, T>(RwLockReadGuard<'a, ()>, &'a T);
 impl<'a, T> Deref for PoolGuard<'a, T> {
     type Target = T;
     #[inline]
@@ -157,7 +157,6 @@ impl<'a, T> Deref for PoolGuard<'a, T> {
         &*self.1
     }
 }
-
 
 /// A rust-style RAII wrapper that drops and frees memory allocated from a pool automatically, the same as an `Arc<T>`. This will run the destructor of `T` in place within the pool before freeing it, correctly maintaining the invariants that the borrow checker and rust compiler expect of generic types.
 pub struct PoolArc<T, OriginPool: StaticPool<T, L>, const L: usize = DEFAULT_L> {
@@ -179,9 +178,7 @@ impl<T, OriginPool: StaticPool<T, L>, const L: usize> PoolArc<T, OriginPool, L> 
     }
     /// Returns a number that uniquely identifies this allocated `T` within this pool. No other instance of `T` may have this uid.
     pub fn uid(&self) -> NonZeroU64 {
-        unsafe {
-            NonZeroU64::new_unchecked(self.ptr.as_ref().uid)
-        }
+        unsafe { NonZeroU64::new_unchecked(self.ptr.as_ref().uid) }
     }
 }
 unsafe impl<T, OriginPool: StaticPool<T, L>, const L: usize> Send for PoolArc<T, OriginPool, L> where T: Send {}
@@ -191,9 +188,7 @@ impl<T, OriginPool: StaticPool<T, L>, const L: usize> Deref for PoolArc<T, Origi
     type Target = T;
     #[inline]
     fn deref(&self) -> &Self::Target {
-        unsafe {
-            &self.ptr.as_ref().obj.full_obj
-        }
+        unsafe { &self.ptr.as_ref().obj.full_obj }
     }
 }
 impl<T, OriginPool: StaticPool<T, L>, const L: usize> Clone for PoolArc<T, OriginPool, L> {
@@ -201,10 +196,7 @@ impl<T, OriginPool: StaticPool<T, L>, const L: usize> Clone for PoolArc<T, Origi
         unsafe {
             self.ptr.as_ref().ref_count.fetch_add(1, Ordering::Relaxed);
         }
-        Self {
-            ptr: self.ptr,
-            _p: PhantomData,
-        }
+        Self { ptr: self.ptr, _p: PhantomData }
     }
 }
 impl<T, OriginPool: StaticPool<T, L>, const L: usize> Drop for PoolArc<T, OriginPool, L> {
@@ -217,7 +209,6 @@ impl<T, OriginPool: StaticPool<T, L>, const L: usize> Drop for PoolArc<T, Origin
         }
     }
 }
-
 
 /// A non-owning reference to a `T` allocated by a pool. This reference has the special property that the underlying `T` can be dropped from the pool while neither making this reference invalid nor leaking the memory of `T`. Instead attempts to `grab` this reference will safely return `None` if the underlying `T` has been freed by any thread.
 ///
@@ -252,14 +243,10 @@ unsafe impl<T> Sync for PoolWeakRef<T> where T: Sync {}
 
 impl<T> Clone for PoolWeakRef<T> {
     fn clone(&self) -> Self {
-        Self {
-            uid: self.uid,
-            ptr: self.ptr,
-        }
+        Self { uid: self.uid, ptr: self.ptr }
     }
 }
 impl<T> Copy for PoolWeakRef<T> {}
-
 
 pub struct PoolArcSwap<T, OriginPool: StaticPool<T, L>, const L: usize = DEFAULT_L> {
     ptr: AtomicPtr<Slot<T>>,
@@ -289,10 +276,7 @@ impl<T, OriginPool: StaticPool<T, L>, const L: usize> PoolArcSwap<T, OriginPool,
             }
 
             mem::forget(arc);
-            PoolArc {
-                ptr: NonNull::new_unchecked(pre_ptr),
-                _p: self._p,
-            }
+            PoolArc { ptr: NonNull::new_unchecked(pre_ptr), _p: self._p }
         }
     }
 
@@ -302,10 +286,7 @@ impl<T, OriginPool: StaticPool<T, L>, const L: usize> PoolArcSwap<T, OriginPool,
             let ptr = self.ptr.load(Ordering::Relaxed);
             (*ptr).ref_count.fetch_add(1, Ordering::Relaxed);
             self.reads.fetch_sub(1, Ordering::Release);
-            PoolArc {
-                ptr: NonNull::new_unchecked(ptr),
-                _p: self._p,
-            }
+            PoolArc { ptr: NonNull::new_unchecked(ptr), _p: self._p }
         }
     }
 }
@@ -317,14 +298,10 @@ impl<T, OriginPool: StaticPool<T, L>, const L: usize> Drop for PoolArcSwap<T, Or
     fn drop(&mut self) {
         unsafe {
             let pre = self.ptr.load(Ordering::SeqCst);
-            PoolArc {
-                _p: self._p,
-                ptr: NonNull::new_unchecked(pre),
-            };
+            PoolArc { _p: self._p, ptr: NonNull::new_unchecked(pre) };
         }
     }
 }
-
 
 pub struct PoolArcSwapRw<T, OriginPool: StaticPool<T, L>, const L: usize = DEFAULT_L> {
     ptr: RwLock<NonNull<Slot<T>>>,
@@ -333,20 +310,14 @@ pub struct PoolArcSwapRw<T, OriginPool: StaticPool<T, L>, const L: usize = DEFAU
 
 impl<T, OriginPool: StaticPool<T, L>, const L: usize> PoolArcSwapRw<T, OriginPool, L> {
     pub fn new(arc: PoolArc<T, OriginPool, L>) -> Self {
-        let ret = Self {
-            ptr: RwLock::new(arc.ptr),
-            _p: arc._p,
-        };
+        let ret = Self { ptr: RwLock::new(arc.ptr), _p: arc._p };
         mem::forget(arc);
         ret
     }
 
     pub fn swap(&self, arc: PoolArc<T, OriginPool, L>) -> PoolArc<T, OriginPool, L> {
         let mut w = self.ptr.write().unwrap();
-        let pre = PoolArc {
-            ptr: *w,
-            _p: self._p,
-        };
+        let pre = PoolArc { ptr: *w, _p: self._p };
         *w = arc.ptr;
         mem::forget(arc);
         pre
@@ -357,10 +328,7 @@ impl<T, OriginPool: StaticPool<T, L>, const L: usize> PoolArcSwapRw<T, OriginPoo
         unsafe {
             r.as_ref().ref_count.fetch_add(1, Ordering::Relaxed);
         }
-        let pre = PoolArc {
-            ptr: *r,
-            _p: self._p,
-        };
+        let pre = PoolArc { ptr: *r, _p: self._p };
         pre
     }
 }
@@ -368,10 +336,7 @@ impl<T, OriginPool: StaticPool<T, L>, const L: usize> Drop for PoolArcSwapRw<T, 
     #[inline]
     fn drop(&mut self) {
         let w = self.ptr.write().unwrap();
-        PoolArc {
-            ptr: *w,
-            _p: self._p,
-        };
+        PoolArc { ptr: *w, _p: self._p };
     }
 }
 unsafe impl<T, OriginPool: StaticPool<T, L>, const L: usize> Send for PoolArcSwapRw<T, OriginPool, L> where T: Send {}
@@ -424,9 +389,11 @@ pub use __static_pool__ as static_pool;
 
 #[cfg(test)]
 mod tests {
-    use std::{thread, sync::{Arc, atomic::AtomicU64}};
     use super::*;
-
+    use std::{
+        sync::{atomic::AtomicU64, Arc},
+        thread,
+    };
 
     fn rand(r: &mut u32) -> u32 {
         /* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
@@ -436,18 +403,18 @@ mod tests {
         *r
     }
     const fn prob(p: u64) -> u32 {
-        (p*(u32::MAX as u64)/100) as u32
+        (p * (u32::MAX as u64) / 100) as u32
     }
     fn rand_idx<'a, T>(v: &'a [T], r: &mut u32) -> Option<&'a T> {
         if v.len() > 0 {
-            Some(&v[(rand(r) as usize)%v.len()])
+            Some(&v[(rand(r) as usize) % v.len()])
         } else {
             None
         }
     }
     fn rand_i<'a, T>(v: &'a [T], r: &mut u32) -> Option<usize> {
         if v.len() > 0 {
-            Some((rand(r) as usize)%v.len())
+            Some((rand(r) as usize) % v.len())
         } else {
             None
         }
@@ -461,11 +428,7 @@ mod tests {
     impl Item {
         fn new(r: u32, count: &'static AtomicU64) -> Item {
             count.fetch_add(1, Ordering::Relaxed);
-            Item {
-                a: r,
-                count,
-                b: r,
-            }
+            Item { a: r, count, b: r }
         }
         fn check(&self, id: u32) {
             assert_eq!(self.a, self.b);
@@ -479,14 +442,13 @@ mod tests {
         }
     }
 
-    const POOL_U32_LEN: usize = (5*12)<<2;
+    const POOL_U32_LEN: usize = (5 * 12) << 2;
     static_pool!(StaticPool TestPools {
         Pool<u32, POOL_U32_LEN>, Pool<Item>
     });
 
     #[test]
     fn usage() {
-
         let num1 = TestPools::alloc(1u32);
         let num2 = TestPools::alloc(2u32);
         let num3 = TestPools::alloc(3u32);
@@ -503,7 +465,6 @@ mod tests {
     }
     #[test]
     fn single_thread() {
-
         let mut history = Vec::new();
 
         let num1 = TestPools::alloc(1u32);
@@ -516,7 +477,7 @@ mod tests {
             history.push(TestPools::alloc(i as u32));
         }
         for i in 0..100 {
-            let arc = history.remove((i*10)%history.len());
+            let arc = history.remove((i * 10) % history.len());
             assert!(*arc < 1000);
         }
         for i in 0..1000 {
@@ -645,7 +606,7 @@ mod tests {
                         let _a = s.load();
                         assert_eq!(_a.a, _a.b);
                     }
-                    }
+                }
             }));
         }
         for j in joins {
