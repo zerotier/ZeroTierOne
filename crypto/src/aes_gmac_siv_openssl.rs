@@ -74,8 +74,7 @@ impl AesGmacSiv {
 
     /// Reset to prepare for another encrypt or decrypt operation.
     #[inline(always)]
-    pub fn reset(&mut self) {
-    }
+    pub fn reset(&mut self) {}
 
     /// Initialize for encryption.
     #[inline(always)]
@@ -83,7 +82,9 @@ impl AesGmacSiv {
         self.tag[0..8].copy_from_slice(iv);
         self.tag[8..12].fill(0);
         unsafe {
-            self.gmac.cipher_init::<true>(ptr::null_mut(), ptr::null_mut(), self.tag[0..12].as_ptr()).unwrap();
+            self.gmac
+                .cipher_init::<true>(ptr::null_mut(), ptr::null_mut(), self.tag[0..12].as_ptr())
+                .unwrap();
         }
     }
 
@@ -176,7 +177,9 @@ impl AesGmacSiv {
         self.tmp[12] &= 0x7f;
 
         unsafe {
-            self.ctr.cipher_init::<false>(ptr::null_mut(), ptr::null_mut(), self.tmp.as_ptr()).unwrap();
+            self.ctr
+                .cipher_init::<false>(ptr::null_mut(), ptr::null_mut(), self.tmp.as_ptr())
+                .unwrap();
         }
 
         let mut tag_tmp = [0_u8; 16];
