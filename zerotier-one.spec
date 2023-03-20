@@ -26,6 +26,12 @@ Requires:      systemd openssl1.1
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
+%if "%{?dist}" == ".fc38"
+BuildRequires: systemd clang openssl1.1 openssl1.1-devel
+Requires:      systemd openssl1.1
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
 # RHEL
 
 %if "%{?dist}" == ".el6"
