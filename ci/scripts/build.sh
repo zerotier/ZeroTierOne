@@ -36,6 +36,7 @@ make munge_rpm zerotier-one.spec VERSION=${VERSION}
 make munge_deb debian/changelog VERSION=${VERSION}
 
 docker buildx build \
+       --no-cache \
        --build-arg ZT_NAME="${ZT_NAME}" \
        --build-arg RUST_TRIPLET="${RUST_TRIPLET}" \
        --build-arg DOCKER_ARCH="${DOCKER_ARCH}" \
