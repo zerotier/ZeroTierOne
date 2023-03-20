@@ -16,14 +16,14 @@ RUN apk add build-base
 RUN apk add openssl-libs-static
 
 COPY . .
-RUN ZT_STATIC=1 make one
+RUN ZT_STATIC=1 make
 RUN ls -la
 
 ARG DOCKER_ARCH
 FROM --platform=linux/${DOCKER_ARCH} centos:6 AS stage
 WORKDIR /root/rpmbuild/BUILD
 COPY . .
-COPY --from=builder zerotier-one ./
+COPY --from=builder bytey ./
 RUN curl https://gist.githubusercontent.com/someara/b363002ba6e57b3c474dd027d4daef85/raw/4ac5534139752fc92fbe1a53599a390214f69615/el6%2520vault --output /etc/yum.repos.d/CentOS-Base.repo
 RUN uname -a
 RUN yum -y install make gcc rpm-build

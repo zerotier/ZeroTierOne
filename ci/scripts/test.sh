@@ -10,10 +10,16 @@ BUILD_EVENT="$1" ; shift
 
 source "$(dirname $0)/lib.sh"
 
-if [ -f "ci/Dockerfile-build.${ZT_NAME}" ]; then
-    DOCKERFILE="ci/Dockerfile-build.${ZT_NAME}"
+if [ -f "ci/Dockerfile-test.${ZT_NAME}" ]; then
+    DOCKERFILE="ci/Dockerfile-test.${ZT_NAME}"
 else
-    DOCKERFILE="ci/Dockerfile-build.${PKGFMT}"
+    DOCKERFILE="ci/Dockerfile-test.${PKGFMT}"
+fi
+
+if [ ${BUILD_EVENT} == "tag" ]; then
+    BASEURL="bytey-releases.ci.lab"
+else
+    BASEURL="bytey-builds.ci.lab"
 fi
 
 echo "#~~~~~~~~~~~~~~~~~~~~"
@@ -32,19 +38,17 @@ echo "PWD: ${PWD}"
 echo "DOCKERFILE: ${DOCKERFILE}"
 echo "#~~~~~~~~~~~~~~~~~~~~"
 
-# if [ ${BUILD_EVENT} == "push" ]; then
-    make munge_rpm bytey.spec VERSION=${VERSION}
-    make munge_deb debian/changelog VERSION=${VERSION}
-# fi
+docker pull -q --platform="linux/${DOCKER_ARCH}" 084037375216.dkr.ecr.us-east-2.amazonaws.com/${ZT_NAME}-tester
 
 docker buildx build \
+       --build-arg BASEURL="${BASEURL}" \
        --build-arg ZT_NAME="${ZT_NAME}" \
-       --build-arg RUST_TRIPLET="${RUST_TRIPLET}" \
-       --build-arg DOCKER_ARCH="${DOCKER_ARCH}" \
+       --build-arg DISTRO="${DISTRO}" \
+       --build-arg DEB_ARCH="${DEB_ARCH}" \
        --build-arg DNF_ARCH="${DNF_ARCH}" \
-       --platform linux/${DOCKER_ARCH} \
+       --build-arg VERSION="${VERSION}" \
+       --platform "linux/${DOCKER_ARCH}" \
+       --no-cache \
        -f ${DOCKERFILE} \
-       -t build \
+       -t test \
        . \
-       --output type=local,dest=. \
-       --target export

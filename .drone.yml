@@ -2,157 +2,445 @@
 clone:
   depth: 1
 kind: pipeline
-name: sid 386 build
+name: el9 amd64 build
+platform:
+  os: linux
 pull: always
 steps:
 - commands:
-  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
-    084037375216.dkr.ecr.us-east-2.amazonaws.com
-  - ./ci/scripts/build.sh sid 386 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/build.sh el9 redhat amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
   name: build
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/build.sh el9 redhat amd64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: release
+  when:
+    event:
+    - tag
+- commands:
+  - ./ci/scripts/publish.sh el9 redhat amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: copy build
+  volumes:
+  - name: zerotier-builds
+    path: /zerotier-builds
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/publish.sh el9 redhat amd64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: copy relase
+  volumes:
+  - name: zerotier-releases
+    path: /zerotier-releases
+  when:
+    event:
+    - tag
 trigger:
   event:
-  - push
   - tag
   - custom
 type: docker
+volumes:
+- host:
+    path: /zerotier-builds
+  name: zerotier-builds
+- host:
+    path: /zerotier-releases
+  name: zerotier-releases
 ---
 clone:
   depth: 1
 kind: pipeline
-name: sid armv7 build
+name: el9 arm64 build
 platform:
   arch: arm64
   os: linux
 pull: always
 steps:
 - commands:
-  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
-    084037375216.dkr.ecr.us-east-2.amazonaws.com
-  - ./ci/scripts/build.sh sid armv7 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/build.sh el9 redhat arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
   name: build
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/build.sh el9 redhat arm64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: release
+  when:
+    event:
+    - tag
+- commands:
+  - ./ci/scripts/publish.sh el9 redhat arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: copy build
+  volumes:
+  - name: zerotier-builds
+    path: /zerotier-builds
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/publish.sh el9 redhat arm64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: copy relase
+  volumes:
+  - name: zerotier-releases
+    path: /zerotier-releases
+  when:
+    event:
+    - tag
 trigger:
   event:
-  - push
   - tag
   - custom
 type: docker
+volumes:
+- host:
+    path: /zerotier-builds
+  name: zerotier-builds
+- host:
+    path: /zerotier-releases
+  name: zerotier-releases
 ---
 clone:
   depth: 1
 kind: pipeline
-name: sid amd64 build
+name: el9 ppc64le build
+platform:
+  os: linux
 pull: always
 steps:
 - commands:
-  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
-    084037375216.dkr.ecr.us-east-2.amazonaws.com
-  - ./ci/scripts/build.sh sid amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/build.sh el9 redhat ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
   name: build
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/build.sh el9 redhat ppc64le ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: release
+  when:
+    event:
+    - tag
+- commands:
+  - ./ci/scripts/publish.sh el9 redhat ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: copy build
+  volumes:
+  - name: zerotier-builds
+    path: /zerotier-builds
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/publish.sh el9 redhat ppc64le ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: copy relase
+  volumes:
+  - name: zerotier-releases
+    path: /zerotier-releases
+  when:
+    event:
+    - tag
 trigger:
   event:
-  - push
   - tag
   - custom
 type: docker
+volumes:
+- host:
+    path: /zerotier-builds
+  name: zerotier-builds
+- host:
+    path: /zerotier-releases
+  name: zerotier-releases
 ---
 clone:
   depth: 1
 kind: pipeline
-name: sid arm64 build
+name: el9 s390x build
+platform:
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/build.sh el9 redhat s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: build
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/build.sh el9 redhat s390x ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: release
+  when:
+    event:
+    - tag
+- commands:
+  - ./ci/scripts/publish.sh el9 redhat s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: copy build
+  volumes:
+  - name: zerotier-builds
+    path: /zerotier-builds
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/publish.sh el9 redhat s390x ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: copy relase
+  volumes:
+  - name: zerotier-releases
+    path: /zerotier-releases
+  when:
+    event:
+    - tag
+trigger:
+  event:
+  - tag
+  - custom
+type: docker
+volumes:
+- host:
+    path: /zerotier-builds
+  name: zerotier-builds
+- host:
+    path: /zerotier-releases
+  name: zerotier-releases
+---
+clone:
+  depth: 1
+depends_on:
+- el9 amd64 build
+- el9 arm64 build
+- el9 ppc64le build
+- el9 s390x build
+kind: pipeline
+name: el9 index
+platform:
+  os: linux
+pull: always
+steps:
+- commands:
+  - /usr/local/bin/index zerotier-builds redhat el9 amd64 arm64 ppc64le s390x
+  environment:
+    GPG_PRIVATE_KEY:
+      from_secret: gpg-private-key
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/dnf-builder
+  name: index build
+  volumes:
+  - name: zerotier-builds
+    path: /zerotier-builds
+  when:
+    event:
+    - push
+- commands:
+  - /usr/local/bin/index zerotier-releases redhat el9 amd64 arm64 ppc64le s390x
+  environment:
+    GPG_PRIVATE_KEY:
+      from_secret: gpg-private-key
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/dnf-builder
+  name: index release
+  volumes:
+  - name: zerotier-releases
+    path: /zerotier-releases
+  when:
+    event:
+    - tag
+trigger:
+  event:
+  - tag
+  - custom
+type: docker
+volumes:
+- host:
+    path: /zerotier-builds
+  name: zerotier-builds
+- host:
+    path: /zerotier-releases
+  name: zerotier-releases
+---
+clone:
+  depth: 1
+depends_on:
+- el9 index
+kind: pipeline
+name: el9 amd64 test
+platform:
+  os: linux
+pull: always
+steps:
+- commands:
+  - ./ci/scripts/test.sh el9 redhat amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: test build
+  volumes:
+  - name: zerotier-builds
+    path: /zerotier-builds
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/test.sh el9 redhat amd64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: test release
+  volumes:
+  - name: zerotier-releases
+    path: /zerotier-releases
+  when:
+    event:
+    - tag
+trigger:
+  event:
+  - tag
+  - custom
+type: docker
+volumes:
+- host:
+    path: /zerotier-builds
+  name: zerotier-builds
+- host:
+    path: /zerotier-releases
+  name: zerotier-releases
+---
+clone:
+  depth: 1
+depends_on:
+- el9 index
+kind: pipeline
+name: el9 arm64 test
 platform:
   arch: arm64
   os: linux
 pull: always
 steps:
 - commands:
-  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
-    084037375216.dkr.ecr.us-east-2.amazonaws.com
-  - ./ci/scripts/build.sh sid arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/test.sh el9 redhat arm64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
-  name: build
+  name: test build
+  volumes:
+  - name: zerotier-builds
+    path: /zerotier-builds
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/test.sh el9 redhat arm64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: test release
+  volumes:
+  - name: zerotier-releases
+    path: /zerotier-releases
+  when:
+    event:
+    - tag
 trigger:
   event:
-  - push
   - tag
   - custom
 type: docker
+volumes:
+- host:
+    path: /zerotier-builds
+  name: zerotier-builds
+- host:
+    path: /zerotier-releases
+  name: zerotier-releases
 ---
 clone:
   depth: 1
+depends_on:
+- el9 index
 kind: pipeline
-name: sid mips64le build
+name: el9 ppc64le test
+platform:
+  os: linux
 pull: always
 steps:
 - commands:
-  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
-    084037375216.dkr.ecr.us-east-2.amazonaws.com
-  - ./ci/scripts/build.sh sid mips64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/test.sh el9 redhat ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
-  name: build
+  name: test build
+  volumes:
+  - name: zerotier-builds
+    path: /zerotier-builds
+  when:
+    event:
+    - push
+- commands:
+  - ./ci/scripts/test.sh el9 redhat ppc64le ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
+  name: test release
+  volumes:
+  - name: zerotier-releases
+    path: /zerotier-releases
+  when:
+    event:
+    - tag
 trigger:
   event:
-  - push
   - tag
   - custom
 type: docker
+volumes:
+- host:
+    path: /zerotier-builds
+  name: zerotier-builds
+- host:
+    path: /zerotier-releases
+  name: zerotier-releases
 ---
 clone:
   depth: 1
+depends_on:
+- el9 index
 kind: pipeline
-name: sid ppc64le build
+name: el9 s390x test
+platform:
+  os: linux
 pull: always
 steps:
 - commands:
-  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
-    084037375216.dkr.ecr.us-east-2.amazonaws.com
-  - ./ci/scripts/build.sh sid ppc64le 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/test.sh el9 redhat s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
-  name: build
-trigger:
-  event:
-  - push
-  - tag
-  - custom
-type: docker
----
-clone:
-  depth: 1
-kind: pipeline
-name: sid s390x build
-pull: always
-steps:
+  name: test build
+  volumes:
+  - name: zerotier-builds
+    path: /zerotier-builds
+  when:
+    event:
+    - push
 - commands:
-  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
-    084037375216.dkr.ecr.us-east-2.amazonaws.com
-  - ./ci/scripts/build.sh sid s390x 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/test.sh el9 redhat s390x ${DRONE_TAG} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
-  name: build
+  name: test release
+  volumes:
+  - name: zerotier-releases
+    path: /zerotier-releases
+  when:
+    event:
+    - tag
 trigger:
   event:
-  - push
   - tag
   - custom
 type: docker
----
-clone:
-  depth: 1
-kind: pipeline
-name: sid riscv64 build
-pull: always
-steps:
-- commands:
-  - aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin
-    084037375216.dkr.ecr.us-east-2.amazonaws.com
-  - ./ci/scripts/build.sh sid riscv64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
-  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
-  name: build
-trigger:
-  event:
-  - push
-  - tag
-  - custom
-type: docker
+volumes:
+- host:
+    path: /zerotier-builds
+  name: zerotier-builds
+- host:
+    path: /zerotier-releases
+  name: zerotier-releases
