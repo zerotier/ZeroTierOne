@@ -80,7 +80,7 @@ local host_volumes(os)   = if os == "linux" then [
   { name: "zerotier-releases", host: { path: "/zerotier-releases" } },
 ] else [];
 
-local sign_image(distro) =
+local index_image(distro) =
       if distro == "debian" || distro == "ubuntu" then
           registry + "/apt-builder"
       else if distro == "redhat" || distro == "fedora" || distro == "amazon" then
@@ -102,9 +102,9 @@ local copy_commands(os, distro, name, isa, version) =
       ]
 ;
 
-local sign_commands(os, channel, distro, name, isas) =
+local index_commands(os, channel, distro, name, isas) =
       if os == "linux" then
-        [ "/usr/local/bin/sign " + channel + " " + distro + " " + name  + " " + std.join(" ", isas) ]
+        [ "/usr/local/bin/index " + channel + " " + distro + " " + name  + " " + std.join(" ", isas) ]
       else if os == "windows" then
         [ "Get-ChildItem -Recurse windows" ]
 ;
@@ -195,29 +195,29 @@ local Test(os, distro, name, isa, events) = {
   ],
   "volumes": host_volumes(os),
   "platform": { "os": os, [ if isa == "arm64" || isa == "armv7" then "arch" ]: "arm64" },
-  "depends_on": [ std.join(" ", [ name, "sign" ]) ],
+  "depends_on": [ std.join(" ", [ name, "index" ]) ],
   "trigger": { "event": events }
 };
 
-local Sign(p) = {
+local Index(p) = {
   "kind": "pipeline",
   "type": pipeline_type(p.os),
-  "name": std.join(" ", [ p.name, "sign" ]),
+  "name": std.join(" ", [ p.name, "index" ]),
   "pull": "always",
   "clone": { "depth": 1 },
   "steps": [
     {
-      "name": "sign build",
-      "image": sign_image(p.distro),
-      "commands": sign_commands(p.os, "zerotier-builds", p.distro, p.name, p.isas),
+      "name": "index build",
+      "image": index_image(p.distro),
+      "commands": index_commands(p.os, "zerotier-builds", p.distro, p.name, p.isas),
       "volumes": build_step_volumes(p.os),
       "environment":{ "GPG_PRIVATE_KEY": { from_secret: "gpg-private-key" }},
       "when": { "event": [ "push" ]},
     },
     {
-      "name": "sign release",
-      "image": sign_image(p.distro),
-      "commands": sign_commands(p.os, "zerotier-releases", p.distro, p.name, p.isas),
+      "name": "index release",
+      "image": index_image(p.distro),
+      "commands": index_commands(p.os, "zerotier-releases", p.distro, p.name, p.isas),
       "volumes": release_step_volumes(p.os),
       "environment":{ "GPG_PRIVATE_KEY": { from_secret: "gpg-private-key" }},
       "when": { "event": [ "tag" ]},  
@@ -239,7 +239,7 @@ std.flattenArrays([
         for isa in p.isas
     ] +
     [
-      Sign(p)
+      Index(p)
     ]
     for p in targets
  ]) +
