@@ -111,7 +111,7 @@ void Peer::received(
 					}
 					// If same address on same interface then don't learn unless existing path isn't alive (prevents learning loop)
 					if (_paths[i].p->address().ipsEqual(path->address()) && _paths[i].p->localSocket() == path->localSocket()) {
-						if (_paths[i].p->alive(now)) {
+						if (_paths[i].p->alive(now) && !_bond) {
 							havePath = true;
 							break;
 						}
