@@ -6,6 +6,7 @@
  * https://www.zerotier.com/
  */
 
+pub mod arc_pool;
 pub mod arrayvec;
 pub mod base64;
 pub mod blob;
