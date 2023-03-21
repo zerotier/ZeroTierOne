@@ -1,0 +1,17 @@
+ARG ZT_NAME
+FROM 084037375216.dkr.ecr.us-east-2.amazonaws.com/${ZT_NAME}-tester
+ARG BASEURL
+ARG VERSION
+ARG DEB_ARCH
+ARG ZT_NAME
+ARG DISTRO
+ARG DNF_ARCH
+RUN curl -s http://${BASEURL}/key.asc -o /etc/pki/rpm-gpg/RPM-GPG-KEY-zerotier
+RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-zerotier
+RUN rpm -q gpg-pubkey --qf '%{NAME}-%{VERSION}-%{RELEASE}\t%{SUMMARY}\n'
+RUN printf "[zerotier]\nname=zerotier\nbaseurl=http://${BASEURL}/${DISTRO}/${ZT_NAME}/$basearch/\nenabled=1\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-zerotier\n" > /etc/yum.repos.d/zerotier.repo
+
+# RUN yum -v repolist
+RUN setarch ${DNF_ARCH} yum -y install zerotier-one-${VERSION}
+RUN file $(which zerotier-cli)
+RUN ldd $(which zerotier-cli)

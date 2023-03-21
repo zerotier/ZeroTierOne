@@ -1,0 +1,9 @@
+ARG ZT_NAME
+FROM 084037375216.dkr.ecr.us-east-2.amazonaws.com/${ZT_NAME}-builder as builder
+WORKDIR /root/rpmbuild/BUILD
+COPY . .
+RUN make redhat
+
+FROM scratch AS export
+ARG ZT_NAME
+COPY --from=builder /root/rpmbuild/RPMS/*/*.rpm ./${ZT_NAME}/
