@@ -15,8 +15,8 @@ use std::sync::atomic::{AtomicI64, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, RwLock, Weak};
 
 use zerotier_crypto::aes::{Aes, AesGcm};
-use zerotier_crypto::hash::{hmac_sha512_secret, SHA384, SHA384_HASH_SIZE};
-use zerotier_crypto::p384::{P384KeyPair, P384PublicKey, P384_ECDH_SHARED_SECRET_SIZE};
+use zerotier_crypto::hash::{hmac_sha512_secret, hmac_sha512_secret256, SHA512};
+use zerotier_crypto::p384::{P384KeyPair, P384PublicKey};
 use zerotier_crypto::secret::Secret;
 use zerotier_crypto::{random, secure_eq};
 
@@ -106,8 +106,8 @@ struct IncomingIncompleteSession<Application: ApplicationLayer> {
     timestamp: i64,
     alice_session_id: SessionId,
     bob_session_id: SessionId,
-    noise_h: [u8; SHA384_HASH_SIZE],
-    noise_es_ee: Secret<BASE_KEY_SIZE>,
+    noise_h: [u8; NOISE_HASHLEN],
+    noise_ck_es_ee: Secret<NOISE_HASHLEN>,
     hk: Secret<KYBER_SSBYTES>,
     header_protection_key: Secret<AES_HEADER_PROTECTION_KEY_SIZE>,
     bob_noise_e_secret: P384KeyPair,
@@ -116,9 +116,9 @@ struct IncomingIncompleteSession<Application: ApplicationLayer> {
 
 struct OutgoingSessionOffer {
     last_retry_time: AtomicI64,
-    psk: Secret<BASE_KEY_SIZE>,
-    noise_h: [u8; SHA384_HASH_SIZE],
-    noise_es: Secret<P384_ECDH_SHARED_SECRET_SIZE>,
+    psk: Secret<NOISE_HASHLEN>,
+    noise_h: [u8; NOISE_HASHLEN],
+    noise_ck_es: Secret<NOISE_HASHLEN>,
     alice_noise_e_secret: P384KeyPair,
     alice_hk_secret: Secret<KYBER_SECRETKEYBYTES>,
     metadata: Option<Vec<u8>>,
@@ -139,7 +139,7 @@ enum Offer {
 }
 
 struct SessionKey {
-    ratchet_key: Secret<BASE_KEY_SIZE>,                                // Key used in derivation of the next session key
+    ratchet_key: Secret<NOISE_HASHLEN>,                                // Key used in derivation of the next session key
     receive_cipher_pool: [Mutex<AesGcm<false>>; GCM_CIPHER_POOL_SIZE], // Pool of reusable sending ciphers
     send_cipher_pool: [Mutex<AesGcm<true>>; GCM_CIPHER_POOL_SIZE],     // Pool of reusable receiving ciphers
     rekey_at_time: i64,                                                // Rekey at or after this time (ticks)
@@ -289,7 +289,7 @@ impl<Application: ApplicationLayer> Context<Application> {
         mtu: usize,
         remote_s_public_blob: &[u8],
         remote_s_public_p384: P384PublicKey,
-        psk: Secret<BASE_KEY_SIZE>,
+        psk: Secret<NOISE_HASHLEN>,
         metadata: Option<Vec<u8>>,
         application_data: Application::Data,
         current_time: i64,
@@ -301,8 +301,13 @@ impl<Application: ApplicationLayer> Context<Application> {
         let alice_noise_e_secret = P384KeyPair::generate();
         let alice_noise_e = alice_noise_e_secret.public_key_bytes().clone();
         let noise_es = alice_noise_e_secret.agree(&remote_s_public_p384).ok_or(Error::InvalidParameter)?;
+        let noise_h = mix_hash(&mix_hash(&INITIAL_H, remote_s_public_blob), &alice_noise_e);
+        let noise_ck_es = hmac_sha512_secret(&INITIAL_H, noise_es.as_bytes());
         let alice_hk_secret = pqc_kyber::keypair(&mut random::SecureRandom::default());
         let header_protection_key: Secret<AES_HEADER_PROTECTION_KEY_SIZE> = Secret(random::get_bytes_secure());
+
+        // Init aesgcm before we move noise_ck_es
+        let mut gcm = AesGcm::new(&kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES>(&noise_ck_es));
 
         let (local_session_id, session) = {
             let mut sessions = self.sessions.write().unwrap();
@@ -330,8 +335,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                     outgoing_offer: Offer::NoiseXKInit(Box::new(OutgoingSessionOffer {
                         last_retry_time: AtomicI64::new(current_time),
                         psk,
-                        noise_h: mix_hash(&mix_hash(&INITIAL_H, remote_s_public_blob), &alice_noise_e),
-                        noise_es: noise_es.clone(),
+                        noise_h,
+                        noise_ck_es,
                         alice_noise_e_secret,
                         alice_hk_secret: Secret(alice_hk_secret.secret),
                         metadata,
@@ -366,7 +371,6 @@ impl<Application: ApplicationLayer> Context<Application> {
             }
 
             // Encrypt and add authentication tag.
-            let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES>(noise_es.as_bytes()));
             gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_INIT, 1));
             gcm.aad(&offer.noise_h);
             gcm.crypt_in_place(&mut init_packet[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START]);
@@ -735,9 +739,11 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                     let noise_h = mix_hash(&mix_hash(&INITIAL_H, app.get_local_s_public_blob()), alice_noise_e.as_bytes());
                     let noise_h_next = mix_hash(&noise_h, &pkt_assembled[HEADER_SIZE..]);
+                    let noise_ck_es = hmac_sha512_secret(&INITIAL_H, noise_es.as_bytes());
+                    drop(noise_es);
 
                     // Decrypt and authenticate init packet, also proving that caller knows our static identity.
-                    let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES>(noise_es.as_bytes()));
+                    let mut gcm = AesGcm::new(&kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES>(&noise_ck_es));
                     gcm.reset_init_gcm(&incoming_message_nonce);
                     gcm.aad(&noise_h);
                     gcm.crypt_in_place(&mut pkt_assembled[AliceNoiseXKInit::ENC_START..AliceNoiseXKInit::AUTH_START]);
@@ -754,12 +760,12 @@ impl<Application: ApplicationLayer> Context<Application> {
                     let alice_session_id = SessionId::new_from_array(&pkt.alice_session_id).ok_or(Error::InvalidPacket)?;
                     let header_protection_key = Secret(pkt.header_protection_key);
 
-                    // Create Bob's ephemeral keys and derive noise_es_ee by agreeing with Alice's. Also create
+                    // Create Bob's ephemeral keys and derive noise_ck by agreeing with Alice's. Also create
                     // a Kyber ciphertext to send back to Alice.
                     let bob_noise_e_secret = P384KeyPair::generate();
                     let bob_noise_e = bob_noise_e_secret.public_key_bytes().clone();
-                    let noise_es_ee = hmac_sha512_secret(
-                        noise_es.as_bytes(),
+                    let noise_ck_es_ee = hmac_sha512_secret(
+                        noise_ck_es.as_bytes(),
                         bob_noise_e_secret.agree(&alice_noise_e).ok_or(Error::FailedAuthentication)?.as_bytes(),
                     );
                     let (bob_hk_ciphertext, hk) = pqc_kyber::encapsulate(&pkt.alice_hk_public, &mut random::SecureRandom::default())
@@ -786,7 +792,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     ack.bob_hk_ciphertext = bob_hk_ciphertext;
 
                     // Encrypt main section of reply and attach tag.
-                    let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(noise_es_ee.as_bytes()));
+                    let mut gcm = AesGcm::new(&kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(&noise_ck_es_ee));
                     gcm.reset_init_gcm(&create_message_nonce(PACKET_TYPE_BOB_NOISE_XK_ACK, 1));
                     gcm.aad(&noise_h_next);
                     gcm.crypt_in_place(&mut ack_packet[BobNoiseXKAck::ENC_START..BobNoiseXKAck::AUTH_START]);
@@ -819,7 +825,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             alice_session_id,
                             bob_session_id,
                             noise_h: mix_hash(&mix_hash(&noise_h_next, &bob_noise_e), &ack_packet[HEADER_SIZE..]),
-                            noise_es_ee: noise_es_ee.clone(),
+                            noise_ck_es_ee,
                             hk,
                             bob_noise_e_secret,
                             header_protection_key: Secret(pkt.header_protection_key),
@@ -874,8 +880,8 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                             // Derive noise_es_ee from Bob's ephemeral public key.
                             let bob_noise_e = P384PublicKey::from_bytes(&pkt.bob_noise_e).ok_or(Error::FailedAuthentication)?;
-                            let noise_es_ee = hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                outgoing_offer.noise_es.as_bytes(),
+                            let noise_ck_es_ee = hmac_sha512_secret(
+                                outgoing_offer.noise_ck_es.as_bytes(),
                                 outgoing_offer
                                     .alice_noise_e_secret
                                     .agree(&bob_noise_e)
@@ -887,7 +893,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             let noise_h_next = mix_hash(&mix_hash(&outgoing_offer.noise_h, bob_noise_e.as_bytes()), &pkt_assembled[HEADER_SIZE..]);
 
                             // Decrypt and authenticate Bob's reply.
-                            let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(noise_es_ee.as_bytes()));
+                            let mut gcm = AesGcm::new(&kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE>(&noise_ck_es_ee));
                             gcm.reset_init_gcm(&incoming_message_nonce);
                             gcm.aad(&outgoing_offer.noise_h);
                             gcm.crypt_in_place(&mut pkt_assembled[BobNoiseXKAck::ENC_START..BobNoiseXKAck::AUTH_START]);
@@ -909,9 +915,9 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                                 // Packet fully authenticated
                                 if session.update_receive_window(incoming_counter) {
-                                    let noise_es_ee_se_hk_psk = hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                        hmac_sha512_secret::<BASE_KEY_SIZE>(noise_es_ee.as_bytes(), noise_se.as_bytes()).as_bytes(),
-                                        hmac_sha512_secret::<BASE_KEY_SIZE>(outgoing_offer.psk.as_bytes(), hk.as_bytes()).as_bytes(),
+                                    let noise_ck_es_ee_se_hk_psk = hmac_sha512_secret(
+                                        hmac_sha512_secret(noise_ck_es_ee.as_bytes(), noise_se.as_bytes()).as_bytes(),
+                                        hmac_sha512_secret(outgoing_offer.psk.as_bytes(), hk.as_bytes()).as_bytes(),
                                     );
 
                                     let reply_message_nonce = create_message_nonce(PACKET_TYPE_ALICE_NOISE_XK_ACK, 2);
@@ -928,9 +934,10 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     let mut enc_start = ack_len;
                                     ack_len = append_to_slice(&mut ack, ack_len, alice_s_public_blob)?;
 
-                                    let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(
-                                        hmac_sha512_secret::<BASE_KEY_SIZE>(noise_es_ee.as_bytes(), hk.as_bytes()).as_bytes(),
-                                    ));
+                                    let mut gcm = AesGcm::new(&kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(&hmac_sha512_secret(
+                                        noise_ck_es_ee.as_bytes(),
+                                        hk.as_bytes(),
+                                    )));
                                     gcm.reset_init_gcm(&reply_message_nonce);
                                     gcm.aad(&noise_h_next);
                                     gcm.crypt_in_place(&mut ack[enc_start..ack_len]);
@@ -946,9 +953,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     enc_start = ack_len;
                                     ack_len = append_to_slice(&mut ack, ack_len, metadata)?;
 
-                                    let mut gcm = AesGcm::new(&kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(
-                                        noise_es_ee_se_hk_psk.as_bytes(),
-                                    ));
+                                    let mut gcm = AesGcm::new(&kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(&noise_ck_es_ee_se_hk_psk));
                                     gcm.reset_init_gcm(&reply_message_nonce);
                                     gcm.aad(&noise_h_next);
                                     gcm.crypt_in_place(&mut ack[enc_start..ack_len]);
@@ -961,7 +966,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         let mut state = session.state.write().unwrap();
                                         let _ = state.remote_session_id.insert(bob_session_id);
                                         let _ = state.keys[0].insert(SessionKey::new::<Application>(
-                                            noise_es_ee_se_hk_psk,
+                                            noise_ck_es_ee_se_hk_psk,
                                             1,
                                             current_time,
                                             2,
@@ -1034,9 +1039,10 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                         let alice_static_public_blob = r.read_decrypt_auth(
                             alice_static_public_blob_size,
-                            kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(
-                                hmac_sha512_secret::<BASE_KEY_SIZE>(incoming.noise_es_ee.as_bytes(), incoming.hk.as_bytes()).as_bytes(),
-                            ),
+                            kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK>(&hmac_sha512_secret(
+                                incoming.noise_ck_es_ee.as_bytes(),
+                                incoming.hk.as_bytes(),
+                            )),
                             &incoming.noise_h,
                             &incoming_message_nonce,
                         )?;
@@ -1052,9 +1058,9 @@ impl<Application: ApplicationLayer> Context<Application> {
                         let noise_h_next = mix_hash(&noise_h_next, psk.as_bytes());
 
                         // Complete Noise_XKpsk3 on Bob's side.
-                        let noise_es_ee_se_hk_psk = hmac_sha512_secret::<BASE_KEY_SIZE>(
-                            hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                incoming.noise_es_ee.as_bytes(),
+                        let noise_ck_es_ee_se_hk_psk = hmac_sha512_secret(
+                            hmac_sha512_secret(
+                                incoming.noise_ck_es_ee.as_bytes(),
                                 incoming
                                     .bob_noise_e_secret
                                     .agree(&alice_noise_s)
@@ -1062,7 +1068,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     .as_bytes(),
                             )
                             .as_bytes(),
-                            hmac_sha512_secret::<BASE_KEY_SIZE>(psk.as_bytes(), incoming.hk.as_bytes()).as_bytes(),
+                            hmac_sha512_secret(psk.as_bytes(), incoming.hk.as_bytes()).as_bytes(),
                         );
 
                         // Decrypt meta-data and verify the final key in the process. Copy meta-data
@@ -1070,7 +1076,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         let alice_meta_data_size = r.read_u16()? as usize;
                         let alice_meta_data = r.read_decrypt_auth(
                             alice_meta_data_size,
-                            kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(noise_es_ee_se_hk_psk.as_bytes()),
+                            kbkdf256::<KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_SE_HK_PSK>(&noise_ck_es_ee_se_hk_psk),
                             &noise_h_next,
                             &incoming_message_nonce,
                         )?;
@@ -1090,7 +1096,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 physical_mtu: self.default_physical_mtu.load(Ordering::Relaxed),
                                 remote_session_id: Some(incoming.alice_session_id),
                                 keys: [
-                                    Some(SessionKey::new::<Application>(noise_es_ee_se_hk_psk, 1, current_time, 2, true, true)),
+                                    Some(SessionKey::new::<Application>(noise_ck_es_ee_se_hk_psk, 1, current_time, 2, true, true)),
                                     None,
                                 ],
                                 current_key: 0,
@@ -1150,9 +1156,13 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         let noise_es = app.get_local_s_keypair().agree(&alice_e).ok_or(Error::FailedAuthentication)?;
                                         let noise_ee = bob_e_secret.agree(&alice_e).ok_or(Error::FailedAuthentication)?;
                                         let noise_se = bob_e_secret.agree(&session.static_public_key).ok_or(Error::FailedAuthentication)?;
-                                        let noise_psk_se_ee_es = hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                            hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                                hmac_sha512_secret::<BASE_KEY_SIZE>(key.ratchet_key.as_bytes(), noise_es.as_bytes()).as_bytes(),
+                                        let noise_ck_psk_es_ee_se = hmac_sha512_secret(
+                                            hmac_sha512_secret(
+                                                hmac_sha512_secret(
+                                                    hmac_sha512_secret(&INITIAL_H_REKEY, key.ratchet_key.as_bytes()).as_bytes(),
+                                                    noise_es.as_bytes(),
+                                                )
+                                                .as_bytes(),
                                                 noise_ee.as_bytes(),
                                             )
                                             .as_bytes(),
@@ -1165,7 +1175,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                             let reply: &mut RekeyAck = byte_array_as_proto_buffer_mut(&mut reply_buf).unwrap();
                                             reply.session_protocol_version = SESSION_PROTOCOL_VERSION;
                                             reply.bob_e = *bob_e_secret.public_key_bytes();
-                                            reply.next_key_fingerprint = SHA384::hash(noise_psk_se_ee_es.as_bytes());
+                                            reply.next_key_fingerprint = SHA512::hash(noise_ck_psk_es_ee_se.as_bytes());
 
                                             let counter = session.get_next_outgoing_counter().ok_or(Error::MaxKeyLifetimeExceeded)?.get();
                                             set_packet_header(
@@ -1197,7 +1207,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                             drop(state);
                                             let mut state = session.state.write().unwrap();
                                             let _ = state.keys[key_index ^ 1].replace(SessionKey::new::<Application>(
-                                                noise_psk_se_ee_es,
+                                                noise_ck_psk_es_ee_se,
                                                 next_ratchet_count,
                                                 current_time,
                                                 counter,
@@ -1248,9 +1258,13 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         let noise_es = alice_e_secret.agree(&session.static_public_key).ok_or(Error::FailedAuthentication)?;
                                         let noise_ee = alice_e_secret.agree(&bob_e).ok_or(Error::FailedAuthentication)?;
                                         let noise_se = app.get_local_s_keypair().agree(&bob_e).ok_or(Error::FailedAuthentication)?;
-                                        let noise_psk_se_ee_es = hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                            hmac_sha512_secret::<BASE_KEY_SIZE>(
-                                                hmac_sha512_secret::<BASE_KEY_SIZE>(key.ratchet_key.as_bytes(), noise_es.as_bytes()).as_bytes(),
+                                        let noise_ck_psk_es_ee_se = hmac_sha512_secret(
+                                            hmac_sha512_secret(
+                                                hmac_sha512_secret(
+                                                    hmac_sha512_secret(&INITIAL_H_REKEY, key.ratchet_key.as_bytes()).as_bytes(),
+                                                    noise_es.as_bytes(),
+                                                )
+                                                .as_bytes(),
                                                 noise_ee.as_bytes(),
                                             )
                                             .as_bytes(),
@@ -1259,7 +1273,7 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                                         // We need to check that the key Bob is acknowledging matches the latest sent offer.
                                         // Because of OOO, it might not, in which case this rekey must be cancelled and retried.
-                                        if secure_eq(&pkt.next_key_fingerprint, &SHA384::hash(noise_psk_se_ee_es.as_bytes())) {
+                                        if secure_eq(&pkt.next_key_fingerprint, &SHA512::hash(noise_ck_psk_es_ee_se.as_bytes())) {
                                             if session.update_receive_window(incoming_counter) {
                                                 // The new "Alice" knows Bob has the key since this is an ACK, so she can go
                                                 // ahead and set current_key to the new key. Then when she sends something
@@ -1269,7 +1283,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                                 let next_key_index = key_index ^ 1;
                                                 let mut state = session.state.write().unwrap();
                                                 let _ = state.keys[next_key_index].replace(SessionKey::new::<Application>(
-                                                    noise_psk_se_ee_es,
+                                                    noise_ck_psk_es_ee_se,
                                                     next_ratchet_count,
                                                     current_time,
                                                     session.send_counter.load(Ordering::Relaxed),
@@ -1390,10 +1404,10 @@ impl<Application: ApplicationLayer> Session<Application> {
     }
 
     /// Get the ratchet count and a hash fingerprint of the current active key.
-    pub fn key_info(&self) -> Option<(u64, [u8; 48])> {
+    pub fn key_info(&self) -> Option<(u64, [u8; NOISE_HASHLEN])> {
         let state = self.state.read().unwrap();
         if let Some(key) = state.keys[state.current_key].as_ref() {
-            Some((key.ratchet_count, SHA384::hash(key.ratchet_key.as_bytes())))
+            Some((key.ratchet_count, SHA512::hash(key.ratchet_key.as_bytes())))
         } else {
             None
         }
@@ -1582,15 +1596,15 @@ fn assemble_fragments_into<A: ApplicationLayer>(fragments: &[A::IncomingPacketBu
 
 impl SessionKey {
     fn new<Application: ApplicationLayer>(
-        key: Secret<BASE_KEY_SIZE>,
+        key: Secret<NOISE_HASHLEN>,
         ratchet_count: u64,
         current_time: i64,
         current_counter: u64,
         bob: bool,
         confirmed: bool,
     ) -> Self {
-        let a2b = kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB>(key.as_bytes());
-        let b2a = kbkdf::<AES_256_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE>(key.as_bytes());
+        let a2b = kbkdf256::<KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB>(&key);
+        let b2a = kbkdf256::<KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE>(&key);
         let (receive_key, send_key) = if bob {
             (a2b, b2a)
         } else {
@@ -1599,7 +1613,7 @@ impl SessionKey {
         let receive_cipher_pool = std::array::from_fn(|_| Mutex::new(AesGcm::new(&receive_key)));
         let send_cipher_pool = std::array::from_fn(|_| Mutex::new(AesGcm::new(&send_key)));
         Self {
-            ratchet_key: kbkdf::<BASE_KEY_SIZE, KBKDF_KEY_USAGE_LABEL_RATCHET>(key.as_bytes()),
+            ratchet_key: kbkdf512::<KBKDF_KEY_USAGE_LABEL_RATCHET>(&key),
             receive_cipher_pool,
             send_cipher_pool,
             rekey_at_time: current_time
@@ -1679,8 +1693,8 @@ fn append_to_slice(s: &mut [u8], p: usize, d: &[u8]) -> Result<usize, Error> {
 }
 
 /// MixHash to update 'h' during negotiation.
-fn mix_hash(h: &[u8; SHA384_HASH_SIZE], m: &[u8]) -> [u8; SHA384_HASH_SIZE] {
-    let mut hasher = SHA384::new();
+fn mix_hash(h: &[u8; NOISE_HASHLEN], m: &[u8]) -> [u8; NOISE_HASHLEN] {
+    let mut hasher = SHA512::new();
     hasher.update(h);
     hasher.update(m);
     hasher.finish()
@@ -1688,22 +1702,13 @@ fn mix_hash(h: &[u8; SHA384_HASH_SIZE], m: &[u8]) -> [u8; SHA384_HASH_SIZE] {
 
 /// HMAC-SHA512 key derivation based on: https://csrc.nist.gov/publications/detail/sp/800-108/final (page 7)
 /// Cryptographically this isn't meaningfully different from HMAC(key, [label]) but this is how NIST rolls.
-fn kbkdf<const OUTPUT_BYTES: usize, const LABEL: u8>(key: &[u8]) -> Secret<OUTPUT_BYTES> {
-    //These are the values we have assigned to the 5 variables involved in https://csrc.nist.gov/publications/detail/sp/800-108/final:
-    // K_in = key, i = 0x01, Label = 'Z'||'T'||LABEL, Context = 0x00, L = (OUTPUT_BYTES * 8)
-    hmac_sha512_secret(
-        key,
-        &[
-            1,
-            b'Z',
-            b'T',
-            LABEL,
-            0x00,
-            0,
-            (((OUTPUT_BYTES * 8) >> 8) & 0xff) as u8,
-            ((OUTPUT_BYTES * 8) & 0xff) as u8,
-        ],
-    )
+/// These are the values we have assigned to the 5 variables involved in their KDF:
+/// K_in = key, i = 1u8, Label = b'Z'||b'T'||LABEL, Context = 0u8, L = 512u16 or 256u16
+fn kbkdf512<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<NOISE_HASHLEN> {
+    hmac_sha512_secret(key.as_bytes(), &[1, b'Z', b'T', LABEL, 0x00, 0, 2u8, 0u8])
+}
+fn kbkdf256<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<32> {
+    hmac_sha512_secret256(key.as_bytes(), &[1, b'Z', b'T', LABEL, 0x00, 0, 1u8, 0u8])
 }
 
 fn prng32(mut x: u32) -> u32 {
