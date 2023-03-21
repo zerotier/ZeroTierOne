@@ -90,7 +90,7 @@ ln -s %{getenv:PWD} %{name}-%{version}
 mkdir -p SOURCES
 tar --exclude=%{name}-%{version}/.git --exclude=%{name}-%{version}/%{name}-%{version} -czf SOURCES/%{name}-%{version}.tar.gz %{name}-%{version}/*
 rm -f %{name}-%{version}
-cp -a %{getenv:PWD}/* .
+# cp -a %{getenv:PWD}/* .
 %endif
 
 %build
