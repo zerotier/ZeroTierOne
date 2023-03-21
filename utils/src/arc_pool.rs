@@ -348,7 +348,7 @@ unsafe impl<T, OriginPool: StaticPool<T, L>, const L: usize> Sync for PoolArcSwa
 /// ```
 /// use zerotier_utils::arc_pool::{Pool, StaticPool, static_pool};
 ///
-/// static_pool!(StaticPool MyPools {
+/// static_pool!(pub StaticPool MyPools {
 ///     Pool<u32>, Pool<&u32, 12>
 /// });
 ///
@@ -374,6 +374,30 @@ macro_rules! __static_pool__ {
     };
     ($m:ident::$n:ident $s:ident { $($($p:ident)::+<$t:ty$(, $l:tt)?>),+ $(,)?}) => {
         struct $s {}
+        $(
+            impl $m::$n<$t$(, $l)?> for $s {
+                #[inline(always)]
+                unsafe fn get_static_pool() -> *const () {
+                    static POOL: $($p)::+<$t$(, $l)?> = $($p)::+::new();
+                    (&POOL as *const $($p)::+<$t$(, $l)?>).cast()
+                }
+            }
+        )*
+    };
+    (pub $m:ident $s:ident { $($($p:ident)::+<$t:ty$(, $l:tt)?>),+ $(,)?}) => {
+        pub struct $s {}
+        $(
+            impl $m<$t$(, $l)?> for $s {
+                #[inline(always)]
+                unsafe fn get_static_pool() -> *const () {
+                    static POOL: $($p)::+<$t$(, $l)?> = $($p)::+::new();
+                    (&POOL as *const $($p)::+<$t$(, $l)?>).cast()
+                }
+            }
+        )*
+    };
+    (pub $m:ident::$n:ident $s:ident { $($($p:ident)::+<$t:ty$(, $l:tt)?>),+ $(,)?}) => {
+        pub struct $s {}
         $(
             impl $m::$n<$t$(, $l)?> for $s {
                 #[inline(always)]
