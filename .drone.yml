@@ -60,18 +60,18 @@ clone:
 depends_on:
 - el9 amd64 build
 kind: pipeline
-name: el9 index
+name: el9 sign
 platform:
   os: linux
 pull: always
 steps:
 - commands:
-  - /usr/local/bin/index zerotier-builds redhat el9 amd64
+  - /usr/local/bin/sign zerotier-builds redhat el9 amd64
   environment:
     GPG_PRIVATE_KEY:
       from_secret: gpg-private-key
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/dnf-builder
-  name: index build
+  name: sign build
   volumes:
   - name: zerotier-builds
     path: /zerotier-builds
@@ -79,12 +79,12 @@ steps:
     event:
     - push
 - commands:
-  - /usr/local/bin/index zerotier-releases redhat el9 amd64
+  - /usr/local/bin/sign zerotier-releases redhat el9 amd64
   environment:
     GPG_PRIVATE_KEY:
       from_secret: gpg-private-key
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/dnf-builder
-  name: index release
+  name: sign release
   volumes:
   - name: zerotier-releases
     path: /zerotier-releases
@@ -166,18 +166,18 @@ clone:
 depends_on:
 - jammy amd64 build
 kind: pipeline
-name: jammy index
+name: jammy sign
 platform:
   os: linux
 pull: always
 steps:
 - commands:
-  - /usr/local/bin/index zerotier-builds ubuntu jammy amd64
+  - /usr/local/bin/sign zerotier-builds ubuntu jammy amd64
   environment:
     GPG_PRIVATE_KEY:
       from_secret: gpg-private-key
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/apt-builder
-  name: index build
+  name: sign build
   volumes:
   - name: zerotier-builds
     path: /zerotier-builds
@@ -185,12 +185,12 @@ steps:
     event:
     - push
 - commands:
-  - /usr/local/bin/index zerotier-releases ubuntu jammy amd64
+  - /usr/local/bin/sign zerotier-releases ubuntu jammy amd64
   environment:
     GPG_PRIVATE_KEY:
       from_secret: gpg-private-key
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/apt-builder
-  name: index release
+  name: sign release
   volumes:
   - name: zerotier-releases
     path: /zerotier-releases
@@ -214,7 +214,7 @@ volumes:
 clone:
   depth: 1
 depends_on:
-- el9 index
+- el9 sign
 kind: pipeline
 name: el9 amd64 test
 platform:
@@ -258,7 +258,7 @@ volumes:
 clone:
   depth: 1
 depends_on:
-- jammy index
+- jammy sign
 kind: pipeline
 name: jammy amd64 test
 platform:
