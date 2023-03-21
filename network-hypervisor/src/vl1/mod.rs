@@ -7,12 +7,13 @@ mod mac;
 mod node;
 mod path;
 mod peer;
+mod peermap;
 mod rootset;
 
 pub mod identity;
 pub mod inetaddress;
 
-pub use address::Address;
+pub use address::{Address, LegacyAddress};
 pub use endpoint::Endpoint;
 pub use event::Event;
 pub use inetaddress::InetAddress;

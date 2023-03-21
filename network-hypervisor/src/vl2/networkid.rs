@@ -22,7 +22,7 @@ impl NetworkId {
     pub fn from_u64(i: u64) -> Option<NetworkId> {
         // Note that we check both that 'i' is non-zero and that the address of the controller is valid.
         if let Some(ii) = NonZeroU64::new(i) {
-            if Address::from_u64_v1(i).is_some() {
+            if Address::from_legacy_u64(i).is_some() {
                 return Some(Self(ii));
             }
         }
@@ -31,7 +31,7 @@ impl NetworkId {
 
     #[inline]
     pub fn from_controller_and_network_no(controller: Address, network_no: u64) -> Option<NetworkId> {
-        Self::from_u64(controller.as_u64_v1().wrapping_shl(24) | (network_no & 0xffffff))
+        Self::from_u64(controller.to_legacy_u64().wrapping_shl(24) | (network_no & 0xffffff))
     }
 
     #[inline]
@@ -56,12 +56,12 @@ impl NetworkId {
     /// Get the network controller ID for this network, which is the most significant 40 bits.
     #[inline]
     pub fn network_controller(&self) -> Address {
-        Address::from_u64_v1(self.0.get()).unwrap()
+        Address::from_legacy_u64(self.0.get()).unwrap()
     }
 
     /// Consume this network ID and return one with the same network number but a different controller ID.
     pub fn change_network_controller(self, new_controller: Address) -> NetworkId {
-        Self(NonZeroU64::new((self.network_no() as u64) | new_controller.as_u64_v1().wrapping_shl(24)).unwrap())
+        Self(NonZeroU64::new((self.network_no() as u64) | new_controller.to_legacy_u64().wrapping_shl(24)).unwrap())
     }
 
     /// Get the 24-bit local network identifier minus the 40-bit controller address portion.

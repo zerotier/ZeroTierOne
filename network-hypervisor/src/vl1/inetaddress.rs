@@ -77,6 +77,7 @@ pub const AF_INET: AddressFamilyType = libc::AF_INET as AddressFamilyType;
 #[cfg(not(windows))]
 pub const AF_INET6: AddressFamilyType = libc::AF_INET6 as AddressFamilyType;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum IpScope {
     None = 0,

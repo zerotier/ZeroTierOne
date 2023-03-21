@@ -140,7 +140,7 @@ impl Marshalable for Endpoint {
             }
             Endpoint::ZeroTier(a) => {
                 buf.append_u8(16 + TYPE_ZEROTIER)?;
-                buf.append_bytes_fixed(a.as_bytes_raw())?;
+                buf.append_bytes_fixed(a.as_bytes())?;
             }
             Endpoint::Ethernet(m) => {
                 buf.append_u8(16 + TYPE_ETHERNET)?;
@@ -184,7 +184,7 @@ impl Marshalable for Endpoint {
             }
             Endpoint::ZeroTierEncap(a) => {
                 buf.append_u8(16 + TYPE_ZEROTIER_ENCAP)?;
-                buf.append_bytes_fixed(a.as_bytes_raw())?;
+                buf.append_bytes_fixed(a.as_bytes())?;
             }
         }
         Ok(())
@@ -212,7 +212,7 @@ impl Marshalable for Endpoint {
             match type_byte - 16 {
                 TYPE_NIL => Ok(Endpoint::Nil),
                 TYPE_ZEROTIER => Ok(Endpoint::ZeroTier(
-                    Address::from_bytes_raw(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)?,
+                    Address::from_bytes(buf.read_bytes_fixed::<{ Address::SIZE_BYTES }>(cursor)?).map_err(|_| UnmarshalError::InvalidData)?,
                 )),
                 TYPE_ETHERNET => Ok(Endpoint::Ethernet(MAC::unmarshal(buf, cursor)?)),
                 TYPE_WIFIDIRECT => Ok(Endpoint::WifiDirect(MAC::unmarshal(buf, cursor)?)),
@@ -225,7 +225,7 @@ impl Marshalable for Endpoint {
                 )),
                 TYPE_WEBRTC => Ok(Endpoint::WebRTC(buf.read_bytes(buf.read_varint(cursor)? as usize, cursor)?.to_vec())),
                 TYPE_ZEROTIER_ENCAP => Ok(Endpoint::ZeroTier(
-                    Address::from_bytes_raw(buf.read_bytes_fixed(cursor)?).ok_or(UnmarshalError::InvalidData)?,
+                    Address::from_bytes(buf.read_bytes_fixed::<{ Address::SIZE_BYTES }>(cursor)?).map_err(|_| UnmarshalError::InvalidData)?,
                 )),
                 _ => Err(UnmarshalError::InvalidData),
             }

@@ -15,6 +15,9 @@ use std::mem::{needs_drop, size_of, MaybeUninit};
 #[allow(unused_imports)]
 use std::ptr::copy_nonoverlapping;
 
+/// Implement this trait to mark a struct as safe to cast from a byte array.
+pub unsafe trait FlatBuffer: Sized {}
+
 /// Store a raw object to a byte array (for architectures known not to care about unaligned access).
 /// This will panic if the slice is too small or the object requires drop.
 #[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "powerpc64"))]
@@ -79,7 +82,7 @@ pub fn array_chunks_exact<T, const S: usize>(a: &[T]) -> impl Iterator<Item = &[
 /// Obtain a view into an array cast as another array.
 /// This will panic if the template parameters would result in out of bounds access.
 #[inline(always)]
-pub fn array_range<T: Copy, const S: usize, const START: usize, const LEN: usize>(a: &[T; S]) -> &[T; LEN] {
+pub fn array_range<T, const S: usize, const START: usize, const LEN: usize>(a: &[T; S]) -> &[T; LEN] {
     assert!((START + LEN) <= S);
     unsafe { &*a.as_ptr().add(START).cast::<[T; LEN]>() }
 }
@@ -107,4 +110,12 @@ pub fn to_byte_array<T: Copy, const S: usize>(o: T) -> [u8; S] {
     assert_eq!(S, size_of::<T>());
     assert!(!std::mem::needs_drop::<T>());
     unsafe { *(&o as *const T).cast() }
+}
+
+/// Cast a byte slice into a flat struct.
+/// This will panic if the slice is too small or the struct requires drop.
+pub fn cast_to_struct<T: FlatBuffer>(b: &[u8]) -> &T {
+    assert!(b.len() >= size_of::<T>());
+    assert!(!std::mem::needs_drop::<T>());
+    unsafe { &*b.as_ptr().cast() }
 }

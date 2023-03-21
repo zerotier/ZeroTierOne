@@ -15,13 +15,14 @@ use zerotier_utils::memory::array_range;
 use zerotier_utils::NEVER_HAPPENED_TICKS;
 
 use crate::protocol::*;
-use crate::vl1::address::Address;
 use crate::vl1::debug_event;
 use crate::vl1::identity::{Identity, IdentitySecret};
 use crate::vl1::node::*;
 use crate::vl1::Valid;
 use crate::vl1::{Endpoint, Path};
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
+
+use super::LegacyAddress;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 
@@ -327,7 +328,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
                     aes_gmac_siv.encrypt_init(&self.v1_proto_next_message_id().to_be_bytes());
                     aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
                         &self.identity.address,
-                        &node.identity.address,
+                        &node.identity().address,
                         flags_cipher_hops,
                     ));
                     let payload = packet.as_bytes_starting_at_mut(v1::HEADER_SIZE).unwrap();
@@ -338,8 +339,8 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
 
                     let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
                     header.id.copy_from_slice(&tag[0..8]);
-                    header.dest = *self.identity.address.as_bytes_v1();
-                    header.src = *node.identity.address.as_bytes_v1();
+                    header.dest = *self.identity.address.legacy_address().as_bytes();
+                    header.src = *node.identity().address.legacy_address().as_bytes();
                     header.flags_cipher_hops = flags_cipher_hops;
                     header.mac.copy_from_slice(&tag[8..16]);
                 } else {
@@ -355,8 +356,8 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
                         {
                             let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
                             header.id = self.v1_proto_next_message_id().to_be_bytes();
-                            header.dest = *self.identity.address.as_bytes_v1();
-                            header.src = *node.identity.address.as_bytes_v1();
+                            header.dest = *self.identity.address.legacy_address().as_bytes();
+                            header.src = *node.identity().address.legacy_address().as_bytes();
                             header.flags_cipher_hops = flags_cipher_hops;
                             header
                         },
@@ -413,8 +414,8 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
             {
                 let f: &mut (v1::PacketHeader, v1::message_component_structs::HelloFixedHeaderFields) = packet.append_struct_get_mut().unwrap();
                 f.0.id = message_id.to_ne_bytes();
-                f.0.dest = *self.identity.address.as_bytes_v1();
-                f.0.src = *node.identity.address.as_bytes_v1();
+                f.0.dest = *self.identity.address.legacy_address().as_bytes();
+                f.0.src = *node.identity().address.legacy_address().as_bytes();
                 f.0.flags_cipher_hops = v1::CIPHER_NOCRYPT_POLY1305;
                 f.1.verb = message_type::VL1_HELLO;
                 f.1.version_proto = PROTOCOL_VERSION;
@@ -425,7 +426,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
             }
 
             debug_assert_eq!(packet.len(), 41);
-            assert!(node.identity.write_bytes(packet.as_mut(), !self.is_v2()).is_ok());
+            assert!(node.identity().write_bytes(packet.as_mut(), !self.is_v2()).is_ok());
 
             let (_, poly1305_key) = v1_proto_salsa_poly_create(
                 &self.v1_proto_static_secret,
@@ -770,8 +771,8 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
                 if !self
                     .send(app, node, None, time_ticks, |packet| {
                         while addresses.len() >= ADDRESS_SIZE && (packet.len() + Identity::MAX_MARSHAL_SIZE) <= UDP_DEFAULT_MTU {
-                            if let Some(zt_address) = Address::from_bytes_v1(&addresses[..ADDRESS_SIZE]) {
-                                if let Some(peer) = node.peer(&zt_address) {
+                            if let Some(zt_address) = LegacyAddress::from_bytes(&addresses[..ADDRESS_SIZE]) {
+                                if let Some(peer) = node.peer_legacy(&zt_address) {
                                     peer.identity.write_bytes(packet, !self.is_v2())?;
                                 }
                             }

@@ -5,9 +5,9 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use super::Address;
+use super::{Address, LegacyAddress};
 
-use zerotier_crypto::hash::{SHA384, SHA384_HASH_SIZE, SHA512};
+use zerotier_crypto::hash::{SHA384, SHA512};
 use zerotier_crypto::p384::*;
 use zerotier_crypto::salsa::Salsa;
 use zerotier_crypto::secret::Secret;
@@ -40,16 +40,20 @@ pub struct P384 {
     pub p384_self_signature: [u8; P384_ECDSA_SIGNATURE_SIZE],
 }
 
+#[derive(Clone)]
 pub struct IdentitySecret {
+    pub public: Valid<Identity>,
     pub x25519: X25519Secret,
     pub p384: Option<P384Secret>,
 }
 
+#[derive(Clone)]
 pub struct X25519Secret {
     pub ecdh: X25519KeyPair,
     pub eddsa: Ed25519KeyPair,
 }
 
+#[derive(Clone)]
 pub struct P384Secret {
     pub ecdh: P384KeyPair,
     pub ecdsa: P384KeyPair,
@@ -65,37 +69,35 @@ impl Identity {
 
     /// Generate a new ZeroTier identity.
     /// If x25519_only is true a legacy identity without NIST P-384 key pairs will be generated.
-    pub fn generate(x25519_only: bool) -> (Identity, IdentitySecret) {
+    pub fn generate(x25519_only: bool) -> IdentitySecret {
         // Generate X25519 portions of the identity plus the first 40 bits of the address, which are
         // the legacy "short" address.
+        let x25519_ecdh = X25519KeyPair::generate();
+        let ed25519_eddsa = Ed25519KeyPair::generate();
+        let x25519_ecdh_public = x25519_ecdh.public_bytes();
+        let ed25519_eddsa_public = ed25519_eddsa.public_bytes();
         let mut secret = IdentitySecret {
-            x25519: X25519Secret {
-                ecdh: X25519KeyPair::generate(),
-                eddsa: Ed25519KeyPair::generate(),
-            },
-            p384: None,
-        };
-        let mut public = Identity {
-            address: Address::new_uninitialized(),
-            x25519: X25519 {
-                ecdh: secret.x25519.ecdh.public_bytes(),
-                eddsa: secret.x25519.eddsa.public_bytes(),
-            },
+            public: Valid::mark_valid(Identity {
+                address: Address::new_uninitialized(),
+                x25519: X25519 { ecdh: x25519_ecdh_public, eddsa: ed25519_eddsa_public },
+                p384: None,
+            }),
+            x25519: X25519Secret { ecdh: x25519_ecdh, eddsa: ed25519_eddsa },
             p384: None,
         };
         loop {
             let mut legacy_address_derivation_hash = SHA512::new();
-            legacy_address_derivation_hash.update(&public.x25519.ecdh);
-            legacy_address_derivation_hash.update(&public.x25519.eddsa);
+            legacy_address_derivation_hash.update(&secret.public.x25519.ecdh);
+            legacy_address_derivation_hash.update(&secret.public.x25519.eddsa);
             let mut legacy_address_derivation_hash = legacy_address_derivation_hash.finish();
             legacy_address_derivation_work_function(&mut legacy_address_derivation_hash);
             if legacy_address_derivation_hash[0] < Self::V0_IDENTITY_POW_THRESHOLD && legacy_address_derivation_hash[59] != Address::RESERVED_PREFIX {
-                public.address.as_bytes_raw_mut()[..5].copy_from_slice(&legacy_address_derivation_hash[59..64]);
+                secret.public.address.as_bytes_mut()[..5].copy_from_slice(&legacy_address_derivation_hash[59..64]);
                 break;
             } else {
                 // Regenerate one of the two keys until we meet the legacy address work function criteria.
                 secret.x25519.ecdh = X25519KeyPair::generate();
-                public.x25519.ecdh = secret.x25519.ecdh.public_bytes();
+                secret.public.x25519.ecdh = secret.x25519.ecdh.public_bytes();
             }
         }
 
@@ -105,7 +107,7 @@ impl Identity {
                 ecdh: P384KeyPair::generate(),
                 ecdsa: P384KeyPair::generate(),
             });
-            public.p384 = secret.p384.as_ref().map(|p384s| P384 {
+            secret.public.p384 = secret.p384.as_ref().map(|p384s| P384 {
                 ecdh: p384s.ecdh.public_key().clone(),
                 ecdsa: p384s.ecdsa.public_key().clone(),
                 ed25519_self_signature: [0u8; ED25519_SIGNATURE_SIZE],
@@ -114,20 +116,20 @@ impl Identity {
         }
 
         // Bits 40-384 of the address are filled from a SHA384 hash of all keys for a full length V2 address.
-        public.populate_extended_address_bits();
+        secret.public.populate_extended_address_bits();
 
         // For V2 identities we include two self signatures to ensure that all these different key pairs
         // are properly bound together and can't be changed independently.
         if !x25519_only {
             let mut for_self_signing =
-                [0u8; Address::V2_ADDRESS_SIZE + 1 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE];
-            public.encode_for_self_signing(&mut for_self_signing);
-            let p384 = public.p384.as_mut().unwrap();
+                [0u8; Address::SIZE_BYTES + 1 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE];
+            secret.public.encode_for_self_signing(&mut for_self_signing);
+            let p384 = secret.public.p384.as_mut().unwrap();
             p384.ed25519_self_signature = secret.x25519.eddsa.sign(&for_self_signing);
             p384.p384_self_signature = secret.p384.as_ref().unwrap().ecdsa.sign(&for_self_signing);
         }
 
-        (public, secret)
+        secret
     }
 
     /// Locally validate this identity.
@@ -145,10 +147,10 @@ impl Identity {
         }
     }
 
-    /// Hash all keys for generation of bits 40-384 of the address.
+    /// Populate bits 40-384 of the address with a hash of everything else.
     fn populate_extended_address_bits(&mut self) {
         let mut sha = SHA384::new();
-        sha.update(self.address.as_bytes_v1()); // including the short address means we can elide the expensive legacy hash in the future
+        sha.update(self.address.legacy_address().as_bytes()); // including the short address means we can elide the expensive legacy hash in the future
         sha.update(&[Self::ALGORITHM_X25519
             | if self.p384.is_some() {
                 Self::ALGORITHM_P384
@@ -162,16 +164,16 @@ impl Identity {
             sha.update(p384.ecdsa.as_bytes());
         }
         let sha = sha.finish();
-        self.address.as_bytes_raw_mut()[5..].copy_from_slice(&sha[..48 - 5]);
+        self.address.as_bytes_mut()[LegacyAddress::SIZE_BYTES..].copy_from_slice(&sha[..Address::SIZE_BYTES - LegacyAddress::SIZE_BYTES]);
     }
 
     /// Encode for self-signing, used only with p384 keys enabled and panics otherwise.
     fn encode_for_self_signing(
         &self,
-        buf: &mut [u8; Address::V2_ADDRESS_SIZE + 1 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE],
+        buf: &mut [u8; Address::SIZE_BYTES + 1 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE],
     ) {
-        let mut buf = &mut buf[Address::V2_ADDRESS_SIZE + 1..];
-        let _ = buf.write_all(self.address.as_bytes_raw());
+        let mut buf = &mut buf[Address::SIZE_BYTES + 1..];
+        let _ = buf.write_all(self.address.as_bytes());
         let _ = buf.write_all(&[Self::ALGORITHM_X25519 | Self::ALGORITHM_P384]);
         let _ = buf.write_all(&self.x25519.ecdh);
         let _ = buf.write_all(&self.x25519.eddsa);
@@ -181,10 +183,10 @@ impl Identity {
     }
 
     pub fn from_bytes(b: &[u8]) -> Result<Self, InvalidFormatError> {
-        if b.len() == packed::V2_PUBLIC_SIZE && b[Address::V1_ADDRESS_SIZE] == (Self::ALGORITHM_X25519 | Self::ALGORITHM_P384) {
-            let p: &packed::V2Public = unsafe { &*b.as_ptr().cast() };
+        if b.len() == packed::V2_PUBLIC_SIZE && b[LegacyAddress::SIZE_BYTES] == (Self::ALGORITHM_X25519 | Self::ALGORITHM_P384) {
+            let p: &packed::V2Public = memory::cast_to_struct(b);
             let mut id = Self {
-                address: Address::from_bytes_v1(&p.short_address).ok_or(InvalidFormatError)?,
+                address: Address::new_uninitialized(),
                 x25519: X25519 { ecdh: p.c25519, eddsa: p.ed25519 },
                 p384: Some(P384 {
                     ecdh: P384PublicKey::from_bytes(&p.p384_ecdh).ok_or(InvalidFormatError)?,
@@ -193,19 +195,17 @@ impl Identity {
                     p384_self_signature: p.p384_self_signature,
                 }),
             };
-            let hash = SHA384::hash(&b[..packed::V2_PUBLIC_SIZE]);
-            id.address.as_bytes_raw_mut()[Address::V1_ADDRESS_SIZE..].copy_from_slice(&hash[..SHA384_HASH_SIZE - Address::V1_ADDRESS_SIZE]);
+            id.address.as_bytes_mut()[..LegacyAddress::SIZE_BYTES].copy_from_slice(&p.short_address);
             id.populate_extended_address_bits();
             return Ok(id);
-        } else if b.len() == packed::V1_PUBLIC_SIZE && b[Address::V1_ADDRESS_SIZE] == Self::ALGORITHM_X25519 {
-            let p: &packed::V1Public = unsafe { &*b.as_ptr().cast() };
+        } else if b.len() == packed::V1_PUBLIC_SIZE && b[LegacyAddress::SIZE_BYTES] == Self::ALGORITHM_X25519 {
+            let p: &packed::V1Public = memory::cast_to_struct(b);
             let mut id = Self {
-                address: Address::from_bytes_v1(&p.short_address).ok_or(InvalidFormatError)?,
+                address: Address::new_uninitialized(),
                 x25519: X25519 { ecdh: p.c25519, eddsa: p.ed25519 },
                 p384: None,
             };
-            let hash = SHA384::hash(&b[..packed::V1_PUBLIC_SIZE]);
-            id.address.as_bytes_raw_mut()[Address::V1_ADDRESS_SIZE..].copy_from_slice(&hash[..SHA384_HASH_SIZE - Address::V1_ADDRESS_SIZE]);
+            id.address.as_bytes_mut()[..LegacyAddress::SIZE_BYTES].copy_from_slice(&p.short_address);
             id.populate_extended_address_bits();
             return Ok(id);
         }
@@ -215,7 +215,7 @@ impl Identity {
     pub fn write_bytes<W: Write>(&self, w: &mut W, x25519_only: bool) -> Result<(), std::io::Error> {
         if let (false, Some(p384)) = (x25519_only, self.p384.as_ref()) {
             w.write_all(memory::as_byte_array::<packed::V2Public, { packed::V2_PUBLIC_SIZE }>(&packed::V2Public {
-                short_address: *self.address.as_bytes_v1(),
+                short_address: *self.address.legacy_address().as_bytes(),
                 algorithms: Self::ALGORITHM_X25519 | Self::ALGORITHM_P384,
                 c25519: self.x25519.ecdh,
                 ed25519: self.x25519.eddsa,
@@ -226,7 +226,7 @@ impl Identity {
             }))
         } else {
             w.write_all(memory::as_byte_array::<packed::V1Public, { packed::V1_PUBLIC_SIZE }>(&packed::V1Public {
-                short_address: *self.address.as_bytes_v1(),
+                short_address: *self.address.legacy_address().as_bytes(),
                 algorithms: Self::ALGORITHM_X25519,
                 c25519: self.x25519.ecdh,
                 ed25519: self.x25519.eddsa,
@@ -252,7 +252,7 @@ impl ToString for Identity {
         } else {
             format!(
                 "{}:0:{}:{}",
-                self.address.to_short_string(),
+                self.address.legacy_address().to_string(),
                 hex::to_string(&self.x25519.ecdh),
                 hex::to_string(&self.x25519.eddsa)
             )
@@ -300,7 +300,7 @@ impl Marshalable for Identity {
     fn unmarshal<const BL: usize>(buf: &Buffer<BL>, cursor: &mut usize) -> Result<Self, UnmarshalError> {
         const V1_ALG: u8 = Identity::ALGORITHM_X25519;
         const V2_ALG: u8 = Identity::ALGORITHM_X25519 | Identity::ALGORITHM_P384;
-        match buf.u8_at(*cursor + Address::V1_ADDRESS_SIZE)? {
+        match buf.u8_at(*cursor + LegacyAddress::SIZE_BYTES)? {
             V1_ALG => Identity::from_bytes(buf.read_bytes_fixed::<{ packed::V1_PUBLIC_SIZE }>(cursor)?).map_err(|_| UnmarshalError::InvalidData),
             V2_ALG => Identity::from_bytes(buf.read_bytes_fixed::<{ packed::V2_PUBLIC_SIZE }>(cursor)?).map_err(|_| UnmarshalError::InvalidData),
             _ => Err(UnmarshalError::UnsupportedVersion),
@@ -446,6 +446,9 @@ mod packed {
         pub ed25519_self_signature: [u8; ED25519_SIGNATURE_SIZE],
         pub p384_self_signature: [u8; P384_ECDSA_SIGNATURE_SIZE],
     }
+
+    unsafe impl memory::FlatBuffer for V1Public {}
+    unsafe impl memory::FlatBuffer for V2Public {}
 }
 
 fn legacy_address_derivation_work_function(digest: &mut [u8; 64]) {

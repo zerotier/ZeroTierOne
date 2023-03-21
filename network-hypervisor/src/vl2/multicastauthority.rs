@@ -127,7 +127,7 @@ impl MulticastAuthority {
 
                             packet.append_u16(in_this_packet as u16)?;
                             for _ in 0..in_this_packet {
-                                packet.append_bytes_fixed(gathered.pop().unwrap().as_bytes_v1())?;
+                                packet.append_bytes_fixed(gathered.pop().unwrap().legacy_address().as_bytes())?;
                             }
 
                             Ok(())
