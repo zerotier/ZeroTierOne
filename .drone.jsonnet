@@ -28,7 +28,7 @@ local targets = [
 
     { "os": "linux", distro: "redhat", "name": "el9",      "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
 //    { "os": "linux", distro: "ubuntu", "name": "jammy",    "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
-    { "os": "linux", distro: "ubuntu", "name": "jessie",    "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
+//    { "os": "linux", distro: "ubuntu", "name": "jessie",    "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
 // { "os": "windows", distro: "windows", "name": "windows",  "isas": [ "amd64" ], "events": [ "push", "tag", "custom" ] },
  // { "os": "darwin", distro: "darwin", "name": "darwin",  "isas": [ "amd64" ], "events": [ "push", "tag", "custom" ] },
 
