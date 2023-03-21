@@ -109,6 +109,13 @@ void Peer::received(
 						havePath = true;
 						break;
 					}
+					// If same address on same interface then don't learn unless existing path isn't alive (prevents learning loop)
+					if (_paths[i].p->address().ipsEqual(path->address()) && _paths[i].p->localSocket() == path->localSocket()) {
+						if (_paths[i].p->alive(now) && !_bond) {
+							havePath = true;
+							break;
+						}
+					}
 				} else {
 					break;
 				}
@@ -116,69 +123,37 @@ void Peer::received(
 		}
 
 		if ( (!havePath) && RR->node->shouldUsePathForZeroTierTraffic(tPtr,_id.address(),path->localSocket(),path->address()) ) {
-
-			/**
-			 * First, fill all free slots before attempting to replace a path
-			 *  - If the above fails, attempt to replace the path that has been dead the longest
-			 *  - If there are no free slots, and no dead paths (unlikely), then replace old path most similar to new path
-			 *  - If all of the above fails to yield a suitable replacement. Replace first path found to have lower `(quality / priority)`
-			 */
-
 			if (verb == Packet::VERB_OK) {
 				Mutex::Lock _l(_paths_m);
+				unsigned int oldestPathIdx = ZT_MAX_PEER_NETWORK_PATHS;
+				unsigned int oldestPathAge = 0;
 				unsigned int replacePath = ZT_MAX_PEER_NETWORK_PATHS;
-				uint64_t maxScore = 0;
-				uint64_t currScore;
-				long replacePathQuality = 0;
-				bool foundFreeSlot = false;
 
 				for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-					currScore = 0;
 					if (_paths[i].p) {
-						// Reward dead paths
-						if (!_paths[i].p->alive(now)) {
-							currScore = _paths[i].p->age(now) / 1000;
+						// Keep track of oldest path as a last resort option
+						unsigned int currAge = _paths[i].p->age(now);
+						if (currAge > oldestPathAge) {
+							oldestPathAge = currAge;
+							oldestPathIdx = i;
 						}
-						// Reward as similarity increases
 						if (_paths[i].p->address().ipsEqual(path->address())) {
-							currScore++;
-							if (_paths[i].p->address().port() == path->address().port()) {
-								currScore++;
-								if (_paths[i].p->localSocket() == path->localSocket()) {
-									currScore++; // max score (3)
+							if (_paths[i].p->localSocket() == path->localSocket()) {
+								if (!_paths[i].p->alive(now)) {
+									replacePath = i;
+									break;
 								}
 							}
 						}
-						// If best so far, mark for replacement
-						if (currScore > maxScore) {
-							maxScore = currScore;
-							replacePath = i;
-						}
 					}
 					else {
-						foundFreeSlot = true;
 						replacePath = i;
 						break;
 					}
 				}
-				if (!foundFreeSlot) {
-					if (maxScore > 3) {
-						// Do nothing. We found a dead path and have already marked it as a candidate
-					}
-					// If we couldn't find a replacement by matching, replacing a dead path, or taking a free slot, then replace by quality
-					else if (maxScore == 0) {
-						for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-							if (_paths[i].p) {
-								const long q = _paths[i].p->quality(now) / _paths[i].priority;
-								if (q > replacePathQuality) {
-									replacePathQuality = q;
-									replacePath = i;
-								}
-							}
-						}
-					}
-				}
 
+				// If we didn't find a good candidate then resort to replacing oldest path
+				replacePath = (replacePath == ZT_MAX_PEER_NETWORK_PATHS) ? oldestPathIdx : replacePath;
 				if (replacePath != ZT_MAX_PEER_NETWORK_PATHS) {
 					RR->t->peerLearnedNewPath(tPtr, networkId, *this, path, packetId);
 					_paths[replacePath].lr = now;
@@ -540,11 +515,15 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 	// let those old links expire.
 	long maxPriority = 0;
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p)
+		if (_paths[i].p) {
 			maxPriority = std::max(_paths[i].priority,maxPriority);
-		else break;
+		}
+		else {
+			break;
+		}
 	}
 
+	bool deletionOccurred = false;
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 			// Clean expired and reduced priority paths
@@ -554,10 +533,22 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 					_paths[i].p->sent(now);
 					sent |= (_paths[i].p->address().ss_family == AF_INET) ? 0x1 : 0x2;
 				}
-			} else {
-				_paths[i] = _PeerPath();
 			}
-		} else break;
+			else {
+				_paths[i] = _PeerPath();
+				deletionOccurred = true;
+			}
+		}
+		if (!_paths[i].p || deletionOccurred) {
+			for(unsigned int j=i;j<ZT_MAX_PEER_NETWORK_PATHS;++j) {
+				if (_paths[j].p && i != j) {
+					_paths[i] = _paths[j];
+					_paths[j] = _PeerPath();
+					break;
+				}
+			}
+			deletionOccurred = false;
+		}
 	}
 	return sent;
 }
