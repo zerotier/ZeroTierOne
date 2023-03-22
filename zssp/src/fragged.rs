@@ -44,7 +44,11 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
             size_of::<[MaybeUninit<Fragment>; MAX_FRAGMENTS]>(),
             size_of::<[Fragment; MAX_FRAGMENTS]>()
         );
-        unsafe { zeroed() }
+        Self {
+            counter_want: RwLock::new((0, 0)),
+            have: AtomicU64::new(0),
+            frags: unsafe {zeroed()},
+        }
     }
 
     /// Add a fragment and return an assembled packet container if all fragments have been received.
@@ -52,7 +56,7 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
     /// When a fully assembled packet is returned the internal state is reset and this object can
     /// be reused to assemble another packet.
     #[inline(always)]
-    pub fn assemble(&mut self, counter: u64, fragment: Fragment, fragment_no: u8, fragment_count: u8) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
+    pub fn assemble(&self, counter: u64, fragment: Fragment, fragment_no: u8, fragment_count: u8) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
         if fragment_no < fragment_count && (fragment_count as usize) <= MAX_FRAGMENTS {
             let r = self.counter_want.read().unwrap();
             let (mut r_counter, mut r_want) = *r;
