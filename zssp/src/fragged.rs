@@ -58,6 +58,7 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
     #[inline(always)]
     pub fn assemble(&self, counter: u64, fragment: Fragment, fragment_no: u8, fragment_count: u8) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
         if fragment_no < fragment_count && (fragment_count as usize) <= MAX_FRAGMENTS {
+            // We must hold the RwLock for the entire duration of this function, in case the counter changes and we need to drop everything
             let r = self.counter_want.read().unwrap();
             let (mut r_counter, mut r_want) = *r;
             let mut _r_guard = Some(r);
@@ -65,6 +66,7 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
 
             // If the counter has changed, reset the structure to receive a new packet.
             if counter != r_counter {
+                // Switch to locking in write mode, and recheck the condition in case another thread entered the critical section while relocking.
                 _r_guard.take();
                 let mut w = self.counter_want.write().unwrap();
                 let (w_counter, w_want) = *w;
