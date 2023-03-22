@@ -38,9 +38,9 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
         // that the array of MaybeUninit<Fragment> can be freely cast into an array of
         // Fragment. They also check that the maximum number of fragments is not too large
         // for the fact that we use bits in a u64 to track which fragments are received.
-        assert!(MAX_FRAGMENTS <= 64);
-        assert_eq!(size_of::<MaybeUninit<Fragment>>(), size_of::<Fragment>());
-        assert_eq!(
+        debug_assert!(MAX_FRAGMENTS <= 64);
+        debug_assert_eq!(size_of::<MaybeUninit<Fragment>>(), size_of::<Fragment>());
+        debug_assert_eq!(
             size_of::<[MaybeUninit<Fragment>; MAX_FRAGMENTS]>(),
             size_of::<[Fragment; MAX_FRAGMENTS]>()
         );
