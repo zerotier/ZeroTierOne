@@ -45,6 +45,10 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
         unsafe { zeroed() }
     }
 
+    #[inline(always)]
+    pub fn counter(&self) -> u64 {
+        self.counter
+    }
     /// Add a fragment and return an assembled packet container if all fragments have been received.
     ///
     /// When a fully assembled packet is returned the internal state is reset and this object can
