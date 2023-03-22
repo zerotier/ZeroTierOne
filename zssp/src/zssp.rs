@@ -42,7 +42,7 @@ pub struct Context<Application: ApplicationLayer> {
         HashMap<
             (Application::PhysicalPath, u64),
             Arc<(
-                Mutex<Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>>,
+                Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>,
                 i64, // creation timestamp
             )>,
         >,
@@ -539,7 +539,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     let mut defrag = self.defrag.lock().unwrap();
                     let f = defrag
                         .entry((source.clone(), incoming_counter))
-                        .or_insert_with(|| Arc::new((Mutex::new(Fragged::new()), current_time)))
+                        .or_insert_with(|| Arc::new((Fragged::new(), current_time)))
                         .clone();
 
                     // Anti-DOS overflow purge of the incoming defragmentation queue for packets not associated with known sessions.
@@ -563,8 +563,6 @@ impl<Application: ApplicationLayer> Context<Application> {
                     f
                 }
                 .0
-                .lock()
-                .unwrap()
                 .assemble(incoming_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                 if let Some(assembled_packet) = assembled_packet.as_ref() {
                     self.defrag.lock().unwrap().remove(&(source.clone(), incoming_counter));
