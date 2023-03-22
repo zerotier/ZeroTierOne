@@ -198,7 +198,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     PACKET_TYPE_ALICE_NOISE_XK_INIT,
                                     None,
                                     0,
-                                    1,
+                                    random::next_u64_secure(),
                                     None,
                                 );
                             }
@@ -378,7 +378,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 PACKET_TYPE_ALICE_NOISE_XK_INIT,
                 None,
                 0,
-                1,
+                random::next_u64_secure(),
                 None,
             )?;
         }
@@ -450,7 +450,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 let (key_index, packet_type, fragment_count, fragment_no, incoming_counter) = parse_packet_header(&incoming_physical_packet);
 
                 if session.check_receive_window(incoming_counter) {
-                    let (assembled_packet, incoming_packet_buf_arr);
+                    let assembled_packet;
                     let incoming_packet = if fragment_count > 1 {
                         assembled_packet = session.defrag[(incoming_counter as usize) % COUNTER_WINDOW_MAX_OOO]
                             .lock()
@@ -462,8 +462,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             return Ok(ReceiveResult::Ok(Some(session)));
                         }
                     } else {
-                        incoming_packet_buf_arr = [incoming_physical_packet_buf];
-                        &incoming_packet_buf_arr
+                        std::array::from_ref(&incoming_physical_packet_buf)
                     };
 
                     return self.process_complete_incoming_packet(
@@ -491,7 +490,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     .decrypt_block_in_place(&mut incoming_physical_packet[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                 let (key_index, packet_type, fragment_count, fragment_no, incoming_counter) = parse_packet_header(&incoming_physical_packet);
 
-                let (assembled_packet, incoming_packet_buf_arr);
+                let assembled_packet;
                 let incoming_packet = if fragment_count > 1 {
                     assembled_packet = incoming.defrag[(incoming_counter as usize) % COUNTER_WINDOW_MAX_OOO]
                         .lock()
@@ -503,8 +502,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         return Ok(ReceiveResult::Ok(None));
                     }
                 } else {
-                    incoming_packet_buf_arr = [incoming_physical_packet_buf];
-                    &incoming_packet_buf_arr
+                    std::array::from_ref(&incoming_physical_packet_buf)
                 };
 
                 return self.process_complete_incoming_packet(
@@ -532,19 +530,25 @@ impl<Application: ApplicationLayer> Context<Application> {
                 let mut hasher = self.defrag_hasher.build_hasher();
                 source.hash(&mut hasher);
                 hasher.write_u64(incoming_counter);
-                let offer_id = hasher.finish();
-                let idx0 = (offer_id as usize)%MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
-                let idx1 = (offer_id as usize)/MAX_INCOMPLETE_SESSION_QUEUE_SIZE%MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
+                let hashed_counter = hasher.finish();
+                let idx0 = (hashed_counter as usize)%MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
+                let idx1 = (hashed_counter as usize)/MAX_INCOMPLETE_SESSION_QUEUE_SIZE%MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
 
+                // Open hash lookup of just 2 slots.
+                // By only checking 2 slots we avoid an expensive hash table lookup while also minimizing the chance that 2 offers collide.
+                // To DOS, an adversary would either need to volumetrically spam the defrag table to keep all slots full
+                // or replay Alice's packet header before Alice's packet is fully assembled.
+                // Since Alice's packet header has a randomly generated counter value replaying it in time is very hard.
                 let mut slot0 = self.defrag[idx0].lock().unwrap();
-                if slot0.counter() == offer_id {
-                    assembled = slot0.assemble(offer_id, incoming_physical_packet_buf, fragment_no, fragment_count);
+                if slot0.counter() == hashed_counter {
+                    assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                 } else {
                     let mut slot1 = self.defrag[idx1].lock().unwrap();
-                    if slot1.counter() == offer_id || slot1.counter() == 0 {
-                        assembled = slot1.assemble(offer_id, incoming_physical_packet_buf, fragment_no, fragment_count);
+                    if slot1.counter() == hashed_counter || slot1.counter() == 0 {
+                        assembled = slot1.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                     } else {
-                        assembled = slot0.assemble(offer_id, incoming_physical_packet_buf, fragment_no, fragment_count);
+                        // Both slots are full so kick out the unassembled packet in slot0 to make more room.
+                        assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                     }
                 }
 
@@ -563,7 +567,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 &mut check_allow_incoming_session,
                 &mut check_accept_session,
                 data_buf,
-                incoming_counter,
+                1,// The incoming_counter on init packets is only meant for DOS resistant defragmentation, we do not want to use it for anything noise related.
                 incoming_packet,
                 packet_type,
                 None,
@@ -702,7 +706,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                      * identity, then responds with his ephemeral keys.
                      */
 
-                    if incoming_counter != 1 || session.is_some() || incoming.is_some() {
+                    if session.is_some() || incoming.is_some() {
                         return Err(Error::OutOfSequence);
                     }
                     if pkt_assembled.len() != AliceNoiseXKInit::SIZE {
