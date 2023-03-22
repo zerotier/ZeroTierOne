@@ -38,6 +38,7 @@ const GCM_CIPHER_POOL_SIZE: usize = 4;
 pub struct Context<Application: ApplicationLayer> {
     max_incomplete_session_queue_size: usize,
     default_physical_mtu: AtomicUsize,
+    init_header_protection_cipher: Aes,
     defrag: Mutex<
         HashMap<
             (Application::PhysicalPath, u64),
@@ -122,6 +123,7 @@ struct OutgoingSessionOffer {
     alice_noise_e_secret: P384KeyPair,
     alice_hk_secret: Secret<KYBER_SECRETKEYBYTES>,
     metadata: Option<Vec<u8>>,
+    header_protection_cipher: Aes,
     init_packet: [u8; AliceNoiseXKInit::SIZE],
 }
 
@@ -154,8 +156,9 @@ impl<Application: ApplicationLayer> Context<Application> {
     /// Create a new session context.
     ///
     /// * `max_incomplete_session_queue_size` - Maximum number of incomplete sessions in negotiation phase
-    pub fn new(max_incomplete_session_queue_size: usize, default_physical_mtu: usize) -> Self {
+    pub fn new(local_s_public_blob: &[u8], max_incomplete_session_queue_size: usize, default_physical_mtu: usize) -> Self {
         Self {
+            init_header_protection_cipher: Aes::new(&kbkdf256_pub::<KBKDF_KEY_USAGE_LABEL_KEX_INIT_HEADER>(&local_s_public_blob)),
             max_incomplete_session_queue_size,
             default_physical_mtu: AtomicUsize::new(default_physical_mtu),
             defrag: Mutex::new(HashMap::new()),
@@ -203,8 +206,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     PACKET_TYPE_ALICE_NOISE_XK_INIT,
                                     None,
                                     0,
-                                    1,
-                                    None,
+                                    random::next_u64_secure(),
+                                    &offer.header_protection_cipher,
                                 );
                             }
                             false
@@ -222,7 +225,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     state.remote_session_id,
                                     0,
                                     2,
-                                    Some(&session.header_protection_cipher),
+                                    &session.header_protection_cipher,
                                 );
                             }
                             false
@@ -340,6 +343,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         alice_noise_e_secret,
                         alice_hk_secret: Secret(alice_hk_secret.secret),
                         metadata,
+                        header_protection_cipher: Aes::new(&kbkdf256_pub::<KBKDF_KEY_USAGE_LABEL_KEX_INIT_HEADER>(&remote_s_public_blob)),
                         init_packet: [0u8; AliceNoiseXKInit::SIZE],
                     })),
                 }),
@@ -386,8 +390,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                 PACKET_TYPE_ALICE_NOISE_XK_INIT,
                 None,
                 0,
-                1,
-                None,
+                random::next_u64_secure(),
+                &offer.header_protection_cipher,
             )?;
         }
 
@@ -535,6 +539,9 @@ impl<Application: ApplicationLayer> Context<Application> {
                 return Err(Error::UnknownLocalSessionId);
             }
         } else {
+            self
+                .init_header_protection_cipher
+                .decrypt_block_in_place(&mut incoming_physical_packet[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
             let (key_index, packet_type, fragment_count, fragment_no, incoming_counter) = parse_packet_header(&incoming_physical_packet);
 
             let (assembled_packet, incoming_packet_buf_arr);
@@ -542,7 +549,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 assembled_packet = {
                     let mut defrag = self.defrag.lock().unwrap();
                     let f = defrag
-                        .entry((source.clone(), incoming_counter))
+                        .entry((source.clone(), 1))
                         .or_insert_with(|| Arc::new((Fragged::new(), current_time)))
                         .clone();
 
@@ -567,9 +574,9 @@ impl<Application: ApplicationLayer> Context<Application> {
                     f
                 }
                 .0
-                .assemble(incoming_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                .assemble(1, incoming_physical_packet_buf, fragment_no, fragment_count);
                 if let Some(assembled_packet) = assembled_packet.as_ref() {
-                    self.defrag.lock().unwrap().remove(&(source.clone(), incoming_counter));
+                    self.defrag.lock().unwrap().remove(&(source.clone(), 1));
                     assembled_packet.as_ref()
                 } else {
                     return Ok(ReceiveResult::Ok(None));
@@ -585,7 +592,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 &mut check_allow_incoming_session,
                 &mut check_accept_session,
                 data_buf,
-                incoming_counter,
+                1,
                 incoming_packet,
                 packet_type,
                 None,
@@ -845,7 +852,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         Some(alice_session_id),
                         0,
                         1,
-                        Some(&Aes::new(&header_protection_key)),
+                        &Aes::new(&header_protection_key),
                     )?;
 
                     return Ok(ReceiveResult::Ok(session));
@@ -994,7 +1001,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                         Some(bob_session_id),
                                         0,
                                         2,
-                                        Some(&session.header_protection_cipher),
+                                        &session.header_protection_cipher,
                                     )?;
 
                                     return Ok(ReceiveResult::Ok(Some(session)));
@@ -1545,7 +1552,7 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
     remote_session_id: Option<SessionId>,
     key_index: usize,
     counter: u64,
-    header_protect_cipher: Option<&Aes>,
+    header_protect_cipher: &Aes,
 ) -> Result<(), Error> {
     let packet_len = packet.len();
     let recipient_session_id = remote_session_id.map_or(SessionId::NONE, |s| u64::from(s));
@@ -1563,9 +1570,7 @@ fn send_with_fragmentation<SendFunction: FnMut(&mut [u8])>(
             key_index,
             counter,
         );
-        if let Some(hcc) = header_protect_cipher {
-            hcc.encrypt_block_in_place(&mut fragment[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
-        }
+        header_protect_cipher.encrypt_block_in_place(&mut fragment[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
         send(fragment);
         fragment_start = fragment_end - HEADER_SIZE;
         fragment_end = (fragment_start + mtu).min(packet_len);
@@ -1712,6 +1717,9 @@ fn kbkdf512<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<NOISE_HASHLE
 }
 fn kbkdf256<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<32> {
     hmac_sha512_secret256(key.as_bytes(), &[1, b'Z', b'T', LABEL, 0x00, 0, 1u8, 0u8])
+}
+fn kbkdf256_pub<const LABEL: u8>(key: &[u8]) -> Secret<32> {
+    hmac_sha512_secret256(key, &[1, b'Z', b'T', LABEL, 0x00, 0, 1u8, 0u8])
 }
 
 fn prng32(mut x: u32) -> u32 {

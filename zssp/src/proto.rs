@@ -55,6 +55,7 @@ pub(crate) const HEADER_SIZE: usize = 16;
 pub(crate) const HEADER_PROTECT_ENCRYPT_START: usize = 6;
 pub(crate) const HEADER_PROTECT_ENCRYPT_END: usize = 22;
 
+pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_INIT_HEADER: u8 = b'h';
 pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ES: u8 = b's'; // AES-GCM encryption during noise key exchange -> e, es
 pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ES_EE: u8 = b'e'; // AES-GCM encryption during noise key exchange <- e, ee
 pub(crate) const KBKDF_KEY_USAGE_LABEL_KEX_ES_EE_HK: u8 = b'h'; // AES-GCM encryption during noise key exchange -> s, se
