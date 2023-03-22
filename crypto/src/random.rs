@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Mutex};
 
 use libc::c_int;
 
@@ -119,14 +119,15 @@ unsafe impl Send for SecureRandom {}
 
 /// Get a non-cryptographic random number.
 pub fn xorshift64_random() -> u64 {
-    static mut XORSHIFT64_STATE: AtomicU64 = AtomicU64::new(0);
-    let mut x = unsafe { XORSHIFT64_STATE.load(Ordering::Relaxed) };
+    static mut XORSHIFT64_STATE: Mutex<u64> = Mutex::new(0);
+    let mut state = unsafe { XORSHIFT64_STATE.lock().unwrap() };
+    let mut x = *state;
     while x == 0 {
         x = next_u64_secure();
     }
     x ^= x.wrapping_shl(13);
     x ^= x.wrapping_shr(7);
     x ^= x.wrapping_shl(17);
-    unsafe { XORSHIFT64_STATE.store(x, Ordering::Relaxed) };
+    *state = x;
     x
 }
