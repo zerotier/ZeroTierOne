@@ -1,8 +1,8 @@
 use std::cell::UnsafeCell;
 use std::mem::{needs_drop, size_of, zeroed, MaybeUninit};
 use std::ptr::slice_from_raw_parts;
-use std::sync::RwLock;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::RwLock;
 
 /// Fast packet defragmenter
 pub struct Fragged<Fragment, const MAX_FRAGMENTS: usize> {
@@ -47,7 +47,7 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
         Self {
             counter_want: RwLock::new((0, 0)),
             have: AtomicU64::new(0),
-            frags: unsafe {zeroed()},
+            frags: unsafe { zeroed() },
         }
     }
 
@@ -95,7 +95,6 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
             if got & r_want > 0 && 1u64.wrapping_shl(fragment_count as u32) - 1 == r_want {
                 let have = self.have.fetch_or(got, Ordering::Relaxed);
                 if have & got == 0 {
-
                     unsafe {
                         (*self.frags.get()).get_unchecked_mut(fragment_no as usize).write(fragment);
                     }

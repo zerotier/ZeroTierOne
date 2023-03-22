@@ -460,8 +460,12 @@ impl<Application: ApplicationLayer> Context<Application> {
                 if session.check_receive_window(incoming_counter) {
                     let (assembled_packet, incoming_packet_buf_arr);
                     let incoming_packet = if fragment_count > 1 {
-                        assembled_packet = session.defrag[(incoming_counter as usize) % COUNTER_WINDOW_MAX_OOO]
-                            .assemble(incoming_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                        assembled_packet = session.defrag[(incoming_counter as usize) % COUNTER_WINDOW_MAX_OOO].assemble(
+                            incoming_counter,
+                            incoming_physical_packet_buf,
+                            fragment_no,
+                            fragment_count,
+                        );
                         if let Some(assembled_packet) = assembled_packet.as_ref() {
                             assembled_packet.as_ref()
                         } else {
