@@ -3,6 +3,7 @@ use std::ptr::slice_from_raw_parts;
 
 /// Fast packet defragmenter
 pub struct Fragged<Fragment, const MAX_FRAGMENTS: usize> {
+    count: u32,
     have: u64,
     counter: u64,
     frags: [MaybeUninit<Fragment>; MAX_FRAGMENTS],
@@ -35,9 +36,9 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
         // that the array of MaybeUninit<Fragment> can be freely cast into an array of
         // Fragment. They also check that the maximum number of fragments is not too large
         // for the fact that we use bits in a u64 to track which fragments are received.
-        assert!(MAX_FRAGMENTS <= 64);
-        assert_eq!(size_of::<MaybeUninit<Fragment>>(), size_of::<Fragment>());
-        assert_eq!(
+        debug_assert!(MAX_FRAGMENTS <= 64);
+        debug_assert_eq!(size_of::<MaybeUninit<Fragment>>(), size_of::<Fragment>());
+        debug_assert_eq!(
             size_of::<[MaybeUninit<Fragment>; MAX_FRAGMENTS]>(),
             size_of::<[Fragment; MAX_FRAGMENTS]>()
         );
@@ -51,12 +52,11 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
     #[inline(always)]
     pub fn assemble(&mut self, counter: u64, fragment: Fragment, fragment_no: u8, fragment_count: u8) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
         if fragment_no < fragment_count && (fragment_count as usize) <= MAX_FRAGMENTS {
-            let mut have = self.have;
 
             // If the counter has changed, reset the structure to receive a new packet.
             if counter != self.counter {
-                self.counter = counter;
                 if needs_drop::<Fragment>() {
+                    let mut have = self.have;
                     let mut i = 0;
                     while have != 0 {
                         if (have & 1) != 0 {
@@ -66,26 +66,29 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
                         have = have.wrapping_shr(1);
                         i += 1;
                     }
-                } else {
-                    have = 0;
+                }
+                self.have = 0;
+                self.count = fragment_count as u32;
+                self.counter = counter;
+            }
+
+            let got = 1u64.wrapping_shl(fragment_no as u32);
+            if got & self.have == 0 && self.count as u8 == fragment_count {
+                self.have |= got;
+                unsafe {
+                    self.frags.get_unchecked_mut(fragment_no as usize).write(fragment);
+                }
+                if self.have == 1u64.wrapping_shl(self.count) - 1 {
+                    self.have = 0;
+                    self.count = 0;
+                    self.counter = 0;
+                    // Setting 'have' to 0 resets the state of this object, and the fragments
+                    // are effectively moved into the Assembled<> container and returned. That
+                    // container will drop them when it is dropped.
+                    return Some(Assembled(unsafe { std::mem::transmute_copy(&self.frags) }, fragment_count as usize));
                 }
             }
 
-            unsafe {
-                self.frags.get_unchecked_mut(fragment_no as usize).write(fragment);
-            }
-
-            let want = 0xffffffffffffffffu64.wrapping_shr((64 - fragment_count) as u32);
-            have |= 1u64.wrapping_shl(fragment_no as u32);
-            if (have & want) == want {
-                self.have = 0;
-                // Setting 'have' to 0 resets the state of this object, and the fragments
-                // are effectively moved into the Assembled<> container and returned. That
-                // container will drop them when it is dropped.
-                return Some(Assembled(unsafe { std::mem::transmute_copy(&self.frags) }, fragment_count as usize));
-            } else {
-                self.have = have;
-            }
         }
         return None;
     }

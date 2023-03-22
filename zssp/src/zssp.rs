@@ -36,17 +36,8 @@ const GCM_CIPHER_POOL_SIZE: usize = 4;
 /// Each application using ZSSP must create an instance of this to own sessions and
 /// defragment incoming packets that are not yet associated with a session.
 pub struct Context<Application: ApplicationLayer> {
-    max_incomplete_session_queue_size: usize,
     default_physical_mtu: AtomicUsize,
-    defrag: Mutex<
-        HashMap<
-            (Application::PhysicalPath, u64),
-            Arc<(
-                Mutex<Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>>,
-                i64, // creation timestamp
-            )>,
-        >,
-    >,
+    defrag: Mutex<[Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>; MAX_INCOMPLETE_SESSION_QUEUE_SIZE]>,
     sessions: RwLock<SessionsById<Application>>,
 }
 
@@ -154,11 +145,10 @@ impl<Application: ApplicationLayer> Context<Application> {
     /// Create a new session context.
     ///
     /// * `max_incomplete_session_queue_size` - Maximum number of incomplete sessions in negotiation phase
-    pub fn new(max_incomplete_session_queue_size: usize, default_physical_mtu: usize) -> Self {
+    pub fn new(default_physical_mtu: usize) -> Self {
         Self {
-            max_incomplete_session_queue_size,
             default_physical_mtu: AtomicUsize::new(default_physical_mtu),
-            defrag: Mutex::new(HashMap::new()),
+            defrag: Mutex::new(std::array::from_fn(|_| Fragged::new())),
             sessions: RwLock::new(SessionsById {
                 active: HashMap::with_capacity(64),
                 incoming: HashMap::with_capacity(64),
@@ -261,9 +251,6 @@ impl<Application: ApplicationLayer> Context<Application> {
                 sessions.incoming.remove(id);
             }
         }
-
-        // Delete any expired defragmentation queue items not associated with a session.
-        self.defrag.lock().unwrap().retain(|_, fragged| fragged.1 > negotiation_timeout_cutoff);
 
         Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS.min(Application::RETRY_INTERVAL)
     }
