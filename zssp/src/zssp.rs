@@ -929,7 +929,9 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     let mut ack_len = HEADER_SIZE + 1;
 
                                     let alice_s_public_blob = app.get_local_s_public_blob();
-                                    assert!(alice_s_public_blob.len() <= (u16::MAX as usize));
+                                    if alice_s_public_blob.len() > (u16::MAX as usize) {
+                                        return Err(Error::DataTooLarge);
+                                    }
                                     ack_len = append_to_slice(&mut ack, ack_len, &(alice_s_public_blob.len() as u16).to_le_bytes())?;
                                     let mut enc_start = ack_len;
                                     ack_len = append_to_slice(&mut ack, ack_len, alice_s_public_blob)?;
@@ -945,7 +947,9 @@ impl<Application: ApplicationLayer> Context<Application> {
 
                                     let metadata = outgoing_offer.metadata.as_ref().map_or(&[][..0], |md| md.as_slice());
 
-                                    assert!(metadata.len() <= (u16::MAX as usize));
+                                    if metadata.len() > (u16::MAX as usize) {
+                                        return Err(Error::DataTooLarge);
+                                    }
                                     ack_len = append_to_slice(&mut ack, ack_len, &(metadata.len() as u16).to_le_bytes())?;
 
                                     let noise_h_next = mix_hash(&mix_hash(&noise_h_next, &ack[HEADER_SIZE..ack_len]), outgoing_offer.psk.as_bytes());
@@ -1505,7 +1509,6 @@ fn set_packet_header(
     // [52-57]           fragment count (1..64 - 1, so 0 means 1 fragment)
     // [58-63]           fragment number (0..63)
     // [64-127]          64-bit counter
-    assert!(packet.len() >= 16);
     packet[0..8].copy_from_slice(
         &(remote_session_id
             | ((key_index & 1) as u64).wrapping_shl(48)
