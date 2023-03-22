@@ -1,11 +1,14 @@
+use std::cell::UnsafeCell;
 use std::mem::{needs_drop, size_of, zeroed, MaybeUninit};
 use std::ptr::slice_from_raw_parts;
+use std::sync::RwLock;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// Fast packet defragmenter
 pub struct Fragged<Fragment, const MAX_FRAGMENTS: usize> {
-    have: u64,
-    counter: u64,
-    frags: [MaybeUninit<Fragment>; MAX_FRAGMENTS],
+    have: AtomicU64,
+    counter: RwLock<u64>,
+    frags: UnsafeCell<[MaybeUninit<Fragment>; MAX_FRAGMENTS]>,
 }
 
 pub struct Assembled<Fragment, const MAX_FRAGMENTS: usize>([MaybeUninit<Fragment>; MAX_FRAGMENTS], usize);
@@ -49,42 +52,56 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
     /// When a fully assembled packet is returned the internal state is reset and this object can
     /// be reused to assemble another packet.
     #[inline(always)]
-    pub fn assemble(&mut self, counter: u64, fragment: Fragment, fragment_no: u8, fragment_count: u8) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
+    pub fn assemble(&self, counter: u64, fragment: Fragment, fragment_no: u8, fragment_count: u8) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
         if fragment_no < fragment_count && (fragment_count as usize) <= MAX_FRAGMENTS {
-            let mut have = self.have;
+            let r = self.counter.read().unwrap();
+            let cur_counter = *r;
+            let mut r_guard = Some(r);
+            let mut w_guard = None;
 
             // If the counter has changed, reset the structure to receive a new packet.
-            if counter != self.counter {
-                self.counter = counter;
-                if needs_drop::<Fragment>() {
-                    let mut i = 0;
-                    while have != 0 {
-                        if (have & 1) != 0 {
-                            debug_assert!(i < MAX_FRAGMENTS);
-                            unsafe { self.frags.get_unchecked_mut(i).assume_init_drop() };
+            if counter != cur_counter {
+                drop(r_guard.take());
+                let mut w = self.counter.write().unwrap();
+                if *w != counter {
+                    *w = counter;
+                    if needs_drop::<Fragment>() {
+                        let mut have = self.have.load(Ordering::Relaxed);
+                        let mut i = 0;
+                        while have != 0 {
+                            if (have & 1) != 0 {
+                                debug_assert!(i < MAX_FRAGMENTS);
+                                unsafe { (*self.frags.get()).get_unchecked_mut(i).assume_init_drop() };
+                            }
+                            have = have.wrapping_shr(1);
+                            i += 1;
                         }
-                        have = have.wrapping_shr(1);
-                        i += 1;
                     }
-                } else {
-                    have = 0;
+                    self.have.store(0, Ordering::Relaxed);
                 }
-            }
-
-            unsafe {
-                self.frags.get_unchecked_mut(fragment_no as usize).write(fragment);
+                w_guard = Some(w);
             }
 
             let want = 0xffffffffffffffffu64.wrapping_shr((64 - fragment_count) as u32);
-            have |= 1u64.wrapping_shl(fragment_no as u32);
-            if (have & want) == want {
-                self.have = 0;
-                // Setting 'have' to 0 resets the state of this object, and the fragments
-                // are effectively moved into the Assembled<> container and returned. That
-                // container will drop them when it is dropped.
-                return Some(Assembled(unsafe { std::mem::transmute_copy(&self.frags) }, fragment_count as usize));
-            } else {
-                self.have = have;
+            let got = 1u64.wrapping_shl(fragment_no as u32);
+            let have = self.have.fetch_or(got, Ordering::Relaxed);
+
+            if have & got == 0 {
+                unsafe {
+                    (*self.frags.get()).get_unchecked_mut(fragment_no as usize).write(fragment);
+                }
+                if ((have | got) & want) == want {
+                    drop(r_guard.take());
+                    let mut w = w_guard.unwrap_or_else(|| self.counter.write().unwrap());
+                    if *w == counter {
+                        *w = 0;
+                        self.have.store(0, Ordering::Relaxed);
+                        // Setting 'have' to 0 resets the state of this object, and the fragments
+                        // are effectively moved into the Assembled<> container and returned. That
+                        // container will drop them when it is dropped.
+                        return Some(Assembled(unsafe { std::mem::transmute_copy(&self.frags) }, fragment_count as usize));
+                    }
+                }
             }
         }
         return None;
@@ -95,12 +112,12 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Drop for Fragged<Fragment, MAX_FRAGME
     #[inline(always)]
     fn drop(&mut self) {
         if needs_drop::<Fragment>() {
-            let mut have = self.have;
+            let mut have = self.have.load(Ordering::Relaxed);
             let mut i = 0;
             while have != 0 {
                 if (have & 1) != 0 {
                     debug_assert!(i < MAX_FRAGMENTS);
-                    unsafe { self.frags.get_unchecked_mut(i).assume_init_drop() };
+                    unsafe { (*self.frags.get()).get_unchecked_mut(i).assume_init_drop() };
                 }
                 have = have.wrapping_shr(1);
                 i += 1;

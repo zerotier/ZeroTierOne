@@ -90,7 +90,7 @@ pub struct Session<Application: ApplicationLayer> {
     receive_window: [AtomicU64; COUNTER_WINDOW_MAX_OOO],
     header_protection_cipher: Aes,
     state: RwLock<State>,
-    defrag: [Mutex<Fragged<Application::IncomingPacketBuffer, MAX_FRAGMENTS>>; COUNTER_WINDOW_MAX_OOO],
+    defrag: [Fragged<Application::IncomingPacketBuffer, MAX_FRAGMENTS>; COUNTER_WINDOW_MAX_OOO],
 }
 
 /// Most of the mutable parts of a session state.
@@ -343,7 +343,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         init_packet: [0u8; AliceNoiseXKInit::SIZE],
                     })),
                 }),
-                defrag: std::array::from_fn(|_| Mutex::new(Fragged::new())),
+                defrag: std::array::from_fn(|_| Fragged::new()),
             });
 
             sessions.active.insert(local_session_id, Arc::downgrade(&session));
@@ -461,8 +461,6 @@ impl<Application: ApplicationLayer> Context<Application> {
                     let (assembled_packet, incoming_packet_buf_arr);
                     let incoming_packet = if fragment_count > 1 {
                         assembled_packet = session.defrag[(incoming_counter as usize) % COUNTER_WINDOW_MAX_OOO]
-                            .lock()
-                            .unwrap()
                             .assemble(incoming_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                         if let Some(assembled_packet) = assembled_packet.as_ref() {
                             assembled_packet.as_ref()
@@ -1102,7 +1100,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                 current_key: 0,
                                 outgoing_offer: Offer::None,
                             }),
-                            defrag: std::array::from_fn(|_| Mutex::new(Fragged::new())),
+                            defrag: std::array::from_fn(|_| Fragged::new()),
                         });
 
                         // Promote incoming session to active.
