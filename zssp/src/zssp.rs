@@ -537,7 +537,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 // Open hash lookup of just 2 slots.
                 // By only checking 2 slots we avoid an expensive hash table lookup while also minimizing the chance that 2 offers collide.
                 // To DOS, an adversary would either need to volumetrically spam the defrag table to keep all slots full
-                // or replay Alice's packet header before Alice's packet is fully assembled.
+                // or replay Alice's packet header from a spoofed physical path before Alice's packet is fully assembled.
                 // Since Alice's packet header has a randomly generated counter value replaying it in time is very hard.
                 let mut slot0 = self.defrag[idx0].lock().unwrap();
                 if slot0.counter() == hashed_counter {
