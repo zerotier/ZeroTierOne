@@ -40,7 +40,7 @@ const GCM_CIPHER_POOL_SIZE: usize = 4;
 /// defragment incoming packets that are not yet associated with a session.
 pub struct Context<Application: ApplicationLayer> {
     default_physical_mtu: AtomicUsize,
-    defrag_hasher: RandomState,
+    defrag_salt: RandomState,
     defrag: [Mutex<Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>>; MAX_INCOMPLETE_SESSION_QUEUE_SIZE],
     sessions: RwLock<SessionsById<Application>>,
 }
@@ -152,7 +152,7 @@ impl<Application: ApplicationLayer> Context<Application> {
     pub fn new(default_physical_mtu: usize) -> Self {
         Self {
             default_physical_mtu: AtomicUsize::new(default_physical_mtu),
-            defrag_hasher: RandomState::new(),
+            defrag_salt: RandomState::new(),
             defrag: std::array::from_fn(|_| Mutex::new(Fragged::new())),
             sessions: RwLock::new(SessionsById {
                 active: HashMap::with_capacity(64),
@@ -527,7 +527,9 @@ impl<Application: ApplicationLayer> Context<Application> {
 
             let assembled;
             let incoming_packet = if fragment_count > 1 {
-                let mut hasher = self.defrag_hasher.build_hasher();
+                // Using just incoming_counter unhashed would be good DOS resistant,
+                // but why not make it harder by mixing in a random value and the physical path in as well.
+                let mut hasher = self.defrag_salt.build_hasher();
                 source.hash(&mut hasher);
                 hasher.write_u64(incoming_counter);
                 let hashed_counter = hasher.finish();
@@ -535,10 +537,12 @@ impl<Application: ApplicationLayer> Context<Application> {
                 let idx1 = (hashed_counter as usize)/MAX_INCOMPLETE_SESSION_QUEUE_SIZE%MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
 
                 // Open hash lookup of just 2 slots.
-                // By only checking 2 slots we avoid an expensive hash table lookup while also minimizing the chance that 2 offers collide.
+                // By only checking 2 slots we avoid a full table lookup while also minimizing the chance that 2 offers collide.
                 // To DOS, an adversary would either need to volumetrically spam the defrag table to keep all slots full
                 // or replay Alice's packet header from a spoofed physical path before Alice's packet is fully assembled.
-                // Since Alice's packet header has a randomly generated counter value replaying it in time is very hard.
+                // Volumetric spam is quite difficult since without the `defrag_salt: RandomState` value an adversary
+                // cannot control which slots their fragments index to. And since Alice's packet header has a randomly
+                // generated counter value replaying it in time requires extreme amounts of network control.
                 let mut slot0 = self.defrag[idx0].lock().unwrap();
                 if slot0.counter() == hashed_counter {
                     assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
@@ -547,7 +551,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     if slot1.counter() == hashed_counter || slot1.counter() == 0 {
                         assembled = slot1.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                     } else {
-                        // Both slots are full so kick out the unassembled packet in slot0 to make more room.
+                        // slot1 is full so kick out whatever is in slot0 to make more room.
                         assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                     }
                 }
