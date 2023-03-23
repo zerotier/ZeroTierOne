@@ -1011,8 +1011,6 @@ void PostgreSQL::heartbeat()
 		int64_t ts = OSUtils::now();
 
 		if(c->c) {
-			pqxx::work w{*c->c};
-
 			std::string major = std::to_string(ZEROTIER_ONE_VERSION_MAJOR);
 			std::string minor = std::to_string(ZEROTIER_ONE_VERSION_MINOR);
 			std::string rev = std::to_string(ZEROTIER_ONE_VERSION_REVISION);
@@ -1023,21 +1021,25 @@ void PostgreSQL::heartbeat()
 			std::string redis_mem_status = (_redisMemberStatus) ? "true" : "false";
 			
 			try {
-			pqxx::result res = w.exec0("INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis, redis_member_status) "
-				"VALUES ("+w.quote(controllerId)+", "+w.quote(hostname)+", TO_TIMESTAMP("+now+"::double precision/1000), "+
-				w.quote(publicIdentity)+", "+major+", "+minor+", "+rev+", "+build+", "+host_port+", "+use_redis+", "+redis_mem_status+") "
-				"ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
-				"public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
-				"v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev, host_port = EXCLUDED.host_port, "
-				"use_redis = EXCLUDED.use_redis, redis_member_status = EXCLUDED.redis_member_status");
+				pqxx::work w{*c->c};
+
+				pqxx::result res =
+					w.exec0("INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis, redis_member_status) "
+							"VALUES ("+w.quote(controllerId)+", "+w.quote(hostname)+", TO_TIMESTAMP("+now+"::double precision/1000), "+
+							w.quote(publicIdentity)+", "+major+", "+minor+", "+rev+", "+build+", "+host_port+", "+use_redis+", "+redis_mem_status+") "
+							"ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
+							"public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
+							"v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev, host_port = EXCLUDED.host_port, "
+							"use_redis = EXCLUDED.use_redis, redis_member_status = EXCLUDED.redis_member_status");
+				w.commit();
 			} catch (std::exception &e) {
-				fprintf(stderr, "Heartbeat update failed: %s\n", e.what());
+				fprintf(stderr, "%s: Heartbeat update failed: %s\n", controllerId, e.what());
 				w.abort();
 				_pool->unborrow(c);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				continue;
-			}		
-			w.commit();
+			}
+
 		}
 		_pool->unborrow(c);
 
