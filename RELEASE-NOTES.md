@@ -1,6 +1,10 @@
 ZeroTier Release Notes
 ======
 
+# 2023-03-10 -- Version 1.10.5
+
+ * Fix for high CPU usage bug on Windows
+
 # 2023-03-07 -- Version 1.10.4
 
  * SECURITY FIX (Windows): this version fixes a file permission problem on

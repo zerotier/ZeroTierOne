@@ -31,7 +31,7 @@
 
 jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
 {
-    jobject resultObject = env->CallStaticObjectMethod(ResultCode_class, ResultCode_fromInt_method, code);
+    jobject resultObject = env->CallStaticObjectMethod(ResultCode_class, ResultCode_fromInt_method, (jint)code);
     if(env->ExceptionCheck() || resultObject == NULL) {
         LOGE("Error creating ResultCode object");
         return NULL;
@@ -43,7 +43,7 @@ jobject createResultObject(JNIEnv *env, ZT_ResultCode code)
 
 jobject createVirtualNetworkStatus(JNIEnv *env, ZT_VirtualNetworkStatus status)
 {
-    jobject statusObject = env->CallStaticObjectMethod(VirtualNetworkStatus_class, VirtualNetworkStatus_fromInt_method, status);
+    jobject statusObject = env->CallStaticObjectMethod(VirtualNetworkStatus_class, VirtualNetworkStatus_fromInt_method, (jint)status);
     if (env->ExceptionCheck() || statusObject == NULL) {
         LOGE("Error creating VirtualNetworkStatus object");
         return NULL;
@@ -54,7 +54,7 @@ jobject createVirtualNetworkStatus(JNIEnv *env, ZT_VirtualNetworkStatus status)
 
 jobject createEvent(JNIEnv *env, ZT_Event event)
 {
-    jobject eventObject = env->CallStaticObjectMethod(Event_class, Event_fromInt_method, event);
+    jobject eventObject = env->CallStaticObjectMethod(Event_class, Event_fromInt_method, (jint)event);
     if (env->ExceptionCheck() || eventObject == NULL) {
         LOGE("Error creating Event object");
         return NULL;
@@ -65,7 +65,7 @@ jobject createEvent(JNIEnv *env, ZT_Event event)
 
 jobject createPeerRole(JNIEnv *env, ZT_PeerRole role)
 {
-    jobject peerRoleObject = env->CallStaticObjectMethod(PeerRole_class, PeerRole_fromInt_method, role);
+    jobject peerRoleObject = env->CallStaticObjectMethod(PeerRole_class, PeerRole_fromInt_method, (jint)role);
     if (env->ExceptionCheck() || peerRoleObject == NULL) {
         LOGE("Error creating PeerRole object");
         return NULL;
@@ -76,7 +76,7 @@ jobject createPeerRole(JNIEnv *env, ZT_PeerRole role)
 
 jobject createVirtualNetworkType(JNIEnv *env, ZT_VirtualNetworkType type)
 {
-    jobject vntypeObject = env->CallStaticObjectMethod(VirtualNetworkType_class, VirtualNetworkType_fromInt_method, type);
+    jobject vntypeObject = env->CallStaticObjectMethod(VirtualNetworkType_class, VirtualNetworkType_fromInt_method, (jint)type);
     if (env->ExceptionCheck() || vntypeObject == NULL) {
         LOGE("Error creating VirtualNetworkType object");
         return NULL;
@@ -87,7 +87,7 @@ jobject createVirtualNetworkType(JNIEnv *env, ZT_VirtualNetworkType type)
 
 jobject createVirtualNetworkConfigOperation(JNIEnv *env, ZT_VirtualNetworkConfigOperation op)
 {
-    jobject vnetConfigOpObject = env->CallStaticObjectMethod(VirtualNetworkConfigOperation_class, VirtualNetworkConfigOperation_fromInt_method, op);
+    jobject vnetConfigOpObject = env->CallStaticObjectMethod(VirtualNetworkConfigOperation_class, VirtualNetworkConfigOperation_fromInt_method, (jint)op);
     if (env->ExceptionCheck() || vnetConfigOpObject == NULL) {
         LOGE("Error creating VirtualNetworkConfigOperation object");
         return NULL;
@@ -113,7 +113,7 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
             }
 
             inetAddressObj = env->CallStaticObjectMethod(
-                InetAddress_class, InetAddress_getByAddress_method, buff);
+                InetAddress_class, InetAddress_getByAddress_method, (jbyteArray)buff);
         }
         break;
         case AF_INET:
@@ -127,7 +127,7 @@ jobject newInetAddress(JNIEnv *env, const sockaddr_storage &addr)
             }
 
             inetAddressObj = env->CallStaticObjectMethod(
-                InetAddress_class, InetAddress_getByAddress_method, buff);
+                InetAddress_class, InetAddress_getByAddress_method, (jbyteArray)buff);
         }
         break;
         default:
@@ -190,7 +190,7 @@ jobject newInetSocketAddress(JNIEnv *env, const sockaddr_storage &addr)
 
     int port = addressPort(addr);
 
-    jobject inetSocketAddressObject = env->NewObject(InetSocketAddress_class, InetSocketAddress_ctor, inetAddressObject, port);
+    jobject inetSocketAddressObject = env->NewObject(InetSocketAddress_class, InetSocketAddress_ctor, (jobject)inetAddressObject, (jint)port);
     if(env->ExceptionCheck() || inetSocketAddressObject == NULL) {
         LOGE("Error creating InetSocketAddress object");
         return NULL;
@@ -211,10 +211,10 @@ jobject newPeerPhysicalPath(JNIEnv *env, const ZT_PeerPhysicalPath &ppp)
     jobject pppObject = env->NewObject(
             PeerPhysicalPath_class,
             PeerPhysicalPath_ctor,
-            addressObject,
-            ppp.lastSend,
-            ppp.lastReceive,
-            ppp.preferred);
+            (jobject)addressObject,
+            (jlong)ppp.lastSend,
+            (jlong)ppp.lastReceive,
+            (jboolean)ppp.preferred); // ANDROID-56: cast to correct size
     if(env->ExceptionCheck() || pppObject == NULL)
     {
         LOGE("Error creating PPP object");
@@ -240,13 +240,13 @@ jobject newPeer(JNIEnv *env, const ZT_Peer &peer)
     jobject peerObject = env->NewObject(
             Peer_class,
             Peer_ctor,
-            peer.address,
-            peer.versionMajor,
-            peer.versionMinor,
-            peer.versionRev,
-            peer.latency,
-            peerRoleObj,
-            arrayObject);
+            (jlong)peer.address,
+            (jint)peer.versionMajor,
+            (jint)peer.versionMinor,
+            (jint)peer.versionRev,
+            (jint)peer.latency,
+            (jobject)peerRoleObj,
+            (jobjectArray)arrayObject);
     if(env->ExceptionCheck() || peerObject == NULL)
     {
         LOGE("Error creating Peer object");
@@ -298,23 +298,20 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
     jobject vnetConfigObj = env->NewObject(
             VirtualNetworkConfig_class,
             VirtualNetworkConfig_ctor,
-            vnetConfig.nwid,
-            vnetConfig.mac,
-            nameStr,
-            statusObject,
-            typeObject,
-            vnetConfig.mtu,
-            vnetConfig.dhcp,
-            vnetConfig.bridge,
-            vnetConfig.broadcastEnabled,
-            //
-            // ANDROID-56: temporarily remove parameters to prevent crashing
-            //
-//            vnetConfig.portError,
-//            vnetConfig.netconfRevision,
-            assignedAddrArrayObj,
-            routesArrayObj,
-            dnsObj);
+            (jlong)vnetConfig.nwid,
+            (jlong)vnetConfig.mac,
+            (jstring)nameStr,
+            (jobject)statusObject,
+            (jobject)typeObject,
+            (jint)vnetConfig.mtu,
+            (jboolean)vnetConfig.dhcp, // ANDROID-56: cast to correct size
+            (jboolean)vnetConfig.bridge, // ANDROID-56: cast to correct size
+            (jboolean)vnetConfig.broadcastEnabled, // ANDROID-56: cast to correct size
+            (jint)vnetConfig.portError,
+            (jlong)vnetConfig.netconfRevision,
+            (jobjectArray)assignedAddrArrayObj,
+            (jobjectArray)routesArrayObj,
+            (jobject)dnsObj);
     if(env->ExceptionCheck() || vnetConfigObj == NULL)
     {
         LOGE("Error creating new VirtualNetworkConfig object");
@@ -327,7 +324,7 @@ jobject newNetworkConfig(JNIEnv *env, const ZT_VirtualNetworkConfig &vnetConfig)
 jobject newVersion(JNIEnv *env, int major, int minor, int rev)
 {
     // create a com.zerotier.sdk.Version object
-    jobject versionObj = env->NewObject(Version_class, Version_ctor, major, minor, rev);
+    jobject versionObj = env->NewObject(Version_class, Version_ctor, (jint)major, (jint)minor, (jint)rev);
     if(env->ExceptionCheck() || versionObj == NULL)
     {
         LOGE("Error creating new Version object");
@@ -358,10 +355,10 @@ jobject newVirtualNetworkRoute(JNIEnv *env, const ZT_VirtualNetworkRoute &route)
     jobject routeObj = env->NewObject(
             VirtualNetworkRoute_class,
             VirtualNetworkRoute_ctor,
-            targetObj,
-            viaObj,
-            route.flags,
-            route.metric);
+            (jobject)targetObj,
+            (jobject)viaObj,
+            (jint)route.flags, // ANDROID-56: cast to correct size
+            (jint)route.metric); // ANDROID-56: cast to correct size
     if(env->ExceptionCheck() || routeObj == NULL)
     {
         LOGE("Exception creating VirtualNetworkRoute");
@@ -387,7 +384,7 @@ jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns)
         return NULL;
     }
 
-    jobject addrList = env->NewObject(ArrayList_class, ArrayList_ctor, 0);
+    jobject addrList = env->NewObject(ArrayList_class, ArrayList_ctor, (jint)0);
     if (env->ExceptionCheck() || addrList == NULL) {
         LOGE("Exception creating new ArrayList");
         return NULL;
@@ -409,7 +406,7 @@ jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns)
             continue;
         }
 
-        env->CallBooleanMethod(addrList, ArrayList_add_method, addr);
+        env->CallBooleanMethod(addrList, ArrayList_add_method, (jobject)addr);
         if(env->ExceptionCheck())
         {
             LOGE("Exception calling add");
@@ -422,8 +419,8 @@ jobject newVirtualNetworkDNS(JNIEnv *env, const ZT_VirtualNetworkDNS &dns)
     jobject dnsObj = env->NewObject(
             VirtualNetworkDNS_class,
             VirtualNetworkDNS_ctor,
-            domain,
-            addrList);
+            (jstring)domain,
+            (jobject)addrList);
     if (env->ExceptionCheck() || dnsObj == NULL) {
         LOGE("Exception creating new VirtualNetworkDNS");
         return NULL;
@@ -450,10 +447,10 @@ jobject newNodeStatus(JNIEnv *env, const ZT_NodeStatus &status) {
     jobject nodeStatusObj = env->NewObject(
             NodeStatus_class,
             NodeStatus_ctor,
-            status.address,
-            pubIdentStr,
-            secIdentStr,
-            status.online);
+            (jlong)status.address,
+            (jstring)pubIdentStr,
+            (jstring)secIdentStr,
+            (jboolean)status.online);
     if(env->ExceptionCheck() || nodeStatusObj == NULL) {
         LOGE("Exception creating new NodeStatus");
         return NULL;

@@ -162,7 +162,7 @@ namespace {
         jint ret = env->CallIntMethod(
             ref->configListener,
             VirtualNetworkConfigListener_onNetworkConfigurationUpdated_method,
-            (jlong)nwid, operationObject, networkConfigObject);
+            (jlong)nwid, (jobject)operationObject, (jobject)networkConfigObject);
         if (env->ExceptionCheck()) {
             LOGE("Exception calling onNetworkConfigurationUpdated");
             return -105;
@@ -213,7 +213,7 @@ namespace {
             return;
         }
 
-        env->CallVoidMethod(ref->frameListener, VirtualNetworkFrameListener_onVirtualNetworkFrame_method, (jlong)nwid, (jlong)sourceMac, (jlong)destMac, (jlong)etherType, (jlong)vlanid, dataArray);
+        env->CallVoidMethod(ref->frameListener, VirtualNetworkFrameListener_onVirtualNetworkFrame_method, (jlong)nwid, (jlong)sourceMac, (jlong)destMac, (jlong)etherType, (jlong)vlanid, (jbyteArray)dataArray);
         if (env->ExceptionCheck()) {
             LOGE("Exception calling onVirtualNetworkFrame");
             return;
@@ -254,7 +254,7 @@ namespace {
         switch (event) {
             case ZT_EVENT_UP: {
                 LOGD("Event Up");
-                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, (jobject)eventObject);
                 if (env->ExceptionCheck()) {
                     LOGE("Exception calling onEvent");
                     return;
@@ -263,7 +263,7 @@ namespace {
             }
             case ZT_EVENT_OFFLINE: {
                 LOGD("Event Offline");
-                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, (jobject)eventObject);
                 if (env->ExceptionCheck()) {
                     LOGE("Exception calling onEvent");
                     return;
@@ -272,7 +272,7 @@ namespace {
             }
             case ZT_EVENT_ONLINE: {
                 LOGD("Event Online");
-                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, (jobject)eventObject);
                 if (env->ExceptionCheck()) {
                     LOGE("Exception calling onEvent");
                     return;
@@ -281,7 +281,7 @@ namespace {
             }
             case ZT_EVENT_DOWN: {
                 LOGD("Event Down");
-                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, (jobject)eventObject);
                 if (env->ExceptionCheck()) {
                     LOGE("Exception calling onEvent");
                     return;
@@ -291,7 +291,7 @@ namespace {
             case ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION: {
                 LOGV("Identity Collision");
                 // call onEvent()
-                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, eventObject);
+                env->CallVoidMethod(ref->eventListener, EventListener_onEvent_method, (jobject)eventObject);
                 if (env->ExceptionCheck()) {
                     LOGE("Exception calling onEvent");
                     return;
@@ -311,7 +311,7 @@ namespace {
                     return;
                 }
 
-                env->CallVoidMethod(ref->eventListener, EventListener_onTrace_method, messageStr);
+                env->CallVoidMethod(ref->eventListener, EventListener_onTrace_method, (jstring)messageStr);
                 if (env->ExceptionCheck()) {
                     LOGE("Exception calling onTrace");
                     return;
@@ -398,7 +398,7 @@ namespace {
 
             int retval = env->CallIntMethod(ref->dataStorePutListener,
                                DataStorePutListener_onDataStorePut_method,
-                               nameStr, bufferObj, secure);
+                               (jstring)nameStr, (jbyteArray)bufferObj, (jboolean)secure);
             if (env->ExceptionCheck()) {
                 LOGE("Exception calling onDataStorePut");
                 return;
@@ -410,7 +410,7 @@ namespace {
 
         } else {
             LOGD("JNI: Delete file: %s", p);
-            int retval = env->CallIntMethod(ref->dataStorePutListener, DataStorePutListener_onDelete_method, nameStr);
+            int retval = env->CallIntMethod(ref->dataStorePutListener, DataStorePutListener_onDelete_method, (jstring)nameStr);
             if (env->ExceptionCheck()) {
                 LOGE("Exception calling onDelete");
                 return;
@@ -500,8 +500,8 @@ namespace {
         int retval = (int)env->CallLongMethod(
                 ref->dataStoreGetListener,
                 DataStoreGetListener_onDataStoreGet_method,
-                nameStr,
-                bufferObj);
+                (jstring)nameStr,
+                (jbyteArray)bufferObj);
         if (env->ExceptionCheck()) {
             LOGE("Exception calling onDataStoreGet");
             return -106;
@@ -570,7 +570,7 @@ namespace {
             return -103;
         }
         
-        int retval = env->CallIntMethod(ref->packetSender, PacketSender_onSendPacketRequested_method, localSocket, remoteAddressObj, bufferObj, 0);
+        int retval = env->CallIntMethod(ref->packetSender, PacketSender_onSendPacketRequested_method, (jlong)localSocket, (jobject)remoteAddressObj, (jbyteArray)bufferObj, (jint)0);
         if (env->ExceptionCheck()) {
             LOGE("Exception calling onSendPacketRequested");
             return -104;
@@ -616,7 +616,7 @@ namespace {
             return true;
         }
 
-        jboolean ret = env->CallBooleanMethod(ref->pathChecker, PathChecker_onPathCheck_method, address, localSocket, remoteAddressObj);
+        jboolean ret = env->CallBooleanMethod(ref->pathChecker, PathChecker_onPathCheck_method, (jlong)address, (jlong)localSocket, (jobject)remoteAddressObj);
         if (env->ExceptionCheck()) {
             LOGE("Exception calling onPathCheck");
             return true;
@@ -656,7 +656,7 @@ namespace {
         //
         // may be NULL
         //
-        jobject sockAddressObject = env->CallObjectMethod(ref->pathChecker, PathChecker_onPathLookup_method, address, ss_family);
+        jobject sockAddressObject = env->CallObjectMethod(ref->pathChecker, PathChecker_onPathLookup_method, (jlong)address, (jint)ss_family);
         if (env->ExceptionCheck()) {
             LOGE("Unable to call onPathLookup implementation");
             return false;

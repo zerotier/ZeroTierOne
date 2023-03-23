@@ -1,3 +1,15 @@
+zerotier-one (1.10.6) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Tue, 21 Mar 2023 01:00:00 -0700
+
+zerotier-one (1.10.5) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Fri, 10 Mar 2023 01:00:00 -0700
+
 zerotier-one (1.10.4) unstable; urgency=medium
 
   * See RELEASE-NOTES.md for release notes.
