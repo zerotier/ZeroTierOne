@@ -14,7 +14,7 @@ use std::collections::hash_map::RandomState;
 use std::collections::HashMap;
 use std::hash::{BuildHasher, Hash, Hasher};
 use std::num::NonZeroU64;
-use std::sync::atomic::{AtomicI64, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI64, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, RwLock, Weak};
 
 use zerotier_crypto::aes::{Aes, AesGcm};
@@ -41,7 +41,8 @@ const GCM_CIPHER_POOL_SIZE: usize = 4;
 pub struct Context<Application: ApplicationLayer> {
     default_physical_mtu: AtomicUsize,
     defrag_salt: RandomState,
-    defrag: [Mutex<Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>>; MAX_INCOMPLETE_SESSION_QUEUE_SIZE],
+    defrag_has_pending: AtomicBool, // Allowed to be falsely positive
+    defrag: [Mutex<(Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>, i64)>; MAX_INCOMPLETE_SESSION_QUEUE_SIZE],
     sessions: RwLock<SessionsById<Application>>,
 }
 
@@ -153,7 +154,8 @@ impl<Application: ApplicationLayer> Context<Application> {
         Self {
             default_physical_mtu: AtomicUsize::new(default_physical_mtu),
             defrag_salt: RandomState::new(),
-            defrag: std::array::from_fn(|_| Mutex::new(Fragged::new())),
+            defrag_has_pending: AtomicBool::new(false),
+            defrag: std::array::from_fn(|_| Mutex::new((Fragged::new(), i64::MAX))),
             sessions: RwLock::new(SessionsById {
                 active: HashMap::with_capacity(64),
                 incoming: HashMap::with_capacity(64),
@@ -244,6 +246,23 @@ impl<Application: ApplicationLayer> Context<Application> {
                 if incoming.timestamp <= negotiation_timeout_cutoff {
                     dead_pending.push(*id);
                 }
+            }
+        }
+        // Only check for expiration if we have a pending packet.
+        // This check is allowed to have false positives for simplicity's sake.
+        if self.defrag_has_pending.swap(false, Ordering::Relaxed) {
+            let mut has_pending = false;
+            for m in &self.defrag {
+                let mut pending = m.lock().unwrap();
+                if pending.1 <= negotiation_timeout_cutoff {
+                    pending.1 = i64::MAX;
+                    pending.0.drop_in_place();
+                } else if pending.0.counter() != 0 {
+                    has_pending = true;
+                }
+            }
+            if has_pending {
+                self.defrag_has_pending.store(true, Ordering::Relaxed);
             }
         }
 
@@ -543,15 +562,27 @@ impl<Application: ApplicationLayer> Context<Application> {
                 // Volumetric spam is quite difficult since without the `defrag_salt: RandomState` value an adversary
                 // cannot control which slots their fragments index to. And since Alice's packet header has a randomly
                 // generated counter value replaying it in time requires extreme amounts of network control.
-                let mut slot0 = self.defrag[idx0].lock().unwrap();
+                let (slot0, timestamp0) = &mut *self.defrag[idx0].lock().unwrap();
                 if slot0.counter() == hashed_counter {
                     assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                    if assembled.is_some() {
+                        *timestamp0 = i64::MAX;
+                    }
                 } else {
-                    let mut slot1 = self.defrag[idx1].lock().unwrap();
+                    let (slot1, timestamp1) = &mut *self.defrag[idx1].lock().unwrap();
                     if slot1.counter() == hashed_counter || slot1.counter() == 0 {
+                        if slot1.counter() == 0 {
+                            *timestamp1 = current_time;
+                            self.defrag_has_pending.store(true, Ordering::Relaxed);
+                        }
                         assembled = slot1.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                        if assembled.is_some() {
+                            *timestamp1 = i64::MAX;
+                        }
                     } else {
-                        // slot1 is full so kick out whatever is in slot0 to make more room.
+                        // slot0 is either occupied or empty so we overwrite whatever is there to make more room.
+                        *timestamp0 = current_time;
+                        self.defrag_has_pending.store(true, Ordering::Relaxed);
                         assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                     }
                 }

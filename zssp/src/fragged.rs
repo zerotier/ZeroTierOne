@@ -55,24 +55,11 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
     ///
     /// When a fully assembled packet is returned the internal state is reset and this object can
     /// be reused to assemble another packet.
-    #[inline(always)]
     pub fn assemble(&mut self, counter: u64, fragment: Fragment, fragment_no: u8, fragment_count: u8) -> Option<Assembled<Fragment, MAX_FRAGMENTS>> {
         if fragment_no < fragment_count && (fragment_count as usize) <= MAX_FRAGMENTS {
             // If the counter has changed, reset the structure to receive a new packet.
             if counter != self.counter {
-                if needs_drop::<Fragment>() {
-                    let mut have = self.have;
-                    let mut i = 0;
-                    while have != 0 {
-                        if (have & 1) != 0 {
-                            debug_assert!(i < MAX_FRAGMENTS);
-                            unsafe { self.frags.get_unchecked_mut(i).assume_init_drop() };
-                        }
-                        have = have.wrapping_shr(1);
-                        i += 1;
-                    }
-                }
-                self.have = 0;
+                self.drop_in_place();
                 self.count = fragment_count as u32;
                 self.counter = counter;
             }
@@ -96,11 +83,10 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Fragged<Fragment, MAX_FRAGMENTS> {
         }
         return None;
     }
-}
 
-impl<Fragment, const MAX_FRAGMENTS: usize> Drop for Fragged<Fragment, MAX_FRAGMENTS> {
+    /// Drops any remaining fragments and resets this object.
     #[inline(always)]
-    fn drop(&mut self) {
+    pub fn drop_in_place(&mut self) {
         if needs_drop::<Fragment>() {
             let mut have = self.have;
             let mut i = 0;
@@ -113,5 +99,15 @@ impl<Fragment, const MAX_FRAGMENTS: usize> Drop for Fragged<Fragment, MAX_FRAGME
                 i += 1;
             }
         }
+        self.have = 0;
+        self.count = 0;
+        self.counter = 0;
+    }
+}
+
+impl<Fragment, const MAX_FRAGMENTS: usize> Drop for Fragged<Fragment, MAX_FRAGMENTS> {
+    #[inline(always)]
+    fn drop(&mut self) {
+        self.drop_in_place();
     }
 }
