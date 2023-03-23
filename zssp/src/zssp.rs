@@ -9,7 +9,10 @@
 // ZSSP: ZeroTier Secure Session Protocol
 // FIPS compliant Noise_XK with Jedi powers (Kyber1024) and built-in attack-resistant large payload (fragmentation) support.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::hash_map::RandomState;
+//use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
+use std::hash::{BuildHasher, Hash, Hasher};
 use std::num::NonZeroU64;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, RwLock, Weak};
@@ -36,17 +39,9 @@ const GCM_CIPHER_POOL_SIZE: usize = 4;
 /// Each application using ZSSP must create an instance of this to own sessions and
 /// defragment incoming packets that are not yet associated with a session.
 pub struct Context<Application: ApplicationLayer> {
-    max_incomplete_session_queue_size: usize,
     default_physical_mtu: AtomicUsize,
-    defrag: Mutex<
-        HashMap<
-            (Application::PhysicalPath, u64),
-            Arc<(
-                Mutex<Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>>,
-                i64, // creation timestamp
-            )>,
-        >,
-    >,
+    defrag_salt: RandomState,
+    defrag: [Mutex<Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>>; MAX_INCOMPLETE_SESSION_QUEUE_SIZE],
     sessions: RwLock<SessionsById<Application>>,
 }
 
@@ -154,11 +149,11 @@ impl<Application: ApplicationLayer> Context<Application> {
     /// Create a new session context.
     ///
     /// * `max_incomplete_session_queue_size` - Maximum number of incomplete sessions in negotiation phase
-    pub fn new(max_incomplete_session_queue_size: usize, default_physical_mtu: usize) -> Self {
+    pub fn new(default_physical_mtu: usize) -> Self {
         Self {
-            max_incomplete_session_queue_size,
             default_physical_mtu: AtomicUsize::new(default_physical_mtu),
-            defrag: Mutex::new(HashMap::new()),
+            defrag_salt: RandomState::new(),
+            defrag: std::array::from_fn(|_| Mutex::new(Fragged::new())),
             sessions: RwLock::new(SessionsById {
                 active: HashMap::with_capacity(64),
                 incoming: HashMap::with_capacity(64),
@@ -203,7 +198,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                                     PACKET_TYPE_ALICE_NOISE_XK_INIT,
                                     None,
                                     0,
-                                    1,
+                                    random::next_u64_secure(),
                                     None,
                                 );
                             }
@@ -261,9 +256,6 @@ impl<Application: ApplicationLayer> Context<Application> {
                 sessions.incoming.remove(id);
             }
         }
-
-        // Delete any expired defragmentation queue items not associated with a session.
-        self.defrag.lock().unwrap().retain(|_, fragged| fragged.1 > negotiation_timeout_cutoff);
 
         Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS.min(Application::RETRY_INTERVAL)
     }
@@ -386,7 +378,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 PACKET_TYPE_ALICE_NOISE_XK_INIT,
                 None,
                 0,
-                1,
+                random::next_u64_secure(),
                 None,
             )?;
         }
@@ -458,7 +450,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 let (key_index, packet_type, fragment_count, fragment_no, incoming_counter) = parse_packet_header(&incoming_physical_packet);
 
                 if session.check_receive_window(incoming_counter) {
-                    let (assembled_packet, incoming_packet_buf_arr);
+                    let assembled_packet;
                     let incoming_packet = if fragment_count > 1 {
                         assembled_packet = session.defrag[(incoming_counter as usize) % COUNTER_WINDOW_MAX_OOO]
                             .lock()
@@ -470,8 +462,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                             return Ok(ReceiveResult::Ok(Some(session)));
                         }
                     } else {
-                        incoming_packet_buf_arr = [incoming_physical_packet_buf];
-                        &incoming_packet_buf_arr
+                        std::array::from_ref(&incoming_physical_packet_buf)
                     };
 
                     return self.process_complete_incoming_packet(
@@ -499,7 +490,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     .decrypt_block_in_place(&mut incoming_physical_packet[HEADER_PROTECT_ENCRYPT_START..HEADER_PROTECT_ENCRYPT_END]);
                 let (key_index, packet_type, fragment_count, fragment_no, incoming_counter) = parse_packet_header(&incoming_physical_packet);
 
-                let (assembled_packet, incoming_packet_buf_arr);
+                let assembled_packet;
                 let incoming_packet = if fragment_count > 1 {
                     assembled_packet = incoming.defrag[(incoming_counter as usize) % COUNTER_WINDOW_MAX_OOO]
                         .lock()
@@ -511,8 +502,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                         return Ok(ReceiveResult::Ok(None));
                     }
                 } else {
-                    incoming_packet_buf_arr = [incoming_physical_packet_buf];
-                    &incoming_packet_buf_arr
+                    std::array::from_ref(&incoming_physical_packet_buf)
                 };
 
                 return self.process_complete_incoming_packet(
@@ -535,48 +525,44 @@ impl<Application: ApplicationLayer> Context<Application> {
         } else {
             let (key_index, packet_type, fragment_count, fragment_no, incoming_counter) = parse_packet_header(&incoming_physical_packet);
 
-            let (assembled_packet, incoming_packet_buf_arr);
+            let assembled;
             let incoming_packet = if fragment_count > 1 {
-                assembled_packet = {
-                    let mut defrag = self.defrag.lock().unwrap();
-                    let f = defrag
-                        .entry((source.clone(), incoming_counter))
-                        .or_insert_with(|| Arc::new((Mutex::new(Fragged::new()), current_time)))
-                        .clone();
+                // Using just incoming_counter unhashed would be good DOS resistant,
+                // but why not make it harder by mixing in a random value and the physical path in as well.
+                let mut hasher = self.defrag_salt.build_hasher();
+                source.hash(&mut hasher);
+                hasher.write_u64(incoming_counter);
+                let hashed_counter = hasher.finish();
+                let idx0 = (hashed_counter as usize) % MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
+                let idx1 = (hashed_counter as usize) / MAX_INCOMPLETE_SESSION_QUEUE_SIZE % MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
 
-                    // Anti-DOS overflow purge of the incoming defragmentation queue for packets not associated with known sessions.
-                    if defrag.len() >= self.max_incomplete_session_queue_size {
-                        // First, drop all entries that are timed out or whose physical source duplicates another entry.
-                        let mut sources = HashSet::with_capacity(defrag.len());
-                        let negotiation_timeout_cutoff = current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS;
-                        defrag
-                            .retain(|k, fragged| (fragged.1 > negotiation_timeout_cutoff && sources.insert(k.0.clone())) || Arc::ptr_eq(fragged, &f));
-
-                        // Then, if we are still at or over the limit, drop 10% of remaining entries at random.
-                        if defrag.len() >= self.max_incomplete_session_queue_size {
-                            let mut rn = random::next_u32_secure();
-                            defrag.retain(|_, fragged| {
-                                rn = prng32(rn);
-                                rn > (u32::MAX / 10) || Arc::ptr_eq(fragged, &f)
-                            });
-                        }
+                // Open hash lookup of just 2 slots.
+                // By only checking 2 slots we avoid a full table lookup while also minimizing the chance that 2 offers collide.
+                // To DOS, an adversary would either need to volumetrically spam the defrag table to keep all slots full
+                // or replay Alice's packet header from a spoofed physical path before Alice's packet is fully assembled.
+                // Volumetric spam is quite difficult since without the `defrag_salt: RandomState` value an adversary
+                // cannot control which slots their fragments index to. And since Alice's packet header has a randomly
+                // generated counter value replaying it in time requires extreme amounts of network control.
+                let mut slot0 = self.defrag[idx0].lock().unwrap();
+                if slot0.counter() == hashed_counter {
+                    assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                } else {
+                    let mut slot1 = self.defrag[idx1].lock().unwrap();
+                    if slot1.counter() == hashed_counter || slot1.counter() == 0 {
+                        assembled = slot1.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                    } else {
+                        // slot1 is full so kick out whatever is in slot0 to make more room.
+                        assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                     }
-
-                    f
                 }
-                .0
-                .lock()
-                .unwrap()
-                .assemble(incoming_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
-                if let Some(assembled_packet) = assembled_packet.as_ref() {
-                    self.defrag.lock().unwrap().remove(&(source.clone(), incoming_counter));
+
+                if let Some(assembled_packet) = &assembled {
                     assembled_packet.as_ref()
                 } else {
                     return Ok(ReceiveResult::Ok(None));
                 }
             } else {
-                incoming_packet_buf_arr = [incoming_physical_packet_buf];
-                &incoming_packet_buf_arr
+                std::array::from_ref(&incoming_physical_packet_buf)
             };
 
             return self.process_complete_incoming_packet(
@@ -585,7 +571,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 &mut check_allow_incoming_session,
                 &mut check_accept_session,
                 data_buf,
-                incoming_counter,
+                1, // The incoming_counter on init packets is only meant for DOS resistant defragmentation, we do not want to use it for anything noise related.
                 incoming_packet,
                 packet_type,
                 None,
@@ -724,7 +710,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                      * identity, then responds with his ephemeral keys.
                      */
 
-                    if incoming_counter != 1 || session.is_some() || incoming.is_some() {
+                    if session.is_some() || incoming.is_some() {
                         return Err(Error::OutOfSequence);
                     }
                     if pkt_assembled.len() != AliceNoiseXKInit::SIZE {
@@ -801,7 +787,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                     // If this queue is too big, we remove the latest entry and replace it. The latest
                     // is used because under flood conditions this is most likely to be another bogus
                     // entry. If we find one that is actually timed out, that one is replaced instead.
-                    if sessions.incoming.len() >= self.max_incomplete_session_queue_size {
+                    if sessions.incoming.len() >= MAX_INCOMPLETE_SESSION_QUEUE_SIZE {
                         let mut newest = i64::MIN;
                         let mut replace_id = None;
                         let cutoff_time = current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS;
@@ -1709,15 +1695,4 @@ fn kbkdf512<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<NOISE_HASHLE
 }
 fn kbkdf256<const LABEL: u8>(key: &Secret<NOISE_HASHLEN>) -> Secret<32> {
     hmac_sha512_secret256(key.as_bytes(), &[1, b'Z', b'T', LABEL, 0x00, 0, 1u8, 0u8])
-}
-
-fn prng32(mut x: u32) -> u32 {
-    // based on lowbias32 from https://nullprogram.com/blog/2018/07/31/
-    x = x.wrapping_add(1); // don't get stuck on 0
-    x ^= x.wrapping_shr(16);
-    x = x.wrapping_mul(0x7feb352d);
-    x ^= x.wrapping_shr(15);
-    x = x.wrapping_mul(0x846ca68b);
-    x ^= x.wrapping_shr(16);
-    x
 }
