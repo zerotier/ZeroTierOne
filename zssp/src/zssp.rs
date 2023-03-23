@@ -562,34 +562,28 @@ impl<Application: ApplicationLayer> Context<Application> {
                 // Volumetric spam is quite difficult since without the `defrag_salt: RandomState` value an adversary
                 // cannot control which slots their fragments index to. And since Alice's packet header has a randomly
                 // generated counter value replaying it in time requires extreme amounts of network control.
-                let mut slot0 = self.defrag[idx0].lock().unwrap();
-                if slot0.0.counter() == hashed_counter {
-                    assembled = slot0
-                        .0
-                        .assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                let (slot0, timestamp0) = &mut *self.defrag[idx0].lock().unwrap();
+                if slot0.counter() == hashed_counter {
+                    assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                     if assembled.is_some() {
-                        slot0.1 = i64::MAX
+                        *timestamp0 = i64::MAX;
                     }
                 } else {
-                    let mut slot1 = self.defrag[idx1].lock().unwrap();
-                    if slot1.0.counter() == hashed_counter || slot1.0.counter() == 0 {
-                        if slot1.0.counter() == 0 {
-                            slot1.1 = current_time;
+                    let (slot1, timestamp1) = &mut *self.defrag[idx1].lock().unwrap();
+                    if slot1.counter() == hashed_counter || slot1.counter() == 0 {
+                        if slot1.counter() == 0 {
+                            *timestamp1 = current_time;
                             self.defrag_has_pending.store(true, Ordering::Relaxed);
                         }
-                        assembled = slot1
-                            .0
-                            .assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                        assembled = slot1.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                         if assembled.is_some() {
-                            slot1.1 = i64::MAX
+                            *timestamp1 = i64::MAX;
                         }
                     } else {
                         // slot0 is either occupied or empty so we overwrite whatever is there to make more room.
-                        slot0.1 = current_time;
+                        *timestamp0 = current_time;
                         self.defrag_has_pending.store(true, Ordering::Relaxed);
-                        assembled = slot0
-                            .0
-                            .assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                        assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                     }
                 }
 
