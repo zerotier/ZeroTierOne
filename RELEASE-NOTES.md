@@ -1,6 +1,12 @@
 ZeroTier Release Notes
 ======
 
+# 2023-03-23 -- Version 1.10.6
+
+  * Prevent binding temporary ipv6 addresses on macos (#1910)
+  * Prevent path-learning loops (#1914)
+  * Prevent infinite loop of UAC prompts in tray app
+
 # 2023-03-10 -- Version 1.10.5
 
  * Fix for high CPU usage bug on Windows
