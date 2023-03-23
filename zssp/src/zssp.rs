@@ -571,20 +571,20 @@ impl<Application: ApplicationLayer> Context<Application> {
                     }
                 } else {
                     let (slot1, timestamp1) = &mut *self.defrag[idx1].lock().unwrap();
-                    if slot1.counter() == hashed_counter || slot1.counter() == 0 {
-                        if slot1.counter() == 0 {
-                            *timestamp1 = current_time;
-                            self.defrag_has_pending.store(true, Ordering::Relaxed);
-                        }
+                    if slot1.counter() == hashed_counter {
                         assembled = slot1.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                         if assembled.is_some() {
                             *timestamp1 = i64::MAX;
                         }
-                    } else {
-                        // slot0 is either occupied or empty so we overwrite whatever is there to make more room.
+                    } else if slot0.counter() == 0 {
                         *timestamp0 = current_time;
                         self.defrag_has_pending.store(true, Ordering::Relaxed);
                         assembled = slot0.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                    } else {
+                        // slot1 is either occupied or empty so we overwrite whatever is there to make more room.
+                        *timestamp1 = current_time;
+                        self.defrag_has_pending.store(true, Ordering::Relaxed);
+                        assembled = slot1.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                     }
                 }
 
