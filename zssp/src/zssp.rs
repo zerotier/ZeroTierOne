@@ -11,8 +11,8 @@
 
 use std::collections::hash_map::RandomState;
 //use std::collections::hash_map::DefaultHasher;
-use std::hash::{BuildHasher, Hash, Hasher};
 use std::collections::HashMap;
+use std::hash::{BuildHasher, Hash, Hasher};
 use std::num::NonZeroU64;
 use std::sync::atomic::{AtomicI64, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, RwLock, Weak};
@@ -533,8 +533,8 @@ impl<Application: ApplicationLayer> Context<Application> {
                 source.hash(&mut hasher);
                 hasher.write_u64(incoming_counter);
                 let hashed_counter = hasher.finish();
-                let idx0 = (hashed_counter as usize)%MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
-                let idx1 = (hashed_counter as usize)/MAX_INCOMPLETE_SESSION_QUEUE_SIZE%MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
+                let idx0 = (hashed_counter as usize) % MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
+                let idx1 = (hashed_counter as usize) / MAX_INCOMPLETE_SESSION_QUEUE_SIZE % MAX_INCOMPLETE_SESSION_QUEUE_SIZE;
 
                 // Open hash lookup of just 2 slots.
                 // By only checking 2 slots we avoid a full table lookup while also minimizing the chance that 2 offers collide.
@@ -571,7 +571,7 @@ impl<Application: ApplicationLayer> Context<Application> {
                 &mut check_allow_incoming_session,
                 &mut check_accept_session,
                 data_buf,
-                1,// The incoming_counter on init packets is only meant for DOS resistant defragmentation, we do not want to use it for anything noise related.
+                1, // The incoming_counter on init packets is only meant for DOS resistant defragmentation, we do not want to use it for anything noise related.
                 incoming_packet,
                 packet_type,
                 None,
