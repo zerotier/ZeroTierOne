@@ -17,9 +17,9 @@ else
 fi
 
 if [ ${BUILD_EVENT} == "tag" ]; then
-    BASEURL="zerotier-releases.ci.lab"
+    BASEURL="zerotier-releases.home.arpa"
 else
-    BASEURL="zerotier-builds.ci.lab"
+    BASEURL="zerotier-builds.home.arpa"
 fi
 
 echo "#~~~~~~~~~~~~~~~~~~~~"
