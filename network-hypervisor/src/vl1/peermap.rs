@@ -1,95 +1,83 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
+use std::ops::Bound;
 use std::sync::{Arc, RwLock};
 
-use crate::vl1::address::{Address, LegacyAddress};
-use crate::vl1::node::ApplicationLayer;
-use crate::vl1::Peer;
+use super::address::{Address, PartialAddress};
+use super::identity::{Identity, IdentitySecret};
+use super::node::ApplicationLayer;
+use super::peer::Peer;
 
-use zerotier_utils::oneormore::OneOrMore;
+use zerotier_crypto::typestate::Valid;
 
-/// Mapping of addresses (and short legacy addresses) to peers.
-///
-/// Collisions in the legacy 40-bit address space are very rare, so the OneOrMore<> optimization is
-/// used to allow lookups to almost always happen by way of a simple u64 key.
 pub struct PeerMap<Application: ApplicationLayer + ?Sized> {
-    peers: RwLock<HashMap<LegacyAddress, OneOrMore<Arc<Peer<Application>>>>>,
+    maps: [RwLock<BTreeMap<Address, Arc<Peer<Application>>>>; 256],
 }
 
 impl<Application: ApplicationLayer + ?Sized> PeerMap<Application> {
     pub fn new() -> Self {
-        Self { peers: RwLock::new(HashMap::new()) }
+        Self { maps: std::array::from_fn(|_| RwLock::new(BTreeMap::new())) }
     }
 
     pub fn each<F: FnMut(&Arc<Peer<Application>>)>(&self, mut f: F) {
-        let peers = self.peers.read().unwrap();
-        for (_, pl) in peers.iter() {
-            for p in pl.iter() {
+        for m in self.maps.iter() {
+            let mm = m.read().unwrap();
+            for (_, p) in mm.iter() {
                 f(p);
             }
         }
     }
 
-    pub fn remove(&self, address: &Address) {
-        let peers = self.peers.write().unwrap();
-        if let Some(list) = peers.get_mut(&address.legacy_address()) {
-            list.remove_if(|peer| peer.identity.address.eq(address));
-            if list.is_empty() {
-                peers.remove(&address.legacy_address());
+    pub fn remove(&self, address: &Address) -> Option<Arc<Peer<Application>>> {
+        self.maps[address.0[0] as usize].write().unwrap().remove(address)
+    }
+
+    /// Get an exact match for a full specificity address.
+    /// This always returns None if the address provided does not have 384 bits of specificity.
+    pub fn get_exact(&self, address: &Address) -> Option<Arc<Peer<Application>>> {
+        self.maps[address.0[0] as usize].read().unwrap().get(address).cloned()
+    }
+
+    /// Get a matching peer for a partial address of any specificity, but return None if the match is ambiguous.
+    pub fn get_unambiguous(&self, address: &PartialAddress) -> Option<Arc<Peer<Application>>> {
+        let mm = self.maps[address.0 .0[0] as usize].read().unwrap();
+        let matches = mm.range::<[u8; 48], (Bound<&[u8; 48]>, Bound<&[u8; 48]>)>((Bound::Included(&address.0 .0), Bound::Unbounded));
+        let mut r = None;
+        for m in matches {
+            if address.matches(m.0) {
+                if r.is_none() {
+                    r.insert(m.1);
+                } else {
+                    return None;
+                }
+            } else {
+                break;
             }
         }
+        return r.cloned();
     }
 
-    pub fn get(&self, address: &Address) -> Option<Arc<Peer<Application>>> {
-        self.peers.read().unwrap().get(&address.legacy_address()).and_then(|list| {
-            for p in list.iter() {
-                if p.identity.address.eq(address) {
-                    return Some(p.clone());
-                }
-            }
-            return None;
-        })
-    }
-
-    /// Get a peer by only its short 40-bit address.
-    ///
-    /// This is only used in V1 compatibility mode to look up peers by V1 address. The rule here
-    /// is that only one V1 peer can map to one V1 address.
-    pub(crate) fn get_legacy(&self, legacy_address: &LegacyAddress) -> Option<Arc<Peer<Application>>> {
-        self.peers.read().unwrap().get(legacy_address).and_then(|list| {
-            // First, get the matching peer whose identity is of the legacy x25519-only type.
-            for p in list.iter() {
-                if p.identity.p384.is_none() {
-                    return Some(p.clone());
-                }
-            }
-            // Then, if that doesn't exist, get the first matching peer with the same short address.
-            return list.front().cloned();
-        })
-    }
-
-    /// Insert the supplied peer if it is in fact unique.
-    ///
-    /// This returns either the new peer or the existing one if the new peer is a duplicate. True is returned
-    /// for the second return value if the new peer is new or false if it was a duplicate.
-    ///
-    /// Short 40-bit addresses are unique within the domain of peers with V1 identities, meaning identities
-    /// that lack P-384 keys. Otherwise the full 384-bit key space is used.
-    pub fn insert_if_unique(&self, peer: Arc<Peer<Application>>) -> (Arc<Peer<Application>>, bool) {
-        let peers = self.peers.write().unwrap();
-        if let Some(list) = peers.get(&peer.identity.address.legacy_address()) {
-            for p in list.iter() {
-                if (p.identity.p384.is_none()
-                    && peer.identity.p384.is_none()
-                    && p.identity.address.legacy_address() == peer.identity.address.legacy_address())
-                    || p.identity.address.eq(&peer.identity.address)
-                {
-                    return (p.clone(), false);
-                }
-            }
-            list.push_front(peer.clone());
+    /// Insert the supplied peer if it is in fact new, otherwise return the existing peer with the same address.
+    pub fn add(&self, peer: Arc<Peer<Application>>) -> (Arc<Peer<Application>>, bool) {
+        let mm = self.maps[peer.identity.address.0[0] as usize].write().unwrap();
+        let p = mm.entry(peer.identity.address).or_insert(peer.clone());
+        if Arc::ptr_eq(p, &peer) {
+            (peer, true)
         } else {
-            peers.insert(peer.identity.address.legacy_address(), OneOrMore::new_one(peer.clone()));
+            (p.clone(), false)
         }
-        return (peer, true);
+    }
+
+    /// Get a peer or create one if not found.
+    /// This should be used when the peer will almost always be new, such as on OK(WHOIS).
+    pub fn get_or_add(&self, this_node_identity: &IdentitySecret, peer_identity: Valid<Identity>, time_ticks: i64) -> Option<Arc<Peer<Application>>> {
+        let peer = Arc::new(Peer::new(this_node_identity, peer_identity, time_ticks)?);
+        Some(
+            self.maps[peer_identity.address.0[0] as usize]
+                .write()
+                .unwrap()
+                .entry(peer.identity.address)
+                .or_insert(peer)
+                .clone(),
+        )
     }
 }

@@ -6,8 +6,8 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::vl1::inetaddress::InetAddress;
-use crate::vl1::{Address, MAC};
+use super::inetaddress::InetAddress;
+use super::{Address, MAC};
 
 use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::error::InvalidFormatError;
@@ -343,10 +343,11 @@ impl FromStr for Endpoint {
         let (endpoint_type, endpoint_data) = ss.unwrap();
         match endpoint_type {
             "zt" | "zte" => {
+                let a = Address::from_str(endpoint_data).map_err(|_| InvalidFormatError)?;
                 if endpoint_type == "zt" {
-                    return Ok(Endpoint::ZeroTier(Address::from_str(endpoint_data)?));
+                    return Ok(Endpoint::ZeroTier(a));
                 } else {
-                    return Ok(Endpoint::ZeroTierEncap(Address::from_str(endpoint_data)?));
+                    return Ok(Endpoint::ZeroTierEncap(a));
                 }
             }
             "eth" => return Ok(Endpoint::Ethernet(MAC::from_str(endpoint_data)?)),

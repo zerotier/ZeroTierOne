@@ -3,8 +3,8 @@
 use std::collections::BTreeSet;
 use std::io::Write;
 
-use crate::vl1::identity::Identity;
-use crate::vl1::Endpoint;
+use super::endpoint::Endpoint;
+use super::identity::{Identity, IdentitySecret};
 
 use zerotier_crypto::typestate::Verified;
 use zerotier_utils::arrayvec::ArrayVec;
@@ -12,8 +12,6 @@ use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 use serde::{Deserialize, Serialize};
-
-use super::identity::IdentitySecret;
 
 /// Description of a member of a root cluster.
 ///

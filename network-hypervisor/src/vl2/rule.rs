@@ -10,7 +10,7 @@ use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
 use crate::protocol;
-use crate::vl1::{Address, InetAddress, LegacyAddress, MAC};
+use crate::vl1::{Address, InetAddress, MAC};
 
 #[allow(unused)]
 pub const RULES_ENGINE_REVISION: u8 = 1;
@@ -174,16 +174,16 @@ impl Default for RuleValue {
 pub trait RuleVisitor {
     fn action_drop(&mut self) -> bool;
     fn action_accept(&mut self) -> bool;
-    fn action_tee(&mut self, address: LegacyAddress, flags: u32, length: u16) -> bool;
-    fn action_watch(&mut self, address: LegacyAddress, flags: u32, length: u16) -> bool;
-    fn action_redirect(&mut self, address: LegacyAddress, flags: u32, length: u16) -> bool;
+    fn action_tee(&mut self, address: Address, flags: u32, length: u16) -> bool;
+    fn action_watch(&mut self, address: Address, flags: u32, length: u16) -> bool;
+    fn action_redirect(&mut self, address: Address, flags: u32, length: u16) -> bool;
     fn action_break(&mut self) -> bool;
     fn action_priority(&mut self, qos_bucket: u8) -> bool;
 
     fn invalid_rule(&mut self) -> bool;
 
-    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: LegacyAddress);
-    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: LegacyAddress);
+    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: Address);
+    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: Address);
     fn match_vlan_id(&mut self, not: bool, or: bool, id: u16);
     fn match_vlan_pcp(&mut self, not: bool, or: bool, pcp: u8);
     fn match_vlan_dei(&mut self, not: bool, or: bool, dei: u8);

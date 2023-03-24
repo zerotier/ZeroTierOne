@@ -5,13 +5,12 @@ use std::hash::{BuildHasher, Hasher};
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Mutex;
 
+use super::endpoint::Endpoint;
+use super::ApplicationLayer;
 use crate::protocol;
-use crate::vl1::endpoint::Endpoint;
 
 use zerotier_crypto::random;
 use zerotier_utils::NEVER_HAPPENED_TICKS;
-
-use super::ApplicationLayer;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = protocol::PATH_KEEPALIVE_INTERVAL;
 
@@ -33,7 +32,7 @@ pub struct Path<Application: ApplicationLayer + ?Sized> {
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
-    fragmented_packets: Mutex<HashMap<u64, protocol::v1::FragmentedPacket, PacketIdHasher>>,
+    v1_fragmented_packets: Mutex<HashMap<u64, protocol::v1::FragmentedPacket, PacketIdHasher>>,
 }
 
 impl<Application: ApplicationLayer + ?Sized> Path<Application> {
@@ -50,7 +49,7 @@ impl<Application: ApplicationLayer + ?Sized> Path<Application> {
             last_send_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             last_receive_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             create_time_ticks: time_ticks,
-            fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, PacketIdHasher(random::xorshift64_random()))),
+            v1_fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, PacketIdHasher(random::xorshift64_random()))),
         }
     }
 
@@ -64,7 +63,7 @@ impl<Application: ApplicationLayer + ?Sized> Path<Application> {
         packet: protocol::PooledPacketBuffer,
         time_ticks: i64,
     ) -> Option<protocol::v1::FragmentedPacket> {
-        let mut fp = self.fragmented_packets.lock().unwrap();
+        let mut fp = self.v1_fragmented_packets.lock().unwrap();
 
         // Discard some old waiting packets if the total incoming fragments for a path exceeds a
         // sanity limit. This is to prevent memory exhaustion DOS attacks.
@@ -103,7 +102,7 @@ impl<Application: ApplicationLayer + ?Sized> Path<Application> {
     }
 
     pub(crate) fn service(&self, time_ticks: i64) -> PathServiceResult {
-        self.fragmented_packets
+        self.v1_fragmented_packets
             .lock()
             .unwrap()
             .retain(|_, frag| (time_ticks - frag.ts_ticks) < protocol::v1::FRAGMENT_EXPIRATION);

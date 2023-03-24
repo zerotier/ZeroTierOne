@@ -1,6 +1,6 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
-use crate::vl1::identity::Identity;
+use super::identity::Identity;
 
 #[derive(Clone)]
 pub enum Event {

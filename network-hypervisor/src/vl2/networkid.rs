@@ -1,18 +1,10 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
-use std::fmt::Debug;
-use std::hash::{Hash, Hasher};
-use std::num::NonZeroU64;
-use std::str::FromStr;
+pub type NetworkId = u64;
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+//pub struct NetworkId;
 
-use zerotier_utils::error::InvalidFormatError;
-use zerotier_utils::hex;
-use zerotier_utils::hex::HEX_CHARS;
-
-use crate::vl1::Address;
-
+/*
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct NetworkId(NonZeroU64);
@@ -172,3 +164,4 @@ impl<'de> Deserialize<'de> for NetworkId {
         }
     }
 }
+*/

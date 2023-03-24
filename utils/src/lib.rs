@@ -7,6 +7,7 @@
  */
 
 pub mod arrayvec;
+pub mod base24;
 pub mod blob;
 pub mod buffer;
 pub mod cast;
@@ -22,7 +23,6 @@ pub mod io;
 pub mod json;
 pub mod marshalable;
 pub mod memory;
-pub mod oneormore;
 pub mod pool;
 pub mod proquint;
 #[cfg(feature = "tokio")]

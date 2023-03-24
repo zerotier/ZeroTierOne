@@ -306,8 +306,8 @@ pub mod v1 {
     #[inline(always)]
     pub fn get_packet_aad_bytes(destination: &Address, source: &Address, flags_cipher_hops: u8) -> [u8; 11] {
         let mut id = [0u8; 11];
-        id[0..5].copy_from_slice(destination.legacy_address().as_bytes());
-        id[5..10].copy_from_slice(source.legacy_address().as_bytes());
+        id[0..5].copy_from_slice(destination.legacy_bytes());
+        id[5..10].copy_from_slice(source.legacy_bytes());
         id[10] = flags_cipher_hops & FLAGS_FIELD_MASK_HIDE_HOPS;
         id
     }
