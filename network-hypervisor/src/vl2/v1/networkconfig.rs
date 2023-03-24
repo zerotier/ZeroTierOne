@@ -175,7 +175,7 @@ impl NetworkConfig {
                 proto_v1_field_name::network_config::CERTIFICATE_OF_MEMBERSHIP,
                 v1cred
                     .certificate_of_membership
-                    .to_bytes(self.network_id.network_controller().legacy_address())
+                    .to_bytes(self.network_id.legacy_controller_address())
                     .as_bytes()
                     .to_vec(),
             );
@@ -183,7 +183,7 @@ impl NetworkConfig {
             if !v1cred.certificates_of_ownership.is_empty() {
                 let mut certs = Vec::with_capacity(v1cred.certificates_of_ownership.len() * 256);
                 for c in v1cred.certificates_of_ownership.iter() {
-                    let _ = certs.write_all(c.to_bytes(controller_identity.address.legacy_address())?.as_slice());
+                    let _ = certs.write_all(c.to_bytes(&controller_identity.address)?.as_slice());
                 }
                 d.set_bytes(proto_v1_field_name::network_config::CERTIFICATES_OF_OWNERSHIP, certs);
             }
@@ -191,7 +191,7 @@ impl NetworkConfig {
             if !v1cred.tags.is_empty() {
                 let mut tags = Vec::with_capacity(v1cred.tags.len() * 256);
                 for (_, t) in v1cred.tags.iter() {
-                    let _ = tags.write_all(t.to_bytes(controller_identity.address.legacy_address()).as_ref());
+                    let _ = tags.write_all(t.to_bytes(&controller_identity.address).as_ref());
                 }
                 d.set_bytes(proto_v1_field_name::network_config::TAGS, tags);
             }

@@ -37,7 +37,6 @@ pub enum Endpoint {
     Nil,
 
     /// Via another node using unencapsulated relaying (e.g. via a root)
-    /// This is the address and the full identity fingerprint.
     ZeroTier(Address),
 
     /// Direct L2 Ethernet
@@ -65,7 +64,6 @@ pub enum Endpoint {
     WebRTC(Vec<u8>),
 
     /// Via another node using inner encapsulation via VERB_ENCAP.
-    /// This is the address and the full identity fingerprint.
     ZeroTierEncap(Address),
 }
 

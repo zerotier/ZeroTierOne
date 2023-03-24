@@ -13,7 +13,7 @@ use crate::protocol;
 use zerotier_crypto::typestate::Valid;
 use zerotier_utils::ringbuffer::RingBuffer;
 
-pub struct Whois<Application: ApplicationLayer + ?Sized> {
+pub(super) struct Whois<Application: ApplicationLayer + ?Sized> {
     whois_queue: Mutex<BTreeMap<PartialAddress, WhoisQueueItem<Application>>>,
 }
 
@@ -54,18 +54,18 @@ impl<Application: ApplicationLayer + ?Sized> Whois<Application> {
             let mut to_delete = Vec::with_capacity(2);
             for qi in q.range((Bound::Unbounded, Bound::Included(identity.address.to_partial()))).rev() {
                 if qi.0.matches(&identity.address) {
-                    to_delete.push(qi.0);
+                    to_delete.push(qi.0.clone());
                     // TODO
                 } else {
                     break;
                 }
             }
             for a in to_delete {
-                queued_items.push(q.remove(a).unwrap());
+                queued_items.push(q.remove(&a).unwrap());
             }
         }
 
-        if let Some(peer) = node.peers.get_or_add(&node.identity_secret, identity, time_ticks) {
+        if let Some(peer) = node.peers.get_or_add(&node.identity_secret, &identity, time_ticks) {
             for qi in queued_items.iter() {
                 for pkt in qi.pending_v1_packets.iter() {
                     if let Some(source_path) = pkt.0.upgrade() {
@@ -80,7 +80,7 @@ impl<Application: ApplicationLayer + ?Sized> Whois<Application> {
 
     pub fn retry_queued(&self) {}
 
-    fn send_whois(&self, app: &Application, node: &Node<Application>, addresses: &[PartialAddress], time_ticks: i64) {
+    fn send_whois(&self, app: &Application, node: &Node<Application>, mut addresses: &[PartialAddress], time_ticks: i64) {
         debug_assert!(!addresses.is_empty());
         debug_event!(app, "[vl1] [v1] sending WHOIS for {}", {
             let mut tmp = String::new();

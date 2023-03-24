@@ -12,10 +12,18 @@ use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::hex;
 use zerotier_utils::memory;
 
+/// A full (V2) ZeroTier address.
+///
+/// The first 40 bits (5 bytes) of the address are the legacy 40-bit short ZeroTier address computed from
+/// a hash of the identity's X25519 keys. The remaining bits are a SHA384 hash of that short address and
+/// all key types and key material. See identity.rs for details.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[repr(transparent)]
 pub struct Address(pub(super) [u8; Self::SIZE_BYTES]);
 
+/// A partial address, which is bytes and the number of bytes of specificity (similar to a CIDR IP address).
+///
+/// Partial addresses are looked up to get full addresses (and identities) via roots using WHOIS messages.
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct PartialAddress(pub(super) Address, pub(super) u16);
 
@@ -39,16 +47,34 @@ impl Address {
         }
     }
 
-    /// Get the first 40 bits of this address (for legacy use)
+    /// Get the first 40 bits of this address (a legacy V1 ZeroTier address)
     #[inline(always)]
-    pub(crate) fn legacy_bytes(&self) -> &[u8; 5] {
+    pub fn legacy_bytes(&self) -> &[u8; 5] {
         memory::array_range::<u8, { Address::SIZE_BYTES }, 0, { PartialAddress::LEGACY_SIZE_BYTES }>(&self.0)
+    }
+
+    /// Get the legacy address in the least significant bits of a u64.
+    #[inline(always)]
+    pub(crate) fn legacy_u64(&self) -> u64 {
+        u64::from_be(memory::load_raw(&self.0)).wrapping_shr(24)
     }
 
     /// Get a partial address object (with full specificity) for this address
     #[inline(always)]
     pub fn to_partial(&self) -> PartialAddress {
         PartialAddress(Address(self.0), Self::SIZE_BYTES as u16)
+    }
+
+    /// Get a partial address covering the 40-bit legacy address.
+    pub fn to_legacy_partial(&self) -> PartialAddress {
+        PartialAddress(
+            Address({
+                let mut tmp = [0u8; PartialAddress::MAX_SIZE_BYTES];
+                tmp[..PartialAddress::LEGACY_SIZE_BYTES].copy_from_slice(&self.0[..PartialAddress::LEGACY_SIZE_BYTES]);
+                tmp
+            }),
+            PartialAddress::LEGACY_SIZE_BYTES as u16,
+        )
     }
 
     #[inline(always)]
@@ -65,20 +91,18 @@ impl Borrow<[u8; Self::SIZE_BYTES]> for Address {
 }
 
 impl ToString for Address {
+    #[inline(always)]
     fn to_string(&self) -> String {
-        let mut tmp = String::with_capacity(Self::SIZE_BYTES * 2);
-        base24::encode_into(&self.0, &mut tmp);
-        tmp
+        base24::encode(&self.0)
     }
 }
 
 impl FromStr for Address {
     type Err = InvalidParameterError;
 
+    #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut tmp = Vec::with_capacity(Self::SIZE_BYTES);
-        base24::decode_into(s, &mut tmp);
-        Self::from_bytes(tmp.as_slice())
+        base24::decode(s.as_bytes()).and_then(|b| Self::from_bytes(b.as_slice()))
     }
 }
 
@@ -163,11 +187,6 @@ impl PartialAddress {
     pub const MIN_SIZE_BYTES: usize = Self::LEGACY_SIZE_BYTES;
     pub const MAX_SIZE_BYTES: usize = Address::SIZE_BYTES;
 
-    /// Create an invalid uninitialized address (used when generating Identity)
-    pub(super) fn new_uninitialized() -> Self {
-        Self(Address([0u8; Self::MAX_SIZE_BYTES]), 0)
-    }
-
     /// Construct an address from a byte slice with its length determining specificity.
     #[inline]
     pub fn from_bytes(b: &[u8]) -> Result<Self, InvalidParameterError> {
@@ -230,6 +249,11 @@ impl PartialAddress {
     }
 
     #[inline(always)]
+    pub(crate) fn legacy_u64(&self) -> u64 {
+        u64::from_be(memory::load_raw(&self.0 .0)).wrapping_shr(24)
+    }
+
+    #[inline(always)]
     pub(super) fn matches(&self, k: &Address) -> bool {
         debug_assert!(self.1 >= Self::MIN_SIZE_BYTES as u16);
         let l = self.1 as usize;
@@ -270,9 +294,7 @@ impl ToString for PartialAddress {
         if self.is_legacy() {
             hex::to_string(&self.0 .0[..Self::LEGACY_SIZE_BYTES])
         } else {
-            let mut tmp = String::with_capacity(Self::MAX_SIZE_BYTES * 2);
-            base24::encode_into(&self.0 .0[..self.1 as usize], &mut tmp);
-            tmp
+            base24::encode(self.as_bytes())
         }
     }
 }
@@ -282,11 +304,9 @@ impl FromStr for PartialAddress {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() == 10 {
-            return Self::from_bytes(hex::from_string(s).as_slice());
+            Self::from_bytes(hex::from_string(s).as_slice())
         } else {
-            let mut tmp = Vec::with_capacity(Self::MAX_SIZE_BYTES);
-            base24::decode_into(s, &mut tmp)?;
-            return Self::from_bytes(tmp.as_slice());
+            base24::decode(s.as_bytes()).and_then(|b| Self::from_bytes(b.as_slice()))
         }
     }
 }

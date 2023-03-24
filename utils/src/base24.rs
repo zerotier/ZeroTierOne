@@ -10,10 +10,14 @@ use std::io::Write;
 
 use crate::error::InvalidParameterError;
 
-// All unambiguous letters, thus easy to type on the alphabetic keyboards on phones without extra shift taps.
-const BASE24_ALPHABET: [u8; 24] = *(b"abcdefghjkmnopqrstuvwxyz"); // avoids 'i' and 'l'
+/// All unambiguous letters, thus easy to type on the alphabetic keyboards on phones without extra shift taps.
+/// The letters 'l' and 'v' are skipped.
+const BASE24_ALPHABET: [u8; 24] = [
+    b'a', b'b', b'c', b'd', b'e', b'f', b'g', b'h', b'i', b'j', b'k', b'm', b'n', b'o', b'p', b'q', b'r', b's', b't', b'v', b'w', b'x', b'y', b'z',
+];
+/// Reverse table for BASE24 alphabet, indexed relative to 'a' or 'A'.
 const BASE24_ALPHABET_INV: [u8; 26] = [
-    0, 1, 2, 3, 4, 5, 6, 7, 255, 8, 9, 255, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 255, 11, 12, 13, 14, 15, 16, 17, 18, 255, 19, 20, 21, 22, 23,
 ];
 
 /// Encode a byte slice into base24 ASCII format (no padding)
@@ -62,8 +66,8 @@ fn decode_up_to_u32(s: &[u8]) -> Result<u32, InvalidParameterError> {
 }
 
 /// Decode a base24 ASCII slice into bytes (no padding, length determines output length)
-pub fn decode_into(s: &str, b: &mut Vec<u8>) -> Result<(), InvalidParameterError> {
-    let mut s = s.as_bytes();
+pub fn decode_into(s: &[u8], b: &mut Vec<u8>) -> Result<(), InvalidParameterError> {
+    let mut s = s.as_ref();
 
     while s.len() >= 7 {
         let _ = b.write_all(&decode_up_to_u32(&s[..7])?.to_le_bytes());
@@ -84,6 +88,18 @@ pub fn decode_into(s: &str, b: &mut Vec<u8>) -> Result<(), InvalidParameterError
     return Ok(());
 }
 
+pub fn encode(b: &[u8]) -> String {
+    let mut tmp = String::with_capacity(((b.len() / 4) * 7) + 2);
+    encode_into(b, &mut tmp);
+    tmp
+}
+
+pub fn decode(s: &[u8]) -> Result<Vec<u8>, InvalidParameterError> {
+    let mut tmp = Vec::with_capacity(((s.len() / 7) * 4) + 2);
+    decode_into(s, &mut tmp)?;
+    Ok(tmp)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -99,7 +115,7 @@ mod tests {
                 encode_into(&tmp[..i], &mut s);
                 //println!("{}", s);
                 v.clear();
-                decode_into(s.as_str(), &mut v).expect("decode error");
+                decode_into(s.as_str().as_bytes(), &mut v).expect("decode error");
                 assert!(v.as_slice().eq(&tmp[..i]));
             }
             for b in tmp.iter_mut() {

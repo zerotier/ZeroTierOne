@@ -78,6 +78,38 @@ pub fn from_string(s: &str) -> Vec<u8> {
     b
 }
 
+pub fn from_string_u64(s: &str) -> u64 {
+    let mut n = 0u64;
+    let mut byte = 0_u8;
+    let mut have_8: bool = false;
+    for cc in s.as_bytes() {
+        let c = *cc;
+        if c >= 48 && c <= 57 {
+            byte = (byte.wrapping_shl(4)) | (c - 48);
+            if have_8 {
+                n = n.wrapping_shl(8);
+                n |= byte as u64;
+            }
+            have_8 = !have_8;
+        } else if c >= 65 && c <= 70 {
+            byte = (byte.wrapping_shl(4)) | (c - 55);
+            if have_8 {
+                n = n.wrapping_shl(8);
+                n |= byte as u64;
+            }
+            have_8 = !have_8;
+        } else if c >= 97 && c <= 102 {
+            byte = (byte.wrapping_shl(4)) | (c - 87);
+            if have_8 {
+                n = n.wrapping_shl(8);
+                n |= byte as u64;
+            }
+            have_8 = !have_8;
+        }
+    }
+    n
+}
+
 /// Encode bytes from 'b' into hex characters in 'dest' and return the number of hex characters written.
 /// This will panic if the destination slice is smaller than twice the length of the source.
 pub fn to_hex_bytes(b: &[u8], dest: &mut [u8]) -> usize {

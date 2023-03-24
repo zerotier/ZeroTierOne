@@ -50,6 +50,7 @@ pub trait ApplicationLayer: Sync + Send + 'static {
     ///
     /// The default implementation always returns true. Typically this is what you want for a
     /// controller or a root but not a regular node (unless required for backward compatibility).
+    #[allow(unused)]
     fn should_respond_to(&self, id: &Valid<Identity>) -> bool {
         true
     }

@@ -45,7 +45,7 @@ impl<Application: ApplicationLayer + ?Sized> PeerMap<Application> {
         for m in matches {
             if address.matches(m.0) {
                 if r.is_none() {
-                    r.insert(m.1);
+                    let _ = r.insert(m.1);
                 } else {
                     return None;
                 }
@@ -58,8 +58,8 @@ impl<Application: ApplicationLayer + ?Sized> PeerMap<Application> {
 
     /// Insert the supplied peer if it is in fact new, otherwise return the existing peer with the same address.
     pub fn add(&self, peer: Arc<Peer<Application>>) -> (Arc<Peer<Application>>, bool) {
-        let mm = self.maps[peer.identity.address.0[0] as usize].write().unwrap();
-        let p = mm.entry(peer.identity.address).or_insert(peer.clone());
+        let mut mm = self.maps[peer.identity.address.0[0] as usize].write().unwrap();
+        let p = mm.entry(peer.identity.address.clone()).or_insert(peer.clone());
         if Arc::ptr_eq(p, &peer) {
             (peer, true)
         } else {
@@ -69,13 +69,18 @@ impl<Application: ApplicationLayer + ?Sized> PeerMap<Application> {
 
     /// Get a peer or create one if not found.
     /// This should be used when the peer will almost always be new, such as on OK(WHOIS).
-    pub fn get_or_add(&self, this_node_identity: &IdentitySecret, peer_identity: Valid<Identity>, time_ticks: i64) -> Option<Arc<Peer<Application>>> {
-        let peer = Arc::new(Peer::new(this_node_identity, peer_identity, time_ticks)?);
+    pub fn get_or_add(
+        &self,
+        this_node_identity: &IdentitySecret,
+        peer_identity: &Valid<Identity>,
+        time_ticks: i64,
+    ) -> Option<Arc<Peer<Application>>> {
+        let peer = Arc::new(Peer::new(this_node_identity, peer_identity.clone(), time_ticks)?);
         Some(
             self.maps[peer_identity.address.0[0] as usize]
                 .write()
                 .unwrap()
-                .entry(peer.identity.address)
+                .entry(peer_identity.address.clone())
                 .or_insert(peer)
                 .clone(),
         )

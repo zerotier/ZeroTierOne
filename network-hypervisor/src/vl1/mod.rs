@@ -14,7 +14,7 @@ mod whois;
 pub mod identity;
 pub mod inetaddress;
 
-pub use address::Address;
+pub use address::{Address, PartialAddress};
 pub use endpoint::Endpoint;
 pub use event::Event;
 pub use inetaddress::InetAddress;

@@ -1,113 +1,113 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
-pub type NetworkId = u64;
+use std::fmt::Debug;
+use std::str::FromStr;
 
-//pub struct NetworkId;
+use crate::vl1::{Address, PartialAddress};
 
-/*
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[repr(transparent)]
-pub struct NetworkId(NonZeroU64);
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+use zerotier_utils::error::InvalidParameterError;
+use zerotier_utils::hex;
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum NetworkId {
+    // Legacy network ID consisting of 40-bit partial address and 24-bit network number.
+    Legacy(u64),
+    // Full length network ID consisting of 384-bit address and 24-bit network number.
+    Full(Address, u32),
+}
 
 impl NetworkId {
-    #[inline]
-    pub fn from_u64(i: u64) -> Option<NetworkId> {
-        // Note that we check both that 'i' is non-zero and that the address of the controller is valid.
-        if let Some(ii) = NonZeroU64::new(i) {
-            if Address::from_legacy_u64(i).is_some() {
-                return Some(Self(ii));
+    pub fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            Self::Legacy(nwid) => nwid.to_be_bytes().to_vec(),
+            Self::Full(controller, nw) => {
+                let mut tmp = [0u8; Address::SIZE_BYTES + 4];
+                tmp[..Address::SIZE_BYTES].copy_from_slice(controller.as_bytes());
+                tmp[Address::SIZE_BYTES..].copy_from_slice(&nw.to_be_bytes());
+                tmp.to_vec()
             }
         }
-        return None;
     }
 
-    #[inline]
-    pub fn from_controller_and_network_no(controller: Address, network_no: u64) -> Option<NetworkId> {
-        Self::from_u64(controller.to_legacy_u64().wrapping_shl(24) | (network_no & 0xffffff))
-    }
-
-    #[inline]
-    pub fn from_bytes(b: &[u8]) -> Option<NetworkId> {
-        if b.len() >= 8 {
-            Self::from_bytes_fixed(b[0..8].try_into().unwrap())
+    pub fn from_bytes(b: &[u8]) -> Result<Self, InvalidParameterError> {
+        if b.len() == 8 {
+            Self::from_legacy_u64(u64::from_be_bytes(b.try_into().unwrap()))
+        } else if b.len() == Address::SIZE_BYTES + 4 {
+            Ok(Self::Full(
+                Address::from_bytes(&b[..Address::SIZE_BYTES])?,
+                u32::from_be_bytes(b[Address::SIZE_BYTES..].try_into().unwrap()),
+            ))
         } else {
-            None
+            Err(InvalidParameterError("invalid network ID"))
         }
     }
 
-    #[inline]
-    pub fn from_bytes_fixed(b: &[u8; 8]) -> Option<NetworkId> {
-        Self::from_u64(u64::from_be_bytes(*b))
+    pub fn from_legacy_u64(nwid: u64) -> Result<Self, InvalidParameterError> {
+        let _ = PartialAddress::from_legacy_address_u64(nwid)?; // check validity of address portion
+        Ok(Self::Legacy(nwid))
     }
 
-    #[inline]
-    pub fn to_bytes(&self) -> [u8; 8] {
-        self.0.get().to_be_bytes()
+    /// Get the legacy 40-bit partial controller address from this network ID.
+    pub(crate) fn legacy_controller_address(&self) -> PartialAddress {
+        match self {
+            Self::Legacy(nwid) => PartialAddress::from_legacy_address_u64(nwid.wrapping_shr(24)).unwrap(),
+            Self::Full(controller, _) => PartialAddress::from_bytes(&controller.as_bytes()[..PartialAddress::LEGACY_SIZE_BYTES]).unwrap(),
+        }
     }
 
-    /// Get the network controller ID for this network, which is the most significant 40 bits.
-    #[inline]
-    pub fn network_controller(&self) -> Address {
-        Address::from_legacy_u64(self.0.get()).unwrap()
-    }
-
-    /// Consume this network ID and return one with the same network number but a different controller ID.
-    pub fn change_network_controller(self, new_controller: Address) -> NetworkId {
-        Self(NonZeroU64::new((self.network_no() as u64) | new_controller.to_legacy_u64().wrapping_shl(24)).unwrap())
-    }
-
-    /// Get the 24-bit local network identifier minus the 40-bit controller address portion.
-    #[inline]
-    pub fn network_no(&self) -> u32 {
-        (self.0.get() & 0xffffff) as u32
-    }
-}
-
-impl From<NetworkId> for u64 {
-    #[inline(always)]
-    fn from(v: NetworkId) -> Self {
-        v.0.get()
-    }
-}
-
-impl From<&NetworkId> for u64 {
-    #[inline(always)]
-    fn from(v: &NetworkId) -> Self {
-        v.0.get()
+    /// Convert this into a legacy network ID in u64 form, or return itself if already a legacy ID.
+    pub(crate) fn to_legacy_u64(&self) -> u64 {
+        match self {
+            Self::Legacy(nwid) => *nwid,
+            Self::Full(controller, nw) => controller.legacy_u64().wrapping_shl(24) | ((*nw & 0xffffff) as u64),
+        }
     }
 }
 
 impl ToString for NetworkId {
     fn to_string(&self) -> String {
-        let mut v = self.0.get();
-        let mut s = String::with_capacity(16);
-        for _ in 0..16 {
-            s.push(HEX_CHARS[(v >> 60) as usize] as char);
-            v <<= 4;
+        match self {
+            Self::Legacy(nwid) => hex::to_string_u64(*nwid, false),
+            Self::Full(controller, nw) => format!("{:08x}@{}", *nw, controller.to_string()),
         }
-        s
-    }
-}
-
-impl Debug for NetworkId {
-    #[inline]
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.to_string().as_str())
     }
 }
 
 impl FromStr for NetworkId {
-    type Err = InvalidFormatError;
+    type Err = InvalidParameterError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        NetworkId::from_bytes(hex::from_string(s).as_slice()).map_or_else(|| Err(InvalidFormatError), |a| Ok(a))
+        if s.len() == 16 {
+            Self::from_legacy_u64(hex::from_string_u64(s))
+        } else {
+            let mut fno = 0;
+            let mut net_no = 0;
+            let mut controller = None;
+            for ss in s.split('@') {
+                if fno == 0 {
+                    net_no = hex::from_string_u64(ss);
+                } else if fno == 1 {
+                    controller = Some(Address::from_str(ss)?);
+                } else {
+                    return Err(InvalidParameterError("invalid network ID"));
+                }
+                fno += 1;
+            }
+            if let Some(controller) = controller {
+                return Ok(Self::Full(controller, net_no as u32));
+            } else {
+                return Err(InvalidParameterError("invalid network ID"));
+            }
+        }
     }
 }
 
-impl Hash for NetworkId {
+impl Debug for NetworkId {
     #[inline(always)]
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        state.write_u64(self.0.get());
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_string().as_str())
     }
 }
 
@@ -119,7 +119,7 @@ impl Serialize for NetworkId {
         if serializer.is_human_readable() {
             serializer.serialize_str(self.to_string().as_str())
         } else {
-            serializer.serialize_bytes(&self.to_bytes())
+            serializer.serialize_bytes(self.to_bytes().as_slice())
         }
     }
 }
@@ -130,25 +130,21 @@ impl<'de> serde::de::Visitor<'de> for NetworkIdVisitor {
     type Value = NetworkId;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("a ZeroTier network ID")
+        formatter.write_str("network ID")
     }
 
     fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
     {
-        if v.len() == 8 {
-            NetworkId::from_bytes(v).map_or_else(|| Err(E::custom("object too large")), |a| Ok(a))
-        } else {
-            Err(E::custom("object too large"))
-        }
+        NetworkId::from_bytes(v).map_err(|_| E::custom("invalid network ID"))
     }
 
     fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
     where
         E: serde::de::Error,
     {
-        NetworkId::from_str(v).map_err(|e| E::custom(e.to_string()))
+        NetworkId::from_str(v).map_err(|_| E::custom("invalid network ID"))
     }
 }
 
@@ -164,4 +160,3 @@ impl<'de> Deserialize<'de> for NetworkId {
         }
     }
 }
-*/

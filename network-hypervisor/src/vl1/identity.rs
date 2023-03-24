@@ -1,8 +1,10 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
+use std::array::TryFromSliceError;
 use std::io::Write;
 use std::str::FromStr;
 
+use serde::de::Error;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use super::address::{Address, PartialAddress};
@@ -14,6 +16,7 @@ use zerotier_crypto::secret::Secret;
 use zerotier_crypto::typestate::Valid;
 use zerotier_crypto::x25519::*;
 use zerotier_utils::arrayvec::ArrayVec;
+use zerotier_utils::base24;
 use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::error::InvalidFormatError;
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
@@ -65,7 +68,7 @@ impl Identity {
     const ALGORITHM_X25519: u8 = 0;
     const ALGORITHM_P384: u8 = 1;
 
-    const V0_IDENTITY_POW_THRESHOLD: u8 = 17;
+    const LEGACY_ADDRESS_POW_THRESHOLD: u8 = 17;
 
     /// Generate a new ZeroTier identity.
     /// If x25519_only is true a legacy identity without NIST P-384 key pairs will be generated.
@@ -85,23 +88,27 @@ impl Identity {
             x25519: X25519Secret { ecdh: x25519_ecdh, eddsa: ed25519_eddsa },
             p384: None,
         };
+        let mut legacy_address_derivation_hasher = SHA512::new();
         loop {
-            let mut legacy_address_derivation_hash = SHA512::new();
-            legacy_address_derivation_hash.update(&secret.public.x25519.ecdh);
-            legacy_address_derivation_hash.update(&secret.public.x25519.eddsa);
-            let mut legacy_address_derivation_hash = legacy_address_derivation_hash.finish();
+            legacy_address_derivation_hasher.update(&secret.public.x25519.ecdh);
+            legacy_address_derivation_hasher.update(&secret.public.x25519.eddsa);
+            let mut legacy_address_derivation_hash = legacy_address_derivation_hasher.finish();
             legacy_address_derivation_work_function(&mut legacy_address_derivation_hash);
-            if legacy_address_derivation_hash[0] < Self::V0_IDENTITY_POW_THRESHOLD && legacy_address_derivation_hash[59] != Address::RESERVED_PREFIX {
+            if legacy_address_derivation_hash[0] < Self::LEGACY_ADDRESS_POW_THRESHOLD
+                && legacy_address_derivation_hash[59] != Address::RESERVED_PREFIX
+                && legacy_address_derivation_hash[59..64].iter().any(|i| *i != 0)
+            {
                 secret.public.address.0[..PartialAddress::LEGACY_SIZE_BYTES].copy_from_slice(&legacy_address_derivation_hash[59..64]);
                 break;
             } else {
                 // Regenerate one of the two keys until we meet the legacy address work function criteria.
                 secret.x25519.ecdh = X25519KeyPair::generate();
                 secret.public.x25519.ecdh = secret.x25519.ecdh.public_bytes();
+                legacy_address_derivation_hasher.reset();
             }
         }
 
-        // Generate NIST P-384 key pairs unless this is disabled.
+        // Generate NIST P-384 key pairs unless we just want a legacy identity.
         if !x25519_only {
             secret.p384 = Some(P384Secret {
                 ecdh: P384KeyPair::generate(),
@@ -116,7 +123,9 @@ impl Identity {
         }
 
         // Bits 40-384 of the address are filled from a SHA384 hash of all keys for a full length V2 address.
-        secret.public.populate_extended_address_bits();
+        let mut address = secret.public.address.clone();
+        secret.public.populate_extended_address_bits(&mut address);
+        secret.public.address = address;
 
         // For V2 identities we include two self signatures to ensure that all these different key pairs
         // are properly bound together and can't be changed independently.
@@ -133,9 +142,43 @@ impl Identity {
     }
 
     /// Locally validate this identity.
-    /// This checks address derivation, any self-signatures, etc.
-    pub fn validate(&self) -> Option<Valid<Self>> {
-        todo!()
+    /// This checks address derivation, any self-signatures, etc. It's a little time consuming so results should be cached
+    /// if possible. Returns a marked typestate on success, which does sort of cache the results and prevents misuse.
+    pub fn validate(self) -> Option<Valid<Self>> {
+        // First, check that the full SHA384 (bits 40-384) in the address is correct. Check first since this is fast.
+        let mut test_address = Address::new_uninitialized();
+        test_address.0[..PartialAddress::LEGACY_SIZE_BYTES].copy_from_slice(&self.address.0[..PartialAddress::LEGACY_SIZE_BYTES]);
+        self.populate_extended_address_bits(&mut test_address);
+        if self.address != test_address {
+            return None;
+        }
+
+        // Second, check self-signatures if we have them. Check second since this is somewhat slower.
+        if let Some(p384) = self.p384.as_ref() {
+            let mut for_self_signing =
+                [0u8; Address::SIZE_BYTES + 1 + C25519_PUBLIC_KEY_SIZE + ED25519_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE + P384_PUBLIC_KEY_SIZE];
+            self.encode_for_self_signing(&mut for_self_signing);
+            if !ed25519_verify(&self.x25519.eddsa, &p384.ed25519_self_signature, &for_self_signing)
+                || !p384.ecdsa.verify(&for_self_signing, &p384.p384_self_signature)
+            {
+                return None;
+            }
+        }
+
+        // Finally, check the legacy address as this is the most costly check. If we deprecate V1 this could go away
+        // in the future since the full SHA384 (checked above) includes the first 40 bits of the address in the hash.
+        let mut legacy_address_derivation_hasher = SHA512::new();
+        legacy_address_derivation_hasher.update(&self.x25519.ecdh);
+        legacy_address_derivation_hasher.update(&self.x25519.eddsa);
+        let mut legacy_address_derivation_hash = legacy_address_derivation_hasher.finish();
+        legacy_address_derivation_work_function(&mut legacy_address_derivation_hash);
+        if legacy_address_derivation_hash[0] >= Self::LEGACY_ADDRESS_POW_THRESHOLD
+            || !legacy_address_derivation_hash[59..64].eq(self.address.legacy_bytes())
+        {
+            return None;
+        }
+
+        return Some(Valid::mark_valid(self));
     }
 
     /// Verify a signature with this identity.
@@ -148,7 +191,7 @@ impl Identity {
     }
 
     /// Populate bits 40-384 of the address with a hash of everything else.
-    fn populate_extended_address_bits(&mut self) {
+    fn populate_extended_address_bits(&self, address: &mut Address) {
         let mut sha = SHA384::new();
         sha.update(&self.address.0[..PartialAddress::LEGACY_SIZE_BYTES]); // include short address in full hash
         sha.update(&[Self::ALGORITHM_X25519
@@ -164,7 +207,7 @@ impl Identity {
             sha.update(p384.ecdsa.as_bytes());
         }
         let sha = sha.finish();
-        self.address.0[PartialAddress::LEGACY_SIZE_BYTES..].copy_from_slice(&sha[..Address::SIZE_BYTES - PartialAddress::LEGACY_SIZE_BYTES]);
+        address.0[PartialAddress::LEGACY_SIZE_BYTES..].copy_from_slice(&sha[..Address::SIZE_BYTES - PartialAddress::LEGACY_SIZE_BYTES]);
     }
 
     /// Encode for self-signing, used only with p384 keys enabled and panics otherwise.
@@ -178,10 +221,13 @@ impl Identity {
         let _ = buf.write_all(p384.ecdsa.as_bytes());
     }
 
+    /// Decode a byte serialized identity.
     pub fn from_bytes(b: &[u8]) -> Result<Self, InvalidFormatError> {
+        let mut id;
+        let mut address = Address::new_uninitialized();
         if b.len() == packed::V2_PUBLIC_SIZE && b[PartialAddress::LEGACY_SIZE_BYTES] == (Self::ALGORITHM_X25519 | Self::ALGORITHM_P384) {
             let p: &packed::V2Public = memory::cast_to_struct(b);
-            let mut id = Self {
+            id = Self {
                 address: Address::new_uninitialized(),
                 x25519: X25519 { ecdh: p.c25519, eddsa: p.ed25519 },
                 p384: Some(P384 {
@@ -191,24 +237,24 @@ impl Identity {
                     p384_self_signature: p.p384_self_signature,
                 }),
             };
-            id.address.0[..PartialAddress::LEGACY_SIZE_BYTES].copy_from_slice(&p.short_address);
-            id.populate_extended_address_bits();
-            return Ok(id);
+            address.0[..PartialAddress::LEGACY_SIZE_BYTES].copy_from_slice(&p.short_address);
         } else if b.len() == packed::V1_PUBLIC_SIZE && b[PartialAddress::LEGACY_SIZE_BYTES] == Self::ALGORITHM_X25519 {
             let p: &packed::V1Public = memory::cast_to_struct(b);
-            let mut id = Self {
+            id = Self {
                 address: Address::new_uninitialized(),
                 x25519: X25519 { ecdh: p.c25519, eddsa: p.ed25519 },
                 p384: None,
             };
-            id.address.0[..PartialAddress::LEGACY_SIZE_BYTES].copy_from_slice(&p.short_address);
-            id.populate_extended_address_bits();
-            return Ok(id);
+            address.0[..PartialAddress::LEGACY_SIZE_BYTES].copy_from_slice(&p.short_address);
         } else {
             return Err(InvalidFormatError);
         }
+        id.populate_extended_address_bits(&mut address);
+        id.address = address;
+        return Ok(id);
     }
 
+    /// Write as a byte serialized identity to a writer.
     pub fn write_bytes<W: Write>(&self, w: &mut W, x25519_only: bool) -> Result<(), std::io::Error> {
         if let (false, Some(p384)) = (x25519_only, self.p384.as_ref()) {
             w.write_all(memory::as_byte_array::<packed::V2Public, { packed::V2_PUBLIC_SIZE }>(&packed::V2Public {
@@ -236,16 +282,21 @@ impl Identity {
 impl ToString for Identity {
     fn to_string(&self) -> String {
         if let Some(p384) = self.p384.as_ref() {
-            format!(
-                "{}:1:{}:{}:{}:{}:{}:{}",
-                self.address.to_string(),
-                hex::to_string(&self.x25519.ecdh),
-                hex::to_string(&self.x25519.eddsa),
-                hex::to_string(p384.ecdh.as_bytes()),
-                hex::to_string(p384.ecdsa.as_bytes()),
-                hex::to_string(&p384.ed25519_self_signature),
-                hex::to_string(&p384.p384_self_signature)
-            )
+            let mut s = String::with_capacity(1024);
+            base24::encode_into(self.address.as_bytes(), &mut s);
+            s.push_str(":1:");
+            base24::encode_into(&self.x25519.ecdh, &mut s);
+            s.push(':');
+            base24::encode_into(&self.x25519.eddsa, &mut s);
+            s.push(':');
+            base24::encode_into(p384.ecdh.as_bytes(), &mut s);
+            s.push(':');
+            base24::encode_into(p384.ecdsa.as_bytes(), &mut s);
+            s.push(':');
+            base24::encode_into(&p384.ed25519_self_signature, &mut s);
+            s.push(':');
+            base24::encode_into(&p384.p384_self_signature, &mut s);
+            s
         } else {
             format!(
                 "{}:0:{}:{}",
@@ -264,9 +315,54 @@ impl FromStr for Identity {
         let ss: Vec<&str> = s.split(':').collect();
         if ss.len() >= 2 {
             if ss[1] == "1" && ss.len() == 8 {
-                todo!()
+                return Ok(Self {
+                    address: Address::from_str(ss[0]).map_err(|_| InvalidFormatError)?,
+                    x25519: X25519 {
+                        ecdh: base24::decode(ss[2].as_bytes())
+                            .map_err(|_| InvalidFormatError)?
+                            .try_into()
+                            .map_err(|_| InvalidFormatError)?,
+                        eddsa: base24::decode(ss[3].as_bytes())
+                            .map_err(|_| InvalidFormatError)?
+                            .try_into()
+                            .map_err(|_| InvalidFormatError)?,
+                    },
+                    p384: Some(P384 {
+                        ecdh: P384PublicKey::from_bytes(base24::decode(ss[4].as_bytes()).map_err(|_| InvalidFormatError)?.as_slice())
+                            .ok_or(InvalidFormatError)?,
+                        ecdsa: P384PublicKey::from_bytes(base24::decode(ss[5].as_bytes()).map_err(|_| InvalidFormatError)?.as_slice())
+                            .ok_or(InvalidFormatError)?,
+                        ed25519_self_signature: base24::decode(ss[6].as_bytes())
+                            .map_err(|_| InvalidFormatError)?
+                            .try_into()
+                            .map_err(|_| InvalidFormatError)?,
+                        p384_self_signature: base24::decode(ss[7].as_bytes())
+                            .map_err(|_| InvalidFormatError)?
+                            .try_into()
+                            .map_err(|_| InvalidFormatError)?,
+                    }),
+                });
             } else if ss[1] == "0" && ss.len() == 4 {
-                todo!()
+                let mut address = {
+                    let legacy_address = hex::from_string(ss[0]);
+                    if legacy_address.len() != PartialAddress::LEGACY_SIZE_BYTES {
+                        return Err(InvalidFormatError);
+                    }
+                    let mut tmp = [0u8; Address::SIZE_BYTES];
+                    tmp[..PartialAddress::LEGACY_SIZE_BYTES].copy_from_slice(legacy_address.as_slice());
+                    Address(tmp)
+                };
+                let mut a = Self {
+                    address: Address::new_uninitialized(),
+                    x25519: X25519 {
+                        ecdh: hex::from_string(ss[2]).try_into().map_err(|_| InvalidFormatError)?,
+                        eddsa: hex::from_string(ss[3]).try_into().map_err(|_| InvalidFormatError)?,
+                    },
+                    p384: None,
+                };
+                a.populate_extended_address_bits(&mut address);
+                a.address = address;
+                return Ok(a);
             }
         }
         return Err(InvalidFormatError);
@@ -406,6 +502,110 @@ impl<'de> Deserialize<'de> for Identity {
         } else {
             deserializer.deserialize_bytes(IdentityDeserializeVisitor)
         }
+    }
+}
+
+/// The actual serialization format for secret identities.
+#[derive(Serialize, Deserialize)]
+struct IdentitySecretForSerialization<'a> {
+    pub address: &'a [u8],
+    pub ed25519_self_signature: Option<&'a [u8]>,
+    pub p384_self_signature: Option<&'a [u8]>,
+    pub x25519_ecdh_public: Option<&'a [u8]>,
+    pub x25519_ecdh_secret: Option<&'a [u8]>,
+    pub x25519_eddsa_public: Option<&'a [u8]>,
+    pub x25519_eddsa_secret: Option<&'a [u8]>,
+    pub p384_ecdh_public: Option<&'a [u8]>,
+    pub p384_ecdh_secret: Option<&'a [u8]>,
+    pub p384_ecdsa_public: Option<&'a [u8]>,
+    pub p384_ecdsa_secret: Option<&'a [u8]>,
+}
+
+impl Serialize for IdentitySecret {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let p384_ecdh_secret = self.p384.as_ref().map(|p384| p384.ecdh.secret_key_bytes());
+        let p384_ecdsa_secret = self.p384.as_ref().map(|p384| p384.ecdsa.secret_key_bytes());
+        IdentitySecretForSerialization {
+            address: self.public.address.as_bytes(),
+            ed25519_self_signature: self.public.p384.as_ref().map(|p384| &p384.ed25519_self_signature[..]),
+            p384_self_signature: self.public.p384.as_ref().map(|p384| &p384.p384_self_signature[..]),
+            x25519_ecdh_public: Some(&self.public.x25519.ecdh),
+            x25519_ecdh_secret: Some(&self.x25519.ecdh.secret_bytes().as_bytes()[..]),
+            x25519_eddsa_public: Some(&self.public.x25519.eddsa),
+            x25519_eddsa_secret: Some(&self.x25519.eddsa.secret_bytes().as_bytes()[..]),
+            p384_ecdh_public: self.p384.as_ref().map(|p384| &p384.ecdh.public_key_bytes()[..]),
+            p384_ecdh_secret: p384_ecdh_secret.as_ref().map(|s| &s.as_bytes()[..]),
+            p384_ecdsa_public: self.p384.as_ref().map(|p384| &p384.ecdsa.public_key_bytes()[..]),
+            p384_ecdsa_secret: p384_ecdsa_secret.as_ref().map(|s| &s.as_bytes()[..]),
+        }
+        .serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for IdentitySecret {
+    fn deserialize<D>(deserializer: D) -> Result<IdentitySecret, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        IdentitySecretForSerialization::deserialize(deserializer).and_then(|tmp| {
+            if let (Some(x25519_ecdh_public), Some(x25519_ecdh_secret), Some(x25519_eddsa_public), Some(x25519_eddsa_secret)) = (
+                tmp.x25519_ecdh_public,
+                tmp.x25519_ecdh_secret,
+                tmp.x25519_eddsa_public,
+                tmp.x25519_eddsa_secret,
+            ) {
+                let tmp_p384 = if let (Some(a), Some(b), Some(c), Some(d), Some(e), Some(f)) = (
+                    tmp.ed25519_self_signature,
+                    tmp.p384_self_signature,
+                    tmp.p384_ecdh_public,
+                    tmp.p384_ecdh_secret,
+                    tmp.p384_ecdsa_public,
+                    tmp.p384_ecdsa_secret,
+                ) {
+                    Some((a, b, c, d, e, f))
+                } else {
+                    None
+                };
+                let e2 = || D::Error::custom("invalid key");
+                let e = |_e: TryFromSliceError| e2();
+                Ok(IdentitySecret {
+                    public: Valid::mark_valid(Identity {
+                        address: Address::from_bytes(tmp.address).map_err(|_| e2())?,
+                        x25519: X25519 {
+                            ecdh: x25519_ecdh_public.try_into().map_err(e)?,
+                            eddsa: x25519_eddsa_public.try_into().map_err(e)?,
+                        },
+                        p384: if let Some(tmp_p384) = tmp_p384.as_ref() {
+                            Some(P384 {
+                                ecdh: P384PublicKey::from_bytes(tmp_p384.2).ok_or_else(e2)?,
+                                ecdsa: P384PublicKey::from_bytes(tmp_p384.3).ok_or_else(e2)?,
+                                ed25519_self_signature: tmp_p384.0.try_into().map_err(e)?,
+                                p384_self_signature: tmp_p384.1.try_into().map_err(e)?,
+                            })
+                        } else {
+                            None
+                        },
+                    }),
+                    x25519: X25519Secret {
+                        ecdh: X25519KeyPair::from_bytes(x25519_ecdh_public, x25519_ecdh_secret).ok_or_else(e2)?,
+                        eddsa: Ed25519KeyPair::from_bytes(x25519_eddsa_public, x25519_eddsa_secret).ok_or_else(e2)?,
+                    },
+                    p384: if let Some(tmp_p384) = tmp_p384.as_ref() {
+                        Some(P384Secret {
+                            ecdh: P384KeyPair::from_bytes(tmp_p384.2, tmp_p384.3).ok_or_else(e2)?,
+                            ecdsa: P384KeyPair::from_bytes(tmp_p384.4, tmp_p384.5).ok_or_else(e2)?,
+                        })
+                    } else {
+                        None
+                    },
+                })
+            } else {
+                Err(D::Error::custom("missing required fields"))
+            }
+        })
     }
 }
 
