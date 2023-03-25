@@ -9,7 +9,6 @@
 mod applicationlayer;
 mod error;
 mod fragged;
-mod priority_queue;
 mod proto;
 mod sessionid;
 mod zssp;

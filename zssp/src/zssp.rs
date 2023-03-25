@@ -40,7 +40,7 @@ const GCM_CIPHER_POOL_SIZE: usize = 4;
 pub struct Context<'a, Application: ApplicationLayer> {
     default_physical_mtu: AtomicUsize,
     dos_salt: RandomState,
-    defrag_has_pending: AtomicBool, // Allowed to be falsely positive
+    defrag_has_pending: AtomicBool,   // Allowed to be falsely positive
     incoming_has_pending: AtomicBool, // Allowed to be falsely positive
     defrag: Mutex<[(i64, u64, Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>); MAX_INCOMPLETE_SESSION_QUEUE_SIZE]>,
     active_sessions: RwLock<HashMap<SessionId, Weak<Session<'a, Application>>>>,
@@ -163,13 +163,12 @@ impl<'a, Application: ApplicationLayer> Context<'a, Application> {
     /// * `send` - Function to send packets to remote sessions
     /// * `current_time` - Current monotonic time in milliseconds
     pub fn service<SendFunction: FnMut(&Arc<Session<Application>>, &mut [u8])>(&self, mut send: SendFunction, current_time: i64) -> i64 {
-        let mut dead_active = Vec::new();
         let retry_cutoff = current_time - Application::RETRY_INTERVAL;
         let negotiation_timeout_cutoff = current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS;
 
         // Scan sessions in read lock mode, then lock more briefly in write mode to delete any dead entries that we found.
         let active_sessions = self.active_sessions.read().unwrap();
-        for (id, s) in active_sessions.iter() {
+        for (_id, s) in active_sessions.iter() {
             if let Some(session) = s.upgrade() {
                 let state = session.state.read().unwrap();
                 if match &state.outgoing_offer {
@@ -226,8 +225,6 @@ impl<'a, Application: ApplicationLayer> Context<'a, Application> {
                         }
                     }
                 }
-            } else {
-                dead_active.push(*id);
             }
         }
         drop(active_sessions);
@@ -318,7 +315,11 @@ impl<'a, Application: ApplicationLayer> Context<'a, Application> {
                 let mut hasher = self.dos_salt.build_hasher();
                 hasher.write_u64(local_session_id.into());
                 hashed_id = hasher.finish();
-                let (_, is_used) = lookup(&*incoming_sessions, hashed_id, current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS);
+                let (_, is_used) = lookup(
+                    &*incoming_sessions,
+                    hashed_id,
+                    current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS,
+                );
                 if !is_used && !active_sessions.contains_key(&local_session_id) {
                     break;
                 }
@@ -500,7 +501,11 @@ impl<'a, Application: ApplicationLayer> Context<'a, Application> {
                 hasher.write_u64(local_session_id.into());
                 let hashed_id = hasher.finish();
 
-                let (idx, is_old) = lookup(&*incoming_sessions, hashed_id, current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS);
+                let (idx, is_old) = lookup(
+                    &*incoming_sessions,
+                    hashed_id,
+                    current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS,
+                );
                 if is_old {
                     incoming_sessions[idx].2.clone()
                 } else {
@@ -557,8 +562,14 @@ impl<'a, Application: ApplicationLayer> Context<'a, Application> {
                 let hashed_counter = hasher.finish();
 
                 let mut defrag = self.defrag.lock().unwrap();
-                let (idx, is_old) = lookup(&*defrag, hashed_counter, current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS);
-                assembled = defrag[idx].2.assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
+                let (idx, is_old) = lookup(
+                    &*defrag,
+                    hashed_counter,
+                    current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS,
+                );
+                assembled = defrag[idx]
+                    .2
+                    .assemble(hashed_counter, incoming_physical_packet_buf, fragment_no, fragment_count);
                 if assembled.is_some() {
                     defrag[idx].0 = i64::MAX;
                 } else if !is_old {
@@ -783,7 +794,11 @@ impl<'a, Application: ApplicationLayer> Context<'a, Application> {
                         hasher.write_u64(bob_session_id.into());
                         hashed_id = hasher.finish();
                         let is_used;
-                        (bob_incoming_idx, is_used) = lookup(&*incoming_sessions, hashed_id, current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS);
+                        (bob_incoming_idx, is_used) = lookup(
+                            &*incoming_sessions,
+                            hashed_id,
+                            current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS,
+                        );
                         if !is_used && !active_sessions.contains_key(&bob_session_id) {
                             break;
                         }
@@ -1040,7 +1055,11 @@ impl<'a, Application: ApplicationLayer> Context<'a, Application> {
                             hasher.write_u64(incoming.bob_session_id.into());
                             let hashed_id = hasher.finish();
                             let mut incoming_sessions = self.incoming_sessions.write().unwrap();
-                            let (bob_incoming_idx, is_old) = lookup(&*incoming_sessions, hashed_id, current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS);
+                            let (bob_incoming_idx, is_old) = lookup(
+                                &*incoming_sessions,
+                                hashed_id,
+                                current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS,
+                            );
                             // Might have been removed already
                             if is_old {
                                 incoming_sessions[bob_incoming_idx].0 = i64::MAX;
@@ -1108,13 +1127,20 @@ impl<'a, Application: ApplicationLayer> Context<'a, Application> {
                             hasher.write_u64(incoming.bob_session_id.into());
                             let hashed_id = hasher.finish();
                             let mut incoming_sessions = self.incoming_sessions.write().unwrap();
-                            let (bob_incoming_idx, is_present) = lookup(&*incoming_sessions, hashed_id, current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS);
+                            let (bob_incoming_idx, is_present) = lookup(
+                                &*incoming_sessions,
+                                hashed_id,
+                                current_time - Application::INCOMING_SESSION_NEGOTIATION_TIMEOUT_MS,
+                            );
                             if is_present {
                                 incoming_sessions[bob_incoming_idx].0 = i64::MAX;
                                 incoming_sessions[bob_incoming_idx].1 = 0;
                                 incoming_sessions[bob_incoming_idx].2 = None;
                             }
-                            self.active_sessions.write().unwrap().insert(incoming.bob_session_id, Arc::downgrade(&session));
+                            self.active_sessions
+                                .write()
+                                .unwrap()
+                                .insert(incoming.bob_session_id, Arc::downgrade(&session));
                         }
 
                         let _ = session.send_nop(|b| send(Some(&session), b));
