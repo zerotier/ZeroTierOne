@@ -4,7 +4,6 @@ use zerotier_crypto::secure_eq;
 use zerotier_network_hypervisor::vl1::{Address, InetAddress};
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::tokio::sync::broadcast::Receiver;
-use zerotier_vl1_service::VL1DataStorage;
 
 use crate::model::*;
 
@@ -22,7 +21,7 @@ pub enum Change {
 }
 
 #[async_trait]
-pub trait Database: Sync + Send + VL1DataStorage + 'static {
+pub trait Database: Sync + Send + 'static {
     async fn list_networks(&self) -> Result<Vec<NetworkId>, Error>;
     async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Error>;
     async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Error>;

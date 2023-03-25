@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::str::FromStr;
 
-use zerotier_network_hypervisor::vl1::Identity;
+use zerotier_network_hypervisor::vl1::identity::Identity;
 use zerotier_utils::io::read_limit;
 
 /// Returns true if the string starts with [yY1tT] or false for [nN0fF].

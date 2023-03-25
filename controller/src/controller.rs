@@ -9,6 +9,7 @@ use tokio::time::{Duration, Instant};
 use zerotier_crypto::secure_eq;
 use zerotier_network_hypervisor::protocol;
 use zerotier_network_hypervisor::protocol::{PacketBuffer, DEFAULT_MULTICAST_LIMIT, ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU};
+use zerotier_network_hypervisor::vl1::identity::{Identity, IdentitySecret};
 use zerotier_network_hypervisor::vl1::*;
 use zerotier_network_hypervisor::vl2;
 use zerotier_network_hypervisor::vl2::multicastauthority::MulticastAuthority;
@@ -37,7 +38,6 @@ pub struct Controller {
     reaper: Reaper,
     runtime: tokio::runtime::Handle,
     database: Arc<dyn Database>,
-    local_identity: Valid<Identity>,
 
     /// Handler for MULTICAST_LIKE and MULTICAST_GATHER messages.
     multicast_authority: MulticastAuthority,
@@ -47,7 +47,7 @@ pub struct Controller {
 
     /// Recently authorized network members and when that authorization expires (in monotonic ticks).
     /// Note that this is not and should not be used for real authentication, just for locking up multicast info.
-    recently_authorized: RwLock<HashMap<[u8; Identity::FINGERPRINT_SIZE], HashMap<NetworkId, i64>>>,
+    recently_authorized: RwLock<HashMap<Address, HashMap<NetworkId, i64>>>,
 }
 
 impl Controller {
@@ -63,7 +63,6 @@ impl Controller {
                 reaper: Reaper::new(&runtime),
                 runtime,
                 database: database.clone(),
-                local_identity: local_identity,
                 multicast_authority: MulticastAuthority::new(),
                 daemons: Mutex::new(Vec::with_capacity(2)),
                 recently_authorized: RwLock::new(HashMap::new()),
@@ -232,7 +231,7 @@ impl Controller {
                 if member.node_id != *m {
                     if let Some(peer) = self.service.read().unwrap().upgrade().and_then(|s| s.node().peer(*m)) {
                         revocations.clear();
-                        Revocation::new(member.network_id, time_clock, member.node_id, *m, &self.local_identity, false).map(|r| revocations.push(r));
+                        Revocation::new(&member.network_id, time_clock, &member.node_id, m, &self.local_identity, false).map(|r| revocations.push(r));
                         self.send_revocations(&peer, &mut revocations);
                     }
                 }
@@ -427,7 +426,7 @@ impl Controller {
                 // the overhead (bandwidth and CPU) of generating these.
 
                 if let Some(com) =
-                    vl2::v1::CertificateOfMembership::new(&self.local_identity, network_id, &source_identity, time_clock, credential_ttl)
+                    vl2::v1::CertificateOfMembership::new(&self.local_identity, &network_id, &source_identity, time_clock, credential_ttl)
                 {
                     let mut v1cred = V1Credentials {
                         revision: time_clock as u64,
@@ -438,7 +437,7 @@ impl Controller {
                     };
 
                     if !nc.static_ips.is_empty() {
-                        let mut coo = vl2::v1::CertificateOfOwnership::new(network_id, time_clock, source_identity.address);
+                        let mut coo = vl2::v1::CertificateOfOwnership::new(&network_id, time_clock, &source_identity.address);
                         for ip in nc.static_ips.iter() {
                             coo.add_ip(ip);
                         }

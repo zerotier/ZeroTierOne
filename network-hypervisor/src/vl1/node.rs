@@ -218,7 +218,7 @@ struct BackgroundTaskIntervals {
 }
 
 pub struct Node<Application: ApplicationLayer + ?Sized> {
-    pub(super) identity_secret: IdentitySecret,
+    pub identity: IdentitySecret,
     intervals: Mutex<BackgroundTaskIntervals>,
     paths: RwLock<HashMap<PathKey<'static, 'static, Application::LocalSocket>, Arc<Path<Application>>>>,
     pub(super) peers: PeerMap<Application>,
@@ -229,7 +229,7 @@ pub struct Node<Application: ApplicationLayer + ?Sized> {
 impl<Application: ApplicationLayer + ?Sized> Node<Application> {
     pub fn new(identity_secret: IdentitySecret) -> Self {
         Self {
-            identity_secret,
+            identity: identity_secret,
             intervals: Mutex::new(BackgroundTaskIntervals::default()),
             paths: RwLock::new(HashMap::new()),
             peers: PeerMap::new(),
@@ -242,11 +242,6 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
             }),
             best_root: RwLock::new(None),
         }
-    }
-
-    #[inline(always)]
-    pub fn identity(&self) -> &Valid<Identity> {
-        &self.identity_secret.public
     }
 
     #[inline(always)]
@@ -353,7 +348,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
 
                     for (_, rs) in roots.sets.iter() {
                         for m in rs.members.iter() {
-                            if m.identity.eq(&self.identity_secret.public) {
+                            if m.identity.eq(&self.identity.public) {
                                 let _ = my_root_sets
                                     .get_or_insert_with(|| Vec::new())
                                     .write_all(rs.to_buffer::<{ RootSet::MAX_MARSHAL_SIZE }>().unwrap().as_bytes());
@@ -367,7 +362,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
                                 if let Some(peer) = self.peers.get_exact(&m.identity.address) {
                                     new_roots.insert(peer.clone(), m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                 } else {
-                                    if let Some(peer) = Peer::new(&self.identity_secret, Valid::mark_valid(m.identity.clone()), time_ticks) {
+                                    if let Some(peer) = Peer::new(&self.identity, Valid::mark_valid(m.identity.clone()), time_ticks) {
                                         new_roots.insert(self.peers.add(Arc::new(peer)).0, m.endpoints.as_ref().unwrap().iter().cloned().collect());
                                     } else {
                                         bad_identities.push(m.identity.clone());
@@ -584,7 +579,7 @@ impl<Application: ApplicationLayer + ?Sized> Node<Application> {
             if let Ok(dest) = PartialAddress::from_legacy_address_bytes(&fragment_header.dest) {
                 // Packet is addressed to this node.
 
-                if dest.matches(&self.identity_secret.public.address) {
+                if dest.matches(&self.identity.public.address) {
                     let fragment_header = &*fragment_header; // discard mut
                     let path = self.canonical_path(source_endpoint, source_local_socket, source_local_interface, time_ticks);
                     path.log_receive_anything(time_ticks);

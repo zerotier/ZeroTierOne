@@ -7,6 +7,5 @@ pub(crate) mod cache;
 pub mod database;
 pub mod filedatabase;
 pub mod model;
-pub mod postgresdatabase;
 
 pub use controller::*;

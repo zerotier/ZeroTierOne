@@ -5,7 +5,8 @@ use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress};
+use zerotier_network_hypervisor::vl1::identity::Identity;
+use zerotier_network_hypervisor::vl1::{Address, InetAddress};
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::blob::Blob;
 

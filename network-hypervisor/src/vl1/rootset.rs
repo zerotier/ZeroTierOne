@@ -154,10 +154,10 @@ impl RootSet {
     ///
     /// All current members must sign whether they are disabled (witnessing) or active. The verify()
     /// method will return true when signing is complete.
-    pub fn sign(&mut self, member_identity: &Identity, member_identity_secret: &IdentitySecret) -> bool {
+    pub fn sign(&mut self, member_identity_secret: &IdentitySecret) -> bool {
         let signature = member_identity_secret.sign(self.marshal_for_signing().as_bytes());
         let unsigned_entry = self.members.iter().find_map(|m| {
-            if m.identity.eq(member_identity) {
+            if m.identity.eq(&member_identity_secret.public) {
                 Some(m.clone())
             } else {
                 None
@@ -165,7 +165,7 @@ impl RootSet {
         });
         if unsigned_entry.is_some() {
             let unsigned_entry = unsigned_entry.unwrap();
-            self.members.retain(|m| !m.identity.eq(member_identity));
+            self.members.retain(|m| !m.identity.eq(&member_identity_secret.public));
             let _ = self.members.push(Root {
                 identity: unsigned_entry.identity,
                 endpoints: unsigned_entry.endpoints,

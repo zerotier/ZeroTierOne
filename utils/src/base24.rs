@@ -105,7 +105,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn base24_encode_decode() {
+    fn encode_decode() {
         let mut tmp = [0xffu8; 256];
         for _ in 0..3 {
             let mut s = String::with_capacity(1024);

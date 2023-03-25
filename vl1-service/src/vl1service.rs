@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use zerotier_crypto::random;
 use zerotier_network_hypervisor::protocol::{PacketBufferFactory, PacketBufferPool};
+use zerotier_network_hypervisor::vl1::identity::IdentitySecret;
 use zerotier_network_hypervisor::vl1::*;
 use zerotier_utils::{ms_monotonic, ms_since_epoch};
 
@@ -20,12 +21,6 @@ use crate::LocalSocket;
 /// Update UDP bindings every this many seconds.
 const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
 
-/// Trait to implement to provide storage for VL1-related state information.
-pub trait VL1DataStorage: Sync + Send {
-    fn load_node_identity(&self) -> Option<Valid<Identity>>;
-    fn save_node_identity(&self, id: &Valid<Identity>) -> bool;
-}
-
 /// VL1 service that connects to the physical network and hosts an inner protocol like ZeroTier VL2.
 ///
 /// This is the "outward facing" half of a full ZeroTier stack on a normal system. It binds sockets,
@@ -33,11 +28,10 @@ pub trait VL1DataStorage: Sync + Send {
 /// whatever inner protocol implementation is using it. This would typically be VL2 but could be
 /// a test harness or just the controller for a controller that runs stand-alone.
 pub struct VL1Service<Inner: InnerProtocolLayer + ?Sized + 'static> {
+    pub node: Node<Self>,
     state: RwLock<VL1ServiceMutableState>,
-    vl1_data_storage: Arc<dyn VL1DataStorage>,
     inner: Arc<Inner>,
     buffer_pool: Arc<PacketBufferPool>,
-    node_container: Option<Node<Self>>, // never None, set in new()
 }
 
 struct VL1ServiceMutableState {
@@ -48,25 +42,21 @@ struct VL1ServiceMutableState {
 }
 
 impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
-    pub fn new(vl1_data_storage: Arc<dyn VL1DataStorage>, inner: Arc<Inner>, settings: VL1Settings) -> Result<Arc<Self>, Box<dyn Error>> {
-        let mut service = Self {
+    pub fn new(identity: IdentitySecret, inner: Arc<Inner>, settings: VL1Settings) -> Result<Arc<Self>, Box<dyn Error>> {
+        let service = Arc::new(Self {
+            node: Node::<Self>::new(identity),
             state: RwLock::new(VL1ServiceMutableState {
                 daemons: Vec::with_capacity(2),
                 udp_sockets: HashMap::with_capacity(8),
                 settings,
                 running: true,
             }),
-            vl1_data_storage,
             inner,
             buffer_pool: Arc::new(PacketBufferPool::new(
                 std::thread::available_parallelism().map_or(2, |c| c.get() + 2),
                 PacketBufferFactory::new(),
             )),
-            node_container: None,
-        };
-
-        service.node_container.replace(Node::new(&service, true, false)?);
-        let service = Arc::new(service);
+        });
 
         let mut daemons = Vec::new();
         let s = service.clone();
@@ -76,12 +66,6 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
         service.state.write().unwrap().daemons = daemons;
 
         Ok(service)
-    }
-
-    #[inline(always)]
-    pub fn node(&self) -> &Node<Self> {
-        debug_assert!(self.node_container.is_some());
-        unsafe { self.node_container.as_ref().unwrap_unchecked() }
     }
 
     pub fn bound_udp_ports(&self) -> Vec<u16> {
@@ -173,7 +157,7 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
                 self.update_udp_bindings();
             }
             udp_binding_check_every = udp_binding_check_every.wrapping_add(1);
-            std::thread::sleep(self.node().do_background_tasks(self.as_ref()));
+            std::thread::sleep(self.node.do_background_tasks(self.as_ref()));
         }
     }
 }
@@ -187,7 +171,7 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> UdpPacketHandler for VL1Servi
         source_address: &InetAddress,
         packet: zerotier_network_hypervisor::protocol::PooledPacketBuffer,
     ) {
-        self.node().handle_incoming_physical_packet(
+        self.node.handle_incoming_physical_packet(
             self.as_ref(),
             self.inner.as_ref(),
             &Endpoint::IpUdp(source_address.clone()),
@@ -214,22 +198,6 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Servi
     #[inline]
     fn local_socket_is_valid(&self, socket: &Self::LocalSocket) -> bool {
         socket.is_valid()
-    }
-
-    #[inline]
-    fn should_respond_to(&self, _: &Valid<Identity>) -> bool {
-        // TODO: provide a way for the user of VL1Service to control this
-        true
-    }
-
-    #[inline]
-    fn load_node_identity(&self) -> Option<Valid<Identity>> {
-        self.vl1_data_storage.load_node_identity()
-    }
-
-    #[inline]
-    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
-        self.vl1_data_storage.save_node_identity(id)
     }
 
     #[inline]

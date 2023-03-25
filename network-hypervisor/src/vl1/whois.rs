@@ -65,7 +65,7 @@ impl<Application: ApplicationLayer + ?Sized> Whois<Application> {
             }
         }
 
-        if let Some(peer) = node.peers.get_or_add(&node.identity_secret, &identity, time_ticks) {
+        if let Some(peer) = node.peers.get_or_add(&node.identity, &identity, time_ticks) {
             for qi in queued_items.iter() {
                 for pkt in qi.pending_v1_packets.iter() {
                     if let Some(source_path) = pkt.0.upgrade() {

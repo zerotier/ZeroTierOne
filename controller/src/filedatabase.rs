@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use notify::{RecursiveMode, Watcher};
 use serde::de::DeserializeOwned;
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, Valid};
+use zerotier_network_hypervisor::vl1::Address;
 use zerotier_network_hypervisor::vl2::NetworkId;
 use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio::fs;
@@ -13,8 +13,6 @@ use zerotier_utils::tokio::runtime::Handle;
 use zerotier_utils::tokio::sync::broadcast::{channel, Receiver, Sender};
 use zerotier_utils::tokio::task::JoinHandle;
 use zerotier_utils::tokio::time::{sleep, Duration, Instant};
-use zerotier_vl1_service::datadir::{load_node_identity, save_node_identity};
-use zerotier_vl1_service::VL1DataStorage;
 
 use crate::cache::Cache;
 use crate::database::{Change, Database, Error};
@@ -32,7 +30,7 @@ const EVENT_HANDLER_TASK_TIMEOUT: Duration = Duration::from_secs(10);
 /// is different from V1 so it'll need a converter to use with V1 FileDb controller data.
 pub struct FileDatabase {
     base_path: PathBuf,
-    local_identity: Valid<Identity>,
+    controller_address: Address,
     change_sender: Sender<Change>,
     tasks: Reaper,
     cache: Cache,
@@ -42,7 +40,7 @@ pub struct FileDatabase {
 // TODO: should cache at least hashes and detect changes in the filesystem live.
 
 impl FileDatabase {
-    pub async fn new<P: AsRef<Path>>(runtime: Handle, base_path: P) -> Result<Arc<Self>, Error> {
+    pub async fn new<P: AsRef<Path>>(runtime: Handle, base_path: P, controller_address: Address) -> Result<Arc<Self>, Error> {
         let base_path: PathBuf = base_path.as_ref().into();
 
         let (change_sender, _) = channel(256);
@@ -50,13 +48,9 @@ impl FileDatabase {
         let db_weak = db_weak_tmp.clone();
         let runtime2 = runtime.clone();
 
-        let local_identity =
-            load_node_identity(base_path.as_path()).ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "identity.secret not found"))?;
-        let controller_address = local_identity.address;
-
         let db = Arc::new(Self {
             base_path: base_path.clone(),
-            local_identity,
+            controller_address: controller_address.clone(),
             change_sender,
             tasks: Reaper::new(&runtime2),
             cache: Cache::new(),
@@ -246,16 +240,6 @@ impl Drop for FileDatabase {
     }
 }
 
-impl VL1DataStorage for FileDatabase {
-    fn load_node_identity(&self) -> Option<Valid<Identity>> {
-        load_node_identity(self.base_path.as_path())
-    }
-
-    fn save_node_identity(&self, id: &Valid<Identity>) -> bool {
-        save_node_identity(self.base_path.as_path(), id)
-    }
-}
-
 #[async_trait]
 impl Database for FileDatabase {
     async fn list_networks(&self) -> Result<Vec<NetworkId>, Error> {
@@ -362,6 +346,7 @@ mod tests {
     #[allow(unused_imports)]
     use super::*;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use zerotier_network_hypervisor::vl1::identity::Identity;
 
     #[allow(unused)]
     #[test]
@@ -375,11 +360,14 @@ mod tests {
                 println!("test filedatabase is in: {}", test_dir.as_os_str().to_str().unwrap());
 
                 let _ = std::fs::remove_dir_all(&test_dir);
-                let controller_id = Identity::generate();
+                let controller_id = Identity::generate(false);
 
                 assert!(fs::create_dir_all(&test_dir).await.is_ok());
-                assert!(save_node_identity(test_dir.as_path(), &controller_id));
-                let db = Arc::new(FileDatabase::new(tokio_runtime.handle().clone(), test_dir).await.expect("new db"));
+                let db = Arc::new(
+                    FileDatabase::new(tokio_runtime.handle().clone(), test_dir, controller_id.public.address.clone())
+                        .await
+                        .expect("new db"),
+                );
 
                 let change_count = Arc::new(AtomicUsize::new(0));
 

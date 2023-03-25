@@ -12,7 +12,7 @@ use crate::vl2::NetworkId;
 /// "Anti-credential" revoking a network member's permission to communicate on a network.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Revocation {
-    pub network_id: NetworkId,
+    pub network_id: u64, // legacy 64-bit network ID
     pub threshold: i64,
     pub target: u64,    // legacy 40-bit address
     pub issued_to: u64, // legacy 40-bit address
@@ -22,7 +22,7 @@ pub struct Revocation {
 
 impl Revocation {
     pub fn new(
-        network_id: NetworkId,
+        network_id: &NetworkId,
         threshold: i64,
         target: &Address,
         issued_to: &Address,
@@ -31,7 +31,7 @@ impl Revocation {
         fast_propagate: bool,
     ) -> Self {
         let mut r = Self {
-            network_id,
+            network_id: network_id.to_legacy_u64(),
             threshold,
             target: target.legacy_u64(),
             issued_to: issued_to.legacy_u64(),
@@ -50,7 +50,7 @@ impl Revocation {
 
         let _ = v.write_all(&[0; 4]);
         let _ = v.write_all(&((self.threshold as u32) ^ (self.target as u32)).to_be_bytes()); // ID is arbitrary
-        let _ = v.write_all(&self.network_id.to_bytes());
+        let _ = v.write_all(&self.network_id.to_be_bytes());
         let _ = v.write_all(&[0; 8]);
         let _ = v.write_all(&self.threshold.to_be_bytes());
         let _ = v.write_all(&(self.fast_propagate as u64).to_be_bytes()); // 0x1 is the flag for this
