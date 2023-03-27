@@ -122,7 +122,7 @@ impl MulticastAuthority {
 
                             let in_this_packet = gathered
                                 .len()
-                                .clamp(1, (packet.capacity() - packet.len()) / protocol::ADDRESS_SIZE)
+                                .clamp(1, (packet.capacity() - packet.len()) / PartialAddress::LEGACY_SIZE_BYTES)
                                 .min(u16::MAX as usize);
 
                             packet.append_u16(in_this_packet as u16)?;

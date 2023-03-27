@@ -33,13 +33,13 @@ impl Cache {
 
         let networks = db.list_networks().await?;
         for network_id in networks {
-            if let Some(network) = db.get_network(network_id).await? {
-                let network_entry = by_nwid.entry(network_id).or_insert_with(|| (network, Mutex::new(HashMap::new())));
+            if let Some(network) = db.get_network(&network_id).await? {
+                let network_entry = by_nwid.entry(network_id.clone()).or_insert_with(|| (network, Mutex::new(HashMap::new())));
                 let mut by_node_id = network_entry.1.lock().unwrap();
-                let members = db.list_members(network_id).await?;
+                let members = db.list_members(&network_id).await?;
                 for node_id in members {
-                    if let Some(member) = db.get_member(network_id, node_id).await? {
-                        let _ = by_node_id.insert(node_id, member);
+                    if let Some(member) = db.get_member(&network_id, &node_id).await? {
+                        let _ = by_node_id.insert(node_id.clone(), member);
                     }
                 }
             }
@@ -59,7 +59,7 @@ impl Cache {
                 (false, None)
             }
         } else {
-            let _ = by_nwid.insert(network.id, (network.clone(), Mutex::new(HashMap::new())));
+            let _ = by_nwid.insert(network.id.clone(), (network.clone(), Mutex::new(HashMap::new())));
             (true, None)
         }
     }
@@ -78,7 +78,7 @@ impl Cache {
                     (false, None)
                 }
             } else {
-                let _ = by_node_id.insert(member.node_id, member);
+                let _ = by_node_id.insert(member.node_id.clone(), member);
                 (true, None)
             }
         } else {

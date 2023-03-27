@@ -168,9 +168,9 @@ impl CertificateOfOwnership {
     }
 
     /// Sign certificate of ownership for use by V1 nodes.
-    pub fn sign(&mut self, issuer_address: &Address, issuer: &IdentitySecret, issued_to: &Identity) -> bool {
+    pub fn sign(&mut self, issuer: &IdentitySecret, issued_to: &Identity) -> bool {
         self.issued_to = issued_to.address.legacy_u64();
-        if let Some(to_sign) = self.internal_to_bytes(true, issuer_address) {
+        if let Some(to_sign) = self.internal_to_bytes(true, &issuer.public.address) {
             self.signature = issuer.sign(&to_sign.as_slice());
             return true;
         }

@@ -1,6 +1,7 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
 use std::array::TryFromSliceError;
+use std::fmt::Debug;
 use std::io::Write;
 use std::str::FromStr;
 
@@ -380,6 +381,13 @@ impl PartialOrd for Identity {
     #[inline(always)]
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.address.cmp(&other.address))
+    }
+}
+
+impl Debug for Identity {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.to_string().as_str())
     }
 }
 

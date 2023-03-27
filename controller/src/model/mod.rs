@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
 use zerotier_network_hypervisor::vl1::{Address, Endpoint};
 use zerotier_network_hypervisor::vl2::v1::networkconfig::NetworkConfig;
 use zerotier_network_hypervisor::vl2::NetworkId;
-use zerotier_utils::blob::Blob;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecordType {
@@ -92,8 +91,6 @@ pub struct RequestLogItem {
     pub network_id: NetworkId,
     #[serde(rename = "n")]
     pub node_id: Address,
-    #[serde(rename = "nf")]
-    pub node_fingerprint: Blob<48>,
     #[serde(rename = "c")]
     pub controller_node_id: Address,
 

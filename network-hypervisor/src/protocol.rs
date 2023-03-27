@@ -129,20 +129,11 @@ pub const UDP_DEFAULT_MTU: usize = 1432;
 /// Default MTU inside VL2 virtual networks.
 pub const ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU: usize = 2800;
 
-/// Default multicast limit if not set in the network.
-pub const DEFAULT_MULTICAST_LIMIT: usize = 32;
-
-/// Length of an address in bytes.
-pub const ADDRESS_SIZE: usize = 5;
-
-/// Length of an address in string format.
-pub const ADDRESS_SIZE_STRING: usize = 10;
-
-/// Bit mask for address bits in a u64.
-pub const ADDRESS_MASK: u64 = 0xffffffffff;
-
 pub mod v1 {
     use super::*;
+
+    /// Default multicast limit if not set in the network.
+    pub const DEFAULT_MULTICAST_LIMIT: usize = 32;
 
     /// Size of packet header that lies outside the encryption envelope.
     pub const HEADER_SIZE: usize = 27;

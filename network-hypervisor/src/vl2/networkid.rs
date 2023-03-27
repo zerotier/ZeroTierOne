@@ -19,6 +19,9 @@ pub enum NetworkId {
 }
 
 impl NetworkId {
+    /// Maximum network number on a controller (24 bits)
+    pub const MAX_NETWORK_NO: u32 = 0xffffff;
+
     pub fn to_bytes(&self) -> Vec<u8> {
         match self {
             Self::Legacy(nwid) => nwid.to_be_bytes().to_vec(),
@@ -44,6 +47,14 @@ impl NetworkId {
         }
     }
 
+    /// Get the 24-bit network number on the network's controller.
+    pub fn network_no(&self) -> u32 {
+        match self {
+            Self::Legacy(nwid) => (*nwid & 0xffffff) as u32,
+            Self::Full(_, nwid) => *nwid & 0xffffff,
+        }
+    }
+
     pub fn from_legacy_u64(nwid: u64) -> Result<Self, InvalidParameterError> {
         let _ = PartialAddress::from_legacy_address_u64(nwid)?; // check validity of address portion
         Ok(Self::Legacy(nwid))
@@ -58,10 +69,10 @@ impl NetworkId {
     }
 
     /// Convert this into a legacy network ID in u64 form, or return itself if already a legacy ID.
-    pub(crate) fn to_legacy_u64(&self) -> u64 {
+    pub fn to_legacy_u64(&self) -> u64 {
         match self {
             Self::Legacy(nwid) => *nwid,
-            Self::Full(controller, nw) => controller.legacy_u64().wrapping_shl(24) | ((*nw & 0xffffff) as u64),
+            Self::Full(controller, nw) => controller.legacy_u64().wrapping_shl(24) | ((*nw & Self::MAX_NETWORK_NO) as u64),
         }
     }
 }
@@ -70,7 +81,7 @@ impl ToString for NetworkId {
     fn to_string(&self) -> String {
         match self {
             Self::Legacy(nwid) => hex::to_string_u64(*nwid, false),
-            Self::Full(controller, nw) => format!("{:08x}@{}", *nw, controller.to_string()),
+            Self::Full(controller, nw) => format!("{:06x}@{}", *nw & Self::MAX_NETWORK_NO, controller.to_string()),
         }
     }
 }
@@ -87,7 +98,7 @@ impl FromStr for NetworkId {
             let mut controller = None;
             for ss in s.split('@') {
                 if fno == 0 {
-                    net_no = hex::from_string_u64(ss);
+                    net_no = u32::from_str_radix(ss, 16).map_err(|_| InvalidParameterError("invalid network ID"))?;
                 } else if fno == 1 {
                     controller = Some(Address::from_str(ss)?);
                 } else {

@@ -21,15 +21,7 @@ pub struct Tag {
 }
 
 impl Tag {
-    pub fn new(
-        id: u32,
-        value: u32,
-        issuer_address: &Address,
-        issuer: &IdentitySecret,
-        network_id: &NetworkId,
-        issued_to: &Identity,
-        timestamp: i64,
-    ) -> Self {
+    pub fn new(id: u32, value: u32, issuer: &IdentitySecret, network_id: &NetworkId, issued_to: &Identity, timestamp: i64) -> Self {
         let mut tag = Self {
             network_id: network_id.to_legacy_u64(),
             timestamp,
@@ -38,7 +30,7 @@ impl Tag {
             value,
             signature: Blob::default(),
         };
-        let to_sign = tag.internal_to_bytes(true, issuer_address);
+        let to_sign = tag.internal_to_bytes(true, &issuer.public.address);
         tag.signature.as_mut().copy_from_slice(issuer.sign(to_sign.as_ref()).as_bytes());
         tag
     }

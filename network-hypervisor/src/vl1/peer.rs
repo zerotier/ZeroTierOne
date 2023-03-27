@@ -22,6 +22,8 @@ use crate::vl1::Valid;
 use crate::vl1::{Address, Endpoint, Path};
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
+use super::PartialAddress;
+
 pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 
 pub struct Peer<Application: ApplicationLayer + ?Sized> {
@@ -766,16 +768,16 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
     ) -> PacketHandlerResult {
         if node.this_node_is_root() || app.should_respond_to(&self.identity) {
             let mut addresses = payload.as_bytes();
-            while addresses.len() >= ADDRESS_SIZE {
+            while addresses.len() >= PartialAddress::LEGACY_SIZE_BYTES {
                 if !self
                     .send(app, node, None, time_ticks, |packet| {
-                        while addresses.len() >= ADDRESS_SIZE && (packet.len() + Identity::MAX_MARSHAL_SIZE) <= UDP_DEFAULT_MTU {
-                            if let Ok(zt_address) = Address::from_bytes(&addresses[..ADDRESS_SIZE]) {
+                        while addresses.len() >= PartialAddress::LEGACY_SIZE_BYTES && (packet.len() + Identity::MAX_MARSHAL_SIZE) <= UDP_DEFAULT_MTU {
+                            if let Ok(zt_address) = Address::from_bytes(&addresses[..PartialAddress::LEGACY_SIZE_BYTES]) {
                                 if let Some(peer) = node.peer(&zt_address) {
                                     peer.identity.write_bytes(packet, !self.is_v2())?;
                                 }
                             }
-                            addresses = &addresses[ADDRESS_SIZE..];
+                            addresses = &addresses[PartialAddress::LEGACY_SIZE_BYTES..];
                         }
                         Ok(())
                     })

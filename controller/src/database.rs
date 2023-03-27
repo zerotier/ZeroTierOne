@@ -23,11 +23,11 @@ pub enum Change {
 #[async_trait]
 pub trait Database: Sync + Send + 'static {
     async fn list_networks(&self) -> Result<Vec<NetworkId>, Error>;
-    async fn get_network(&self, id: NetworkId) -> Result<Option<Network>, Error>;
+    async fn get_network(&self, id: &NetworkId) -> Result<Option<Network>, Error>;
     async fn save_network(&self, obj: Network, generate_change_notification: bool) -> Result<(), Error>;
 
-    async fn list_members(&self, network_id: NetworkId) -> Result<Vec<Address>, Error>;
-    async fn get_member(&self, network_id: NetworkId, node_id: Address) -> Result<Option<Member>, Error>;
+    async fn list_members(&self, network_id: &NetworkId) -> Result<Vec<Address>, Error>;
+    async fn get_member(&self, network_id: &NetworkId, node_id: &Address) -> Result<Option<Member>, Error>;
     async fn save_member(&self, obj: Member, generate_change_notification: bool) -> Result<(), Error>;
 
     /// Get a receiver that can be used to receive changes made to networks and members, if supported.
@@ -49,11 +49,11 @@ pub trait Database: Sync + Send + 'static {
     ///
     /// The default trait implementation uses a brute force method. This should be reimplemented if a
     /// more efficient way is available.
-    async fn list_members_deauthorized_after(&self, network_id: NetworkId, cutoff: i64) -> Result<Vec<Address>, Error> {
+    async fn list_members_deauthorized_after(&self, network_id: &NetworkId, cutoff: i64) -> Result<Vec<Address>, Error> {
         let mut v = Vec::new();
         let members = self.list_members(network_id).await?;
         for a in members.iter() {
-            if let Some(m) = self.get_member(network_id, *a).await? {
+            if let Some(m) = self.get_member(network_id, a).await? {
                 if m.last_deauthorized_time.unwrap_or(i64::MIN) >= cutoff {
                     v.push(m.node_id);
                 }
@@ -66,10 +66,10 @@ pub trait Database: Sync + Send + 'static {
     ///
     /// The default trait implementation uses a brute force method. This should be reimplemented if a
     /// more efficient way is available.
-    async fn is_ip_assigned(&self, network_id: NetworkId, ip: &InetAddress) -> Result<bool, Error> {
+    async fn is_ip_assigned(&self, network_id: &NetworkId, ip: &InetAddress) -> Result<bool, Error> {
         let members = self.list_members(network_id).await?;
         for a in members.iter() {
-            if let Some(m) = self.get_member(network_id, *a).await? {
+            if let Some(m) = self.get_member(network_id, a).await? {
                 if m.ip_assignments.iter().any(|ip2| secure_eq(ip2.ip_bytes(), ip.ip_bytes())) {
                     return Ok(true);
                 }

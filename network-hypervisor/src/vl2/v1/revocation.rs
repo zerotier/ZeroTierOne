@@ -21,15 +21,7 @@ pub struct Revocation {
 }
 
 impl Revocation {
-    pub fn new(
-        network_id: &NetworkId,
-        threshold: i64,
-        target: &Address,
-        issued_to: &Address,
-        signer_address: &Address,
-        signer: &IdentitySecret,
-        fast_propagate: bool,
-    ) -> Self {
+    pub fn new(network_id: &NetworkId, threshold: i64, target: &Address, issued_to: &Address, signer: &IdentitySecret, fast_propagate: bool) -> Self {
         let mut r = Self {
             network_id: network_id.to_legacy_u64(),
             threshold,
@@ -38,7 +30,7 @@ impl Revocation {
             signature: ArrayVec::new(),
             fast_propagate,
         };
-        r.signature = signer.sign(r.internal_to_bytes(true, signer_address).as_bytes());
+        r.signature = signer.sign(r.internal_to_bytes(true, &signer.public.address).as_bytes());
         r
     }
 

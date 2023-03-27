@@ -9,8 +9,7 @@ use phf::phf_map;
 use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
-use crate::protocol;
-use crate::vl1::{Address, InetAddress, PartialAddress, MAC};
+use crate::vl1::{InetAddress, PartialAddress, MAC};
 
 #[allow(unused)]
 pub const RULES_ENGINE_REVISION: u8 = 1;
@@ -235,7 +234,7 @@ impl Rule {
         Self { t: action::DROP, v: RuleValue::default() }
     }
 
-    pub fn action_tee(address: Address, flags: u32, length: u16) -> Self {
+    pub fn action_tee(address: PartialAddress, flags: u32, length: u16) -> Self {
         Self {
             t: action::TEE,
             v: RuleValue {
@@ -244,7 +243,7 @@ impl Rule {
         }
     }
 
-    pub fn action_watch(address: Address, flags: u32, length: u16) -> Self {
+    pub fn action_watch(address: PartialAddress, flags: u32, length: u16) -> Self {
         Self {
             t: action::TEE,
             v: RuleValue {
@@ -253,7 +252,7 @@ impl Rule {
         }
     }
 
-    pub fn action_redirect(address: Address, flags: u32, length: u16) -> Self {
+    pub fn action_redirect(address: PartialAddress, flags: u32, length: u16) -> Self {
         Self {
             t: action::TEE,
             v: RuleValue {
@@ -270,14 +269,14 @@ impl Rule {
         Self { t: action::PRIORITY, v: RuleValue { qos_bucket } }
     }
 
-    pub fn match_source_zerotier_address(not: bool, or: bool, address: Address) -> Self {
+    pub fn match_source_zerotier_address(not: bool, or: bool, address: PartialAddress) -> Self {
         Self {
             t: t(not, or, match_cond::SOURCE_ZEROTIER_ADDRESS),
             v: RuleValue { zt: address.legacy_u64() },
         }
     }
 
-    pub fn match_dest_zerotier_address(not: bool, or: bool, address: Address) -> Self {
+    pub fn match_dest_zerotier_address(not: bool, or: bool, address: PartialAddress) -> Self {
         Self {
             t: t(not, or, match_cond::DEST_ZEROTIER_ADDRESS),
             v: RuleValue { zt: address.legacy_u64() },
@@ -462,7 +461,7 @@ impl Marshalable for Rule {
                 }
                 match_cond::SOURCE_ZEROTIER_ADDRESS | match_cond::DEST_ZEROTIER_ADDRESS => {
                     buf.append_u8(5)?;
-                    buf.append_bytes(&self.v.zt.to_be_bytes()[..protocol::ADDRESS_SIZE])?;
+                    buf.append_bytes(&self.v.zt.to_be_bytes()[..PartialAddress::LEGACY_SIZE_BYTES])?;
                 }
                 match_cond::VLAN_ID => {
                     buf.append_u8(2)?;
@@ -562,7 +561,7 @@ impl Marshalable for Rule {
                     r.v.qos_bucket = buf.read_u8(cursor)?;
                 }
                 match_cond::SOURCE_ZEROTIER_ADDRESS | match_cond::DEST_ZEROTIER_ADDRESS => {
-                    let a = buf.read_bytes_fixed::<{ protocol::ADDRESS_SIZE }>(cursor)?;
+                    let a = buf.read_bytes_fixed::<{ PartialAddress::LEGACY_SIZE_BYTES }>(cursor)?;
                     r.v.zt = a[0].wrapping_shl(32) as u64
                         | a[1].wrapping_shl(24) as u64
                         | a[2].wrapping_shl(16) as u64
