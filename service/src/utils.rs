@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::str::FromStr;
 
-use zerotier_network_hypervisor::vl1::identity::Identity;
+use zerotier_network_hypervisor::vl1::identity::{Identity, IdentitySecret};
 use zerotier_utils::io::read_limit;
 
 /// Returns true if the string starts with [yY1tT] or false for [nN0fF].
@@ -36,7 +36,6 @@ pub fn is_valid_port(v: &str) -> Result<(), String> {
     Err(format!("invalid TCP/IP port number: {}", v))
 }
 
-/// Read an identity as either a literal or from a file.
 pub fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, String> {
     let parse_func = |s: &str| {
         Identity::from_str(s).map_or_else(
@@ -52,6 +51,20 @@ pub fn parse_cli_identity(input: &str, validate: bool) -> Result<Identity, Strin
             },
         )
     };
+
+    let input_p = Path::new(input);
+    if input_p.is_file() {
+        read_limit(input_p, 16384).map_or_else(
+            |e| Err(e.to_string()),
+            |v| String::from_utf8(v).map_or_else(|e| Err(e.to_string()), |s| parse_func(s.as_str())),
+        )
+    } else {
+        parse_func(input)
+    }
+}
+
+pub fn parse_cli_identity_secret(input: &str) -> Result<IdentitySecret, String> {
+    let parse_func = |s: &str| IdentitySecret::from_str(s).map_err(|e| format!("invalid identity: {}", e.to_string()));
 
     let input_p = Path::new(input);
     if input_p.is_file() {

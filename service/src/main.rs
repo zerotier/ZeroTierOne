@@ -207,28 +207,34 @@ fn main() {
             if let Ok(_tokio_runtime) = zerotier_utils::tokio::runtime::Builder::new_multi_thread().enable_all().build() {
                 let test_inner = Arc::new(DummyInnerLayer);
                 let datadir = open_datadir(&flags);
-                let svc = VL1Service::new(datadir, test_inner, zerotier_vl1_service::VL1Settings::default());
-                if svc.is_ok() {
-                    let svc = svc.unwrap();
-                    svc.node().init_default_roots();
-
-                    // Wait for kill signal on Unix-like platforms.
-                    #[cfg(unix)]
-                    {
-                        let term = Arc::new(AtomicBool::new(false));
-                        let _ = signal_hook::flag::register(libc::SIGINT, term.clone());
-                        let _ = signal_hook::flag::register(libc::SIGTERM, term.clone());
-                        let _ = signal_hook::flag::register(libc::SIGQUIT, term.clone());
-                        while !term.load(Ordering::Relaxed) {
-                            std::thread::sleep(Duration::from_secs(1));
-                        }
-                    }
-
-                    println!("Terminate signal received, shutting down...");
-                    exitcode::OK
-                } else {
-                    eprintln!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
+                let id = datadir.read_identity(true, true);
+                if let Err(e) = id {
+                    eprintln!("FATAL: error generator or writing identity: {}", e.to_string());
                     exitcode::ERR_IOERR
+                } else {
+                    let svc = VL1Service::new(id.unwrap(), test_inner, zerotier_vl1_service::VL1Settings::default());
+                    if svc.is_ok() {
+                        let svc = svc.unwrap();
+                        svc.node.init_default_roots();
+
+                        // Wait for kill signal on Unix-like platforms.
+                        #[cfg(unix)]
+                        {
+                            let term = Arc::new(AtomicBool::new(false));
+                            let _ = signal_hook::flag::register(libc::SIGINT, term.clone());
+                            let _ = signal_hook::flag::register(libc::SIGTERM, term.clone());
+                            let _ = signal_hook::flag::register(libc::SIGQUIT, term.clone());
+                            while !term.load(Ordering::Relaxed) {
+                                std::thread::sleep(Duration::from_secs(1));
+                            }
+                        }
+
+                        println!("Terminate signal received, shutting down...");
+                        exitcode::OK
+                    } else {
+                        eprintln!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
+                        exitcode::ERR_IOERR
+                    }
                 }
             } else {
                 eprintln!("FATAL: error launching service: can't start async runtime");

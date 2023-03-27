@@ -26,17 +26,13 @@ pub fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
             if path.is_some() && secret_arg.is_some() {
                 let path = path.unwrap();
                 let secret_arg = secret_arg.unwrap();
-                let secret = crate::utils::parse_cli_identity(secret_arg, true);
+                let secret = crate::utils::parse_cli_identity_secret(secret_arg);
                 let json_data = read_limit(path, DEFAULT_FILE_IO_READ_LIMIT);
                 if secret.is_err() {
                     eprintln!("ERROR: unable to parse '{}' or read as a file.", secret_arg);
                     return exitcode::ERR_IOERR;
                 }
                 let secret = secret.unwrap();
-                if !secret.secret.is_some() {
-                    eprintln!("ERROR: identity does not include secret key, which is required for signing.");
-                    return exitcode::ERR_IOERR;
-                }
                 if json_data.is_err() {
                     eprintln!("ERROR: unable to read '{}'.", path);
                     return exitcode::ERR_IOERR;
@@ -102,7 +98,7 @@ pub fn cmd(_: Flags, cmd_args: &ArgMatches) -> i32 {
                     eprintln!("ERROR: root set JSON parsing failed: {}", root_set.err().unwrap().to_string());
                     return exitcode::ERR_IOERR;
                 }
-                let _ = std::io::stdout().write_all(root_set.unwrap().to_bytes().as_slice());
+                let _ = std::io::stdout().write_all(root_set.unwrap().to_buffer::<16384>().unwrap().as_ref());
             } else {
                 eprintln!("ERROR: 'rootset marshal' requires a path to a root set in JSON format.");
                 return exitcode::ERR_IOERR;

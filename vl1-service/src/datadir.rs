@@ -1,12 +1,15 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::{Arc, Mutex, RwLock};
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 
 use zerotier_crypto::random::next_u32_secure;
+use zerotier_network_hypervisor::vl1::identity::{Identity, IdentitySecret};
 use zerotier_utils::io::{fs_restrict_permissions, read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 use zerotier_utils::json::to_json_pretty;
 
@@ -54,6 +57,31 @@ impl<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + Deseri
         }));
 
         return Ok(Self { base_path, config, authtoken: Mutex::new(String::new()) });
+    }
+
+    /// Read (and possibly generate) the identity.
+    pub fn read_identity(&self, auto_generate: bool, generate_x25519_only: bool) -> std::io::Result<IdentitySecret> {
+        let identity_path = self.base_path.join(IDENTITY_SECRET_FILENAME);
+        match read_limit(&identity_path, 4096) {
+            Ok(id_bytes) => {
+                return IdentitySecret::from_str(String::from_utf8_lossy(id_bytes.as_slice()).as_ref())
+                    .map_err(|_| std::io::Error::new(ErrorKind::InvalidData, "invalid identity"));
+            }
+            Err(e) => match e.kind() {
+                ErrorKind::NotFound => {
+                    if auto_generate {
+                        let id = Identity::generate(generate_x25519_only);
+                        let ids = id.to_string();
+                        std::fs::write(&identity_path, ids.as_bytes())?;
+                        std::fs::write(self.base_path.join(IDENTITY_PUBLIC_FILENAME), id.public.to_string().as_bytes())?;
+                        return Ok(id);
+                    } else {
+                        return Err(e);
+                    }
+                }
+                _ => return Err(e),
+            },
+        }
     }
 
     /// Get authorization token for local API, creating and saving if it does not exist.
