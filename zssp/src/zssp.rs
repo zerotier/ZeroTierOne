@@ -40,7 +40,7 @@ const GCM_CIPHER_POOL_SIZE: usize = 4;
 pub struct Context<'a, Application: ApplicationLayer> {
     default_physical_mtu: AtomicUsize,
     dos_salt: RandomState,
-    init_has_pending: AtomicBool,   // Allowed to be falsely positive
+    init_has_pending: AtomicBool,     // Allowed to be falsely positive
     incoming_has_pending: AtomicBool, // Allowed to be falsely positive
     init_defrag: Mutex<[(i64, u64, Fragged<Application::IncomingPacketBuffer, MAX_NOISE_HANDSHAKE_FRAGMENTS>); MAX_INCOMPLETE_SESSION_QUEUE_SIZE]>,
     incoming_sessions: RwLock<[(i64, u64, Option<Arc<IncomingIncompleteSession<Application>>>); MAX_INCOMPLETE_SESSION_QUEUE_SIZE]>,
