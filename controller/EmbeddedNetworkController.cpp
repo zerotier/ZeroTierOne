@@ -1235,6 +1235,7 @@ void EmbeddedNetworkController::_request(
 	const Identity &identity,
 	const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData)
 {
+    std::lock_guard<std::mutex> l(_request_l);
 	char nwids[24];
 	DB::NetworkSummaryInfo ns;
 	json network,member;
@@ -1736,7 +1737,7 @@ void EmbeddedNetworkController::_request(
 
 					if ((ipRangeEnd < ipRangeStart)||(ipRangeStart == 0))
 						continue;
-					uint32_t ipRangeLen = ipRangeEnd - ipRangeStart;
+					uint32_t ipRangeLen = ipRangeEnd - ipRangeStart + 1;
 
 					// Start with the LSB of the member's address
 					uint32_t ipTrialCounter = (uint32_t)(identity.address().toInt() & 0xffffffff);

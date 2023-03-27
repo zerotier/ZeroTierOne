@@ -160,6 +160,8 @@ private:
 
 	RedisConfig *_rc;
 	std::string _ssoRedirectURL;
+
+	std::mutex _request_l;
 };
 
 } // namespace ZeroTier
