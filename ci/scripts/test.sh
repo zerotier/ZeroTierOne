@@ -38,7 +38,7 @@ echo "PWD: ${PWD}"
 echo "DOCKERFILE: ${DOCKERFILE}"
 echo "#~~~~~~~~~~~~~~~~~~~~"
 
-docker pull -q --platform="linux/${DOCKER_ARCH}" 084037375216.dkr.ecr.us-east-2.amazonaws.com/${ZT_NAME}-tester
+# docker pull -q --platform="linux/${DOCKER_ARCH}" 084037375216.dkr.ecr.us-east-2.amazonaws.com/${ZT_NAME}-tester
 
 docker buildx build \
        --build-arg BASEURL="${BASEURL}" \
