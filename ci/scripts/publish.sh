@@ -18,6 +18,8 @@ fi
 
 function publish_rpm {
     mkdir -p /${CHANNEL}/${DISTRO}
+    ls -la /${CHANNEL}    
+    ls -la .
     cp -a ${ZT_NAME} /${CHANNEL}/${DISTRO}
 }
 
