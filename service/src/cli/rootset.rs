@@ -4,10 +4,11 @@ use std::io::Write;
 
 use clap::ArgMatches;
 
-use crate::{exitcode, Flags};
+use super::Flags;
 
 use zerotier_network_hypervisor::vl1::RootSet;
 
+use zerotier_utils::exitcode;
 use zerotier_utils::io::{read_limit, DEFAULT_FILE_IO_READ_LIMIT};
 use zerotier_utils::json::to_json_pretty;
 use zerotier_utils::marshalable::Marshalable;

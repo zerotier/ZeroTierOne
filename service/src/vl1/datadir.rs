@@ -21,6 +21,7 @@ pub const CONFIG_FILENAME: &'static str = "local.conf";
 const AUTH_TOKEN_DEFAULT_LENGTH: usize = 48;
 const AUTH_TOKEN_POSSIBLE_CHARS: &'static str = "0123456789abcdefghijklmnopqrstuvwxyz";
 
+/// ZeroTier home directory interface
 pub struct DataDir<Config: PartialEq + Eq + Clone + Send + Sync + Default + Serialize + DeserializeOwned + 'static> {
     pub base_path: PathBuf,
     config: RwLock<Arc<Config>>,

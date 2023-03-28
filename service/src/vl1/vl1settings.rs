@@ -1,5 +1,53 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
+use std::collections::HashSet;
+
+use serde::{Deserialize, Serialize};
+
+use zerotier_network_hypervisor::vl1::InetAddress;
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[serde(default)]
+pub struct VL1Settings {
+    /// Primary ZeroTier port that is always bound, default is 9993.
+    pub fixed_ports: HashSet<u16>,
+
+    /// Number of additional random ports to bind.
+    pub random_port_count: usize,
+
+    /// Enable uPnP, NAT-PMP, and other router port mapping technologies?
+    pub port_mapping: bool,
+
+    /// Interface name prefix blacklist for local bindings (not remote IPs).
+    pub interface_prefix_blacklist: HashSet<String>,
+
+    /// IP/bits CIDR blacklist for local bindings (not remote IPs).
+    pub cidr_blacklist: HashSet<InetAddress>,
+}
+
+impl VL1Settings {
+    #[cfg(target_os = "macos")]
+    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 11] = ["lo", "utun", "gif", "stf", "iptap", "pktap", "feth", "zt", "llw", "anpi", "bridge"];
+
+    #[cfg(target_os = "linux")]
+    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 5] = ["lo", "tun", "tap", "ipsec", "zt"];
+
+    #[cfg(windows)]
+    pub const DEFAULT_PREFIX_BLACKLIST: [&'static str; 0] = [];
+}
+
+impl Default for VL1Settings {
+    fn default() -> Self {
+        Self {
+            fixed_ports: HashSet::from([9993u16]),
+            random_port_count: 5,
+            port_mapping: true,
+            interface_prefix_blacklist: Self::DEFAULT_PREFIX_BLACKLIST.iter().map(|s| s.to_string()).collect(),
+            cidr_blacklist: HashSet::new(),
+        }
+    }
+}
+
 /// A list of unassigned or obsolete ports under 1024 that could possibly be squatted.
 pub const UNASSIGNED_PRIVILEGED_PORTS: [u16; 299] = [
     4, 6, 8, 10, 12, 14, 15, 16, 26, 28, 30, 32, 34, 36, 40, 60, 269, 270, 271, 272, 273, 274, 275, 276, 277, 278, 279, 285, 288, 289, 290, 291, 292,

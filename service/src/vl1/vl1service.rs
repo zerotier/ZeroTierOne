@@ -12,10 +12,8 @@ use zerotier_network_hypervisor::vl1::identity::IdentitySecret;
 use zerotier_network_hypervisor::vl1::*;
 use zerotier_utils::{ms_monotonic, ms_since_epoch};
 
-use crate::constants::UNASSIGNED_PRIVILEGED_PORTS;
+use super::vl1settings::{VL1Settings, UNASSIGNED_PRIVILEGED_PORTS};
 use crate::sys::udp::{udp_test_bind, BoundUdpPort, UdpPacketHandler};
-use crate::vl1settings::VL1Settings;
-use crate::LocalSocket;
 
 /// Update UDP bindings every this many seconds.
 const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
@@ -180,7 +178,7 @@ impl<Inner: InnerProtocolLayer + 'static> UdpPacketHandler for VL1Service<Inner>
             self.as_ref(),
             self.inner.as_ref(),
             &Endpoint::IpUdp(source_address.clone()),
-            &LocalSocket::new(socket),
+            &super::localsocket::LocalSocket::new(socket),
             &socket.interface,
             time_ticks,
             packet,
@@ -189,8 +187,8 @@ impl<Inner: InnerProtocolLayer + 'static> UdpPacketHandler for VL1Service<Inner>
 }
 
 impl<Inner: InnerProtocolLayer + 'static> ApplicationLayer for VL1Service<Inner> {
-    type LocalSocket = crate::LocalSocket;
-    type LocalInterface = crate::LocalInterface;
+    type LocalSocket = super::localsocket::LocalSocket;
+    type LocalInterface = super::localinterface::LocalInterface;
 
     #[inline]
     fn event(&self, event: Event) {
