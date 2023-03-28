@@ -68,18 +68,18 @@ pub enum ReceiveResult<'a, 'b, Application: ApplicationLayer> {
 pub struct Session<'a, Application: ApplicationLayer> {
     /// The receive vontext associated with this session,
     /// only this context can receive messages from the remote peer.
-    /// **Read-only**
+    /// **Read-only**.
     pub context: &'a Context<'a, Application>,
     /// This side's locally unique session ID.
-    /// **Read-only**
+    /// **Read-only**.
     pub id: SessionId,
 
     /// An arbitrary application defined object associated with each session.
-    /// **Read-only**
+    /// **Read-only**.
     pub application_data: Application::Data,
 
     /// The static public key of the remote peer.
-    /// **Read-only**
+    /// **Read-only**.
     pub static_public_key: P384PublicKey,
 
     send_counter: AtomicU64,
@@ -1776,6 +1776,8 @@ fn lookup<T>(table: &[(i64, u64, T)], key: u64, expiry: i64) -> (usize, bool) {
         (idx1, true)
     } else if table[idx0].0 == i64::MAX || table[idx0].0 > table[idx1].0 || table[idx0].0 < expiry {
         // slot0 is either empty, expired, or the youngest of the two slots so use it.
+        // We evict the youngest because even in worst case flood conditions it guarantees *at least*
+        // one slot can never be evicted until expiry, giving plenty of time to be fully processed.
         (idx0, false)
     } else {
         // slot1 is either occupied or empty so we overwrite whatever is there to make more room.
