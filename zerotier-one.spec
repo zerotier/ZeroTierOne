@@ -1,5 +1,5 @@
 Name:           zerotier-one
-Version:        1.10.6
+Version:        1.10.5
 Release:        1%{?dist}
 Summary:        ZeroTier network virtualization service
 
@@ -143,19 +143,16 @@ chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 %endif
 
 %changelog
-* Tue Mar 21 2023 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.6
+* Fri Mar 10 2023 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.5
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
-* Sat Mar 10 2023 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.5
-- see https://github.com/zerotier/ZeroTierOne for release notes
-
-* Sat Mar 06 2023 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.4
+* Sat Mon 06 2023 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.4
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
 * Sat Jan 21 2023 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.3
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
-* Mon Oct 13 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.2
+* Thu Oct 13 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.2
 - see https://github.com/zerotier/ZeroTierOne for release notes
 
 * Mon Jun 27 2022 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.1
