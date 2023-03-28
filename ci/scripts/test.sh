@@ -47,8 +47,9 @@ docker buildx build \
        --build-arg DEB_ARCH="${DEB_ARCH}" \
        --build-arg DNF_ARCH="${DNF_ARCH}" \
        --build-arg VERSION="${VERSION}" \
+       --build-arg DOCKER_ARCH="${DOCKER_ARCH}" \
        --platform "linux/${DOCKER_ARCH}" \
        --no-cache \
        -f ${DOCKERFILE} \
        -t test \
-       . \
+       .
