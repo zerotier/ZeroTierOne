@@ -11,7 +11,6 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::{Address, Endpoint};
-use zerotier_network_hypervisor::vl2::v1::networkconfig::NetworkConfig;
 use zerotier_network_hypervisor::vl2::NetworkId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -118,9 +117,6 @@ pub struct RequestLogItem {
 
     #[serde(rename = "r")]
     pub result: AuthenticationResult,
-
-    #[serde(rename = "nc")]
-    pub config: Option<NetworkConfig>,
 }
 
 impl ToString for RequestLogItem {

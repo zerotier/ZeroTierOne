@@ -14,19 +14,20 @@ use zerotier_utils::marshalable::Marshalable;
 use zerotier_utils::memory::array_range;
 use zerotier_utils::NEVER_HAPPENED_TICKS;
 
+use super::api::*;
+use super::debug_event;
+use super::identity::{Identity, IdentitySecret};
+use super::node::*;
+use super::Valid;
+use super::{Address, Endpoint, Path};
 use crate::protocol::*;
-use crate::vl1::debug_event;
-use crate::vl1::identity::{Identity, IdentitySecret};
-use crate::vl1::node::*;
-use crate::vl1::Valid;
-use crate::vl1::{Address, Endpoint, Path};
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 
 use super::PartialAddress;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 
-pub struct Peer<Application: ApplicationLayer + ?Sized> {
+pub struct Peer<Application: ApplicationLayer> {
     pub identity: Valid<Identity>,
 
     v1_proto_static_secret: v1::SymmetricSecret,
@@ -43,7 +44,7 @@ pub struct Peer<Application: ApplicationLayer + ?Sized> {
     remote_node_info: RwLock<RemoteNodeInfo>,
 }
 
-struct PeerPath<Application: ApplicationLayer + ?Sized> {
+struct PeerPath<Application: ApplicationLayer> {
     path: Weak<Path<Application>>,
     last_receive_time_ticks: i64,
 }
@@ -55,11 +56,11 @@ struct RemoteNodeInfo {
 }
 
 /// Sort a list of paths by quality or priority, with best paths first.
-fn prioritize_paths<Application: ApplicationLayer + ?Sized>(paths: &mut Vec<PeerPath<Application>>) {
+fn prioritize_paths<Application: ApplicationLayer>(paths: &mut Vec<PeerPath<Application>>) {
     paths.sort_unstable_by(|a, b| a.last_receive_time_ticks.cmp(&b.last_receive_time_ticks).reverse());
 }
 
-impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
+impl<Application: ApplicationLayer> Peer<Application> {
     /// Create a new peer.
     ///
     /// This only returns None if this_node_identity does not have its secrets or if some
@@ -470,7 +471,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
     /// those fragments after the main packet header and first chunk.
     ///
     /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) fn v1_proto_receive<Inner: InnerProtocolLayer + ?Sized>(
+    pub(crate) fn v1_proto_receive<Inner: InnerProtocolLayer>(
         self: &Arc<Self>,
         node: &Node<Application>,
         app: &Application,
@@ -617,7 +618,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_error<Inner: InnerProtocolLayer + ?Sized>(
+    fn handle_incoming_error<Inner: InnerProtocolLayer>(
         self: &Arc<Self>,
         app: &Application,
         inner: &Inner,
@@ -655,7 +656,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_ok<Inner: InnerProtocolLayer + ?Sized>(
+    fn handle_incoming_ok<Inner: InnerProtocolLayer>(
         self: &Arc<Self>,
         app: &Application,
         inner: &Inner,
@@ -852,21 +853,21 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
     }
 }
 
-impl<Application: ApplicationLayer + ?Sized> Hash for Peer<Application> {
+impl<Application: ApplicationLayer> Hash for Peer<Application> {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         self.identity.address.hash(state)
     }
 }
 
-impl<Application: ApplicationLayer + ?Sized> PartialEq for Peer<Application> {
+impl<Application: ApplicationLayer> PartialEq for Peer<Application> {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
         self.identity.eq(&other.identity)
     }
 }
 
-impl<Application: ApplicationLayer + ?Sized> Eq for Peer<Application> {}
+impl<Application: ApplicationLayer> Eq for Peer<Application> {}
 
 fn v1_proto_try_aead_decrypt(
     secret: &v1::SymmetricSecret,

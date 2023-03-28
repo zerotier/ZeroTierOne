@@ -11,7 +11,7 @@ pub struct Switch {}
 
 #[allow(unused_variables)]
 impl InnerProtocolLayer for Switch {
-    fn handle_packet<Application: ApplicationLayer + ?Sized>(
+    fn handle_packet<Application: ApplicationLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,
@@ -26,7 +26,7 @@ impl InnerProtocolLayer for Switch {
         PacketHandlerResult::NotHandled
     }
 
-    fn handle_error<Application: ApplicationLayer + ?Sized>(
+    fn handle_error<Application: ApplicationLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,
@@ -43,7 +43,7 @@ impl InnerProtocolLayer for Switch {
         PacketHandlerResult::NotHandled
     }
 
-    fn handle_ok<Application: ApplicationLayer + ?Sized>(
+    fn handle_ok<Application: ApplicationLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,

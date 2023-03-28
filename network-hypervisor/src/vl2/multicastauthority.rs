@@ -42,7 +42,7 @@ impl MulticastAuthority {
     }
 
     /// Call for VL2_MULTICAST_LIKE packets.
-    pub fn handle_vl2_multicast_like<Application: ApplicationLayer + ?Sized, Authenticator: Fn(&NetworkId, &Identity) -> bool>(
+    pub fn handle_vl2_multicast_like<Application: ApplicationLayer, Authenticator: Fn(&NetworkId, &Identity) -> bool>(
         &self,
         auth: Authenticator,
         time_ticks: i64,
@@ -79,7 +79,7 @@ impl MulticastAuthority {
     }
 
     /// Call for VL2_MULTICAST_GATHER packets.
-    pub fn handle_vl2_multicast_gather<Application: ApplicationLayer + ?Sized, Authenticator: Fn(&NetworkId, &Identity) -> bool>(
+    pub fn handle_vl2_multicast_gather<Application: ApplicationLayer, Authenticator: Fn(&NetworkId, &Identity) -> bool>(
         &self,
         auth: Authenticator,
         time_ticks: i64,

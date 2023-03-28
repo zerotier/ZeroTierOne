@@ -4,8 +4,9 @@ use std::ops::Bound;
 use std::sync::{Mutex, Weak};
 
 use super::address::PartialAddress;
+use super::api::{ApplicationLayer, InnerProtocolLayer};
 use super::identity::Identity;
-use super::node::{ApplicationLayer, InnerProtocolLayer, Node};
+use super::node::Node;
 use super::path::Path;
 use crate::debug_event;
 use crate::protocol;
@@ -13,17 +14,17 @@ use crate::protocol;
 use zerotier_crypto::typestate::Valid;
 use zerotier_utils::ringbuffer::RingBuffer;
 
-pub(super) struct Whois<Application: ApplicationLayer + ?Sized> {
+pub(super) struct Whois<Application: ApplicationLayer> {
     whois_queue: Mutex<BTreeMap<PartialAddress, WhoisQueueItem<Application>>>,
 }
 
-struct WhoisQueueItem<Application: ApplicationLayer + ?Sized> {
+struct WhoisQueueItem<Application: ApplicationLayer> {
     pending_v1_packets: RingBuffer<(Weak<Path<Application>>, protocol::PooledPacketBuffer), { protocol::WHOIS_MAX_WAITING_PACKETS }>,
     last_retry_time: i64,
     retry_count: u16,
 }
 
-impl<Application: ApplicationLayer + ?Sized> Whois<Application> {
+impl<Application: ApplicationLayer> Whois<Application> {
     pub fn new() -> Self {
         Self { whois_queue: Mutex::new(BTreeMap::new()) }
     }
@@ -37,7 +38,7 @@ impl<Application: ApplicationLayer + ?Sized> Whois<Application> {
     ) {
     }
 
-    pub fn handle_incoming_identity<Inner: InnerProtocolLayer + ?Sized>(
+    pub fn handle_incoming_identity<Inner: InnerProtocolLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,

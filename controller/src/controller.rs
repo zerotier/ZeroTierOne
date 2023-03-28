@@ -31,7 +31,6 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// ZeroTier VL2 network controller packet handler, answers VL2 netconf queries.
 pub struct Controller {
     self_ref: Weak<Self>,
-    service: RwLock<Weak<VL1Service<Self>>>,
     reaper: Reaper,
     runtime: tokio::runtime::Handle,
     database: Arc<dyn Database>,
@@ -49,40 +48,25 @@ pub struct Controller {
 }
 
 impl Controller {
-    /*
-    /// Start an inner protocol handler answer ZeroTier VL2 network controller queries.
-    ///
-    /// The start() method must be called once the service this will run within is also created.
-    pub async fn new(database: Arc<dyn Database>, runtime: tokio::runtime::Handle) -> Result<Arc<Self>, Box<dyn Error>> {
-        if let Some(local_identity) = database.load_node_identity() {
-            assert!(local_identity.secret.is_some());
-            Ok(Arc::new_cyclic(|r| Self {
-                self_ref: r.clone(),
-                service: RwLock::new(Weak::default()),
-                reaper: Reaper::new(&runtime),
-                runtime,
-                database: database.clone(),
-                multicast_authority: MulticastAuthority::new(),
-                daemons: Mutex::new(Vec::with_capacity(2)),
-                recently_authorized: RwLock::new(HashMap::new()),
-            }))
-        } else {
-            Err(Box::new(InvalidParameterError("local controller's identity not readable by database")))
-        }
-    }
+    pub async fn new(
+        runtime: tokio::runtime::Handle,
+        local_identity: IdentitySecret,
+        database: Arc<dyn Database>,
+    ) -> Result<Arc<Self>, Box<dyn Error>> {
+        let c = Arc::new_cyclic(|self_ref| Self {
+            self_ref: self_ref.clone(),
+            reaper: Reaper::new(&runtime),
+            runtime,
+            database: database.clone(),
+            local_identity,
+            multicast_authority: MulticastAuthority::new(),
+            daemons: Mutex::new(Vec::with_capacity(2)),
+            recently_authorized: RwLock::new(HashMap::new()),
+        });
 
-    /// Set the service and HostSystem implementation for this controller and start daemons.
-    ///
-    /// This must be called once the service that uses this handler is up or the controller
-    /// won't actually do anything. The controller holds a weak reference to VL1Service so
-    /// be sure it's not dropped.
-    pub async fn start(&self, service: &Arc<VL1Service<Self>>) {
-        *self.service.write().unwrap() = Arc::downgrade(service);
-
-        // Create database change listener.
-        if let Some(cw) = self.database.changes().await.map(|mut ch| {
-            let self2 = self.self_ref.clone();
-            self.runtime.spawn(async move {
+        if let Some(cw) = c.database.changes().await.map(|mut ch| {
+            let self2 = c.self_ref.clone();
+            c.runtime.spawn(async move {
                 loop {
                     if let Ok(change) = ch.recv().await {
                         if let Some(self2) = self2.upgrade() {
@@ -97,12 +81,11 @@ impl Controller {
                 }
             })
         }) {
-            self.daemons.lock().unwrap().push(cw);
+            c.daemons.lock().unwrap().push(cw);
         }
 
-        // Create background task to expire multicast subscriptions and recent authorizations.
-        let self2 = self.self_ref.clone();
-        self.daemons.lock().unwrap().push(self.runtime.spawn(async move {
+        let self2 = c.self_ref.clone();
+        c.daemons.lock().unwrap().push(c.runtime.spawn(async move {
             let sleep_duration = Duration::from_millis((protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE / 2).min(2500) as u64);
             loop {
                 tokio::time::sleep(sleep_duration).await;
@@ -119,8 +102,9 @@ impl Controller {
                 }
             }
         }));
+
+        Ok(c)
     }
-    */
 
     /// Launched as a task when the DB informs us of a change.
     async fn handle_change_notification(self: Arc<Self>, change: Change) {
@@ -139,7 +123,7 @@ impl Controller {
     }
 
     /// Compose and send network configuration packet (either V1 or V2)
-    fn send_network_config<Application: ApplicationLayer + ?Sized>(
+    fn send_network_config<Application: ApplicationLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,
@@ -176,8 +160,6 @@ impl Controller {
                 packet.append_u64(config.network_id.to_legacy_u64())?;
                 packet.append_u16(config_data.len() as u16)?;
                 packet.append_bytes(config_data.as_slice())?;
-
-                // TODO: for V1 we may need to introduce use of the chunking mechanism for large configs.
             }
 
             let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);
@@ -188,48 +170,40 @@ impl Controller {
     }
 
     /// Send one or more revocation object(s) to a peer. The provided vector is drained.
-    fn send_revocations(&self, peer: &Peer<VL1Service<Self>>, revocations: &mut Vec<Revocation>) {
-        if let Some(host_system) = self.service.read().unwrap().upgrade() {
-            let time_ticks = ms_monotonic();
-            while !revocations.is_empty() {
-                let send_count = revocations.len().min(protocol::UDP_DEFAULT_MTU / 256);
-                debug_assert!(send_count <= (u16::MAX as usize));
-                peer.send(
-                    host_system.as_ref(),
-                    &host_system.node,
-                    None,
-                    time_ticks,
-                    |packet| -> Result<(), OutOfBoundsError> {
-                        let payload_start = packet.len();
+    fn send_revocations(&self, app: &Arc<VL1Service<Self>>, peer: &Peer<VL1Service<Self>>, revocations: &mut Vec<Revocation>) {
+        let time_ticks = ms_monotonic();
+        while !revocations.is_empty() {
+            let send_count = revocations.len().min(protocol::UDP_DEFAULT_MTU / 256);
+            debug_assert!(send_count <= (u16::MAX as usize));
+            peer.send(app.as_ref(), &app.node, None, time_ticks, |packet| -> Result<(), OutOfBoundsError> {
+                let payload_start = packet.len();
 
-                        packet.append_u8(protocol::message_type::VL2_NETWORK_CREDENTIALS)?;
-                        packet.append_u8(0)?;
-                        packet.append_u16(0)?;
-                        packet.append_u16(0)?;
-                        packet.append_u16(send_count as u16)?;
-                        for _ in 0..send_count {
-                            let r = revocations.pop().unwrap();
-                            packet.append_bytes(r.v1_proto_to_bytes(&self.local_identity.public.address).as_bytes())?;
-                        }
-                        packet.append_u16(0)?;
+                packet.append_u8(protocol::message_type::VL2_NETWORK_CREDENTIALS)?;
+                packet.append_u8(0)?;
+                packet.append_u16(0)?;
+                packet.append_u16(0)?;
+                packet.append_u16(send_count as u16)?;
+                for _ in 0..send_count {
+                    let r = revocations.pop().unwrap();
+                    packet.append_bytes(r.v1_proto_to_bytes(&self.local_identity.public.address).as_bytes())?;
+                }
+                packet.append_u16(0)?;
 
-                        let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);
-                        packet.set_size(payload_start + new_payload_len);
+                let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);
+                packet.set_size(payload_start + new_payload_len);
 
-                        Ok(())
-                    },
-                );
-            }
+                Ok(())
+            });
         }
     }
 
-    async fn deauthorize_member(&self, member: &Member) {
+    async fn deauthorize_member(&self, app: &Arc<VL1Service<Self>>, member: &Member) {
         let time_clock = ms_since_epoch();
         let mut revocations = Vec::with_capacity(1);
         if let Ok(all_network_members) = self.database.list_members(&member.network_id).await {
             for m in all_network_members.iter() {
                 if member.node_id != *m {
-                    if let Some(peer) = self.service.read().unwrap().upgrade().and_then(|s| s.node.peer(m)) {
+                    if let Some(peer) = app.node.peer(m) {
                         revocations.clear();
                         revocations.push(Revocation::new(
                             &member.network_id,
@@ -239,7 +213,7 @@ impl Controller {
                             &self.local_identity,
                             false,
                         ));
-                        self.send_revocations(&peer, &mut revocations);
+                        self.send_revocations(&app, &peer, &mut revocations);
                     }
                 }
             }
@@ -258,7 +232,7 @@ impl Controller {
         source_identity: &Valid<Identity>,
         network_id: &NetworkId,
         time_clock: i64,
-    ) -> Result<(AuthenticationResult, Option<NetworkConfig>), Box<dyn Error + Send + Sync>> {
+    ) -> Result<(AuthenticationResult, Option<Box<NetworkConfig>>), Box<dyn Error + Send + Sync>> {
         let network = self.database.get_network(&network_id).await?;
         if network.is_none() {
             return Ok((AuthenticationResult::Rejected, None));
@@ -326,7 +300,7 @@ impl Controller {
             // Check and if necessary auto-assign static IPs for this member.
             member_changed |= network.assign_ip_addresses(self.database.as_ref(), &mut member).await;
 
-            let mut nc = NetworkConfig::new(network_id.clone(), source_identity.address.clone());
+            let mut nc = Box::new(NetworkConfig::new(network_id.clone(), source_identity.address.clone()));
 
             nc.name = network.name.clone();
             nc.private = network.private;
@@ -434,7 +408,7 @@ impl Controller {
 }
 
 impl InnerProtocolLayer for Controller {
-    fn handle_packet<Application: ApplicationLayer + ?Sized>(
+    fn handle_packet<Application: ApplicationLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,
@@ -481,6 +455,8 @@ impl InnerProtocolLayer for Controller {
                 };
 
                 // Launch handler as an async background task.
+                let app: &VL1Service<Self> = cast_ref(app).unwrap();
+                let app = app.get();
                 let (self2, source, source_remote_endpoint) = (self.self_ref.upgrade().unwrap(), source.clone(), source_path.endpoint.clone());
                 self.reaper.add(
                     self.runtime.spawn(async move {
@@ -490,15 +466,13 @@ impl InnerProtocolLayer for Controller {
                         let (result, config) = match self2.authorize(&source.identity, &network_id, now).await {
                             Result::Ok((result, Some(config))) => {
                                 //println!("{}", serde_yaml::to_string(&config).unwrap());
-                                let app = self2.service.read().unwrap().upgrade().unwrap();
                                 self2.send_network_config(app.as_ref(), &app.node, cast_ref(source.as_ref()).unwrap(), &config, Some(message_id));
                                 (result, Some(config))
                             }
                             Result::Ok((result, None)) => (result, None),
                             Result::Err(e) => {
                                 #[cfg(debug_assertions)]
-                                let host = self2.service.read().unwrap().clone().upgrade().unwrap();
-                                debug_event!(host, "[vl2] ERROR getting network config: {}", e.to_string());
+                                debug_event!(app, "[vl2] ERROR getting network config: {}", e.to_string());
                                 return;
                             }
                         };
@@ -516,7 +490,6 @@ impl InnerProtocolLayer for Controller {
                                 source_remote_endpoint,
                                 source_hops,
                                 result,
-                                config,
                             })
                             .await;
                     }),

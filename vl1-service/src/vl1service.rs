@@ -2,8 +2,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
-use std::sync::Arc;
-use std::sync::RwLock;
+use std::sync::{Arc, RwLock, Weak};
 use std::thread::JoinHandle;
 use std::time::Duration;
 
@@ -27,8 +26,9 @@ const UPDATE_UDP_BINDINGS_EVERY_SECS: usize = 10;
 /// talks to the physical network, manages the vl1 node, and presents a templated interface for
 /// whatever inner protocol implementation is using it. This would typically be VL2 but could be
 /// a test harness or just the controller for a controller that runs stand-alone.
-pub struct VL1Service<Inner: InnerProtocolLayer + ?Sized + 'static> {
+pub struct VL1Service<Inner: InnerProtocolLayer + 'static> {
     pub node: Node<Self>,
+    self_ref: Weak<Self>,
     state: RwLock<VL1ServiceMutableState>,
     inner: Arc<Inner>,
     buffer_pool: Arc<PacketBufferPool>,
@@ -41,10 +41,11 @@ struct VL1ServiceMutableState {
     running: bool,
 }
 
-impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
+impl<Inner: InnerProtocolLayer + 'static> VL1Service<Inner> {
     pub fn new(identity: IdentitySecret, inner: Arc<Inner>, settings: VL1Settings) -> Result<Arc<Self>, Box<dyn Error>> {
-        let service = Arc::new(Self {
+        let service = Arc::new_cyclic(|self_ref| Self {
             node: Node::<Self>::new(identity),
+            self_ref: self_ref.clone(),
             state: RwLock::new(VL1ServiceMutableState {
                 daemons: Vec::with_capacity(2),
                 udp_sockets: HashMap::with_capacity(8),
@@ -66,6 +67,10 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
         service.state.write().unwrap().daemons = daemons;
 
         Ok(service)
+    }
+
+    pub fn get(&self) -> Arc<Self> {
+        self.self_ref.upgrade().unwrap()
     }
 
     pub fn bound_udp_ports(&self) -> Vec<u16> {
@@ -162,7 +167,7 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> VL1Service<Inner> {
     }
 }
 
-impl<Inner: InnerProtocolLayer + ?Sized + 'static> UdpPacketHandler for VL1Service<Inner> {
+impl<Inner: InnerProtocolLayer + 'static> UdpPacketHandler for VL1Service<Inner> {
     #[inline(always)]
     fn incoming_udp_packet(
         self: &Arc<Self>,
@@ -183,7 +188,7 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> UdpPacketHandler for VL1Servi
     }
 }
 
-impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Service<Inner> {
+impl<Inner: InnerProtocolLayer + 'static> ApplicationLayer for VL1Service<Inner> {
     type LocalSocket = crate::LocalSocket;
     type LocalInterface = crate::LocalInterface;
 
@@ -280,7 +285,7 @@ impl<Inner: InnerProtocolLayer + ?Sized + 'static> ApplicationLayer for VL1Servi
     }
 }
 
-impl<Inner: InnerProtocolLayer + ?Sized + 'static> Drop for VL1Service<Inner> {
+impl<Inner: InnerProtocolLayer + 'static> Drop for VL1Service<Inner> {
     fn drop(&mut self) {
         let mut state = self.state.write().unwrap();
         state.running = false;

@@ -3,17 +3,17 @@ use std::ops::Bound;
 use std::sync::{Arc, RwLock};
 
 use super::address::{Address, PartialAddress};
+use super::api::ApplicationLayer;
 use super::identity::{Identity, IdentitySecret};
-use super::node::ApplicationLayer;
 use super::peer::Peer;
 
 use zerotier_crypto::typestate::Valid;
 
-pub struct PeerMap<Application: ApplicationLayer + ?Sized> {
+pub struct PeerMap<Application: ApplicationLayer> {
     maps: [RwLock<BTreeMap<Address, Arc<Peer<Application>>>>; 256],
 }
 
-impl<Application: ApplicationLayer + ?Sized> PeerMap<Application> {
+impl<Application: ApplicationLayer> PeerMap<Application> {
     pub fn new() -> Self {
         Self { maps: std::array::from_fn(|_| RwLock::new(BTreeMap::new())) }
     }
