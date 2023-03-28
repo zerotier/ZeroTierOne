@@ -1,0 +1,2 @@
+FROM --platform=linux/${DOCKER_ARCH} centos:6
+RUN yum -y install curl
