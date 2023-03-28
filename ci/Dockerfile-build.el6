@@ -32,5 +32,5 @@ RUN ls -la
 RUN make redhat
 
 FROM scratch AS export
-ARG PLATFORM
+ARG ZT_NAME
 COPY --from=stage /root/rpmbuild/RPMS/*/*.rpm ./${ZT_NAME}/
