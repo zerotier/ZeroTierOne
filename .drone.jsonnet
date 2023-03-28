@@ -26,8 +26,8 @@ local targets = [
     // { "os": "linux", distro: "debian", "name": "stretch",  "isas": [ "386", "armv7", "amd64", "arm64" ],                                            "events": [ "tag" ] },
     // { "os": "linux", distro: "debian", "name": "jessie",   "isas": [ "386", "armv7", "amd64" ],                                                     "events": [ "tag" ] },
 
-    // { "os": "linux", distro: "redhat", "name": "el9",      "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
-    // { "os": "linux", distro: "redhat", "name": "el8",      "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
+    { "os": "linux", distro: "redhat", "name": "el9",      "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
+    { "os": "linux", distro: "redhat", "name": "el8",      "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
     { "os": "linux", distro: "redhat", "name": "el7",      "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
     { "os": "linux", distro: "redhat", "name": "el6",      "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
     { "os": "linux", distro: "ubuntu", "name": "jammy",    "isas": [ "amd64" ],  "events": [ "push", "tag", "custom" ] },
