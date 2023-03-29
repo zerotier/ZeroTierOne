@@ -24,7 +24,7 @@ FROM --platform=linux/${DOCKER_ARCH} centos:5 AS stage
 WORKDIR /root/rpmbuild/BUILD
 COPY . .
 COPY --from=builder zerotier-* ./
-RUN printf "[C5.10-base]\nname=CentOS-5.10 - Base\nbaseurl=http://vault.epel.cloud/5.10/os/\$basearch/\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6\nenabled=1\nmetadata_expire=never\n" > /etc/yum.repos.d/CentOS-Base.repo
+# RUN printf "[C5.10-base]\nname=CentOS-5.10 - Base\nbaseurl=http://vault.epel.cloud/5.10/os/\$basearch/\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6\nenabled=1\nmetadata_expire=never\n" > /etc/yum.repos.d/CentOS-Base.repo
 RUN uname -a
 RUN yum -y install make gcc rpm-build
 RUN pwd
