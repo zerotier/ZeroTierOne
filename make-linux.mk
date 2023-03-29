@@ -478,7 +478,8 @@ echo_flags:
 
 debian: echo_flags
 	@echo "building deb package"
-	debuild --no-lintian -b -uc -us
+	debuild --no-lintian -I -i -us -uc -nc -b
+	# debuild --no-lintian -b -uc -us
 
 # debian:	FORCE
 # 	debuild --no-lintian -I -i -us -uc -nc -b
