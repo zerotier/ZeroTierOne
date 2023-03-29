@@ -9,10 +9,8 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use zerotier_utils::base24;
 use zerotier_utils::error::InvalidParameterError;
-use zerotier_utils::hex;
-use zerotier_utils::memory;
+use zerotier_utils::{base24, base62, hex, memory};
 
 /// A full (V2) ZeroTier address.
 ///
@@ -102,7 +100,17 @@ impl Borrow<[u8; Self::SIZE_BYTES]> for Address {
 impl ToString for Address {
     #[inline(always)]
     fn to_string(&self) -> String {
-        base24::encode(&self.0)
+        let mut s = String::with_capacity(48 * 2);
+        base24::encode_into(&self.0[..4], &mut s);
+        s.push('-');
+        base24::encode_into(&self.0[4..8], &mut s);
+        s.push('-');
+        base24::encode_into(&self.0[8..12], &mut s);
+        s.push('-');
+        base24::encode_into(&self.0[12..16], &mut s);
+        s.push('-');
+        base62::encode_into(&self.0[16..], &mut s, 43);
+        s
     }
 }
 
@@ -111,7 +119,19 @@ impl FromStr for Address {
 
     #[inline]
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        base24::decode(s.as_bytes()).and_then(|b| Self::from_bytes(b.as_slice()))
+        let mut a = Self([0u8; Self::SIZE_BYTES]);
+        let mut f = 0;
+        for ss in s.split('-') {
+            if f <= 3 {
+                base24::decode_into_slice(ss.as_bytes(), &mut a.0[f * 4..(f + 1) * 4])?;
+            } else if f == 4 {
+                base62::decode_into_slice(ss.as_bytes(), &mut a.0[16..]).map_err(|_| InvalidParameterError("invalid base62"))?;
+            } else {
+                return Err(InvalidParameterError("too many sections"));
+            }
+            f += 1;
+        }
+        return Ok(a);
     }
 }
 
@@ -488,7 +508,10 @@ mod tests {
         for _ in 0..64 {
             let mut tmp = Address::new_uninitialized();
             random::fill_bytes_secure(&mut tmp.0);
-            println!("{}", tmp.to_string());
+            let s = tmp.to_string();
+            println!("{}", s);
+            let tmp2 = Address::from_str(s.as_str()).unwrap();
+            assert!(tmp == tmp2);
         }
     }
 }

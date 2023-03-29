@@ -85,6 +85,12 @@ pub fn decode_into<W: Write>(s: &[u8], b: &mut W, output_length: usize) -> std::
     return Ok(());
 }
 
+#[inline]
+pub fn decode_into_slice(s: &[u8], mut b: &mut [u8]) -> std::io::Result<()> {
+    let l = b.len();
+    decode_into(s, &mut b, l)
+}
+
 /// Decode into and return an array whose length is the desired output_length.
 /// None is returned if there is an error.
 #[inline]
