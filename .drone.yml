@@ -2,27 +2,27 @@
 clone:
   depth: 1
 kind: pipeline
-name: el5 amd64 build
+name: jammy amd64 build
 platform:
   os: linux
 pull: always
 steps:
 - commands:
-  - ./ci/scripts/build.sh el5 redhat amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/build.sh jammy ubuntu amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
   name: build
   when:
     event:
     - push
 - commands:
-  - ./ci/scripts/build.sh el5 redhat amd64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/build.sh jammy ubuntu amd64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
   name: release
   when:
     event:
     - tag
 - commands:
-  - ./ci/scripts/publish.sh el5 redhat amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/publish.sh jammy ubuntu amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
   name: copy build
   volumes:
@@ -32,7 +32,7 @@ steps:
     event:
     - push
 - commands:
-  - ./ci/scripts/publish.sh el5 redhat amd64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/publish.sh jammy ubuntu amd64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
   name: copy relase
   volumes:
@@ -58,19 +58,19 @@ volumes:
 clone:
   depth: 1
 depends_on:
-- el5 amd64 build
+- jammy amd64 build
 kind: pipeline
-name: el5 index
+name: jammy index
 platform:
   os: linux
 pull: always
 steps:
 - commands:
-  - /usr/local/bin/index zerotier-builds redhat el5 amd64
+  - /usr/local/bin/index zerotier-builds ubuntu jammy amd64
   environment:
     GPG_PRIVATE_KEY:
       from_secret: gpg-private-key
-  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/dnf-builder
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/apt-builder
   name: index build
   volumes:
   - name: zerotier-builds
@@ -79,11 +79,11 @@ steps:
     event:
     - push
 - commands:
-  - /usr/local/bin/index zerotier-releases redhat el5 amd64
+  - /usr/local/bin/index zerotier-releases ubuntu jammy amd64
   environment:
     GPG_PRIVATE_KEY:
       from_secret: gpg-private-key
-  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/dnf-builder
+  image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/apt-builder
   name: index release
   volumes:
   - name: zerotier-releases
@@ -108,15 +108,15 @@ volumes:
 clone:
   depth: 1
 depends_on:
-- el5 index
+- jammy index
 kind: pipeline
-name: el5 amd64 test
+name: jammy amd64 test
 platform:
   os: linux
 pull: always
 steps:
 - commands:
-  - ./ci/scripts/test.sh el5 redhat amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/test.sh jammy ubuntu amd64 100.0.0+${DRONE_COMMIT_SHA:0:8} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
   name: test build
   volumes:
@@ -126,7 +126,7 @@ steps:
     event:
     - push
 - commands:
-  - ./ci/scripts/test.sh el5 redhat amd64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
+  - ./ci/scripts/test.sh jammy ubuntu amd64 ${DRONE_TAG} ${DRONE_BUILD_EVENT}
   image: 084037375216.dkr.ecr.us-east-2.amazonaws.com/honda-builder
   name: test release
   volumes:
@@ -150,6 +150,6 @@ volumes:
   name: zerotier-releases
 ---
 kind: signature
-hmac: ae0cda8013ad7f0832be07ef67b5742e7c0e07f0df26c9995eb95f9b993181b7
+hmac: 2720f6d3e0e35871051e5622f834f5276531f19dae6318f6be64ecb61f2164da
 
 ...
