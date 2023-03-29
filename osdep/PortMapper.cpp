@@ -207,7 +207,8 @@ public:
 					memset(&data,0,sizeof(data));
 					OSUtils::ztsnprintf(inport,sizeof(inport),"%d",localPort);
 
-					if ((UPNP_GetValidIGD(devlist,&urls,&data,lanaddr,sizeof(lanaddr)))&&(lanaddr[0])) {
+					int foundValidIGD = 0;
+					if ((foundValidIGD = UPNP_GetValidIGD(devlist,&urls,&data,lanaddr,sizeof(lanaddr)))&&(lanaddr[0])) {
 #ifdef ZT_PORTMAPPER_TRACE
                         PM_TRACE("PortMapper: UPnP: my LAN IP address: %s" ZT_EOL_S,lanaddr);
 #endif
@@ -282,9 +283,11 @@ public:
                         PM_TRACE("PortMapper: UPnP: UPNP_GetValidIGD failed, returning to NAT-PMP mode" ZT_EOL_S);
 #endif
 					}
-
 					freeUPNPDevlist(devlist);
 
+					if(foundValidIGD) {
+						FreeUPNPUrls(&urls);
+					}
 				} else {
 					mode = 0;
 #ifdef ZT_PORTMAPPER_TRACE
