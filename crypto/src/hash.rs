@@ -269,19 +269,19 @@ pub fn hmac_sha512(key: &[u8], msg: &[u8]) -> [u8; HMAC_SHA512_SIZE] {
     hm.finish()
 }
 
-#[inline(always)]
-pub fn hmac_sha512_into(key: &[u8], msg: &[u8], md: &mut [u8]) {
+pub fn hmac_sha512_secret256(key: &[u8], msg: &[u8]) -> Secret<32> {
     let mut hm = HMACSHA512::new(key);
     hm.update(msg);
-    hm.finish_into(md);
+    let mut md = [0u8; HMAC_SHA512_SIZE];
+    hm.finish_into(&mut md);
+    // With such a simple procedure hopefully the compiler implements the following line as a move from md and not a copy
+    // If not we ought to change this code so we don't leak a secret value on the stack
+    unsafe { Secret::from_bytes(&md[0..32]) }
 }
-
-pub fn hmac_sha512_secret<const C: usize>(key: &[u8], msg: &[u8]) -> Secret<C> {
-    debug_assert!(C <= HMAC_SHA512_SIZE);
+pub fn hmac_sha512_secret(key: &[u8], msg: &[u8]) -> Secret<HMAC_SHA512_SIZE> {
     let mut hm = HMACSHA512::new(key);
     hm.update(msg);
-    let buff = hm.finish();
-    unsafe { Secret::from_bytes(&buff[..C]) }
+    Secret::move_bytes(hm.finish())
 }
 
 #[inline(always)]
@@ -289,11 +289,4 @@ pub fn hmac_sha384(key: &[u8], msg: &[u8]) -> [u8; HMAC_SHA384_SIZE] {
     let mut hm = HMACSHA384::new(key);
     hm.update(msg);
     hm.finish()
-}
-
-#[inline(always)]
-pub fn hmac_sha384_into(key: &[u8], msg: &[u8], md: &mut [u8]) {
-    let mut hm = HMACSHA384::new(key);
-    hm.update(msg);
-    hm.finish_into(md);
 }

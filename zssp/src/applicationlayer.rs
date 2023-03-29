@@ -71,7 +71,7 @@ pub trait ApplicationLayer: Sized {
     ///
     /// A physical path could be an IP address or IP plus device in the case of UDP, a socket in the
     /// case of TCP, etc.
-    type PhysicalPath: PartialEq + Eq + Hash + Clone;
+    type PhysicalPath: Hash;
 
     /// Get a reference to this host's static public key blob.
     ///

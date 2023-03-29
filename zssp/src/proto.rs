@@ -8,8 +8,9 @@
 
 use std::mem::size_of;
 
+use hex_literal::hex;
 use pqc_kyber::{KYBER_CIPHERTEXTBYTES, KYBER_PUBLICKEYBYTES};
-use zerotier_crypto::hash::SHA384_HASH_SIZE;
+use zerotier_crypto::hash::SHA512_HASH_SIZE;
 use zerotier_crypto::p384::P384_PUBLIC_KEY_SIZE;
 
 use crate::error::Error;
@@ -25,11 +26,13 @@ pub const MIN_TRANSPORT_MTU: usize = 128;
 pub const MAX_INIT_PAYLOAD_SIZE: usize = MAX_NOISE_HANDSHAKE_SIZE - ALICE_NOISE_XK_ACK_MIN_SIZE;
 
 /// Initial value of 'h'
-/// echo -n 'Noise_XKpsk3_P384_AESGCM_SHA384_hybridKyber1024' | shasum -a 384
-pub(crate) const INITIAL_H: [u8; SHA384_HASH_SIZE] = [
-    0x35, 0x27, 0x16, 0x62, 0x58, 0x04, 0x0c, 0x7a, 0x99, 0xa8, 0x0b, 0x49, 0xb2, 0x6b, 0x25, 0xfb, 0xf5, 0x26, 0x2a, 0x26, 0xe7, 0xb3, 0x70, 0xcb,
-    0x2c, 0x3c, 0xcb, 0x7f, 0xca, 0x20, 0x06, 0x91, 0x20, 0x55, 0x52, 0x8e, 0xd4, 0x3c, 0x97, 0xc3, 0xd5, 0x6c, 0xb4, 0x13, 0x02, 0x54, 0x83, 0x12,
-];
+/// echo -n 'Noise_XKpsk3_P384_AESGCM_SHA512_hybridKyber1024' | shasum -a 512
+pub(crate) const INITIAL_H: [u8; SHA512_HASH_SIZE] =
+    hex!("12ae70954e8d93bf7f73d0fe48d487155666f541e532f9461af5ef52ab90c8fd9259ef9e48f5adcf9af63f869805a570004ae095655dcaddbc226a50623b2b25");
+/// Initial value of 'h'
+/// echo -n 'Noise_KKpsk0_P384_AESGCM_SHA512' | shasum -a 512
+pub(crate) const INITIAL_H_REKEY: [u8; SHA512_HASH_SIZE] =
+    hex!("daeedd651ac9c5173f2eaaff996beebac6f3f1bfe9a70bb1cc54fa1fb2bf46260d71a3c4fb4d4ee36f654c31773a8a15e5d5be974a0668dc7db70f4e13ed172e");
 
 /// Version 0: Noise_XK with NIST P-384 plus Kyber1024 hybrid exchange on session init.
 pub(crate) const SESSION_PROTOCOL_VERSION: u8 = 0x00;
@@ -60,12 +63,13 @@ pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_ALICE_TO_BOB: u8 = b'A'; // AES-G
 pub(crate) const KBKDF_KEY_USAGE_LABEL_AES_GCM_BOB_TO_ALICE: u8 = b'B'; // AES-GCM in B->A direction
 pub(crate) const KBKDF_KEY_USAGE_LABEL_RATCHET: u8 = b'R'; // Key used in derivatin of next session key
 
+pub(crate) const MAX_INCOMPLETE_SESSION_QUEUE_SIZE: usize = 32;
 pub(crate) const MAX_FRAGMENTS: usize = 48; // hard protocol max: 63
 pub(crate) const MAX_NOISE_HANDSHAKE_FRAGMENTS: usize = 16; // enough room for p384 + ZT identity + kyber1024 + tag/hmac/etc.
 pub(crate) const MAX_NOISE_HANDSHAKE_SIZE: usize = MAX_NOISE_HANDSHAKE_FRAGMENTS * MIN_TRANSPORT_MTU;
 
 /// Size of keys used during derivation, mixing, etc. process.
-pub(crate) const BASE_KEY_SIZE: usize = 64;
+pub(crate) const NOISE_HASHLEN: usize = SHA512_HASH_SIZE;
 
 pub(crate) const AES_256_KEY_SIZE: usize = 32;
 pub(crate) const AES_HEADER_PROTECTION_KEY_SIZE: usize = 16;
@@ -160,14 +164,14 @@ pub(crate) struct RekeyAck {
     pub session_protocol_version: u8,
     // -- start AES-GCM encrypted portion (using current key)
     pub bob_e: [u8; P384_PUBLIC_KEY_SIZE],
-    pub next_key_fingerprint: [u8; SHA384_HASH_SIZE], // SHA384(next secret)
+    pub next_key_fingerprint: [u8; SHA512_HASH_SIZE], // SHA384(next secret)
     // -- end AES-GCM encrypted portion
     pub gcm_tag: [u8; AES_GCM_TAG_SIZE],
 }
 
 impl RekeyAck {
     pub const ENC_START: usize = HEADER_SIZE + 1;
-    pub const AUTH_START: usize = Self::ENC_START + P384_PUBLIC_KEY_SIZE + SHA384_HASH_SIZE;
+    pub const AUTH_START: usize = Self::ENC_START + P384_PUBLIC_KEY_SIZE + SHA512_HASH_SIZE;
     pub const SIZE: usize = Self::AUTH_START + AES_GCM_TAG_SIZE;
 }
 
