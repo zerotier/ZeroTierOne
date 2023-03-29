@@ -173,7 +173,7 @@ impl Network {
                             for route in self.ip_routes.iter() {
                                 let ip = InetAddress::from_ip_port(&ip_ptr.to_be_bytes(), route.target.port()); // IP/bits
                                 if ip.is_within(&route.target) {
-                                    if let Ok(is_ip_assigned) = database.is_ip_assigned(self.id, &ip).await {
+                                    if let Ok(is_ip_assigned) = database.is_ip_assigned(&self.id, &ip).await {
                                         if !is_ip_assigned {
                                             modified = true;
                                             let _ = member.ip_assignments.insert(ip);
@@ -201,7 +201,7 @@ impl Network {
                             for route in self.ip_routes.iter() {
                                 let ip = InetAddress::from_ip_port(&ip_ptr.to_be_bytes(), route.target.port()); // IP/bits
                                 if ip.is_within(&route.target) {
-                                    if let Ok(is_ip_assigned) = database.is_ip_assigned(self.id, &ip).await {
+                                    if let Ok(is_ip_assigned) = database.is_ip_assigned(&self.id, &ip).await {
                                         if !is_ip_assigned {
                                             modified = true;
                                             let _ = member.ip_assignments.insert(ip);

@@ -10,7 +10,7 @@ use std::ptr::{null, null_mut};
 use std::sync::atomic::{AtomicBool, AtomicI64, Ordering};
 use std::sync::{Arc, RwLock};
 
-use crate::localinterface::LocalInterface;
+use crate::vl1::LocalInterface;
 
 #[allow(unused_imports)]
 use num_traits::AsPrimitive;

@@ -5,9 +5,7 @@ mod localsocket;
 mod vl1service;
 mod vl1settings;
 
-pub mod constants;
 pub mod datadir;
-pub mod sys;
 
 pub use localinterface::LocalInterface;
 pub use localsocket::LocalSocket;

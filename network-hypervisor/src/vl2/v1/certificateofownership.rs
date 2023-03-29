@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 use std::io::Write;
 
-use crate::vl1::{Address, Identity, InetAddress, MAC};
+use crate::vl1::identity::{Identity, IdentitySecret};
+use crate::vl1::{Address, InetAddress, PartialAddress, MAC};
 use crate::vl2::NetworkId;
 
 use serde::{Deserialize, Serialize};
@@ -29,21 +30,21 @@ impl Thing {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateOfOwnership {
-    pub network_id: NetworkId,
+    pub network_id: u64, // legacy 64-bit network ID
     pub timestamp: i64,
     pub things: HashSet<Thing>,
-    pub issued_to: Address,
-    pub signature: ArrayVec<u8, { crate::vl1::identity::IDENTITY_MAX_SIGNATURE_SIZE }>,
+    pub issued_to: u64, // legacy 40-bit address
+    pub signature: ArrayVec<u8, { Identity::MAX_SIGNATURE_SIZE }>,
 }
 
 impl CertificateOfOwnership {
     /// Create a new empty and unsigned certificate.
-    pub fn new(network_id: NetworkId, timestamp: i64, issued_to: Address) -> Self {
+    pub fn new(network_id: &NetworkId, timestamp: i64, issued_to: &Address) -> Self {
         Self {
-            network_id,
+            network_id: network_id.to_legacy_u64(),
             timestamp,
             things: HashSet::with_capacity(4),
-            issued_to,
+            issued_to: issued_to.legacy_u64(),
             signature: ArrayVec::new(),
         }
     }
@@ -62,7 +63,7 @@ impl CertificateOfOwnership {
         let _ = self.things.insert(Thing::Mac(mac));
     }
 
-    fn internal_to_bytes(&self, for_sign: bool, signed_by: Address) -> Option<Vec<u8>> {
+    fn internal_to_bytes(&self, for_sign: bool, signed_by: &Address) -> Option<Vec<u8>> {
         if self.things.len() > 0xffff {
             return None;
         }
@@ -70,7 +71,7 @@ impl CertificateOfOwnership {
         if for_sign {
             let _ = v.write_all(&[0x7fu8; 8]);
         }
-        let _ = v.write_all(&self.network_id.to_bytes());
+        let _ = v.write_all(&self.network_id.to_be_bytes());
         let _ = v.write_all(&self.timestamp.to_be_bytes());
         let _ = v.write_all(&[0u8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]); // obsolete flags and ID fields
         let _ = v.write_all(&(self.things.len() as u16).to_be_bytes());
@@ -93,8 +94,8 @@ impl CertificateOfOwnership {
                 }
             }
         }
-        let _ = v.write_all(&self.issued_to.to_bytes());
-        let _ = v.write_all(&signed_by.to_bytes());
+        let _ = v.write_all(&self.issued_to.to_be_bytes()[3..8]);
+        let _ = v.write_all(signed_by.legacy_bytes());
         if for_sign {
             v.push(0);
             v.push(0);
@@ -111,7 +112,7 @@ impl CertificateOfOwnership {
     }
 
     #[inline(always)]
-    pub fn to_bytes(&self, signed_by: Address) -> Option<Vec<u8>> {
+    pub fn to_bytes(&self, signed_by: &Address) -> Option<Vec<u8>> {
         self.internal_to_bytes(false, signed_by)
     }
 
@@ -152,10 +153,10 @@ impl CertificateOfOwnership {
         }
         Ok((
             Self {
-                network_id: NetworkId::from_u64(network_id).ok_or(InvalidParameterError("invalid network ID"))?,
+                network_id: NetworkId::from_legacy_u64(network_id)?.to_legacy_u64(),
                 timestamp,
                 things,
-                issued_to: Address::from_bytes(&b[..5]).ok_or(InvalidParameterError("invalid address"))?,
+                issued_to: PartialAddress::from_bytes(&b[..5])?.legacy_u64(),
                 signature: {
                     let mut s = ArrayVec::new();
                     s.push_slice(&b[13..109]);
@@ -167,13 +168,11 @@ impl CertificateOfOwnership {
     }
 
     /// Sign certificate of ownership for use by V1 nodes.
-    pub fn sign(&mut self, issuer: &Identity, issued_to: &Identity) -> bool {
-        self.issued_to = issued_to.address;
-        if let Some(to_sign) = self.internal_to_bytes(true, issuer.address) {
-            if let Some(signature) = issuer.sign(&to_sign.as_slice(), true) {
-                self.signature = signature;
-                return true;
-            }
+    pub fn sign(&mut self, issuer: &IdentitySecret, issued_to: &Identity) -> bool {
+        self.issued_to = issued_to.address.legacy_u64();
+        if let Some(to_sign) = self.internal_to_bytes(true, &issuer.public.address) {
+            self.signature = issuer.sign(&to_sign.as_slice());
+            return true;
         }
         return false;
     }

@@ -6,8 +6,8 @@
  * https://www.zerotier.com/
  */
 
-pub mod arc_pool;
 pub mod arrayvec;
+pub mod base24;
 pub mod base64;
 pub mod blob;
 pub mod buffer;
@@ -25,9 +25,11 @@ pub mod json;
 pub mod marshalable;
 pub mod memory;
 pub mod pool;
+pub mod proquint;
 #[cfg(feature = "tokio")]
 pub mod reaper;
 pub mod ringbuffer;
+pub mod str;
 pub mod sync;
 pub mod varint;
 

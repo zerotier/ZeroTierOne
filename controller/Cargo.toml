@@ -11,11 +11,10 @@ path = "src/main.rs"
 zerotier-crypto = { path = "../crypto" }
 zerotier-utils = { path = "../utils", features = ["tokio"] }
 zerotier-network-hypervisor = { path = "../network-hypervisor" }
-zerotier-vl1-service = { path = "../vl1-service" }
+zerotier-service = { path = "../service" }
 async-trait = "^0"
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
-serde_yaml = "^0"
 clap = { version = "^3", features = ["std", "suggestions"], default-features = false }
 notify = { version = "^5", features = ["macos_fsevent"], default-features = false }
 tokio-postgres = "^0"

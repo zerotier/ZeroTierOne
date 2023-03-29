@@ -11,12 +11,12 @@ pub struct Switch {}
 
 #[allow(unused_variables)]
 impl InnerProtocolLayer for Switch {
-    fn handle_packet<Application: ApplicationLayer + ?Sized>(
+    fn handle_packet<Application: ApplicationLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,
         source: &Arc<Peer<Application>>,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         source_hops: u8,
         message_id: u64,
         verb: u8,
@@ -26,12 +26,12 @@ impl InnerProtocolLayer for Switch {
         PacketHandlerResult::NotHandled
     }
 
-    fn handle_error<Application: ApplicationLayer + ?Sized>(
+    fn handle_error<Application: ApplicationLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,
         source: &Arc<Peer<Application>>,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         source_hops: u8,
         message_id: u64,
         in_re_verb: u8,
@@ -43,12 +43,12 @@ impl InnerProtocolLayer for Switch {
         PacketHandlerResult::NotHandled
     }
 
-    fn handle_ok<Application: ApplicationLayer + ?Sized>(
+    fn handle_ok<Application: ApplicationLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,
         source: &Arc<Peer<Application>>,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         source_hops: u8,
         message_id: u64,
         in_re_verb: u8,

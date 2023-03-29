@@ -1,7 +1,7 @@
 use std::io::Write;
 
-use crate::vl1::identity::Identity;
-use crate::vl1::Address;
+use crate::vl1::identity::{Identity, IdentitySecret};
+use crate::vl1::PartialAddress;
 use crate::vl2::NetworkId;
 
 use serde::{Deserialize, Serialize};
@@ -24,10 +24,10 @@ use zerotier_utils::memory;
 /// certificate.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CertificateOfMembership {
-    pub network_id: NetworkId,
+    pub network_id: u64, // 64-bit legacy network ID
     pub timestamp: i64,
     pub max_delta: u64,
-    pub issued_to: Address,
+    pub issued_to: u64, // 40-bit legacy address
     pub issued_to_fingerprint: Blob<32>,
     pub signature: ArrayVec<u8, { Identity::MAX_SIGNATURE_SIZE }>,
 }
@@ -35,23 +35,18 @@ pub struct CertificateOfMembership {
 impl CertificateOfMembership {
     /// Create a new signed certificate of membership.
     /// None is returned if an error occurs, such as the issuer missing its secrets.
-    pub fn new(issuer: &Identity, network_id: NetworkId, issued_to: &Identity, timestamp: i64, max_delta: u64) -> Option<Self> {
+    pub fn new(issuer: &IdentitySecret, network_id: &NetworkId, issued_to: &Identity, timestamp: i64, max_delta: u64) -> Self {
         let mut com = CertificateOfMembership {
-            network_id,
+            network_id: network_id.to_legacy_u64(),
             timestamp,
             max_delta,
-            issued_to: issued_to.address,
+            issued_to: issued_to.address.legacy_u64(),
             issued_to_fingerprint: Blob::default(),
             signature: ArrayVec::new(),
         };
-
         com.issued_to_fingerprint = Blob::from(Self::v1_proto_issued_to_fingerprint(issued_to));
-        if let Some(signature) = issuer.sign(&com.v1_proto_get_qualifier_bytes(), true) {
-            com.signature = signature;
-            Some(com)
-        } else {
-            None
-        }
+        com.signature = issuer.sign(&com.v1_proto_get_qualifier_bytes());
+        com
     }
 
     fn v1_proto_get_qualifier_bytes(&self) -> [u8; 168] {
@@ -64,7 +59,7 @@ impl CertificateOfMembership {
         q[4] = u64::from(self.network_id).to_be();
         q[5] = 0; // no disagreement permitted
         q[6] = 2u64.to_be();
-        q[7] = u64::from(self.issued_to).to_be();
+        q[7] = self.issued_to.to_be();
         q[8] = u64::MAX; // no to_be needed for all-1s
 
         // This is a fix for a security issue in V1 in which an attacker could (with much CPU use)
@@ -91,20 +86,20 @@ impl CertificateOfMembership {
     /// Get the identity fingerprint used in V1, which only covers the curve25519 keys.
     fn v1_proto_issued_to_fingerprint(issued_to: &Identity) -> [u8; 32] {
         let mut v1_signee_hasher = SHA384::new();
-        v1_signee_hasher.update(&issued_to.address.to_bytes());
-        v1_signee_hasher.update(&issued_to.x25519);
-        v1_signee_hasher.update(&issued_to.ed25519);
+        v1_signee_hasher.update(issued_to.address.legacy_bytes());
+        v1_signee_hasher.update(&issued_to.x25519.ecdh);
+        v1_signee_hasher.update(&issued_to.x25519.eddsa);
         (&v1_signee_hasher.finish()[..32]).try_into().unwrap()
     }
 
     /// Get this certificate of membership in byte encoded format.
-    pub fn to_bytes(&self, controller_address: Address) -> ArrayVec<u8, 384> {
+    pub fn to_bytes(&self, controller_address: PartialAddress) -> ArrayVec<u8, 384> {
         let mut v = ArrayVec::new();
         v.push(1); // version byte from v1 protocol
         v.push(0);
         v.push(7); // 7 qualifiers, big-endian 16-bit
         let _ = v.write_all(&self.v1_proto_get_qualifier_bytes());
-        let _ = v.write_all(&controller_address.to_bytes());
+        let _ = v.write_all(controller_address.legacy_bytes());
         let _ = v.write_all(self.signature.as_bytes());
         v
     }
@@ -157,10 +152,10 @@ impl CertificateOfMembership {
         b = &b[5..]; // skip issuer address which is always the controller
 
         Ok(Self {
-            network_id: NetworkId::from_u64(network_id).ok_or(InvalidParameterError("invalid network ID"))?,
+            network_id: NetworkId::from_legacy_u64(network_id)?.to_legacy_u64(),
             timestamp,
             max_delta,
-            issued_to: Address::from_u64(issued_to).ok_or(InvalidParameterError("invalid issued to address"))?,
+            issued_to,
             issued_to_fingerprint: Blob::from(v1_fingerprint),
             signature: {
                 let mut s = ArrayVec::new();

@@ -1,4 +1,5 @@
 mod bn;
+#[allow(unused)]
 mod cipher_ctx;
 mod ec;
 mod error;

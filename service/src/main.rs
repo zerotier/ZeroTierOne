@@ -1,11 +1,5 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
-pub mod cli;
-pub mod cmdline_help;
-pub mod localconfig;
-pub mod utils;
-pub mod vnic;
-
 use std::io::Write;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -18,13 +12,17 @@ use clap::{Arg, ArgMatches, Command};
 use zerotier_network_hypervisor::vl1::InnerProtocolLayer;
 use zerotier_network_hypervisor::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
 use zerotier_utils::exitcode;
-use zerotier_vl1_service::datadir::DataDir;
-use zerotier_vl1_service::VL1Service;
 
-use crate::localconfig::Config;
+use zerotier_service::cli;
+use zerotier_service::cli::Flags;
+use zerotier_service::cmdline_help;
+use zerotier_service::localconfig::Config;
+use zerotier_service::utils;
+use zerotier_service::vl1::datadir::DataDir;
+use zerotier_service::vl1::{VL1Service, VL1Settings};
 
 pub fn print_help() {
-    let h = crate::cmdline_help::make_cmdline_help();
+    let h = cmdline_help::make_cmdline_help();
     let _ = std::io::stdout().write_all(h.as_bytes());
 }
 
@@ -36,13 +34,6 @@ pub fn platform_default_home_path() -> String {
 #[cfg(target_os = "linux")]
 pub fn platform_default_home_path() -> String {
     "/var/lib/zerotier".into()
-}
-
-pub struct Flags {
-    pub json_output: bool,
-    pub base_path: String,
-    pub auth_token_path_override: Option<String>,
-    pub auth_token_override: Option<String>,
 }
 
 fn open_datadir(flags: &Flags) -> Arc<DataDir<Config>> {
@@ -207,28 +198,34 @@ fn main() {
             if let Ok(_tokio_runtime) = zerotier_utils::tokio::runtime::Builder::new_multi_thread().enable_all().build() {
                 let test_inner = Arc::new(DummyInnerLayer);
                 let datadir = open_datadir(&flags);
-                let svc = VL1Service::new(datadir, test_inner, zerotier_vl1_service::VL1Settings::default());
-                if svc.is_ok() {
-                    let svc = svc.unwrap();
-                    svc.node().init_default_roots();
-
-                    // Wait for kill signal on Unix-like platforms.
-                    #[cfg(unix)]
-                    {
-                        let term = Arc::new(AtomicBool::new(false));
-                        let _ = signal_hook::flag::register(libc::SIGINT, term.clone());
-                        let _ = signal_hook::flag::register(libc::SIGTERM, term.clone());
-                        let _ = signal_hook::flag::register(libc::SIGQUIT, term.clone());
-                        while !term.load(Ordering::Relaxed) {
-                            std::thread::sleep(Duration::from_secs(1));
-                        }
-                    }
-
-                    println!("Terminate signal received, shutting down...");
-                    exitcode::OK
-                } else {
-                    eprintln!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
+                let id = datadir.read_identity(true, true);
+                if let Err(e) = id {
+                    eprintln!("FATAL: error generator or writing identity: {}", e.to_string());
                     exitcode::ERR_IOERR
+                } else {
+                    let svc = VL1Service::new(id.unwrap(), test_inner, VL1Settings::default());
+                    if svc.is_ok() {
+                        let svc = svc.unwrap();
+                        svc.node.init_default_roots();
+
+                        // Wait for kill signal on Unix-like platforms.
+                        #[cfg(unix)]
+                        {
+                            let term = Arc::new(AtomicBool::new(false));
+                            let _ = signal_hook::flag::register(libc::SIGINT, term.clone());
+                            let _ = signal_hook::flag::register(libc::SIGTERM, term.clone());
+                            let _ = signal_hook::flag::register(libc::SIGQUIT, term.clone());
+                            while !term.load(Ordering::Relaxed) {
+                                std::thread::sleep(Duration::from_secs(1));
+                            }
+                        }
+
+                        println!("Terminate signal received, shutting down...");
+                        exitcode::OK
+                    } else {
+                        eprintln!("FATAL: error launching service: {}", svc.err().unwrap().to_string());
+                        exitcode::ERR_IOERR
+                    }
                 }
             } else {
                 eprintln!("FATAL: error launching service: can't start async runtime");

@@ -6,11 +6,10 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use phf::phf_map;
 
-use zerotier_utils::buffer::Buffer;
+use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
 
-use crate::protocol;
-use crate::vl1::{Address, InetAddress, MAC};
+use crate::vl1::{InetAddress, PartialAddress, MAC};
 
 #[allow(unused)]
 pub const RULES_ENGINE_REVISION: u8 = 1;
@@ -174,16 +173,16 @@ impl Default for RuleValue {
 pub trait RuleVisitor {
     fn action_drop(&mut self) -> bool;
     fn action_accept(&mut self) -> bool;
-    fn action_tee(&mut self, address: Address, flags: u32, length: u16) -> bool;
-    fn action_watch(&mut self, address: Address, flags: u32, length: u16) -> bool;
-    fn action_redirect(&mut self, address: Address, flags: u32, length: u16) -> bool;
+    fn action_tee(&mut self, address: PartialAddress, flags: u32, length: u16) -> bool;
+    fn action_watch(&mut self, address: PartialAddress, flags: u32, length: u16) -> bool;
+    fn action_redirect(&mut self, address: PartialAddress, flags: u32, length: u16) -> bool;
     fn action_break(&mut self) -> bool;
     fn action_priority(&mut self, qos_bucket: u8) -> bool;
 
     fn invalid_rule(&mut self) -> bool;
 
-    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: Address);
-    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: Address);
+    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: PartialAddress);
+    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: PartialAddress);
     fn match_vlan_id(&mut self, not: bool, or: bool, id: u16);
     fn match_vlan_pcp(&mut self, not: bool, or: bool, pcp: u8);
     fn match_vlan_dei(&mut self, not: bool, or: bool, dei: u8);
@@ -235,29 +234,29 @@ impl Rule {
         Self { t: action::DROP, v: RuleValue::default() }
     }
 
-    pub fn action_tee(address: Address, flags: u32, length: u16) -> Self {
+    pub fn action_tee(address: PartialAddress, flags: u32, length: u16) -> Self {
         Self {
             t: action::TEE,
             v: RuleValue {
-                forward: rule_value::Forward { address: address.into(), flags, length },
+                forward: rule_value::Forward { address: address.legacy_u64(), flags, length },
             },
         }
     }
 
-    pub fn action_watch(address: Address, flags: u32, length: u16) -> Self {
+    pub fn action_watch(address: PartialAddress, flags: u32, length: u16) -> Self {
         Self {
             t: action::TEE,
             v: RuleValue {
-                forward: rule_value::Forward { address: address.into(), flags, length },
+                forward: rule_value::Forward { address: address.legacy_u64(), flags, length },
             },
         }
     }
 
-    pub fn action_redirect(address: Address, flags: u32, length: u16) -> Self {
+    pub fn action_redirect(address: PartialAddress, flags: u32, length: u16) -> Self {
         Self {
             t: action::TEE,
             v: RuleValue {
-                forward: rule_value::Forward { address: address.into(), flags, length },
+                forward: rule_value::Forward { address: address.legacy_u64(), flags, length },
             },
         }
     }
@@ -270,17 +269,17 @@ impl Rule {
         Self { t: action::PRIORITY, v: RuleValue { qos_bucket } }
     }
 
-    pub fn match_source_zerotier_address(not: bool, or: bool, address: Address) -> Self {
+    pub fn match_source_zerotier_address(not: bool, or: bool, address: PartialAddress) -> Self {
         Self {
             t: t(not, or, match_cond::SOURCE_ZEROTIER_ADDRESS),
-            v: RuleValue { zt: address.into() },
+            v: RuleValue { zt: address.legacy_u64() },
         }
     }
 
-    pub fn match_dest_zerotier_address(not: bool, or: bool, address: Address) -> Self {
+    pub fn match_dest_zerotier_address(not: bool, or: bool, address: PartialAddress) -> Self {
         Self {
             t: t(not, or, match_cond::DEST_ZEROTIER_ADDRESS),
-            v: RuleValue { zt: address.into() },
+            v: RuleValue { zt: address.legacy_u64() },
         }
     }
 
@@ -306,21 +305,21 @@ impl Rule {
                     return v.action_accept();
                 }
                 action::TEE => {
-                    if let Some(a) = Address::from_u64(self.v.forward.address) {
+                    if let Ok(a) = PartialAddress::from_legacy_address_u64(self.v.forward.address) {
                         return v.action_tee(a, self.v.forward.flags, self.v.forward.length);
                     } else {
                         return v.invalid_rule();
                     }
                 }
                 action::WATCH => {
-                    if let Some(a) = Address::from_u64(self.v.forward.address) {
+                    if let Ok(a) = PartialAddress::from_legacy_address_u64(self.v.forward.address) {
                         return v.action_watch(a, self.v.forward.flags, self.v.forward.length);
                     } else {
                         return v.invalid_rule();
                     }
                 }
                 action::REDIRECT => {
-                    if let Some(a) = Address::from_u64(self.v.forward.address) {
+                    if let Ok(a) = PartialAddress::from_legacy_address_u64(self.v.forward.address) {
                         return v.action_redirect(a, self.v.forward.flags, self.v.forward.length);
                     } else {
                         return v.invalid_rule();
@@ -333,14 +332,14 @@ impl Rule {
                     return v.action_priority(self.v.qos_bucket);
                 }
                 match_cond::SOURCE_ZEROTIER_ADDRESS => {
-                    if let Some(a) = Address::from_u64(self.v.zt) {
+                    if let Ok(a) = PartialAddress::from_legacy_address_u64(self.v.zt) {
                         v.match_source_zerotier_address(not, or, a);
                     } else {
                         return v.invalid_rule();
                     }
                 }
                 match_cond::DEST_ZEROTIER_ADDRESS => {
-                    if let Some(a) = Address::from_u64(self.v.zt) {
+                    if let Ok(a) = PartialAddress::from_legacy_address_u64(self.v.zt) {
                         v.match_dest_zerotier_address(not, or, a);
                     } else {
                         return v.invalid_rule();
@@ -447,7 +446,7 @@ impl Rule {
 impl Marshalable for Rule {
     const MAX_MARSHAL_SIZE: usize = 21;
 
-    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), UnmarshalError> {
+    fn marshal<const BL: usize>(&self, buf: &mut Buffer<BL>) -> Result<(), OutOfBoundsError> {
         buf.append_u8(self.t)?;
         unsafe {
             match self.t & 0x3f {
@@ -462,7 +461,7 @@ impl Marshalable for Rule {
                 }
                 match_cond::SOURCE_ZEROTIER_ADDRESS | match_cond::DEST_ZEROTIER_ADDRESS => {
                     buf.append_u8(5)?;
-                    buf.append_bytes(&self.v.zt.to_be_bytes()[..protocol::ADDRESS_SIZE])?;
+                    buf.append_bytes(&self.v.zt.to_be_bytes()[..PartialAddress::LEGACY_SIZE_BYTES])?;
                 }
                 match_cond::VLAN_ID => {
                     buf.append_u8(2)?;
@@ -562,7 +561,7 @@ impl Marshalable for Rule {
                     r.v.qos_bucket = buf.read_u8(cursor)?;
                 }
                 match_cond::SOURCE_ZEROTIER_ADDRESS | match_cond::DEST_ZEROTIER_ADDRESS => {
-                    let a = buf.read_bytes_fixed::<{ protocol::ADDRESS_SIZE }>(cursor)?;
+                    let a = buf.read_bytes_fixed::<{ PartialAddress::LEGACY_SIZE_BYTES }>(cursor)?;
                     r.v.zt = a[0].wrapping_shl(32) as u64
                         | a[1].wrapping_shl(24) as u64
                         | a[2].wrapping_shl(16) as u64
@@ -775,13 +774,13 @@ static HR_NAME_TO_RULE_TYPE: phf::Map<&'static str, u8> = phf_map! {
 #[derive(Default, Serialize, Deserialize)]
 struct HumanReadableRule<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub address: Option<Address>,
+    pub address: Option<PartialAddress>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub flags: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub length: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub zt: Option<Address>,
+    pub zt: Option<PartialAddress>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub vlanId: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -837,7 +836,7 @@ impl<'a> HumanReadableRule<'a> {
             unsafe {
                 match *t {
                     action::TEE | action::WATCH | action::REDIRECT => {
-                        r.v.forward.address = self.address?.into();
+                        r.v.forward.address = self.address.as_ref()?.legacy_u64();
                         r.v.forward.flags = self.flags?;
                         r.v.forward.length = self.length?;
                     }
@@ -845,7 +844,7 @@ impl<'a> HumanReadableRule<'a> {
                         r.v.qos_bucket = self.qosBucket?;
                     }
                     match_cond::SOURCE_ZEROTIER_ADDRESS | match_cond::DEST_ZEROTIER_ADDRESS => {
-                        r.v.zt = self.address?.into();
+                        r.v.zt = self.address.as_ref()?.legacy_u64();
                     }
                     match_cond::VLAN_ID => {
                         r.v.vlan_id = self.vlanId?;
@@ -982,7 +981,7 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn action_tee(&mut self, address: Address, flags: u32, length: u16) -> bool {
+    fn action_tee(&mut self, address: PartialAddress, flags: u32, length: u16) -> bool {
         self.0._type = "ACTION_TEE";
         let _ = self.0.address.insert(address);
         let _ = self.0.flags.insert(flags);
@@ -991,7 +990,7 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn action_watch(&mut self, address: Address, flags: u32, length: u16) -> bool {
+    fn action_watch(&mut self, address: PartialAddress, flags: u32, length: u16) -> bool {
         self.0._type = "ACTION_WATCH";
         let _ = self.0.address.insert(address);
         let _ = self.0.flags.insert(flags);
@@ -1000,7 +999,7 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn action_redirect(&mut self, address: Address, flags: u32, length: u16) -> bool {
+    fn action_redirect(&mut self, address: PartialAddress, flags: u32, length: u16) -> bool {
         self.0._type = "ACTION_REDIRECT";
         let _ = self.0.address.insert(address);
         let _ = self.0.flags.insert(flags);
@@ -1027,13 +1026,13 @@ impl<'a> RuleVisitor for MakeHumanReadable<'a> {
     }
 
     #[inline(always)]
-    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: Address) {
+    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: PartialAddress) {
         let _ = self.0.zt.insert(address);
         self.do_cond("MATCH_SOURCE_ZEROTIER_ADDRESS", not, or);
     }
 
     #[inline(always)]
-    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: Address) {
+    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: PartialAddress) {
         let _ = self.0.zt.insert(address);
         self.do_cond("MATCH_DEST_ZEROTIER_ADDRESS", not, or);
     }
@@ -1217,19 +1216,19 @@ impl RuleVisitor for RuleStringer {
     }
 
     #[inline(always)]
-    fn action_tee(&mut self, address: Address, flags: u32, length: u16) -> bool {
+    fn action_tee(&mut self, address: PartialAddress, flags: u32, length: u16) -> bool {
         self.0 = format!("ACTION_TEE({}, {}, {})", address.to_string(), flags, length);
         true
     }
 
     #[inline(always)]
-    fn action_watch(&mut self, address: Address, flags: u32, length: u16) -> bool {
+    fn action_watch(&mut self, address: PartialAddress, flags: u32, length: u16) -> bool {
         self.0 = format!("ACTION_WATCH({}, {}, {})", address.to_string(), flags, length);
         true
     }
 
     #[inline(always)]
-    fn action_redirect(&mut self, address: Address, flags: u32, length: u16) -> bool {
+    fn action_redirect(&mut self, address: PartialAddress, flags: u32, length: u16) -> bool {
         self.0 = format!("ACTION_REDIRECT({}, {}, {})", address.to_string(), flags, length);
         true
     }
@@ -1253,7 +1252,7 @@ impl RuleVisitor for RuleStringer {
     }
 
     #[inline(always)]
-    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: Address) {
+    fn match_source_zerotier_address(&mut self, not: bool, or: bool, address: PartialAddress) {
         self.0 = format!(
             "MATCH_SOURCE_ZEROTIER_ADDRESS({}{}{})",
             if or {
@@ -1271,7 +1270,7 @@ impl RuleVisitor for RuleStringer {
     }
 
     #[inline(always)]
-    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: Address) {
+    fn match_dest_zerotier_address(&mut self, not: bool, or: bool, address: PartialAddress) {
         self.0 = format!(
             "MATCH_DEST_ZEROTIER_ADDRESS({}{}{})",
             if or {
