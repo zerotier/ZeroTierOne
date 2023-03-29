@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
 
 use super::address::{Address, PartialAddress};
-use super::api::{ApplicationLayer, InnerProtocolLayer, PacketHandlerResult};
+use super::api::{ApplicationLayer, InnerProtocolLayer};
 use super::debug_event;
 use super::endpoint::Endpoint;
 use super::event::Event;

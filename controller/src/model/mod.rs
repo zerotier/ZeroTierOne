@@ -6,8 +6,6 @@ mod network;
 pub use member::*;
 pub use network::*;
 
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::{Address, Endpoint};
@@ -18,13 +16,6 @@ pub enum RecordType {
     Network,
     Member,
     RequestLogItem,
-}
-
-/// A complete network with all member configuration information for import/export or blob storage.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct NetworkExport {
-    pub network: Network,
-    pub members: HashMap<Address, Member>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

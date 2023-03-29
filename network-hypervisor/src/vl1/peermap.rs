@@ -39,8 +39,11 @@ impl<Application: ApplicationLayer> PeerMap<Application> {
 
     /// Get a matching peer for a partial address of any specificity, but return None if the match is ambiguous.
     pub fn get_unambiguous(&self, address: &PartialAddress) -> Option<Arc<Peer<Application>>> {
-        let mm = self.maps[address.0 .0[0] as usize].read().unwrap();
-        let matches = mm.range::<[u8; 48], (Bound<&[u8; 48]>, Bound<&[u8; 48]>)>((Bound::Included(&address.0 .0), Bound::Unbounded));
+        let mm = self.maps[address.address.0[0] as usize].read().unwrap();
+        let matches = mm.range::<[u8; Address::SIZE_BYTES], (Bound<&[u8; Address::SIZE_BYTES]>, Bound<&[u8; Address::SIZE_BYTES]>)>((
+            Bound::Included(&address.address.0),
+            Bound::Unbounded,
+        ));
         let mut r = None;
         for m in matches {
             if address.matches(m.0) {

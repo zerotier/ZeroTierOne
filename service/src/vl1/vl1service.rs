@@ -10,6 +10,7 @@ use zerotier_crypto::random;
 use zerotier_network_hypervisor::protocol::{PacketBufferFactory, PacketBufferPool};
 use zerotier_network_hypervisor::vl1::identity::IdentitySecret;
 use zerotier_network_hypervisor::vl1::*;
+use zerotier_utils::cast::cast_ref;
 use zerotier_utils::{ms_monotonic, ms_since_epoch};
 
 use super::vl1settings::{VL1Settings, UNASSIGNED_PRIVILEGED_PORTS};
@@ -67,7 +68,8 @@ impl<Inner: InnerProtocolLayer + 'static> VL1Service<Inner> {
         Ok(service)
     }
 
-    pub fn get(&self) -> Arc<Self> {
+    #[inline]
+    pub fn get_self_arc(&self) -> Arc<Self> {
         self.self_ref.upgrade().unwrap()
     }
 
@@ -280,6 +282,11 @@ impl<Inner: InnerProtocolLayer + 'static> ApplicationLayer for VL1Service<Inner>
     #[inline(always)]
     fn time_clock(&self) -> i64 {
         ms_since_epoch()
+    }
+
+    #[inline(always)]
+    fn concrete_self<T: ApplicationLayer>(&self) -> Option<&T> {
+        cast_ref(self)
     }
 }
 

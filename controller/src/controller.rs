@@ -15,12 +15,12 @@ use zerotier_network_hypervisor::vl2::multicastauthority::MulticastAuthority;
 use zerotier_network_hypervisor::vl2::v1::networkconfig::*;
 use zerotier_network_hypervisor::vl2::v1::Revocation;
 use zerotier_network_hypervisor::vl2::NetworkId;
+use zerotier_service::vl1::VL1Service;
 use zerotier_utils::buffer::OutOfBoundsError;
 use zerotier_utils::cast::cast_ref;
 use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio;
 use zerotier_utils::{ms_monotonic, ms_since_epoch};
-use zerotier_vl1_service::VL1Service;
 
 use crate::database::*;
 use crate::model::{AuthenticationResult, Member, RequestLogItem, CREDENTIAL_WINDOW_SIZE_DEFAULT};
@@ -53,7 +53,7 @@ impl Controller {
         local_identity: IdentitySecret,
         database: Arc<dyn Database>,
     ) -> Result<Arc<Self>, Box<dyn Error>> {
-        let c = Arc::new_cyclic(|self_ref| Self {
+        Ok(Arc::new_cyclic(|self_ref| Self {
             self_ref: self_ref.clone(),
             reaper: Reaper::new(&runtime),
             runtime,
@@ -62,16 +62,22 @@ impl Controller {
             multicast_authority: MulticastAuthority::new(),
             daemons: Mutex::new(Vec::with_capacity(2)),
             recently_authorized: RwLock::new(HashMap::new()),
-        });
+        }))
+    }
 
-        if let Some(cw) = c.database.changes().await.map(|mut ch| {
-            let self2 = c.self_ref.clone();
-            c.runtime.spawn(async move {
+    /// Start this controller's background tasks.
+    ///
+    /// Note that the controller only holds a Weak<VL1Service<Self>> to avoid circular references.
+    pub async fn start(&self, app: &Arc<VL1Service<Self>>) {
+        if let Some(cw) = self.database.changes().await.map(|mut ch| {
+            let controller_weak = self.self_ref.clone();
+            let app_weak = Arc::downgrade(app);
+            self.runtime.spawn(async move {
                 loop {
                     if let Ok(change) = ch.recv().await {
-                        if let Some(self2) = self2.upgrade() {
-                            self2.reaper.add(
-                                self2.runtime.spawn(self2.clone().handle_change_notification(change)),
+                        if let (Some(controller), Some(app)) = (controller_weak.upgrade(), app_weak.upgrade()) {
+                            controller.reaper.add(
+                                controller.runtime.spawn(controller.clone().handle_change_notification(app, change)),
                                 Instant::now().checked_add(REQUEST_TIMEOUT).unwrap(),
                             );
                         } else {
@@ -81,19 +87,19 @@ impl Controller {
                 }
             })
         }) {
-            c.daemons.lock().unwrap().push(cw);
+            self.daemons.lock().unwrap().push(cw);
         }
 
-        let self2 = c.self_ref.clone();
-        c.daemons.lock().unwrap().push(c.runtime.spawn(async move {
+        let controller_weak = self.self_ref.clone();
+        self.daemons.lock().unwrap().push(self.runtime.spawn(async move {
             let sleep_duration = Duration::from_millis((protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE / 2).min(2500) as u64);
             loop {
                 tokio::time::sleep(sleep_duration).await;
 
-                if let Some(self2) = self2.upgrade() {
+                if let Some(controller) = controller_weak.upgrade() {
                     let time_ticks = ms_monotonic();
-                    self2.multicast_authority.clean(time_ticks);
-                    self2.recently_authorized.write().unwrap().retain(|_, by_network| {
+                    controller.multicast_authority.clean(time_ticks);
+                    controller.recently_authorized.write().unwrap().retain(|_, by_network| {
                         by_network.retain(|_, timeout| *timeout > time_ticks);
                         !by_network.is_empty()
                     });
@@ -102,12 +108,10 @@ impl Controller {
                 }
             }
         }));
-
-        Ok(c)
     }
 
     /// Launched as a task when the DB informs us of a change.
-    async fn handle_change_notification(self: Arc<Self>, change: Change) {
+    async fn handle_change_notification(self: Arc<Self>, app: Arc<VL1Service<Self>>, change: Change) {
         match change {
             Change::NetworkCreated(_) => {}
             Change::NetworkChanged(_, _) => {}
@@ -115,10 +119,10 @@ impl Controller {
             Change::MemberCreated(_) => {}
             Change::MemberChanged(old_member, new_member) => {
                 if !new_member.authorized() && old_member.authorized() {
-                    self.deauthorize_member(&new_member).await;
+                    self.deauthorize_member(&app, &new_member).await;
                 }
             }
-            Change::MemberDeleted(member) => self.deauthorize_member(&member).await,
+            Change::MemberDeleted(member) => self.deauthorize_member(&app, &member).await,
         }
     }
 
@@ -201,15 +205,16 @@ impl Controller {
         let time_clock = ms_since_epoch();
         let mut revocations = Vec::with_capacity(1);
         if let Ok(all_network_members) = self.database.list_members(&member.network_id).await {
-            for m in all_network_members.iter() {
-                if member.node_id != *m {
-                    if let Some(peer) = app.node.peer(m) {
+            for other_member in all_network_members.iter() {
+                if member.node_id != *other_member && member.node_id.is_complete() && other_member.is_complete() {
+                    let node_id = member.node_id.as_complete().unwrap();
+                    if let Some(peer) = app.node.peer(node_id) {
                         revocations.clear();
                         revocations.push(Revocation::new(
                             &member.network_id,
                             time_clock,
-                            &member.node_id,
-                            m,
+                            node_id,
+                            other_member.as_complete().unwrap(),
                             &self.local_identity,
                             false,
                         ));
@@ -239,7 +244,7 @@ impl Controller {
         }
         let network = network.unwrap();
 
-        let mut member = self.database.get_member(&network_id, &source_identity.address).await?;
+        let mut member = self.database.get_member(&network_id, &source_identity.address.to_partial()).await?;
         let mut member_changed = false;
 
         let mut authentication_result = AuthenticationResult::Rejected;
@@ -253,7 +258,7 @@ impl Controller {
         if !member_authorized {
             if member.is_none() {
                 if network.learn_members.unwrap_or(true) {
-                    let _ = member.insert(Member::new(source_identity.address.clone(), network_id.clone()));
+                    let _ = member.insert(Member::new(source_identity.clone(), network_id.clone()));
                     member_changed = true;
                 } else {
                     return Ok((AuthenticationResult::Rejected, None));
@@ -288,6 +293,16 @@ impl Controller {
         // drop 'mut' from these since they should no longer change
         let member_authorized = member_authorized;
         let authentication_result = authentication_result;
+
+        // Pin full address and full identity if these aren't pinned already.
+        if !member.node_id.is_complete() {
+            member.node_id = source_identity.address.to_partial();
+            member_changed = true;
+        }
+        if member.identity.is_none() {
+            let _ = member.identity.insert(source_identity.clone().remove_typestate());
+            member_changed = true;
+        }
 
         // Generate network configuration if the member is authorized.
         let network_config = if authentication_result.approved() {
@@ -325,8 +340,7 @@ impl Controller {
                     nc.rules.reserve(deauthed_members_still_in_window.len() + 1);
                     let mut or = false;
                     for dead in deauthed_members_still_in_window.iter() {
-                        nc.rules
-                            .push(vl2::rule::Rule::match_source_zerotier_address(false, or, dead.to_partial()));
+                        nc.rules.push(vl2::rule::Rule::match_source_zerotier_address(false, or, dead.clone()));
                         or = true;
                     }
                     nc.rules.push(vl2::rule::Rule::action_drop());
@@ -455,21 +469,26 @@ impl InnerProtocolLayer for Controller {
                 };
 
                 // Launch handler as an async background task.
-                let app: &VL1Service<Self> = cast_ref(app).unwrap();
-                let app = app.get();
-                let (self2, source, source_remote_endpoint) = (self.self_ref.upgrade().unwrap(), source.clone(), source_path.endpoint.clone());
+                let app = app.concrete_self::<VL1Service<Self>>().unwrap().get_self_arc(); // can't be a dead pointer since we're in a handler being called by it
+                let (controller, source, source_remote_endpoint) = (self.self_ref.upgrade().unwrap(), source.clone(), source_path.endpoint.clone());
                 self.reaper.add(
                     self.runtime.spawn(async move {
                         let node_id = source.identity.address.clone();
                         let now = ms_since_epoch();
 
-                        let (result, config) = match self2.authorize(&source.identity, &network_id, now).await {
+                        let result = match controller.authorize(&source.identity, &network_id, now).await {
                             Result::Ok((result, Some(config))) => {
                                 //println!("{}", serde_yaml::to_string(&config).unwrap());
-                                self2.send_network_config(app.as_ref(), &app.node, cast_ref(source.as_ref()).unwrap(), &config, Some(message_id));
-                                (result, Some(config))
+                                controller.send_network_config(
+                                    app.as_ref(),
+                                    &app.node,
+                                    cast_ref(source.as_ref()).unwrap(),
+                                    &config,
+                                    Some(message_id),
+                                );
+                                result
                             }
-                            Result::Ok((result, None)) => (result, None),
+                            Result::Ok((result, None)) => result,
                             Result::Err(e) => {
                                 #[cfg(debug_assertions)]
                                 debug_event!(app, "[vl2] ERROR getting network config: {}", e.to_string());
@@ -477,12 +496,12 @@ impl InnerProtocolLayer for Controller {
                             }
                         };
 
-                        let _ = self2
+                        let _ = controller
                             .database
                             .log_request(RequestLogItem {
                                 network_id,
                                 node_id,
-                                controller_node_id: self2.local_identity.public.address.clone(),
+                                controller_node_id: controller.local_identity.public.address.clone(),
                                 metadata,
                                 peer_version: source.version(),
                                 peer_protocol_version: source.protocol_version(),

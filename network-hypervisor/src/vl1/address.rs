@@ -1,8 +1,10 @@
 // (c) 2020-2022 ZeroTier, Inc. -- currently proprietary pending actual release and licensing. See LICENSE.md.
 
 use std::borrow::Borrow;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::ops::Bound;
 use std::str::FromStr;
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -24,8 +26,11 @@ pub struct Address(pub(super) [u8; Self::SIZE_BYTES]);
 /// A partial address, which is bytes and the number of bytes of specificity (similar to a CIDR IP address).
 ///
 /// Partial addresses are looked up to get full addresses (and identities) via roots using WHOIS messages.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct PartialAddress(pub(super) Address, pub(super) u16);
+#[derive(Clone, PartialEq, Eq)]
+pub struct PartialAddress {
+    pub(super) address: Address,
+    pub(super) specificity: u16,
+}
 
 impl Address {
     pub const SIZE_BYTES: usize = 48;
@@ -60,21 +65,25 @@ impl Address {
     }
 
     /// Get a partial address object (with full specificity) for this address
-    #[inline(always)]
+    #[inline]
     pub fn to_partial(&self) -> PartialAddress {
-        PartialAddress(Address(self.0), Self::SIZE_BYTES as u16)
+        PartialAddress {
+            address: Address(self.0),
+            specificity: Self::SIZE_BYTES as u16,
+        }
     }
 
     /// Get a partial address covering the 40-bit legacy address.
+    #[inline]
     pub fn to_legacy_partial(&self) -> PartialAddress {
-        PartialAddress(
-            Address({
+        PartialAddress {
+            address: Address({
                 let mut tmp = [0u8; PartialAddress::MAX_SIZE_BYTES];
                 tmp[..PartialAddress::LEGACY_SIZE_BYTES].copy_from_slice(&self.0[..PartialAddress::LEGACY_SIZE_BYTES]);
                 tmp
             }),
-            PartialAddress::LEGACY_SIZE_BYTES as u16,
-        )
+            specificity: PartialAddress::LEGACY_SIZE_BYTES as u16,
+        }
     }
 
     #[inline(always)]
@@ -195,8 +204,11 @@ impl PartialAddress {
             && b[0] != Address::RESERVED_PREFIX
             && b[..Self::LEGACY_SIZE_BYTES].iter().any(|i| *i != 0)
         {
-            let mut a = Self(Address([0u8; Address::SIZE_BYTES]), b.len() as u16);
-            a.0 .0[..b.len()].copy_from_slice(b);
+            let mut a = Self {
+                address: Address([0u8; Address::SIZE_BYTES]),
+                specificity: b.len() as u16,
+            };
+            a.address.0[..b.len()].copy_from_slice(b);
             Ok(a)
         } else {
             Err(InvalidParameterError("invalid address"))
@@ -206,14 +218,14 @@ impl PartialAddress {
     #[inline]
     pub(crate) fn from_legacy_address_bytes(b: &[u8; 5]) -> Result<Self, InvalidParameterError> {
         if b[0] != Address::RESERVED_PREFIX && b.iter().any(|i| *i != 0) {
-            Ok(Self(
-                Address({
+            Ok(Self {
+                address: Address({
                     let mut tmp = [0u8; Self::MAX_SIZE_BYTES];
                     tmp[..5].copy_from_slice(b);
                     tmp
                 }),
-                Self::LEGACY_SIZE_BYTES as u16,
-            ))
+                specificity: Self::LEGACY_SIZE_BYTES as u16,
+            })
         } else {
             Err(InvalidParameterError("invalid address"))
         }
@@ -223,14 +235,14 @@ impl PartialAddress {
     pub(crate) fn from_legacy_address_u64(mut b: u64) -> Result<Self, InvalidParameterError> {
         b &= 0xffffffffff;
         if b.wrapping_shr(32) != (Address::RESERVED_PREFIX as u64) && b != 0 {
-            Ok(Self(
-                Address({
+            Ok(Self {
+                address: Address({
                     let mut tmp = [0u8; Self::MAX_SIZE_BYTES];
                     tmp[..5].copy_from_slice(&b.to_be_bytes()[..5]);
                     tmp
                 }),
-                Self::LEGACY_SIZE_BYTES as u16,
-            ))
+                specificity: Self::LEGACY_SIZE_BYTES as u16,
+            })
         } else {
             Err(InvalidParameterError("invalid address"))
         }
@@ -238,45 +250,60 @@ impl PartialAddress {
 
     #[inline(always)]
     pub fn as_bytes(&self) -> &[u8] {
-        debug_assert!(self.1 >= Self::MIN_SIZE_BYTES as u16);
-        &self.0 .0[..self.1 as usize]
+        debug_assert!(self.specificity >= Self::MIN_SIZE_BYTES as u16);
+        &self.address.0[..self.specificity as usize]
     }
 
     #[inline(always)]
     pub(crate) fn legacy_bytes(&self) -> &[u8; 5] {
-        debug_assert!(self.1 >= Self::MIN_SIZE_BYTES as u16);
-        memory::array_range::<u8, { Address::SIZE_BYTES }, 0, { PartialAddress::LEGACY_SIZE_BYTES }>(&self.0 .0)
+        debug_assert!(self.specificity >= Self::MIN_SIZE_BYTES as u16);
+        memory::array_range::<u8, { Address::SIZE_BYTES }, 0, { PartialAddress::LEGACY_SIZE_BYTES }>(&self.address.0)
     }
 
     #[inline(always)]
     pub(crate) fn legacy_u64(&self) -> u64 {
-        u64::from_be(memory::load_raw(&self.0 .0)).wrapping_shr(24)
+        u64::from_be(memory::load_raw(&self.address.0)).wrapping_shr(24)
     }
 
+    /// Returns true if this partial address matches a full length address up to this partial's specificity.
     #[inline(always)]
-    pub(super) fn matches(&self, k: &Address) -> bool {
-        debug_assert!(self.1 >= Self::MIN_SIZE_BYTES as u16);
-        let l = self.1 as usize;
-        self.0 .0[..l].eq(&k.0[..l])
+    pub fn matches(&self, k: &Address) -> bool {
+        debug_assert!(self.specificity >= Self::MIN_SIZE_BYTES as u16);
+        let l = self.specificity as usize;
+        self.address.0[..l].eq(&k.0[..l])
+    }
+
+    /// Returns true if this partial address matches another up to the lower of the two addresses' specificities.
+    #[inline(always)]
+    pub fn matches_partial(&self, k: &PartialAddress) -> bool {
+        debug_assert!(self.specificity >= Self::MIN_SIZE_BYTES as u16);
+        let l = self.specificity.min(k.specificity) as usize;
+        self.address.0[..l].eq(&k.address.0[..l])
     }
 
     /// Get the number of bits of specificity in this address
     #[inline(always)]
-    pub fn specificity(&self) -> usize {
-        (self.1 * 8) as usize
+    pub fn specificity_bits(&self) -> usize {
+        (self.specificity * 8) as usize
+    }
+
+    /// Get the number of bytes of specificity in this address (only 8 bit increments in specificity are allowed)
+    #[inline(always)]
+    pub fn specificity_bytes(&self) -> usize {
+        self.specificity as usize
     }
 
     /// Returns true if this address has legacy 40 bit specificity (V1 ZeroTier address)
     #[inline(always)]
     pub fn is_legacy(&self) -> bool {
-        self.1 == Self::LEGACY_SIZE_BYTES as u16
+        self.specificity == Self::LEGACY_SIZE_BYTES as u16
     }
 
-    /// Get a full length address if this partial address is actually complete (384 bits of specificity)
-    #[inline(always)]
-    pub fn as_address(&self) -> Option<&Address> {
-        if self.1 == Self::MAX_SIZE_BYTES as u16 {
-            Some(&self.0)
+    /// Get a complete address from this partial if it is in fact complete.
+    #[inline]
+    pub fn as_complete(&self) -> Option<&Address> {
+        if self.specificity == Self::MAX_SIZE_BYTES as u16 {
+            Some(&self.address)
         } else {
             None
         }
@@ -285,14 +312,84 @@ impl PartialAddress {
     /// Returns true if specificity is at the maximum value (384 bits)
     #[inline(always)]
     pub fn is_complete(&self) -> bool {
-        self.1 == Self::MAX_SIZE_BYTES as u16
+        self.specificity == Self::MAX_SIZE_BYTES as u16
+    }
+
+    /// Efficiently find an entry in a BTreeMap of partial addresses that uniquely matches this partial.
+    ///
+    /// This returns None if there is no match or if this partial matches more than one entry, in which
+    /// case it's ambiguous and may be unsafe to use. This should be prohibited at other levels of the
+    /// system but is checked for here as well.
+    #[inline]
+    pub fn find_unique_match<'a, T>(&self, map: &'a BTreeMap<PartialAddress, T>) -> Option<&'a T> {
+        // Search for an exact or more specific match.
+        let mut m = None;
+
+        // First search for exact or more specific matches, which would appear later in the sorted key list.
+        let mut pos = map.range((Bound::Included(self), Bound::Unbounded));
+        while let Some(e) = pos.next() {
+            if self.matches_partial(e.0) {
+                if m.is_some() {
+                    // Ambiguous!
+                    return None;
+                }
+                let _ = m.insert(e.1);
+            } else {
+                break;
+            }
+        }
+
+        // Then search for less specific matches or verify that the match we found above is not ambiguous.
+        let mut pos = map.range((Bound::Unbounded, Bound::Excluded(self)));
+        while let Some(e) = pos.next_back() {
+            if self.matches_partial(e.0) {
+                if m.is_some() {
+                    return None;
+                }
+                let _ = m.insert(e.1);
+            } else {
+                break;
+            }
+        }
+
+        return m;
+    }
+
+    /// Efficiently find an entry in a BTreeMap of partial addresses that uniquely matches this partial.
+    ///
+    /// This returns None if there is no match or if this partial matches more than one entry, in which
+    /// case it's ambiguous and may be unsafe to use. This should be prohibited at other levels of the
+    /// system but is checked for here as well.
+    #[inline]
+    pub fn find_unique_match_mut<'a, T>(&self, map: &'a mut BTreeMap<PartialAddress, T>) -> Option<&'a mut T> {
+        // This not only saves some repetition but is in fact the only way to easily do this. The same code as
+        // find_unique_match() but with range_mut() doesn't compile because the second range_mut() would
+        // borrow 'map' a second time (since 'm' may have it borrowed). This is primarily due to the too-limited
+        // API of BTreeMap which is missing a good way to find the nearest match. This should be safe since
+        // we do not mutate the map and the signature of find_unique_match_mut() should properly guarantee
+        // that the semantics of mutable references are obeyed in the calling context.
+        unsafe { std::mem::transmute(self.find_unique_match::<T>(map)) }
+    }
+}
+
+impl Ord for PartialAddress {
+    #[inline(always)]
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.address.cmp(&other.address).then(self.specificity.cmp(&other.specificity))
+    }
+}
+
+impl PartialOrd for PartialAddress {
+    #[inline(always)]
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
     }
 }
 
 impl ToString for PartialAddress {
     fn to_string(&self) -> String {
         if self.is_legacy() {
-            hex::to_string(&self.0 .0[..Self::LEGACY_SIZE_BYTES])
+            hex::to_string(&self.address.0[..Self::LEGACY_SIZE_BYTES])
         } else {
             base24::encode(self.as_bytes())
         }
@@ -315,7 +412,7 @@ impl Hash for PartialAddress {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         // Since this contains a random hash, the first 64 bits should be enough for a local HashMap etc.
-        state.write_u64(memory::load_raw(&self.0 .0))
+        state.write_u64(memory::load_raw(&self.address.0))
     }
 }
 

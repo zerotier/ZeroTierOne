@@ -97,6 +97,17 @@ pub trait ApplicationLayer: Sync + Send + 'static {
     /// Called to get the current time in milliseconds since epoch from the real-time clock.
     /// This needs to be accurate to about one second resolution or better.
     fn time_clock(&self) -> i64;
+
+    /// Get this application implementation cast to its concrete type.
+    ///
+    /// The default implementation just returns None, but this can be implemented using the cast_ref()
+    /// function in zerotier_utils::cast to return the concrete implementation of this type. It's exposed
+    /// in this interface for convenience since it's common for inner protocol or other handlers to want
+    /// to get 'app' as its concrete type to access internal fields and methods. Implement it if possible
+    /// and convenient.
+    fn concrete_self<T: ApplicationLayer>(&self) -> Option<&T> {
+        None
+    }
 }
 
 /// Result of a packet handler in the InnerProtocolLayer trait.
