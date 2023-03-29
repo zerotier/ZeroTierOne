@@ -17,7 +17,7 @@ use zerotier_crypto::secret::Secret;
 use zerotier_crypto::typestate::Valid;
 use zerotier_crypto::x25519::*;
 use zerotier_utils::arrayvec::ArrayVec;
-use zerotier_utils::base64;
+use zerotier_utils::base62;
 use zerotier_utils::buffer::{Buffer, OutOfBoundsError};
 use zerotier_utils::error::InvalidFormatError;
 use zerotier_utils::marshalable::{Marshalable, UnmarshalError};
@@ -284,17 +284,17 @@ impl ToString for Identity {
             let mut s = String::with_capacity(1024);
             s.push_str(self.address.to_string().as_str());
             s.push_str(":1:");
-            base64::encode_into(&self.x25519.ecdh, &mut s);
+            base62::encode_into(&self.x25519.ecdh, &mut s, 0);
             s.push(':');
-            base64::encode_into(&self.x25519.eddsa, &mut s);
+            base62::encode_into(&self.x25519.eddsa, &mut s, 0);
             s.push(':');
-            base64::encode_into(p384.ecdh.as_bytes(), &mut s);
+            base62::encode_into(p384.ecdh.as_bytes(), &mut s, 0);
             s.push(':');
-            base64::encode_into(p384.ecdsa.as_bytes(), &mut s);
+            base62::encode_into(p384.ecdsa.as_bytes(), &mut s, 0);
             s.push(':');
-            base64::encode_into(&p384.ed25519_self_signature, &mut s);
+            base62::encode_into(&p384.ed25519_self_signature, &mut s, 0);
             s.push(':');
-            base64::encode_into(&p384.p384_self_signature, &mut s);
+            base62::encode_into(&p384.p384_self_signature, &mut s, 0);
             s
         } else {
             format!(
@@ -317,28 +317,16 @@ impl FromStr for Identity {
                 return Ok(Self {
                     address: Address::from_str(ss[0]).map_err(|_| InvalidFormatError)?,
                     x25519: X25519 {
-                        ecdh: base64::decode(ss[2].as_bytes())
-                            .map_err(|_| InvalidFormatError)?
-                            .try_into()
-                            .map_err(|_| InvalidFormatError)?,
-                        eddsa: base64::decode(ss[3].as_bytes())
-                            .map_err(|_| InvalidFormatError)?
-                            .try_into()
-                            .map_err(|_| InvalidFormatError)?,
+                        ecdh: base62::decode(ss[2].as_bytes()).ok_or(InvalidFormatError)?,
+                        eddsa: base62::decode(ss[3].as_bytes()).ok_or(InvalidFormatError)?,
                     },
                     p384: Some(P384 {
-                        ecdh: P384PublicKey::from_bytes(base64::decode(ss[4].as_bytes()).map_err(|_| InvalidFormatError)?.as_slice())
+                        ecdh: P384PublicKey::from_bytes(&base62::decode::<P384_PUBLIC_KEY_SIZE>(ss[4].as_bytes()).ok_or(InvalidFormatError)?)
                             .ok_or(InvalidFormatError)?,
-                        ecdsa: P384PublicKey::from_bytes(base64::decode(ss[5].as_bytes()).map_err(|_| InvalidFormatError)?.as_slice())
+                        ecdsa: P384PublicKey::from_bytes(&base62::decode::<P384_PUBLIC_KEY_SIZE>(ss[5].as_bytes()).ok_or(InvalidFormatError)?)
                             .ok_or(InvalidFormatError)?,
-                        ed25519_self_signature: base64::decode(ss[6].as_bytes())
-                            .map_err(|_| InvalidFormatError)?
-                            .try_into()
-                            .map_err(|_| InvalidFormatError)?,
-                        p384_self_signature: base64::decode(ss[7].as_bytes())
-                            .map_err(|_| InvalidFormatError)?
-                            .try_into()
-                            .map_err(|_| InvalidFormatError)?,
+                        ed25519_self_signature: base62::decode(ss[6].as_bytes()).ok_or(InvalidFormatError)?,
+                        p384_self_signature: base62::decode(ss[7].as_bytes()).ok_or(InvalidFormatError)?,
                     }),
                 });
             } else if ss[1] == "0" && ss.len() >= 3 {
@@ -495,13 +483,13 @@ impl ToString for IdentitySecret {
         let mut s = self.public.to_string();
         if let Some(p384) = self.p384.as_ref() {
             s.push(':');
-            base64::encode_into(self.x25519.ecdh.secret_bytes().as_bytes(), &mut s);
+            base62::encode_into(self.x25519.ecdh.secret_bytes().as_bytes(), &mut s, 0);
             s.push(':');
-            base64::encode_into(self.x25519.eddsa.secret_bytes().as_bytes(), &mut s);
+            base62::encode_into(self.x25519.eddsa.secret_bytes().as_bytes(), &mut s, 0);
             s.push(':');
-            base64::encode_into(p384.ecdh.secret_key_bytes().as_bytes(), &mut s);
+            base62::encode_into(p384.ecdh.secret_key_bytes().as_bytes(), &mut s, 0);
             s.push(':');
-            base64::encode_into(p384.ecdsa.secret_key_bytes().as_bytes(), &mut s);
+            base62::encode_into(p384.ecdsa.secret_key_bytes().as_bytes(), &mut s, 0);
         } else {
             s.push(':');
             s.push_str(hex::to_string(self.x25519.ecdh.secret_bytes().as_bytes()).as_str());
@@ -521,22 +509,22 @@ impl FromStr for IdentitySecret {
             if ss[1] == "1" && ss.len() >= 12 && public.p384.is_some() {
                 let x25519_ecdh = X25519KeyPair::from_bytes(
                     &public.x25519.ecdh,
-                    base64::decode(ss[8].as_bytes()).map_err(|_| InvalidFormatError)?.as_slice(),
+                    &base62::decode::<C25519_SECRET_KEY_SIZE>(ss[8].as_bytes()).ok_or(InvalidFormatError)?,
                 )
                 .ok_or(InvalidFormatError)?;
                 let x25519_eddsa = Ed25519KeyPair::from_bytes(
                     &public.x25519.ecdh,
-                    base64::decode(ss[9].as_bytes()).map_err(|_| InvalidFormatError)?.as_slice(),
+                    &base62::decode::<C25519_SECRET_KEY_SIZE>(ss[9].as_bytes()).ok_or(InvalidFormatError)?,
                 )
                 .ok_or(InvalidFormatError)?;
                 let p384_ecdh = P384KeyPair::from_bytes(
                     public.p384.as_ref().unwrap().ecdh.as_bytes(),
-                    base64::decode(ss[10].as_bytes()).map_err(|_| InvalidFormatError)?.as_slice(),
+                    &base62::decode::<P384_SECRET_KEY_SIZE>(ss[10].as_bytes()).ok_or(InvalidFormatError)?,
                 )
                 .ok_or(InvalidFormatError)?;
                 let p384_ecdsa = P384KeyPair::from_bytes(
                     public.p384.as_ref().unwrap().ecdh.as_bytes(),
-                    base64::decode(ss[11].as_bytes()).map_err(|_| InvalidFormatError)?.as_slice(),
+                    &base62::decode::<P384_SECRET_KEY_SIZE>(ss[11].as_bytes()).ok_or(InvalidFormatError)?,
                 )
                 .ok_or(InvalidFormatError)?;
                 return Ok(Self {

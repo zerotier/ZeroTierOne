@@ -8,7 +8,7 @@
 
 pub mod arrayvec;
 pub mod base24;
-pub mod base64;
+pub mod base62;
 pub mod blob;
 pub mod buffer;
 pub mod cast;
@@ -25,7 +25,6 @@ pub mod json;
 pub mod marshalable;
 pub mod memory;
 pub mod pool;
-pub mod proquint;
 #[cfg(feature = "tokio")]
 pub mod reaper;
 pub mod ringbuffer;
@@ -88,6 +87,11 @@ pub fn wait_for_process_abort() {
 #[cold]
 #[inline(never)]
 pub extern "C" fn unlikely_branch() {}
+
+#[cfg(unix)]
+pub fn rand() -> u32 {
+    unsafe { (libc::rand() as u32) ^ (libc::rand() as u32).wrapping_shr(8) }
+}
 
 #[cfg(test)]
 mod tests {

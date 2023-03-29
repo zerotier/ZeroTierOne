@@ -360,7 +360,7 @@ impl PartialAddress {
     /// This returns None if there is no match or if this partial matches more than one entry, in which
     /// case it's ambiguous and may be unsafe to use. This should be prohibited at other levels of the
     /// system but is checked for here as well.
-    #[inline]
+    #[inline(always)]
     pub fn find_unique_match_mut<'a, T>(&self, map: &'a mut BTreeMap<PartialAddress, T>) -> Option<&'a mut T> {
         // This not only saves some repetition but is in fact the only way to easily do this. The same code as
         // find_unique_match() but with range_mut() doesn't compile because the second range_mut() would
@@ -474,6 +474,21 @@ impl<'de> Deserialize<'de> for PartialAddress {
             deserializer.deserialize_str(PartialAddressDeserializeVisitor)
         } else {
             deserializer.deserialize_bytes(PartialAddressDeserializeVisitor)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zerotier_crypto::random;
+
+    #[test]
+    fn to_from_string() {
+        for _ in 0..64 {
+            let mut tmp = Address::new_uninitialized();
+            random::fill_bytes_secure(&mut tmp.0);
+            println!("{}", tmp.to_string());
         }
     }
 }
