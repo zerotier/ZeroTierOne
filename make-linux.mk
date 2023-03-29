@@ -476,12 +476,12 @@ echo_flags:
 	@echo "echo_flags :: RUSTFLAGS=$(RUSTFLAGS)"
 	@echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~"
 
-# debian: echo_flags
-# 	@echo "building deb package"
-# 	debuild --no-lintian -b -uc -us
+debian: echo_flags
+	@echo "building deb package"
+	debuild --no-lintian -b -uc -us
 
-debian:	FORCE
-	debuild --no-lintian -I -i -us -uc -nc -b
+# debian:	FORCE
+# 	debuild --no-lintian -I -i -us -uc -nc -b
 
 debian-clean: FORCE
 	rm -rf debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one debian/.debhelper debian/debhelper-build-stamp
