@@ -4,6 +4,7 @@ WORKDIR /work/build
 COPY . .
 RUN pwd
 RUN ls -la .
+RUN make clean
 RUN make debian
 RUN ls -ls /work
 
