@@ -66,7 +66,7 @@ pub enum ReceiveResult<'a, 'b, Application: ApplicationLayer> {
 ///
 /// A FIPS/NIST compliant variant of Noise_XK with hybrid Kyber1024 PQ data forward secrecy.
 pub struct Session<'a, Application: ApplicationLayer> {
-    /// The receive vontext associated with this session,
+    /// The receive context associated with this session,
     /// only this context can receive messages from the remote peer.
     /// **Read-only**.
     pub context: &'a Context<'a, Application>,
