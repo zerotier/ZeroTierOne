@@ -6,27 +6,16 @@ mod network;
 pub use member::*;
 pub use network::*;
 
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::{Address, Endpoint};
-use zerotier_network_hypervisor::vl2::v1::networkconfig::NetworkConfig;
 use zerotier_network_hypervisor::vl2::NetworkId;
-use zerotier_utils::blob::Blob;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecordType {
     Network,
     Member,
     RequestLogItem,
-}
-
-/// A complete network with all member configuration information for import/export or blob storage.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct NetworkExport {
-    pub network: Network,
-    pub members: HashMap<Address, Member>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -92,8 +81,6 @@ pub struct RequestLogItem {
     pub network_id: NetworkId,
     #[serde(rename = "n")]
     pub node_id: Address,
-    #[serde(rename = "nf")]
-    pub node_fingerprint: Blob<48>,
     #[serde(rename = "c")]
     pub controller_node_id: Address,
 
@@ -121,9 +108,6 @@ pub struct RequestLogItem {
 
     #[serde(rename = "r")]
     pub result: AuthenticationResult,
-
-    #[serde(rename = "nc")]
-    pub config: Option<NetworkConfig>,
 }
 
 impl ToString for RequestLogItem {

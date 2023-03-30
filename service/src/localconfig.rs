@@ -6,7 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use zerotier_network_hypervisor::vl1::{Address, Endpoint};
 use zerotier_network_hypervisor::vl2::NetworkId;
-use zerotier_vl1_service::VL1Settings;
+
+use crate::vl1::VL1Settings;
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq)]
 #[serde(default)]

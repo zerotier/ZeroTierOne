@@ -4,7 +4,7 @@ use fastcdc::v2020;
 
 use zerotier_crypto::hash::{SHA384, SHA384_HASH_SIZE};
 use zerotier_utils::error::{InvalidFormatError, InvalidParameterError};
-use zerotier_utils::memory::byte_array_chunks_exact;
+use zerotier_utils::memory::array_chunks_exact;
 
 const MAX_RECURSION_DEPTH: u8 = 64; // sanity limit, object would have to be quite huge to hit this
 
@@ -30,7 +30,7 @@ impl ScatteredObject {
         if (hl.len() % SHA384_HASH_SIZE) != 0 || hl.is_empty() {
             return Err(InvalidFormatError);
         }
-        for h in byte_array_chunks_exact::<SHA384_HASH_SIZE>(hl) {
+        for h in array_chunks_exact::<u8, SHA384_HASH_SIZE>(hl) {
             if (h[SHA384_HASH_SIZE - 1] & 0x01) != 0 {
                 if let Some(chunk) = get_chunk(h) {
                     if depth < MAX_RECURSION_DEPTH {
@@ -72,7 +72,7 @@ impl ScatteredObject {
 
             let mut chunk_no = 0;
             let mut missing_chunks = false;
-            for h in byte_array_chunks_exact::<SHA384_HASH_SIZE>(self.need.as_slice()) {
+            for h in array_chunks_exact::<u8, SHA384_HASH_SIZE>(self.need.as_slice()) {
                 let dc = self.data_chunks.get_mut(chunk_no).unwrap();
                 if dc.is_empty() {
                     debug_assert_eq!(h.len(), SHA384_HASH_SIZE);
@@ -110,7 +110,7 @@ impl ScatteredObject {
     /// This list can get longer through the course of object retrival since incoming chunks can
     /// be chunks of hashes instead of chunks of data.
     pub fn need(&self) -> impl Iterator<Item = &[u8; SHA384_HASH_SIZE]> {
-        byte_array_chunks_exact::<SHA384_HASH_SIZE>(self.need.as_slice())
+        array_chunks_exact::<u8, SHA384_HASH_SIZE>(self.need.as_slice())
     }
 }
 

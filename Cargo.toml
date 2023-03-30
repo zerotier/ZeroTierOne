@@ -5,7 +5,6 @@ members = [
     "network-hypervisor",
     "controller",
     "service",
-    "vl1-service",
     "utils",
 ]
 

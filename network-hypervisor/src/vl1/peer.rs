@@ -14,17 +14,20 @@ use zerotier_utils::marshalable::Marshalable;
 use zerotier_utils::memory::array_range;
 use zerotier_utils::NEVER_HAPPENED_TICKS;
 
+use super::api::*;
+use super::debug_event;
+use super::identity::{Identity, IdentitySecret};
+use super::node::*;
+use super::Valid;
+use super::{Address, Endpoint, Path};
 use crate::protocol::*;
-use crate::vl1::address::Address;
-use crate::vl1::debug_event;
-use crate::vl1::node::*;
-use crate::vl1::Valid;
-use crate::vl1::{Endpoint, Identity, Path};
 use crate::{VERSION_MAJOR, VERSION_MINOR, VERSION_REVISION};
+
+use super::PartialAddress;
 
 pub(crate) const SERVICE_INTERVAL_MS: i64 = 10000;
 
-pub struct Peer<Application: ApplicationLayer + ?Sized> {
+pub struct Peer<Application: ApplicationLayer> {
     pub identity: Valid<Identity>,
 
     v1_proto_static_secret: v1::SymmetricSecret,
@@ -41,8 +44,8 @@ pub struct Peer<Application: ApplicationLayer + ?Sized> {
     remote_node_info: RwLock<RemoteNodeInfo>,
 }
 
-struct PeerPath<Application: ApplicationLayer + ?Sized> {
-    path: Weak<Path<Application::LocalSocket, Application::LocalInterface>>,
+struct PeerPath<Application: ApplicationLayer> {
+    path: Weak<Path<Application>>,
     last_receive_time_ticks: i64,
 }
 
@@ -53,17 +56,17 @@ struct RemoteNodeInfo {
 }
 
 /// Sort a list of paths by quality or priority, with best paths first.
-fn prioritize_paths<Application: ApplicationLayer + ?Sized>(paths: &mut Vec<PeerPath<Application>>) {
+fn prioritize_paths<Application: ApplicationLayer>(paths: &mut Vec<PeerPath<Application>>) {
     paths.sort_unstable_by(|a, b| a.last_receive_time_ticks.cmp(&b.last_receive_time_ticks).reverse());
 }
 
-impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
+impl<Application: ApplicationLayer> Peer<Application> {
     /// Create a new peer.
     ///
     /// This only returns None if this_node_identity does not have its secrets or if some
     /// fatal error occurs performing key agreement between the two identities.
-    pub(crate) fn new(this_node_identity: &Valid<Identity>, id: Valid<Identity>, time_ticks: i64) -> Option<Self> {
-        this_node_identity.agree(&id).map(|static_secret| -> Self {
+    pub(crate) fn new(this_node_identity: &IdentitySecret, id: Valid<Identity>, time_ticks: i64) -> Option<Self> {
+        this_node_identity.x25519.agree(&id).map(|static_secret| -> Self {
             Self {
                 identity: id,
                 v1_proto_static_secret: v1::SymmetricSecret::new(static_secret),
@@ -113,7 +116,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
 
     /// Get current best path or None if there are no direct paths to this peer.
     #[inline]
-    pub fn direct_path(&self) -> Option<Arc<Path<Application::LocalSocket, Application::LocalInterface>>> {
+    pub fn direct_path(&self) -> Option<Arc<Path<Application>>> {
         for p in self.paths.lock().unwrap().iter() {
             let pp = p.path.upgrade();
             if pp.is_some() {
@@ -125,7 +128,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
 
     /// Get either the current best direct path or an indirect path via e.g. a root.
     #[inline]
-    pub fn path(&self, node: &Node<Application>) -> Option<Arc<Path<Application::LocalSocket, Application::LocalInterface>>> {
+    pub fn path(&self, node: &Node<Application>) -> Option<Arc<Path<Application>>> {
         let direct_path = self.direct_path();
         if direct_path.is_some() {
             return direct_path;
@@ -136,7 +139,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
         return None;
     }
 
-    fn learn_path(&self, app: &Application, new_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>, time_ticks: i64) {
+    fn learn_path(&self, app: &Application, new_path: &Arc<Path<Application>>, time_ticks: i64) {
         let mut paths = self.paths.lock().unwrap();
 
         // TODO: check path filter
@@ -285,7 +288,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
         &self,
         app: &Application,
         node: &Node<Application>,
-        path: Option<&Arc<Path<Application::LocalSocket, Application::LocalInterface>>>,
+        path: Option<&Arc<Path<Application>>>,
         time_ticks: i64,
         builder_function: BuilderFunction,
     ) -> Option<Result<R, E>> {
@@ -324,7 +327,11 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
 
                     let mut aes_gmac_siv = self.v1_proto_static_secret.aes_gmac_siv.get();
                     aes_gmac_siv.encrypt_init(&self.v1_proto_next_message_id().to_be_bytes());
-                    aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(self.identity.address, node.identity.address, flags_cipher_hops));
+                    aes_gmac_siv.encrypt_set_aad(&v1::get_packet_aad_bytes(
+                        &self.identity.address,
+                        &node.identity.public.address,
+                        flags_cipher_hops,
+                    ));
                     let payload = packet.as_bytes_starting_at_mut(v1::HEADER_SIZE).unwrap();
                     aes_gmac_siv.encrypt_first_pass(payload);
                     aes_gmac_siv.encrypt_first_pass_finish();
@@ -333,8 +340,8 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
 
                     let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
                     header.id.copy_from_slice(&tag[0..8]);
-                    header.dest = self.identity.address.to_bytes();
-                    header.src = node.identity.address.to_bytes();
+                    header.dest = *self.identity.address.legacy_bytes();
+                    header.src = *node.identity.public.address.legacy_bytes();
                     header.flags_cipher_hops = flags_cipher_hops;
                     header.mac.copy_from_slice(&tag[8..16]);
                 } else {
@@ -350,8 +357,8 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
                         {
                             let header = packet.struct_mut_at::<v1::PacketHeader>(0).unwrap();
                             header.id = self.v1_proto_next_message_id().to_be_bytes();
-                            header.dest = self.identity.address.to_bytes();
-                            header.src = node.identity.address.to_bytes();
+                            header.dest = *self.identity.address.legacy_bytes();
+                            header.src = *node.identity.public.address.legacy_bytes();
                             header.flags_cipher_hops = flags_cipher_hops;
                             header
                         },
@@ -408,8 +415,8 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
             {
                 let f: &mut (v1::PacketHeader, v1::message_component_structs::HelloFixedHeaderFields) = packet.append_struct_get_mut().unwrap();
                 f.0.id = message_id.to_ne_bytes();
-                f.0.dest = self.identity.address.to_bytes();
-                f.0.src = node.identity.address.to_bytes();
+                f.0.dest = *self.identity.address.legacy_bytes();
+                f.0.src = *node.identity.public.address.legacy_bytes();
                 f.0.flags_cipher_hops = v1::CIPHER_NOCRYPT_POLY1305;
                 f.1.verb = message_type::VL1_HELLO;
                 f.1.version_proto = PROTOCOL_VERSION;
@@ -420,7 +427,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
             }
 
             debug_assert_eq!(packet.len(), 41);
-            assert!(node.identity.write_public(packet.as_mut(), !self.is_v2()).is_ok());
+            assert!(node.identity.public.write_bytes(packet.as_mut(), !self.is_v2()).is_ok());
 
             let (_, poly1305_key) = v1_proto_salsa_poly_create(
                 &self.v1_proto_static_secret,
@@ -464,13 +471,13 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
     /// those fragments after the main packet header and first chunk.
     ///
     /// This returns true if the packet decrypted and passed authentication.
-    pub(crate) fn v1_proto_receive<Inner: InnerProtocolLayer + ?Sized>(
+    pub(crate) fn v1_proto_receive<Inner: InnerProtocolLayer>(
         self: &Arc<Self>,
         node: &Node<Application>,
         app: &Application,
         inner: &Inner,
         time_ticks: i64,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         packet_header: &v1::PacketHeader,
         frag0: &PacketBuffer,
         fragments: &[Option<PooledPacketBuffer>],
@@ -564,7 +571,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
         node: &Node<Application>,
         time_ticks: i64,
         message_id: MessageId,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if !(app.should_respond_to(&self.identity) || node.this_node_is_root() || node.is_peer_root(self)) {
@@ -611,13 +618,13 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_error<Inner: InnerProtocolLayer + ?Sized>(
+    fn handle_incoming_error<Inner: InnerProtocolLayer>(
         self: &Arc<Self>,
         app: &Application,
         inner: &Inner,
         node: &Node<Application>,
         _time_ticks: i64,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         source_hops: u8,
         message_id: u64,
         payload: &PacketBuffer,
@@ -649,13 +656,13 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
         return PacketHandlerResult::Error;
     }
 
-    fn handle_incoming_ok<Inner: InnerProtocolLayer + ?Sized>(
+    fn handle_incoming_ok<Inner: InnerProtocolLayer>(
         self: &Arc<Self>,
         app: &Application,
         inner: &Inner,
         node: &Node<Application>,
         time_ticks: i64,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         source_hops: u8,
         message_id: u64,
         path_is_known: bool,
@@ -716,7 +723,8 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
                                     self.identity.address.to_string(),
                                     received_identity.to_string()
                                 );
-                                node.handle_incoming_identity(app, inner, received_identity, time_ticks, true);
+                                // TODO
+                                //node.handle_incoming_identity(app, inner, received_identity, time_ticks, true);
                             } else {
                                 debug_event!(
                                     app,
@@ -761,16 +769,16 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
     ) -> PacketHandlerResult {
         if node.this_node_is_root() || app.should_respond_to(&self.identity) {
             let mut addresses = payload.as_bytes();
-            while addresses.len() >= ADDRESS_SIZE {
+            while addresses.len() >= PartialAddress::LEGACY_SIZE_BYTES {
                 if !self
                     .send(app, node, None, time_ticks, |packet| {
-                        while addresses.len() >= ADDRESS_SIZE && (packet.len() + Identity::MAX_MARSHAL_SIZE) <= UDP_DEFAULT_MTU {
-                            if let Some(zt_address) = Address::from_bytes(&addresses[..ADDRESS_SIZE]) {
-                                if let Some(peer) = node.peer(zt_address) {
-                                    peer.identity.write_public(packet, !self.is_v2())?;
+                        while addresses.len() >= PartialAddress::LEGACY_SIZE_BYTES && (packet.len() + Identity::MAX_MARSHAL_SIZE) <= UDP_DEFAULT_MTU {
+                            if let Ok(zt_address) = Address::from_bytes(&addresses[..PartialAddress::LEGACY_SIZE_BYTES]) {
+                                if let Some(peer) = node.peer(&zt_address) {
+                                    peer.identity.write_bytes(packet, !self.is_v2())?;
                                 }
                             }
-                            addresses = &addresses[ADDRESS_SIZE..];
+                            addresses = &addresses[PartialAddress::LEGACY_SIZE_BYTES..];
                         }
                         Ok(())
                     })
@@ -789,7 +797,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
         node: &Node<Application>,
         _time_ticks: i64,
         _message_id: MessageId,
-        _source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        _source_path: &Arc<Path<Application>>,
         _payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         if node.is_peer_root(self) {}
@@ -827,7 +835,7 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
         _app: &Application,
         _node: &Node<Application>,
         _time_ticks: i64,
-        _source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        _source_path: &Arc<Path<Application>>,
         _payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         PacketHandlerResult::Ok
@@ -838,28 +846,28 @@ impl<Application: ApplicationLayer + ?Sized> Peer<Application> {
         _app: &Application,
         _node: &Node<Application>,
         _time_ticks: i64,
-        _source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        _source_path: &Arc<Path<Application>>,
         _payload: &PacketBuffer,
     ) -> PacketHandlerResult {
         PacketHandlerResult::Ok
     }
 }
 
-impl<Application: ApplicationLayer + ?Sized> Hash for Peer<Application> {
+impl<Application: ApplicationLayer> Hash for Peer<Application> {
     #[inline(always)]
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        state.write_u64(self.identity.address.into());
+        self.identity.address.hash(state)
     }
 }
 
-impl<Application: ApplicationLayer + ?Sized> PartialEq for Peer<Application> {
+impl<Application: ApplicationLayer> PartialEq for Peer<Application> {
     #[inline(always)]
     fn eq(&self, other: &Self) -> bool {
-        self.identity.fingerprint.eq(&other.identity.fingerprint)
+        self.identity.eq(&other.identity)
     }
 }
 
-impl<Application: ApplicationLayer + ?Sized> Eq for Peer<Application> {}
+impl<Application: ApplicationLayer> Eq for Peer<Application> {}
 
 fn v1_proto_try_aead_decrypt(
     secret: &v1::SymmetricSecret,

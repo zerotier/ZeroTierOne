@@ -204,6 +204,34 @@ impl<T, const C: usize> ArrayVec<T, C> {
         C - self.s
     }
 
+    #[inline(always)]
+    pub fn iter(&self) -> impl DoubleEndedIterator<Item = &T> {
+        self.as_ref().iter()
+    }
+
+    #[inline(always)]
+    pub fn iter_mut(&mut self) -> impl DoubleEndedIterator<Item = &mut T> {
+        self.as_mut().iter_mut()
+    }
+
+    #[inline(always)]
+    pub fn first(&self) -> Option<&T> {
+        if self.s != 0 {
+            Some(unsafe { self.a.get_unchecked(0).assume_init_ref() })
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    pub fn last(&self) -> Option<&T> {
+        if self.s != 0 {
+            Some(unsafe { self.a.get_unchecked(self.s - 1).assume_init_ref() })
+        } else {
+            None
+        }
+    }
+
     #[inline]
     pub fn pop(&mut self) -> Option<T> {
         if self.s > 0 {

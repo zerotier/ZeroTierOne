@@ -1,12 +1,11 @@
 use std::borrow::Cow;
 
-use zerotier_utils::blob::Blob;
 use zerotier_utils::flatsortedmap::FlatSortedMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::vl1::identity::IDENTITY_FINGERPRINT_SIZE;
 use crate::vl1::inetaddress::InetAddress;
+use crate::vl1::Address;
 use crate::vl2::rule::Rule;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Clone)]
@@ -47,7 +46,7 @@ pub struct Topology<'a> {
 
     #[serde(skip_serializing_if = "FlatSortedMap::is_empty")]
     #[serde(default)]
-    pub members: FlatSortedMap<'a, Blob<IDENTITY_FINGERPRINT_SIZE>, Member<'a>>,
+    pub members: FlatSortedMap<'a, Address, Member<'a>>,
 }
 
 #[inline(always)]

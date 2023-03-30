@@ -10,9 +10,8 @@ use tokio_postgres::types::Type;
 use tokio_postgres::{Client, Statement};
 
 use zerotier_crypto::secure_eq;
-use zerotier_crypto::typestate::Valid;
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress};
+use zerotier_network_hypervisor::vl1::{Address, InetAddress};
 use zerotier_network_hypervisor::vl2::rule::Rule;
 use zerotier_network_hypervisor::vl2::{IpRoute, NetworkId};
 
@@ -21,7 +20,6 @@ use zerotier_utils::tokio;
 use zerotier_utils::tokio::runtime::Handle;
 use zerotier_utils::tokio::sync::broadcast::{channel, Receiver, Sender};
 use zerotier_utils::tokio::task::JoinHandle;
-use zerotier_vl1_service::VL1DataStorage;
 
 use crate::database::*;
 use crate::model::{IpAssignmentPool, Member, Network, RequestLogItem};
@@ -130,15 +128,14 @@ impl<'a> Drop for ConnectionHolder<'a> {
 }
 
 pub struct PostgresDatabase {
-    local_controller_id_str: String,
-    local_identity: Valid<Identity>,
+    local_controller: Address,
     connections: Mutex<(Vec<Box<PostgresConnection>>, Sender<()>)>,
     postgres_path: String,
     runtime: Handle,
 }
 
 impl PostgresDatabase {
-    pub async fn new(runtime: Handle, postgres_path: String, num_connections: usize, local_identity: Valid<Identity>) -> Result<Arc<Self>, Error> {
+    pub async fn new(runtime: Handle, postgres_path: String, num_connections: usize) -> Result<Arc<Self>, Error> {
         assert!(num_connections > 0);
         let (sender, _) = channel(4096);
         let mut connections = Vec::with_capacity(num_connections);
@@ -147,7 +144,6 @@ impl PostgresDatabase {
         }
         Ok(Arc::new(Self {
             local_controller_id_str: local_identity.address.to_string(),
-            local_identity,
             connections: Mutex::new((connections, sender)),
             postgres_path,
             runtime,
@@ -174,16 +170,6 @@ impl PostgresDatabase {
             Some(PostgresConnection::new(&self.runtime, self.postgres_path.as_str()).await?),
             self,
         ));
-    }
-}
-
-impl VL1DataStorage for PostgresDatabase {
-    fn load_node_identity(&self) -> Option<Valid<Identity>> {
-        Some(self.local_identity.clone())
-    }
-
-    fn save_node_identity(&self, _id: &Valid<Identity>) -> bool {
-        panic!("local identity saving not supported by PostgresDatabase")
     }
 }
 

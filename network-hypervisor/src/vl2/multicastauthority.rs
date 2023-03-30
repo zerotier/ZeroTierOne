@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex, RwLock};
 
 use crate::protocol;
 use crate::protocol::PacketBuffer;
+use crate::vl1::identity::Identity;
 use crate::vl1::*;
 use crate::vl2::{MulticastGroup, NetworkId};
 
@@ -41,7 +42,7 @@ impl MulticastAuthority {
     }
 
     /// Call for VL2_MULTICAST_LIKE packets.
-    pub fn handle_vl2_multicast_like<Application: ApplicationLayer + ?Sized, Authenticator: Fn(NetworkId, &Identity) -> bool>(
+    pub fn handle_vl2_multicast_like<Application: ApplicationLayer, Authenticator: Fn(&NetworkId, &Identity) -> bool>(
         &self,
         auth: Authenticator,
         time_ticks: i64,
@@ -52,14 +53,14 @@ impl MulticastAuthority {
         let mut subscriptions = RMaybeWLockGuard::new_read(&self.subscriptions);
 
         while (cursor + 8 + 6 + 4) <= payload.len() {
-            let network_id = NetworkId::from_bytes_fixed(payload.read_bytes_fixed(&mut cursor).unwrap());
-            if let Some(network_id) = network_id {
+            let network_id = NetworkId::from_bytes(payload.read_bytes_fixed::<8>(&mut cursor).unwrap());
+            if let Ok(network_id) = network_id {
                 let mac = MAC::from_bytes_fixed(payload.read_bytes_fixed(&mut cursor).unwrap());
                 if let Some(mac) = mac {
-                    if auth(network_id, &source.identity) {
-                        let sub_key = (network_id, MulticastGroup { mac, adi: payload.read_u32(&mut cursor).unwrap() });
+                    if auth(&network_id, &source.identity) {
+                        let sub_key = (network_id.clone(), MulticastGroup { mac, adi: payload.read_u32(&mut cursor).unwrap() });
                         if let Some(sub) = subscriptions.read().get(&sub_key) {
-                            let _ = sub.lock().unwrap().insert(source.identity.address, time_ticks);
+                            let _ = sub.lock().unwrap().insert(source.identity.address.clone(), time_ticks);
                         } else {
                             let _ = subscriptions
                                 .write(&self.subscriptions)
@@ -67,7 +68,7 @@ impl MulticastAuthority {
                                 .or_insert_with(|| Mutex::new(HashMap::new()))
                                 .lock()
                                 .unwrap()
-                                .insert(source.identity.address, time_ticks);
+                                .insert(source.identity.address.clone(), time_ticks);
                         }
                     }
                 }
@@ -78,7 +79,7 @@ impl MulticastAuthority {
     }
 
     /// Call for VL2_MULTICAST_GATHER packets.
-    pub fn handle_vl2_multicast_gather<Application: ApplicationLayer + ?Sized, Authenticator: Fn(NetworkId, &Identity) -> bool>(
+    pub fn handle_vl2_multicast_gather<Application: ApplicationLayer, Authenticator: Fn(&NetworkId, &Identity) -> bool>(
         &self,
         auth: Authenticator,
         time_ticks: i64,
@@ -90,20 +91,20 @@ impl MulticastAuthority {
         mut cursor: usize,
     ) -> PacketHandlerResult {
         if let Some(network_id) = payload
-            .read_bytes_fixed(&mut cursor)
-            .map_or(None, |network_id| NetworkId::from_bytes_fixed(network_id))
+            .read_bytes_fixed::<8>(&mut cursor)
+            .map_or(None, |network_id| NetworkId::from_bytes(network_id).ok())
         {
-            if auth(network_id, &source.identity) {
+            if auth(&network_id, &source.identity) {
                 cursor += 1; // skip flags, currently unused
                 if let Some(mac) = payload.read_bytes_fixed(&mut cursor).map_or(None, |mac| MAC::from_bytes_fixed(mac)) {
                     let mut gathered = Vec::new();
 
                     let adi = payload.read_u32(&mut cursor).unwrap_or(0);
                     let subscriptions = self.subscriptions.read().unwrap();
-                    if let Some(sub) = subscriptions.get(&(network_id, MulticastGroup { mac, adi })) {
+                    if let Some(sub) = subscriptions.get(&(network_id.clone(), MulticastGroup { mac, adi })) {
                         let sub = sub.lock().unwrap();
                         for a in sub.keys() {
-                            gathered.push(*a);
+                            gathered.push(a.clone());
                         }
                     }
 
@@ -114,19 +115,19 @@ impl MulticastAuthority {
                             ok_header.in_re_verb = protocol::message_type::VL2_MULTICAST_GATHER;
                             ok_header.in_re_message_id = message_id.to_be_bytes();
 
-                            packet.append_bytes_fixed(&network_id.to_bytes())?;
+                            packet.append_bytes_fixed(&network_id.to_legacy_u64().to_be_bytes())?;
                             packet.append_bytes_fixed(&mac.to_bytes())?;
                             packet.append_u32(adi)?;
                             packet.append_u32(gathered.len() as u32)?;
 
                             let in_this_packet = gathered
                                 .len()
-                                .clamp(1, (packet.capacity() - packet.len()) / protocol::ADDRESS_SIZE)
+                                .clamp(1, (packet.capacity() - packet.len()) / PartialAddress::LEGACY_SIZE_BYTES)
                                 .min(u16::MAX as usize);
 
                             packet.append_u16(in_this_packet as u16)?;
                             for _ in 0..in_this_packet {
-                                packet.append_bytes_fixed(&gathered.pop().unwrap().to_bytes())?;
+                                packet.append_bytes_fixed(gathered.pop().unwrap().legacy_bytes())?;
                             }
 
                             Ok(())

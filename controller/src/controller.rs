@@ -6,23 +6,21 @@ use std::sync::{Arc, Mutex, RwLock, Weak};
 
 use tokio::time::{Duration, Instant};
 
-use zerotier_crypto::secure_eq;
 use zerotier_network_hypervisor::protocol;
-use zerotier_network_hypervisor::protocol::{PacketBuffer, DEFAULT_MULTICAST_LIMIT, ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU};
+use zerotier_network_hypervisor::protocol::PacketBuffer;
+use zerotier_network_hypervisor::vl1::identity::{Identity, IdentitySecret};
 use zerotier_network_hypervisor::vl1::*;
 use zerotier_network_hypervisor::vl2;
 use zerotier_network_hypervisor::vl2::multicastauthority::MulticastAuthority;
 use zerotier_network_hypervisor::vl2::v1::networkconfig::*;
 use zerotier_network_hypervisor::vl2::v1::Revocation;
 use zerotier_network_hypervisor::vl2::NetworkId;
-use zerotier_utils::blob::Blob;
+use zerotier_service::vl1::VL1Service;
 use zerotier_utils::buffer::OutOfBoundsError;
 use zerotier_utils::cast::cast_ref;
-use zerotier_utils::error::InvalidParameterError;
 use zerotier_utils::reaper::Reaper;
 use zerotier_utils::tokio;
 use zerotier_utils::{ms_monotonic, ms_since_epoch};
-use zerotier_vl1_service::VL1Service;
 
 use crate::database::*;
 use crate::model::{AuthenticationResult, Member, RequestLogItem, CREDENTIAL_WINDOW_SIZE_DEFAULT};
@@ -33,11 +31,10 @@ const REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 /// ZeroTier VL2 network controller packet handler, answers VL2 netconf queries.
 pub struct Controller {
     self_ref: Weak<Self>,
-    service: RwLock<Weak<VL1Service<Self>>>,
     reaper: Reaper,
     runtime: tokio::runtime::Handle,
     database: Arc<dyn Database>,
-    local_identity: Valid<Identity>,
+    local_identity: IdentitySecret,
 
     /// Handler for MULTICAST_LIKE and MULTICAST_GATHER messages.
     multicast_authority: MulticastAuthority,
@@ -47,49 +44,40 @@ pub struct Controller {
 
     /// Recently authorized network members and when that authorization expires (in monotonic ticks).
     /// Note that this is not and should not be used for real authentication, just for locking up multicast info.
-    recently_authorized: RwLock<HashMap<[u8; Identity::FINGERPRINT_SIZE], HashMap<NetworkId, i64>>>,
+    recently_authorized: RwLock<HashMap<Address, HashMap<NetworkId, i64>>>,
 }
 
 impl Controller {
-    /// Start an inner protocol handler answer ZeroTier VL2 network controller queries.
-    ///
-    /// The start() method must be called once the service this will run within is also created.
-    pub async fn new(database: Arc<dyn Database>, runtime: tokio::runtime::Handle) -> Result<Arc<Self>, Box<dyn Error>> {
-        if let Some(local_identity) = database.load_node_identity() {
-            assert!(local_identity.secret.is_some());
-            Ok(Arc::new_cyclic(|r| Self {
-                self_ref: r.clone(),
-                service: RwLock::new(Weak::default()),
-                reaper: Reaper::new(&runtime),
-                runtime,
-                database: database.clone(),
-                local_identity: local_identity,
-                multicast_authority: MulticastAuthority::new(),
-                daemons: Mutex::new(Vec::with_capacity(2)),
-                recently_authorized: RwLock::new(HashMap::new()),
-            }))
-        } else {
-            Err(Box::new(InvalidParameterError("local controller's identity not readable by database")))
-        }
+    pub async fn new(
+        runtime: tokio::runtime::Handle,
+        local_identity: IdentitySecret,
+        database: Arc<dyn Database>,
+    ) -> Result<Arc<Self>, Box<dyn Error>> {
+        Ok(Arc::new_cyclic(|self_ref| Self {
+            self_ref: self_ref.clone(),
+            reaper: Reaper::new(&runtime),
+            runtime,
+            database: database.clone(),
+            local_identity,
+            multicast_authority: MulticastAuthority::new(),
+            daemons: Mutex::new(Vec::with_capacity(2)),
+            recently_authorized: RwLock::new(HashMap::new()),
+        }))
     }
 
-    /// Set the service and HostSystem implementation for this controller and start daemons.
+    /// Start this controller's background tasks.
     ///
-    /// This must be called once the service that uses this handler is up or the controller
-    /// won't actually do anything. The controller holds a weak reference to VL1Service so
-    /// be sure it's not dropped.
-    pub async fn start(&self, service: &Arc<VL1Service<Self>>) {
-        *self.service.write().unwrap() = Arc::downgrade(service);
-
-        // Create database change listener.
+    /// Note that the controller only holds a Weak<VL1Service<Self>> to avoid circular references.
+    pub async fn start(&self, app: &Arc<VL1Service<Self>>) {
         if let Some(cw) = self.database.changes().await.map(|mut ch| {
-            let self2 = self.self_ref.clone();
+            let controller_weak = self.self_ref.clone();
+            let app_weak = Arc::downgrade(app);
             self.runtime.spawn(async move {
                 loop {
                     if let Ok(change) = ch.recv().await {
-                        if let Some(self2) = self2.upgrade() {
-                            self2.reaper.add(
-                                self2.runtime.spawn(self2.clone().handle_change_notification(change)),
+                        if let (Some(controller), Some(app)) = (controller_weak.upgrade(), app_weak.upgrade()) {
+                            controller.reaper.add(
+                                controller.runtime.spawn(controller.clone().handle_change_notification(app, change)),
                                 Instant::now().checked_add(REQUEST_TIMEOUT).unwrap(),
                             );
                         } else {
@@ -102,17 +90,16 @@ impl Controller {
             self.daemons.lock().unwrap().push(cw);
         }
 
-        // Create background task to expire multicast subscriptions and recent authorizations.
-        let self2 = self.self_ref.clone();
+        let controller_weak = self.self_ref.clone();
         self.daemons.lock().unwrap().push(self.runtime.spawn(async move {
             let sleep_duration = Duration::from_millis((protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE / 2).min(2500) as u64);
             loop {
                 tokio::time::sleep(sleep_duration).await;
 
-                if let Some(self2) = self2.upgrade() {
+                if let Some(controller) = controller_weak.upgrade() {
                     let time_ticks = ms_monotonic();
-                    self2.multicast_authority.clean(time_ticks);
-                    self2.recently_authorized.write().unwrap().retain(|_, by_network| {
+                    controller.multicast_authority.clean(time_ticks);
+                    controller.recently_authorized.write().unwrap().retain(|_, by_network| {
                         by_network.retain(|_, timeout| *timeout > time_ticks);
                         !by_network.is_empty()
                     });
@@ -124,7 +111,7 @@ impl Controller {
     }
 
     /// Launched as a task when the DB informs us of a change.
-    async fn handle_change_notification(self: Arc<Self>, change: Change) {
+    async fn handle_change_notification(self: Arc<Self>, app: Arc<VL1Service<Self>>, change: Change) {
         match change {
             Change::NetworkCreated(_) => {}
             Change::NetworkChanged(_, _) => {}
@@ -132,15 +119,15 @@ impl Controller {
             Change::MemberCreated(_) => {}
             Change::MemberChanged(old_member, new_member) => {
                 if !new_member.authorized() && old_member.authorized() {
-                    self.deauthorize_member(&new_member).await;
+                    self.deauthorize_member(&app, &new_member).await;
                 }
             }
-            Change::MemberDeleted(member) => self.deauthorize_member(&member).await,
+            Change::MemberDeleted(member) => self.deauthorize_member(&app, &member).await,
         }
     }
 
     /// Compose and send network configuration packet (either V1 or V2)
-    fn send_network_config<Application: ApplicationLayer + ?Sized>(
+    fn send_network_config<Application: ApplicationLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,
@@ -163,7 +150,7 @@ impl Controller {
             if peer.is_v2() {
                 todo!()
             } else {
-                let config_data = if let Some(config_dict) = config.v1_proto_to_dictionary(&self.local_identity) {
+                let config_data = if let Some(config_dict) = config.v1_proto_to_dictionary(&self.local_identity.public) {
                     config_dict.to_bytes()
                 } else {
                     eprintln!("WARNING: unexpected error serializing network config into V1 format dictionary");
@@ -174,11 +161,9 @@ impl Controller {
                     return Err(OutOfBoundsError); // abort
                 }
 
-                packet.append_u64(config.network_id.into())?;
+                packet.append_u64(config.network_id.to_legacy_u64())?;
                 packet.append_u16(config_data.len() as u16)?;
                 packet.append_bytes(config_data.as_slice())?;
-
-                // TODO: for V1 we may need to introduce use of the chunking mechanism for large configs.
             }
 
             let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);
@@ -189,51 +174,51 @@ impl Controller {
     }
 
     /// Send one or more revocation object(s) to a peer. The provided vector is drained.
-    fn send_revocations(&self, peer: &Peer<VL1Service<Self>>, revocations: &mut Vec<Revocation>) {
-        if let Some(host_system) = self.service.read().unwrap().upgrade() {
-            let time_ticks = ms_monotonic();
-            while !revocations.is_empty() {
-                let send_count = revocations.len().min(protocol::UDP_DEFAULT_MTU / 256);
-                debug_assert!(send_count <= (u16::MAX as usize));
-                peer.send(
-                    host_system.as_ref(),
-                    host_system.node(),
-                    None,
-                    time_ticks,
-                    |packet| -> Result<(), OutOfBoundsError> {
-                        let payload_start = packet.len();
+    fn send_revocations(&self, app: &Arc<VL1Service<Self>>, peer: &Peer<VL1Service<Self>>, revocations: &mut Vec<Revocation>) {
+        let time_ticks = ms_monotonic();
+        while !revocations.is_empty() {
+            let send_count = revocations.len().min(protocol::UDP_DEFAULT_MTU / 256);
+            debug_assert!(send_count <= (u16::MAX as usize));
+            peer.send(app.as_ref(), &app.node, None, time_ticks, |packet| -> Result<(), OutOfBoundsError> {
+                let payload_start = packet.len();
 
-                        packet.append_u8(protocol::message_type::VL2_NETWORK_CREDENTIALS)?;
-                        packet.append_u8(0)?;
-                        packet.append_u16(0)?;
-                        packet.append_u16(0)?;
-                        packet.append_u16(send_count as u16)?;
-                        for _ in 0..send_count {
-                            let r = revocations.pop().unwrap();
-                            packet.append_bytes(r.v1_proto_to_bytes(self.local_identity.address).as_bytes())?;
-                        }
-                        packet.append_u16(0)?;
+                packet.append_u8(protocol::message_type::VL2_NETWORK_CREDENTIALS)?;
+                packet.append_u8(0)?;
+                packet.append_u16(0)?;
+                packet.append_u16(0)?;
+                packet.append_u16(send_count as u16)?;
+                for _ in 0..send_count {
+                    let r = revocations.pop().unwrap();
+                    packet.append_bytes(r.v1_proto_to_bytes(&self.local_identity.public.address).as_bytes())?;
+                }
+                packet.append_u16(0)?;
 
-                        let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);
-                        packet.set_size(payload_start + new_payload_len);
+                let new_payload_len = protocol::compress(&mut packet.as_bytes_mut()[payload_start..]);
+                packet.set_size(payload_start + new_payload_len);
 
-                        Ok(())
-                    },
-                );
-            }
+                Ok(())
+            });
         }
     }
 
-    async fn deauthorize_member(&self, member: &Member) {
+    async fn deauthorize_member(&self, app: &Arc<VL1Service<Self>>, member: &Member) {
         let time_clock = ms_since_epoch();
         let mut revocations = Vec::with_capacity(1);
-        if let Ok(all_network_members) = self.database.list_members(member.network_id).await {
-            for m in all_network_members.iter() {
-                if member.node_id != *m {
-                    if let Some(peer) = self.service.read().unwrap().upgrade().and_then(|s| s.node().peer(*m)) {
+        if let Ok(all_network_members) = self.database.list_members(&member.network_id).await {
+            for other_member in all_network_members.iter() {
+                if member.node_id != *other_member && member.node_id.is_complete() && other_member.is_complete() {
+                    let node_id = member.node_id.as_complete().unwrap();
+                    if let Some(peer) = app.node.peer(node_id) {
                         revocations.clear();
-                        Revocation::new(member.network_id, time_clock, member.node_id, *m, &self.local_identity, false).map(|r| revocations.push(r));
-                        self.send_revocations(&peer, &mut revocations);
+                        revocations.push(Revocation::new(
+                            &member.network_id,
+                            time_clock,
+                            node_id,
+                            other_member.as_complete().unwrap(),
+                            &self.local_identity,
+                            false,
+                        ));
+                        self.send_revocations(&app, &peer, &mut revocations);
                     }
                 }
             }
@@ -250,55 +235,17 @@ impl Controller {
     async fn authorize(
         self: &Arc<Self>,
         source_identity: &Valid<Identity>,
-        network_id: NetworkId,
+        network_id: &NetworkId,
         time_clock: i64,
-    ) -> Result<(AuthenticationResult, Option<NetworkConfig>), Box<dyn Error + Send + Sync>> {
-        let network = self.database.get_network(network_id).await?;
+    ) -> Result<(AuthenticationResult, Option<Box<NetworkConfig>>), Box<dyn Error + Send + Sync>> {
+        let network = self.database.get_network(&network_id).await?;
         if network.is_none() {
             return Ok((AuthenticationResult::Rejected, None));
         }
         let network = network.unwrap();
 
-        let mut member = self.database.get_member(network_id, source_identity.address).await?;
+        let mut member = self.database.get_member(&network_id, &source_identity.address.to_partial()).await?;
         let mut member_changed = false;
-
-        // SECURITY WARNING: this is a critical code path where members of networks are authorized.
-        // Read and modify with extreme care.
-
-        // If we have a member object and a pinned identity, check to make sure it matches. Also accept
-        // upgraded identities to replace old versions if they are properly formed and their signatures
-        // all check out (see Identity::is_upgraded_from()). Note that we do not pin the identity here
-        // if it is unspecified. That's not done until we fully authorize this member, since we don't
-        // want to have a way to somehow pin the wrong person's identity (if someone manages to somehow
-        // create a colliding identity and get it to us).
-        if let Some(member) = member.as_mut() {
-            if let Some(pinned_identity) = member.identity.as_ref() {
-                if !pinned_identity.eq(&source_identity) {
-                    if source_identity.is_upgraded_from(pinned_identity) {
-                        // Upgrade identity types if we have a V2 identity upgraded from a V1 identity.
-                        let _ = member.identity.replace(source_identity.clone_without_secret());
-                        let _ = member.identity_fingerprint.replace(Blob::from(source_identity.fingerprint));
-                        member_changed = true;
-                    } else {
-                        return Ok((AuthenticationResult::RejectedIdentityMismatch, None));
-                    }
-                }
-            }
-
-            if let Some(pinned_fingerprint) = member.identity_fingerprint.as_ref() {
-                if secure_eq(pinned_fingerprint.as_bytes(), &source_identity.fingerprint) {
-                    if member.identity.is_none() {
-                        // Learn the FULL identity if the fingerprint is pinned and they match. This
-                        // lets us add members by address/fingerprint with full SHA384 identity
-                        // verification instead of just by short address.
-                        let _ = member.identity.replace(source_identity.clone_without_secret());
-                        member_changed = true;
-                    }
-                } else {
-                    return Ok((AuthenticationResult::RejectedIdentityMismatch, None));
-                }
-            }
-        }
 
         let mut authentication_result = AuthenticationResult::Rejected;
 
@@ -311,7 +258,7 @@ impl Controller {
         if !member_authorized {
             if member.is_none() {
                 if network.learn_members.unwrap_or(true) {
-                    let _ = member.insert(Member::new_with_identity(source_identity.as_ref().clone(), network_id));
+                    let _ = member.insert(Member::new(source_identity.clone(), network_id.clone()));
                     member_changed = true;
                 } else {
                     return Ok((AuthenticationResult::Rejected, None));
@@ -347,30 +294,20 @@ impl Controller {
         let member_authorized = member_authorized;
         let authentication_result = authentication_result;
 
+        // Pin full address and full identity if these aren't pinned already.
+        if !member.node_id.is_complete() {
+            member.node_id = source_identity.address.to_partial();
+            member_changed = true;
+        }
+        if member.identity.is_none() {
+            let _ = member.identity.insert(source_identity.clone().remove_typestate());
+            member_changed = true;
+        }
+
         // Generate network configuration if the member is authorized.
         let network_config = if authentication_result.approved() {
             // We should not be able to make it here if this is still false.
             assert!(member_authorized);
-
-            // Pin member identity if not pinned already. This is analogous to SSH "trust on first use" except
-            // that the ZeroTier address is akin to the host name. Once we've seen the full identity once then
-            // it becomes truly "impossible" to collide the address. (Unless you can break ECC and SHA384.)
-            if member.identity.is_none() {
-                let _ = member.identity.replace(source_identity.clone_without_secret());
-                debug_assert!(member.identity_fingerprint.is_none());
-                let _ = member.identity_fingerprint.replace(Blob::from(source_identity.fingerprint));
-                member_changed = true;
-            }
-
-            // Make sure these agree. It should be impossible to end up with a member that's authorized and
-            // whose identity and identity fingerprint don't match.
-            if !secure_eq(
-                &member.identity.as_ref().unwrap().fingerprint,
-                member.identity_fingerprint.as_ref().unwrap().as_bytes(),
-            ) {
-                debug_assert!(false);
-                return Ok((AuthenticationResult::RejectedDueToError, None));
-            }
 
             // Figure out TTL for credentials (time window in V1).
             let credential_ttl = network.credential_ttl.unwrap_or(CREDENTIAL_WINDOW_SIZE_DEFAULT);
@@ -378,14 +315,14 @@ impl Controller {
             // Check and if necessary auto-assign static IPs for this member.
             member_changed |= network.assign_ip_addresses(self.database.as_ref(), &mut member).await;
 
-            let mut nc = NetworkConfig::new(network_id, source_identity.address);
+            let mut nc = Box::new(NetworkConfig::new(network_id.clone(), source_identity.address.clone()));
 
             nc.name = network.name.clone();
             nc.private = network.private;
             nc.timestamp = time_clock;
-            nc.multicast_limit = network.multicast_limit.unwrap_or(DEFAULT_MULTICAST_LIMIT as u32);
+            nc.multicast_limit = network.multicast_limit.unwrap_or(protocol::v1::DEFAULT_MULTICAST_LIMIT as u32);
             nc.multicast_like_expire = Some(protocol::VL2_DEFAULT_MULTICAST_LIKE_EXPIRE as u32);
-            nc.mtu = network.mtu.unwrap_or(ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u16);
+            nc.mtu = network.mtu.unwrap_or(protocol::ZEROTIER_VIRTUAL_NETWORK_DEFAULT_MTU as u16);
             nc.routes = network.ip_routes.iter().cloned().collect();
             nc.static_ips = member.ip_assignments.iter().cloned().collect();
 
@@ -395,7 +332,7 @@ impl Controller {
             // connectivity between valid members.
             if let Ok(mut deauthed_members_still_in_window) = self
                 .database
-                .list_members_deauthorized_after(network.id, time_clock - (credential_ttl as i64))
+                .list_members_deauthorized_after(&network.id, time_clock - (credential_ttl as i64))
                 .await
             {
                 if !deauthed_members_still_in_window.is_empty() {
@@ -403,7 +340,7 @@ impl Controller {
                     nc.rules.reserve(deauthed_members_still_in_window.len() + 1);
                     let mut or = false;
                     for dead in deauthed_members_still_in_window.iter() {
-                        nc.rules.push(vl2::rule::Rule::match_source_zerotier_address(false, or, *dead));
+                        nc.rules.push(vl2::rule::Rule::match_source_zerotier_address(false, or, dead.clone()));
                         or = true;
                     }
                     nc.rules.push(vl2::rule::Rule::action_drop());
@@ -426,40 +363,34 @@ impl Controller {
                 // If this network supports V1 nodes we have to include V1 credentials. Otherwise we can skip
                 // the overhead (bandwidth and CPU) of generating these.
 
-                if let Some(com) =
-                    vl2::v1::CertificateOfMembership::new(&self.local_identity, network_id, &source_identity, time_clock, credential_ttl)
-                {
-                    let mut v1cred = V1Credentials {
-                        revision: time_clock as u64,
-                        max_delta: credential_ttl,
-                        certificate_of_membership: com,
-                        certificates_of_ownership: Vec::new(),
-                        tags: HashMap::new(),
-                    };
+                let com = vl2::v1::CertificateOfMembership::new(&self.local_identity, &network_id, &source_identity, time_clock, credential_ttl);
+                let mut v1cred = V1Credentials {
+                    revision: time_clock as u64,
+                    max_delta: credential_ttl,
+                    certificate_of_membership: com,
+                    certificates_of_ownership: Vec::new(),
+                    tags: HashMap::new(),
+                };
 
-                    if !nc.static_ips.is_empty() {
-                        let mut coo = vl2::v1::CertificateOfOwnership::new(network_id, time_clock, source_identity.address);
-                        for ip in nc.static_ips.iter() {
-                            coo.add_ip(ip);
-                        }
-                        if !coo.sign(&self.local_identity, &source_identity) {
-                            return Ok((AuthenticationResult::RejectedDueToError, None));
-                        }
-                        v1cred.certificates_of_ownership.push(coo);
+                if !nc.static_ips.is_empty() {
+                    let mut coo = vl2::v1::CertificateOfOwnership::new(&network_id, time_clock, &source_identity.address);
+                    for ip in nc.static_ips.iter() {
+                        coo.add_ip(ip);
                     }
-
-                    for (id, value) in member.tags.iter() {
-                        let tag = vl2::v1::Tag::new(*id, *value, &self.local_identity, network_id, &source_identity, time_clock);
-                        if tag.is_none() {
-                            return Ok((AuthenticationResult::RejectedDueToError, None));
-                        }
-                        let _ = v1cred.tags.insert(*id, tag.unwrap());
+                    if !coo.sign(&self.local_identity, &source_identity) {
+                        return Ok((AuthenticationResult::RejectedDueToError, None));
                     }
-
-                    nc.v1_credentials = Some(v1cred);
-                } else {
-                    return Ok((AuthenticationResult::RejectedDueToError, None));
+                    v1cred.certificates_of_ownership.push(coo);
                 }
+
+                for (id, value) in member.tags.iter() {
+                    let _ = v1cred.tags.insert(
+                        *id,
+                        vl2::v1::Tag::new(*id, *value, &self.local_identity, &network_id, &source_identity, time_clock),
+                    );
+                }
+
+                nc.v1_credentials = Some(v1cred);
             }
 
             if source_identity.p384.is_some() {
@@ -472,9 +403,9 @@ impl Controller {
                 .recently_authorized
                 .write()
                 .unwrap()
-                .entry(source_identity.fingerprint)
+                .entry(source_identity.address.clone())
                 .or_default()
-                .insert(network_id, ms_monotonic() + (credential_ttl as i64));
+                .insert(network_id.clone(), ms_monotonic() + (credential_ttl as i64));
 
             Some(nc)
         } else {
@@ -491,12 +422,12 @@ impl Controller {
 }
 
 impl InnerProtocolLayer for Controller {
-    fn handle_packet<Application: ApplicationLayer + ?Sized>(
+    fn handle_packet<Application: ApplicationLayer>(
         &self,
         app: &Application,
         node: &Node<Application>,
         source: &Arc<Peer<Application>>,
-        source_path: &Arc<Path<Application::LocalSocket, Application::LocalInterface>>,
+        source_path: &Arc<Path<Application>>,
         source_hops: u8,
         message_id: u64,
         verb: u8,
@@ -509,7 +440,7 @@ impl InnerProtocolLayer for Controller {
                 if network_id.is_err() {
                     return PacketHandlerResult::Error;
                 }
-                let network_id = NetworkId::from_u64(network_id.unwrap());
+                let network_id = NetworkId::from_legacy_u64(network_id.unwrap()).ok();
                 if network_id.is_none() {
                     return PacketHandlerResult::Error;
                 }
@@ -517,10 +448,10 @@ impl InnerProtocolLayer for Controller {
 
                 debug_event!(
                     app,
-                    "[vl2] NETWORK_CONFIG_REQUEST from {}({}) for {:0>16x}",
+                    "[vl2] NETWORK_CONFIG_REQUEST from {}({}) for {}",
                     source.identity.address.to_string(),
                     source_path.endpoint.to_string(),
-                    u64::from(network_id)
+                    network_id.to_string()
                 );
 
                 let metadata = if (cursor + 2) < payload.len() {
@@ -538,36 +469,39 @@ impl InnerProtocolLayer for Controller {
                 };
 
                 // Launch handler as an async background task.
-                let (self2, source, source_remote_endpoint) = (self.self_ref.upgrade().unwrap(), source.clone(), source_path.endpoint.clone());
+                let app = app.concrete_self::<VL1Service<Self>>().unwrap().get_self_arc(); // can't be a dead pointer since we're in a handler being called by it
+                let (controller, source, source_remote_endpoint) = (self.self_ref.upgrade().unwrap(), source.clone(), source_path.endpoint.clone());
                 self.reaper.add(
                     self.runtime.spawn(async move {
-                        let node_id = source.identity.address;
-                        let node_fingerprint = Blob::from(source.identity.fingerprint);
+                        let node_id = source.identity.address.clone();
                         let now = ms_since_epoch();
 
-                        let (result, config) = match self2.authorize(&source.identity, network_id, now).await {
+                        let result = match controller.authorize(&source.identity, &network_id, now).await {
                             Result::Ok((result, Some(config))) => {
                                 //println!("{}", serde_yaml::to_string(&config).unwrap());
-                                let app = self2.service.read().unwrap().upgrade().unwrap();
-                                self2.send_network_config(app.as_ref(), app.node(), cast_ref(source.as_ref()).unwrap(), &config, Some(message_id));
-                                (result, Some(config))
+                                controller.send_network_config(
+                                    app.as_ref(),
+                                    &app.node,
+                                    cast_ref(source.as_ref()).unwrap(),
+                                    &config,
+                                    Some(message_id),
+                                );
+                                result
                             }
-                            Result::Ok((result, None)) => (result, None),
+                            Result::Ok((result, None)) => result,
                             Result::Err(e) => {
                                 #[cfg(debug_assertions)]
-                                let host = self2.service.read().unwrap().clone().upgrade().unwrap();
-                                debug_event!(host, "[vl2] ERROR getting network config: {}", e.to_string());
+                                debug_event!(app, "[vl2] ERROR getting network config: {}", e.to_string());
                                 return;
                             }
                         };
 
-                        let _ = self2
+                        let _ = controller
                             .database
                             .log_request(RequestLogItem {
                                 network_id,
                                 node_id,
-                                node_fingerprint,
-                                controller_node_id: self2.local_identity.address,
+                                controller_node_id: controller.local_identity.public.address.clone(),
                                 metadata,
                                 peer_version: source.version(),
                                 peer_protocol_version: source.protocol_version(),
@@ -575,7 +509,6 @@ impl InnerProtocolLayer for Controller {
                                 source_remote_endpoint,
                                 source_hops,
                                 result,
-                                config,
                             })
                             .await;
                     }),
@@ -590,7 +523,7 @@ impl InnerProtocolLayer for Controller {
                 let time_ticks = ms_monotonic();
                 self.multicast_authority.handle_vl2_multicast_like(
                     |network_id, identity| {
-                        auth.get(&identity.fingerprint)
+                        auth.get(&identity.address)
                             .map_or(false, |t| t.get(&network_id).map_or(false, |t| *t > time_ticks))
                     },
                     time_ticks,
@@ -606,7 +539,7 @@ impl InnerProtocolLayer for Controller {
                 let time_ticks = ms_monotonic();
                 self.multicast_authority.handle_vl2_multicast_gather(
                     |network_id, identity| {
-                        auth.get(&identity.fingerprint)
+                        auth.get(&identity.address)
                             .map_or(false, |t| t.get(&network_id).map_or(false, |t| *t > time_ticks))
                     },
                     time_ticks,

@@ -5,25 +5,25 @@ use std::hash::Hash;
 
 use serde::{Deserialize, Serialize};
 
-use zerotier_network_hypervisor::vl1::{Address, Identity, InetAddress};
+use zerotier_crypto::typestate::Valid;
+use zerotier_network_hypervisor::vl1::identity::Identity;
+use zerotier_network_hypervisor::vl1::{InetAddress, PartialAddress};
 use zerotier_network_hypervisor::vl2::NetworkId;
-use zerotier_utils::blob::Blob;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Debug)]
 pub struct Member {
+    /// Member node ID
+    ///
+    /// This can be a partial address if it was manually added as such by a user. As soon as a node matching
+    /// this partial is seen, this will be replaced by a full specificity PartialAddress from the querying
+    /// node's full identity. The 'identity' field will also be populated in this case.
     #[serde(rename = "address")]
-    pub node_id: Address,
+    pub node_id: PartialAddress,
+
     #[serde(rename = "networkId")]
     pub network_id: NetworkId,
 
-    /// Pinned full member identity fingerprint, if known.
-    /// If this is set but 'identity' is not, the 'identity' field will be set on first request
-    /// but an identity not matching this fingerprint will not be accepted. This allows a member
-    /// to be created with an address and a fingerprint for full SHA384 identity specification.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub identity_fingerprint: Option<Blob<{ Identity::FINGERPRINT_SIZE }>>,
-
-    /// Pinned full member identity, if known.
+    /// Full identity of this node, if known.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub identity: Option<Identity>,
 
@@ -79,13 +79,11 @@ pub struct Member {
 }
 
 impl Member {
-    /// Create a new network member without specifying a "pinned" identity.
-    pub fn new_without_identity(node_id: Address, network_id: NetworkId) -> Self {
+    pub fn new(node_identity: Valid<Identity>, network_id: NetworkId) -> Self {
         Self {
-            node_id,
+            node_id: node_identity.address.to_partial(),
             network_id,
-            identity: None,
-            identity_fingerprint: None,
+            identity: Some(node_identity.remove_typestate()),
             name: String::new(),
             last_authorized_time: None,
             last_deauthorized_time: None,
@@ -98,14 +96,8 @@ impl Member {
         }
     }
 
-    pub fn new_with_identity(identity: Identity, network_id: NetworkId) -> Self {
-        let mut tmp = Self::new_without_identity(identity.address, network_id);
-        tmp.identity_fingerprint = Some(Blob::from(identity.fingerprint));
-        tmp.identity = Some(identity);
-        tmp
-    }
-
-    /// Check whether this member is authorized, which is true if the last authorized time is after last deauthorized time.
+    /// Check whether this member is authorized.
+    /// This is true if the last authorized time is after last deauthorized time.
     pub fn authorized(&self) -> bool {
         self.last_authorized_time
             .map_or(false, |la| self.last_deauthorized_time.map_or(true, |ld| la > ld))

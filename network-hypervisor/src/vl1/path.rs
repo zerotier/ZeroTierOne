@@ -5,8 +5,9 @@ use std::hash::{BuildHasher, Hasher};
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Mutex;
 
+use super::endpoint::Endpoint;
+use super::ApplicationLayer;
 use crate::protocol;
-use crate::vl1::endpoint::Endpoint;
 
 use zerotier_crypto::random;
 use zerotier_utils::NEVER_HAPPENED_TICKS;
@@ -24,18 +25,23 @@ pub(crate) enum PathServiceResult {
 /// These are maintained in Node and canonicalized so that all unique paths have
 /// one and only one unique path object. That enables statistics to be tracked
 /// for them and uniform application of things like keepalives.
-pub struct Path<LocalSocket, LocalInterface> {
+pub struct Path<Application: ApplicationLayer + ?Sized> {
     pub endpoint: Endpoint,
-    pub local_socket: LocalSocket,
-    pub local_interface: LocalInterface,
+    pub local_socket: Application::LocalSocket,
+    pub local_interface: Application::LocalInterface,
     last_send_time_ticks: AtomicI64,
     last_receive_time_ticks: AtomicI64,
     create_time_ticks: i64,
-    fragmented_packets: Mutex<HashMap<u64, protocol::v1::FragmentedPacket, PacketIdHasher>>,
+    v1_fragmented_packets: Mutex<HashMap<u64, protocol::v1::FragmentedPacket, PacketIdHasher>>,
 }
 
-impl<LocalSocket, LocalInterface> Path<LocalSocket, LocalInterface> {
-    pub(crate) fn new(endpoint: Endpoint, local_socket: LocalSocket, local_interface: LocalInterface, time_ticks: i64) -> Self {
+impl<Application: ApplicationLayer + ?Sized> Path<Application> {
+    pub(crate) fn new(
+        endpoint: Endpoint,
+        local_socket: Application::LocalSocket,
+        local_interface: Application::LocalInterface,
+        time_ticks: i64,
+    ) -> Self {
         Self {
             endpoint,
             local_socket,
@@ -43,7 +49,7 @@ impl<LocalSocket, LocalInterface> Path<LocalSocket, LocalInterface> {
             last_send_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             last_receive_time_ticks: AtomicI64::new(NEVER_HAPPENED_TICKS),
             create_time_ticks: time_ticks,
-            fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, PacketIdHasher(random::xorshift64_random()))),
+            v1_fragmented_packets: Mutex::new(HashMap::with_capacity_and_hasher(4, PacketIdHasher(random::xorshift64_random()))),
         }
     }
 
@@ -57,7 +63,7 @@ impl<LocalSocket, LocalInterface> Path<LocalSocket, LocalInterface> {
         packet: protocol::PooledPacketBuffer,
         time_ticks: i64,
     ) -> Option<protocol::v1::FragmentedPacket> {
-        let mut fp = self.fragmented_packets.lock().unwrap();
+        let mut fp = self.v1_fragmented_packets.lock().unwrap();
 
         // Discard some old waiting packets if the total incoming fragments for a path exceeds a
         // sanity limit. This is to prevent memory exhaustion DOS attacks.
@@ -96,7 +102,7 @@ impl<LocalSocket, LocalInterface> Path<LocalSocket, LocalInterface> {
     }
 
     pub(crate) fn service(&self, time_ticks: i64) -> PathServiceResult {
-        self.fragmented_packets
+        self.v1_fragmented_packets
             .lock()
             .unwrap()
             .retain(|_, frag| (time_ticks - frag.ts_ticks) < protocol::v1::FRAGMENT_EXPIRATION);

@@ -5,7 +5,7 @@ use std::ptr::{copy_nonoverlapping, null_mut};
 
 use zerotier_network_hypervisor::vl1::InetAddress;
 
-use crate::localinterface::LocalInterface;
+use crate::vl1::LocalInterface;
 
 #[allow(unused)]
 #[inline(always)]

@@ -6,9 +6,9 @@
  * https://www.zerotier.com/
  */
 
-pub mod arc_pool;
 pub mod arrayvec;
-pub mod base64;
+pub mod base24;
+pub mod base62;
 pub mod blob;
 pub mod buffer;
 pub mod cast;
@@ -28,14 +28,12 @@ pub mod pool;
 #[cfg(feature = "tokio")]
 pub mod reaper;
 pub mod ringbuffer;
+pub mod str;
 pub mod sync;
 pub mod varint;
 
 #[cfg(feature = "tokio")]
 pub use tokio;
-
-#[cfg(feature = "tokio")]
-pub use futures_util;
 
 /// Initial value that should be used for monotonic tick time variables.
 pub const NEVER_HAPPENED_TICKS: i64 = i64::MIN;
@@ -86,6 +84,11 @@ pub fn wait_for_process_abort() {
 #[cold]
 #[inline(never)]
 pub extern "C" fn unlikely_branch() {}
+
+#[cfg(unix)]
+pub fn rand() -> u32 {
+    unsafe { (libc::rand() as u32) ^ (libc::rand() as u32).wrapping_shr(8) }
+}
 
 #[cfg(test)]
 mod tests {

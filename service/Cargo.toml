@@ -5,6 +5,11 @@ authors = ["ZeroTier, Inc. <contact@zerotier.com>", "Adam Ierymenko <adam.ieryme
 edition = "2021"
 license = "MPL-2.0"
 
+[lib]
+name = "zerotier_service"
+path = "src/lib.rs"
+doc = true
+
 [[bin]]
 name = "zerotier"
 path = "src/main.rs"
@@ -13,10 +18,10 @@ path = "src/main.rs"
 zerotier-network-hypervisor = { path = "../network-hypervisor" }
 zerotier-crypto = { path = "../crypto" }
 zerotier-utils = { path = "../utils", features = ["tokio"] }
-zerotier-vl1-service = { path = "../vl1-service" }
 serde = { version = "^1", features = ["derive"], default-features = false }
 serde_json = { version = "^1", features = ["std"], default-features = false }
 clap = { version = "^3", features = ["std", "suggestions"], default-features = false }
+num-traits = "^0"
 
 [target."cfg(windows)".dependencies]
 winapi = { version = "^0", features = ["handleapi", "ws2ipdef", "ws2tcpip"] }
