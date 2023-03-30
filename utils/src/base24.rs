@@ -11,7 +11,7 @@ use std::io::Write;
 use crate::error::InvalidParameterError;
 
 /// All unambiguous letters, thus easy to type on the alphabetic keyboards on phones without extra shift taps.
-/// The letters 'l' and 'v' are skipped.
+/// The letters 'l' and 'u' are skipped.
 const BASE24_ALPHABET: [u8; 24] = [
     b'a', b'b', b'c', b'd', b'e', b'f', b'g', b'h', b'i', b'j', b'k', b'm', b'n', b'o', b'p', b'q', b'r', b's', b't', b'v', b'w', b'x', b'y', b'z',
 ];

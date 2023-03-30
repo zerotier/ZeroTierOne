@@ -10,7 +10,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use zerotier_utils::error::InvalidParameterError;
-use zerotier_utils::{base24, base62, hex, memory};
+use zerotier_utils::{base24, hex, memory};
 
 /// A full (V2) ZeroTier address.
 ///
@@ -100,16 +100,19 @@ impl Borrow<[u8; Self::SIZE_BYTES]> for Address {
 impl ToString for Address {
     #[inline(always)]
     fn to_string(&self) -> String {
-        let mut s = String::with_capacity(48 * 2);
-        base24::encode_into(&self.0[..4], &mut s);
-        s.push('-');
-        base24::encode_into(&self.0[4..8], &mut s);
-        s.push('-');
-        base24::encode_into(&self.0[8..12], &mut s);
-        s.push('-');
-        base24::encode_into(&self.0[12..16], &mut s);
-        s.push('-');
-        base62::encode_into(&self.0[16..], &mut s, 43);
+        let mut s = String::with_capacity(96);
+        let mut x = 0;
+        for c in self.0.chunks(4) {
+            if !s.is_empty() {
+                if (x & 3) == 0 {
+                    s.push('.');
+                } else {
+                    s.push('-');
+                }
+            }
+            x += 1;
+            base24::encode_into(c, &mut s);
+        }
         s
     }
 }
@@ -121,15 +124,11 @@ impl FromStr for Address {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut a = Self([0u8; Self::SIZE_BYTES]);
         let mut f = 0;
-        for ss in s.split('-') {
-            if f <= 3 {
+        for ss in s.split(&['-', '.']) {
+            if ss.len() > 0 {
                 base24::decode_into_slice(ss.as_bytes(), &mut a.0[f * 4..(f + 1) * 4])?;
-            } else if f == 4 {
-                base62::decode_into_slice(ss.as_bytes(), &mut a.0[16..]).map_err(|_| InvalidParameterError("invalid base62"))?;
-            } else {
-                return Err(InvalidParameterError("too many sections"));
+                f += 1;
             }
-            f += 1;
         }
         return Ok(a);
     }
@@ -216,11 +215,19 @@ impl PartialAddress {
     pub const MIN_SIZE_BYTES: usize = Self::LEGACY_SIZE_BYTES;
     pub const MAX_SIZE_BYTES: usize = Address::SIZE_BYTES;
 
+    const fn is_valid_specificity(s: u16) -> bool {
+        match s {
+            5 | 16 | 32 | 48 => true,
+            _ => false,
+        }
+    }
+
     /// Construct an address from a byte slice with its length determining specificity.
     #[inline]
     pub fn from_bytes(b: &[u8]) -> Result<Self, InvalidParameterError> {
         if b.len() >= Self::MIN_SIZE_BYTES
             && b.len() <= Self::MAX_SIZE_BYTES
+            && Self::is_valid_specificity(b.len() as u16)
             && b[0] != Address::RESERVED_PREFIX
             && b[..Self::LEGACY_SIZE_BYTES].iter().any(|i| *i != 0)
         {
@@ -270,13 +277,13 @@ impl PartialAddress {
 
     #[inline(always)]
     pub fn as_bytes(&self) -> &[u8] {
-        debug_assert!(self.specificity >= Self::MIN_SIZE_BYTES as u16);
+        debug_assert!(Self::is_valid_specificity(self.specificity));
         &self.address.0[..self.specificity as usize]
     }
 
     #[inline(always)]
     pub(crate) fn legacy_bytes(&self) -> &[u8; 5] {
-        debug_assert!(self.specificity >= Self::MIN_SIZE_BYTES as u16);
+        debug_assert!(Self::is_valid_specificity(self.specificity));
         memory::array_range::<u8, { Address::SIZE_BYTES }, 0, { PartialAddress::LEGACY_SIZE_BYTES }>(&self.address.0)
     }
 
@@ -288,7 +295,7 @@ impl PartialAddress {
     /// Returns true if this partial address matches a full length address up to this partial's specificity.
     #[inline(always)]
     pub fn matches(&self, k: &Address) -> bool {
-        debug_assert!(self.specificity >= Self::MIN_SIZE_BYTES as u16);
+        debug_assert!(Self::is_valid_specificity(self.specificity));
         let l = self.specificity as usize;
         self.address.0[..l].eq(&k.0[..l])
     }
@@ -296,7 +303,7 @@ impl PartialAddress {
     /// Returns true if this partial address matches another up to the lower of the two addresses' specificities.
     #[inline(always)]
     pub fn matches_partial(&self, k: &PartialAddress) -> bool {
-        debug_assert!(self.specificity >= Self::MIN_SIZE_BYTES as u16);
+        debug_assert!(Self::is_valid_specificity(self.specificity));
         let l = self.specificity.min(k.specificity) as usize;
         self.address.0[..l].eq(&k.address.0[..l])
     }
@@ -408,10 +415,25 @@ impl PartialOrd for PartialAddress {
 
 impl ToString for PartialAddress {
     fn to_string(&self) -> String {
+        debug_assert!(Self::is_valid_specificity(self.specificity));
         if self.is_legacy() {
             hex::to_string(&self.address.0[..Self::LEGACY_SIZE_BYTES])
         } else {
-            base24::encode(self.as_bytes())
+            let mut s = String::with_capacity(96);
+            let mut i = 0;
+            while i < self.specificity {
+                let ii = i + 4;
+                if !s.is_empty() {
+                    if (i & 15) == 0 {
+                        s.push('.');
+                    } else {
+                        s.push('-');
+                    }
+                }
+                base24::encode_into(&self.address.0[i as usize..ii as usize], &mut s);
+                i = ii;
+            }
+            s
         }
     }
 }
@@ -421,9 +443,23 @@ impl FromStr for PartialAddress {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s.len() == 10 {
-            Self::from_bytes(hex::from_string(s).as_slice())
+            return Self::from_bytes(hex::from_string(s).as_slice());
         } else {
-            base24::decode(s.as_bytes()).and_then(|b| Self::from_bytes(b.as_slice()))
+            let mut a = Address([0u8; Address::SIZE_BYTES]);
+            let mut f = 0;
+            let mut specificity = 0;
+            for ss in s.split(&['-', '.']) {
+                if ss.len() > 0 {
+                    base24::decode_into_slice(ss.as_bytes(), &mut a.0[f * 4..(f + 1) * 4])?;
+                    f += 1;
+                    specificity += 4;
+                }
+            }
+            if Self::is_valid_specificity(specificity) {
+                return Ok(Self { address: a, specificity });
+            } else {
+                return Err(InvalidParameterError("illegal specificity"));
+            }
         }
     }
 }
@@ -509,9 +545,30 @@ mod tests {
             let mut tmp = Address::new_uninitialized();
             random::fill_bytes_secure(&mut tmp.0);
             let s = tmp.to_string();
-            println!("{}", s);
+            //println!("{}", s);
             let tmp2 = Address::from_str(s.as_str()).unwrap();
             assert!(tmp == tmp2);
+        }
+    }
+
+    #[test]
+    fn to_from_string_partial() {
+        let mut tmp = [0u8; Address::SIZE_BYTES];
+        for _ in 0..64 {
+            for s in [5, 16, 32, 48] {
+                random::fill_bytes_secure(&mut tmp);
+                if tmp[0] == Address::RESERVED_PREFIX {
+                    tmp[0] = 1;
+                }
+                if tmp[1] == 0 {
+                    tmp[1] = 1;
+                }
+                let partial = PartialAddress::from_bytes(&tmp[..s]).unwrap();
+                let s = partial.to_string();
+                //println!("{}", s);
+                let partial2 = PartialAddress::from_str(s.as_str()).unwrap();
+                assert!(partial == partial2);
+            }
         }
     }
 }

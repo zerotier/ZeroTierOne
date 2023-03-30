@@ -35,9 +35,6 @@ pub mod varint;
 #[cfg(feature = "tokio")]
 pub use tokio;
 
-#[cfg(feature = "tokio")]
-pub use futures_util;
-
 /// Initial value that should be used for monotonic tick time variables.
 pub const NEVER_HAPPENED_TICKS: i64 = i64::MIN;
 
