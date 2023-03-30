@@ -11,7 +11,7 @@ use std::io::Write;
 use crate::error::InvalidParameterError;
 
 /// All unambiguous letters, thus easy to type on the alphabetic keyboards on phones without extra shift taps.
-/// The letters 'l' and 'v' are skipped.
+/// The letters 'l' and 'u' are skipped.
 const BASE24_ALPHABET: [u8; 24] = [
     b'a', b'b', b'c', b'd', b'e', b'f', b'g', b'h', b'i', b'j', b'k', b'm', b'n', b'o', b'p', b'q', b'r', b's', b't', b'v', b'w', b'x', b'y', b'z',
 ];
@@ -66,7 +66,7 @@ fn decode_up_to_u32(s: &[u8]) -> Result<u32, InvalidParameterError> {
 }
 
 /// Decode a base24 ASCII slice into bytes (no padding, length determines output length)
-pub fn decode_into(s: &[u8], b: &mut Vec<u8>) -> Result<(), InvalidParameterError> {
+pub fn decode_into<W: Write>(s: &[u8], b: &mut W) -> Result<(), InvalidParameterError> {
     let mut s = s.as_ref();
 
     while s.len() >= 7 {
@@ -86,6 +86,11 @@ pub fn decode_into(s: &[u8], b: &mut Vec<u8>) -> Result<(), InvalidParameterErro
     }
 
     return Ok(());
+}
+
+#[inline]
+pub fn decode_into_slice(s: &[u8], mut b: &mut [u8]) -> Result<(), InvalidParameterError> {
+    decode_into(s, &mut b)
 }
 
 pub fn encode(b: &[u8]) -> String {

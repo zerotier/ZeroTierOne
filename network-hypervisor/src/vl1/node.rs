@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::io::Write;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex, RwLock};
 use std::time::Duration;
@@ -22,7 +23,6 @@ use zerotier_crypto::typestate::{Valid, Verified};
 use zerotier_utils::gate::IntervalGate;
 use zerotier_utils::hex;
 use zerotier_utils::marshalable::Marshalable;
-use zerotier_utils::tokio::io::AsyncWriteExt;
 
 /// A VL1 node on the ZeroTier global peer to peer network.
 ///
