@@ -5,7 +5,7 @@ ARG VERSION
 ARG DEB_ARCH
 ARG ZT_NAME
 ARG DISTRO
-RUN curl -s http://${BASEURL}/key.gpg -o /etc/apt/trusted.gpg.d/ci.lab.gpg
+RUN curl -s http://${BASEURL}/key.gpg -o /etc/apt/trusted.gpg.d/zerotier.gpg
 RUN echo "deb [arch=${DEB_ARCH} signed-by=/etc/apt/trusted.gpg.d/zerotier.gpg] http://${BASEURL}/${DISTRO} ${ZT_NAME} main" > /etc/apt/sources.list.d/zerotier.list
 RUN apt-get -qq update
 RUN apt-get -qq install zerotier=one=${VERSION}
