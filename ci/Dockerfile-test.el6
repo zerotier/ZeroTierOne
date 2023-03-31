@@ -1,0 +1,4 @@
+ARG DOCKER_ARCH
+FROM --platform=linux/${DOCKER_ARCH} centos:6
+RUN printf "[C6.10-base]\nname=CentOS-6.10 - Base\nbaseurl=http://vault.epel.cloud/6.10/os/\$basearch/\ngpgcheck=1\ngpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-CentOS-6\nenabled=1\nmetadata_expire=never\n" > /etc/yum.repos.d/CentOS-Base.repo
+RUN yum -y install curl

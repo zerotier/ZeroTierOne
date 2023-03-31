@@ -1,0 +1,13 @@
+ARG ZT_NAME
+FROM 084037375216.dkr.ecr.us-east-2.amazonaws.com/${ZT_NAME}-builder as builder
+WORKDIR /work/build
+COPY . .
+RUN pwd
+RUN ls -la .
+RUN make clean
+RUN make debian
+RUN ls -ls /work
+
+FROM scratch AS export
+ARG ZT_NAME
+COPY --from=builder /work/*.deb ./${ZT_NAME}/
