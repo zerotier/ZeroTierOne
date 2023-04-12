@@ -146,8 +146,7 @@ void Peer::received(
 								}
 							}
 						}
-					}
-					else {
+					} else {
 						replacePath = i;
 						break;
 					}
@@ -518,8 +517,7 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 			maxPriority = std::max(_paths[i].priority,maxPriority);
-		}
-		else {
+		} else {
 			break;
 		}
 	}
@@ -534,8 +532,7 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 					_paths[i].p->sent(now);
 					sent |= (_paths[i].p->address().ss_family == AF_INET) ? 0x1 : 0x2;
 				}
-			}
-			else {
+			} else {
 				_paths[i] = _PeerPath();
 				deletionOccurred = true;
 			}

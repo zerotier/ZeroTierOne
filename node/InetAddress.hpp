@@ -260,9 +260,12 @@ struct InetAddress : public sockaddr_storage
 	inline unsigned int port() const
 	{
 		switch(ss_family) {
-			case AF_INET: return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port));
-			case AF_INET6: return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port));
-			default: return 0;
+			case AF_INET:
+				return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in *>(this)->sin_port));
+			case AF_INET6:
+				return Utils::ntoh((uint16_t)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port));
+			default:
+				return 0;
 		}
 	}
 
@@ -284,8 +287,10 @@ struct InetAddress : public sockaddr_storage
 	{
 		const unsigned int n = port();
 		switch(ss_family) {
-			case AF_INET: return (n <= 32);
-			case AF_INET6: return (n <= 128);
+			case AF_INET:
+				return (n <= 32);
+			case AF_INET6:
+				return (n <= 128);
 		}
 		return false;
 	}
@@ -356,9 +361,12 @@ struct InetAddress : public sockaddr_storage
 	inline const void *rawIpData() const
 	{
 		switch(ss_family) {
-			case AF_INET: return (const void *)&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
-			case AF_INET6: return (const void *)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-			default: return 0;
+			case AF_INET:
+				return (const void *)&(reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr);
+			case AF_INET6:
+				return (const void *)(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
+			default:
+				return 0;
 		}
 	}
 
@@ -512,11 +520,16 @@ struct InetAddress : public sockaddr_storage
 				break;
 			case AF_INET6: {
 				const uint8_t *ip = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-				h = ((unsigned long)ip[0]); h <<= 1;
-				h += ((unsigned long)ip[1]); h <<= 1;
-				h += ((unsigned long)ip[2]); h <<= 1;
-				h += ((unsigned long)ip[3]); h <<= 1;
-				h += ((unsigned long)ip[4]); h <<= 1;
+				h = ((unsigned long)ip[0]);
+				h <<= 1;
+				h += ((unsigned long)ip[1]);
+				h <<= 1;
+				h += ((unsigned long)ip[2]);
+				h <<= 1;
+				h += ((unsigned long)ip[3]);
+				h <<= 1;
+				h += ((unsigned long)ip[4]);
+				h <<= 1;
 				h += ((unsigned long)ip[5]);
 			}	break;
 		}
@@ -570,13 +583,17 @@ struct InetAddress : public sockaddr_storage
 				return (unsigned int)(b.template at<uint16_t>(p) + 3); // other addresses begin with 16-bit non-inclusive length
 			case 0x04:
 				ss_family = AF_INET;
-				memcpy(&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr),b.field(p,4),4); p += 4;
-				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
+				memcpy(&(reinterpret_cast<struct sockaddr_in *>(this)->sin_addr.s_addr),b.field(p,4),4);
+				p += 4;
+				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p));
+				p += 2;
 				break;
 			case 0x06:
 				ss_family = AF_INET6;
-				memcpy(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,b.field(p,16),16); p += 16;
-				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p)); p += 2;
+				memcpy(reinterpret_cast<struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,b.field(p,16),16);
+				p += 16;
+				reinterpret_cast<struct sockaddr_in *>(this)->sin_port = Utils::hton(b.template at<uint16_t>(p));
+				p += 2;
 				break;
 			default:
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_BAD_ENCODING;

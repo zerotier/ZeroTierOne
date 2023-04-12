@@ -419,11 +419,15 @@ public:
 
 		unsigned int p = startAt;
 
-		_nwid = b.template at<uint64_t>(p); p += 8;
-		_ts = b.template at<uint64_t>(p); p += 8;
-		_id = b.template at<uint32_t>(p); p += 4;
+		_nwid = b.template at<uint64_t>(p);
+		p += 8;
+		_ts = b.template at<uint64_t>(p);
+		p += 8;
+		_id = b.template at<uint32_t>(p);
+		p += 4;
 
-		const unsigned int rc = b.template at<uint16_t>(p); p += 2;
+		const unsigned int rc = b.template at<uint16_t>(p);
+		p += 2;
 		if (rc > ZT_MAX_CAPABILITY_RULES)
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 		deserializeRules(b,p,_rules,_ruleCount,rc);
@@ -433,18 +437,21 @@ public:
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 
 		for(unsigned int i=0;;++i) {
-			const Address to(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
+			const Address to(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+			p += ZT_ADDRESS_LENGTH;
 			if (!to)
 				break;
 			if ((i >= _maxCustodyChainLength)||(i >= ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 			_custody[i].to = to;
-			_custody[i].from.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
+			_custody[i].from.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+			p += ZT_ADDRESS_LENGTH;
 			if (b[p++] == 1) {
 				if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
 					throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 				p += 2;
-				memcpy(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+				memcpy(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
+				p += ZT_C25519_SIGNATURE_LEN;
 			} else {
 				p += 2 + b.template at<uint16_t>(p);
 			}

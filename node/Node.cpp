@@ -69,7 +69,8 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 	memset((void *)(&_stats),0,sizeof(_stats));
 
 	uint64_t idtmp[2];
-	idtmp[0] = 0; idtmp[1] = 0;
+	idtmp[0] = 0;
+	idtmp[1] = 0;
 	char tmp[2048];
 	int n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,tmp,sizeof(tmp) - 1);
 	if (n > 0) {
@@ -86,11 +87,13 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		RR->identity.generate();
 		RR->identity.toString(false,RR->publicIdentityStr);
 		RR->identity.toString(true,RR->secretIdentityStr);
-		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
+		idtmp[0] = RR->identity.address().toInt();
+		idtmp[1] = 0;
 		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_SECRET,idtmp,RR->secretIdentityStr,(unsigned int)strlen(RR->secretIdentityStr));
 		stateObjectPut(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,RR->publicIdentityStr,(unsigned int)strlen(RR->publicIdentityStr));
 	} else {
-		idtmp[0] = RR->identity.address().toInt(); idtmp[1] = 0;
+		idtmp[0] = RR->identity.address().toInt();
+		idtmp[1] = 0;
 		n = stateObjectGet(tptr,ZT_STATE_OBJECT_IDENTITY_PUBLIC,idtmp,tmp,sizeof(tmp) - 1);
 		if ((n > 0)&&(n < (int)sizeof(RR->publicIdentityStr))&&(n < (int)sizeof(tmp))) {
 			if (memcmp(tmp,RR->publicIdentityStr,n))
@@ -427,7 +430,8 @@ ZT_ResultCode Node::leave(uint64_t nwid,void **uptr,void *tptr)
 	}
 
 	uint64_t tmp[2];
-	tmp[0] = nwid; tmp[1] = 0;
+	tmp[0] = nwid;
+	tmp[1] = 0;
 	RR->node->stateObjectDelete(tptr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp);
 
 	return ZT_RESULT_OK;
@@ -773,7 +777,8 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 				break;
 			} 
 
-			default: break;
+			default:
+				break;
 		}
 	} else if (requestPacketId) {
 		Packet outp(destination,RR->identity.address(),Packet::VERB_ERROR);

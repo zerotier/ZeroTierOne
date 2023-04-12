@@ -432,23 +432,45 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 					const MAC peerMac(v6EmbeddedAddress,network->id());
 
 					uint8_t adv[72];
-					adv[0] = 0x60; adv[1] = 0x00; adv[2] = 0x00; adv[3] = 0x00;
-					adv[4] = 0x00; adv[5] = 0x20;
-					adv[6] = 0x3a; adv[7] = 0xff;
+					adv[0] = 0x60;
+					adv[1] = 0x00;
+					adv[2] = 0x00;
+					adv[3] = 0x00;
+					adv[4] = 0x00;
+					adv[5] = 0x20;
+					adv[6] = 0x3a;
+					adv[7] = 0xff;
 					for(int i=0;i<16;++i) adv[8 + i] = pkt6[i];
 					for(int i=0;i<16;++i) adv[24 + i] = my6[i];
-					adv[40] = 0x88; adv[41] = 0x00;
-					adv[42] = 0x00; adv[43] = 0x00; // future home of checksum
-					adv[44] = 0x60; adv[45] = 0x00; adv[46] = 0x00; adv[47] = 0x00;
+					adv[40] = 0x88;
+					adv[41] = 0x00;
+					adv[42] = 0x00;
+					adv[43] = 0x00; // future home of checksum
+					adv[44] = 0x60;
+					adv[45] = 0x00;
+					adv[46] = 0x00;
+					adv[47] = 0x00;
 					for(int i=0;i<16;++i) adv[48 + i] = pkt6[i];
-					adv[64] = 0x02; adv[65] = 0x01;
-					adv[66] = peerMac[0]; adv[67] = peerMac[1]; adv[68] = peerMac[2]; adv[69] = peerMac[3]; adv[70] = peerMac[4]; adv[71] = peerMac[5];
+					adv[64] = 0x02;
+					adv[65] = 0x01;
+					adv[66] = peerMac[0];
+					adv[67] = peerMac[1];
+					adv[68] = peerMac[2];
+					adv[69] = peerMac[3];
+					adv[70] = peerMac[4];
+					adv[71] = peerMac[5];
 
 					uint16_t pseudo_[36];
 					uint8_t *const pseudo = reinterpret_cast<uint8_t *>(pseudo_);
 					for(int i=0;i<32;++i) pseudo[i] = adv[8 + i];
-					pseudo[32] = 0x00; pseudo[33] = 0x00; pseudo[34] = 0x00; pseudo[35] = 0x20;
-					pseudo[36] = 0x00; pseudo[37] = 0x00; pseudo[38] = 0x00; pseudo[39] = 0x3a;
+					pseudo[32] = 0x00;
+					pseudo[33] = 0x00;
+					pseudo[34] = 0x00;
+					pseudo[35] = 0x20;
+					pseudo[36] = 0x00;
+					pseudo[37] = 0x00;
+					pseudo[38] = 0x00;
+					pseudo[39] = 0x3a;
 					for(int i=0;i<32;++i) pseudo[40 + i] = adv[40 + i];
 					uint32_t checksum = 0;
 					for(int i=0;i<36;++i) checksum += Utils::hton(pseudo_[i]);
@@ -627,11 +649,13 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 			if (nqcb->oldQueues[i]->id == qosBucket) {
 				selectedQueue = nqcb->oldQueues[i];
 			}
-		} if (i < nqcb->newQueues.size()) { // search new queues (this would imply not often-used queues)
+		}
+		if (i < nqcb->newQueues.size()) { // search new queues (this would imply not often-used queues)
 			if (nqcb->newQueues[i]->id == qosBucket) {
 				selectedQueue = nqcb->newQueues[i];
 			}
-		} if (i < nqcb->inactiveQueues.size()) { // search inactive queues
+		}
+		if (i < nqcb->inactiveQueues.size()) { // search inactive queues
 			if (nqcb->inactiveQueues[i]->id == qosBucket) {
 				selectedQueue = nqcb->inactiveQueues[i];
 				// move queue to end of NEW queue list
@@ -655,8 +679,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 
 	// Drop a packet if necessary
 	ManagedQueue *selectedQueueToDropFrom = nullptr;
-	if (nqcb->_currEnqueuedPackets > ZT_AQM_MAX_ENQUEUED_PACKETS)
-	{
+	if (nqcb->_currEnqueuedPackets > ZT_AQM_MAX_ENQUEUED_PACKETS) {
 		// DEBUG_INFO("too many enqueued packets (%d), finding packet to drop", nqcb->_currEnqueuedPackets);
 		int maxQueueLength = 0;
 		for (size_t i=0; i<ZT_AQM_NUM_BUCKETS; i++) {
@@ -665,12 +688,14 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 					maxQueueLength = nqcb->oldQueues[i]->byteLength;
 					selectedQueueToDropFrom = nqcb->oldQueues[i];
 				}
-			} if (i < nqcb->newQueues.size()) {
+			}
+			if (i < nqcb->newQueues.size()) {
 				if (nqcb->newQueues[i]->byteLength > maxQueueLength) {
 					maxQueueLength = nqcb->newQueues[i]->byteLength;
 					selectedQueueToDropFrom = nqcb->newQueues[i];
 				}
-			} if (i < nqcb->inactiveQueues.size()) {
+			}
+			if (i < nqcb->inactiveQueues.size()) {
 				if (nqcb->inactiveQueues[i]->byteLength > maxQueueLength) {
 					maxQueueLength = nqcb->inactiveQueues[i]->byteLength;
 					selectedQueueToDropFrom = nqcb->inactiveQueues[i];
@@ -785,8 +810,7 @@ void Switch::aqm_dequeue(void *tPtr)
 					// DEBUG_INFO("moving q=%p from NEW to OLD list", queueAtFrontOfList);
 					oldQueues->push_back(queueAtFrontOfList);
 					currQueues->erase(currQueues->begin());
-				}
-				else {
+				} else {
 					int len = entryToEmit->packet.payloadLength();
 					queueAtFrontOfList->byteLength -= len;
 					queueAtFrontOfList->byteCredit -= len;
@@ -818,8 +842,7 @@ void Switch::aqm_dequeue(void *tPtr)
 					// Move to inactive list of queues
 					inactiveQueues->push_back(queueAtFrontOfList);
 					currQueues->erase(currQueues->begin());
-				}
-				else {
+				} else {
 					int len = entryToEmit->packet.payloadLength();
 					queueAtFrontOfList->byteLength -= len;
 					queueAtFrontOfList->byteCredit -= len;
@@ -1018,8 +1041,7 @@ bool Switch::_trySend(void *tPtr,Packet &packet,bool encrypt,int32_t flowId)
 				}
 			}
 			return true;
-		}
-		else {
+		} else {
 			viaPath = peer->getAppropriatePath(now,false,flowId);
 			if (!viaPath) {
 				peer->tryMemorizedPath(tPtr,now); // periodically attempt memorized or statically defined paths, if any are known

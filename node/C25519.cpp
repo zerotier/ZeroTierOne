@@ -837,14 +837,12 @@ static inline void reduce_add_sub(fe25519 *r)
 	crypto_uint32 t;
 	int i,rep;
 
-	for(rep=0;rep<4;rep++)
-	{
+	for(rep=0;rep<4;rep++) {
 		t = r->v[31] >> 7;
 		r->v[31] &= 127;
 		t = times19(t);
 		r->v[0] += t;
-		for(i=0;i<31;i++)
-		{
+		for(i=0;i<31;i++) {
 			t = r->v[i] >> 8;
 			r->v[i+1] += t;
 			r->v[i] &= 255;
@@ -857,14 +855,12 @@ static inline void reduce_mul(fe25519 *r)
 	crypto_uint32 t;
 	int i,rep;
 
-	for(rep=0;rep<2;rep++)
-	{
+	for(rep=0;rep<2;rep++) {
 		t = r->v[31] >> 7;
 		r->v[31] &= 127;
 		t = times19(t);
 		r->v[0] += t;
-		for(i=0;i<31;i++)
-		{
+		for(i=0;i<31;i++) {
 			t = r->v[i] >> 8;
 			r->v[i+1] += t;
 			r->v[i] &= 255;
@@ -1136,8 +1132,7 @@ static inline void reduce_add_sub(sc25519 *r)
 	int i;
 	unsigned char t[32];
 
-	for(i=0;i<32;i++)
-	{
+	for(i=0;i<32;i++) {
 		pb += m[i];
 		b = lt(r->v[i],pb);
 		t[i] = r->v[i]-pb+(b<<8);
@@ -1177,15 +1172,13 @@ static inline void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
 		for(j=0;j<33;j++)
 			if(i+j < 33) r2[i+j] += m[i]*q3[j];
 
-	for(i=0;i<32;i++)
-	{
+	for(i=0;i<32;i++) {
 		carry = r2[i] >> 8;
 		r2[i+1] += carry;
 		r2[i] &= 0xff;
 	}
 
-	for(i=0;i<32;i++)
-	{
+	for(i=0;i<32;i++) {
 		pb += r2[i];
 		b = lt(r1[i],pb);
 		r->v[i] = r1[i]-pb+(b<<8);
@@ -1227,8 +1220,7 @@ static inline void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
 	int i, carry;
 	for(i=0;i<32;i++) r->v[i] = x->v[i] + y->v[i];
-	for(i=0;i<31;i++)
-	{
+	for(i=0;i<31;i++) {
 		carry = r->v[i] >> 8;
 		r->v[i+1] += carry;
 		r->v[i] &= 0xff;
@@ -1246,8 +1238,7 @@ static inline void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 		for(j=0;j<32;j++)
 			t[i+j] += x->v[i] * y->v[j];
 
-	for(i=0;i<63;i++)
-	{
+	for(i=0;i<63;i++) {
 		carry = t[i] >> 8;
 		t[i+1] += carry;
 		t[i] &= 0xff;
@@ -1260,8 +1251,7 @@ static inline void sc25519_window3(signed char r[85], const sc25519 *s)
 {
 	char carry;
 	int i;
-	for(i=0;i<10;i++)
-	{
+	for(i=0;i<10;i++) {
 		r[8*i+0]  =  s->v[3*i+0]       & 7;
 		r[8*i+1]  = (s->v[3*i+0] >> 3) & 7;
 		r[8*i+2]  = (s->v[3*i+0] >> 6) & 7;
@@ -1282,8 +1272,7 @@ static inline void sc25519_window3(signed char r[85], const sc25519 *s)
 
 	/* Making it signed */
 	carry = 0;
-	for(i=0;i<84;i++)
-	{
+	for(i=0;i<84;i++) {
 		r[i] += carry;
 		r[i+1] += r[i] >> 3;
 		r[i] &= 7;
@@ -1296,8 +1285,7 @@ static inline void sc25519_window3(signed char r[85], const sc25519 *s)
 static inline void sc25519_2interleave2(unsigned char r[127], const sc25519 *s1, const sc25519 *s2)
 {
 	int i;
-	for(i=0;i<31;i++)
-	{
+	for(i=0;i<31;i++) {
 		r[4*i]   = ( s1->v[i]       & 3) ^ (( s2->v[i]       & 3) << 2);
 		r[4*i+1] = ((s1->v[i] >> 2) & 3) ^ (((s2->v[i] >> 2) & 3) << 2);
 		r[4*i+2] = ((s1->v[i] >> 4) & 3) ^ (((s2->v[i] >> 4) & 3) << 2);
@@ -2399,13 +2387,11 @@ static inline void ge25519_double_scalarmult_vartime(ge25519_p3 *r, const ge2551
 
 	/* scalar multiplication */
 	*r = pre[b[126]];
-	for(i=125;i>=0;i--)
-	{
+	for(i=125;i>=0;i--) {
 		dbl_p1p1(&tp1p1, (ge25519_p2 *)r);
 		p1p1_to_p2((ge25519_p2 *) r, &tp1p1);
 		dbl_p1p1(&tp1p1, (ge25519_p2 *)r);
-		if(b[i]!=0)
-		{
+		if(b[i]!=0) {
 			p1p1_to_p3(r, &tp1p1);
 			add_p1p1(&tp1p1, r, &pre[b[i]]);
 		}
@@ -2424,8 +2410,7 @@ static inline void ge25519_scalarmult_base(ge25519_p3 *r, const sc25519 *s)
 	choose_t((ge25519_aff *)r, 0, b[0]);
 	fe25519_setone(&r->z);
 	fe25519_mul(&r->t, &r->x, &r->y);
-	for(i=1;i<85;i++)
-	{
+	for(i=1;i<85;i++) {
 		choose_t(&t, (unsigned long long) i, b[i]);
 		ge25519_mixadd2(r, &t);
 	}

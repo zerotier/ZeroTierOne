@@ -151,14 +151,21 @@ public:
 		unsigned int p = startAt;
 
 		p += 4; // 4 bytes, currently unused
-		_id = b.template at<uint32_t>(p); p += 4;
-		_networkId = b.template at<uint64_t>(p); p += 8;
+		_id = b.template at<uint32_t>(p);
+		p += 4;
+		_networkId = b.template at<uint64_t>(p);
+		p += 8;
 		p += 4; // 4 bytes, currently unused
-		_credentialId = b.template at<uint32_t>(p); p += 4;
-		_threshold = (int64_t)b.template at<uint64_t>(p); p += 8;
-		_flags = b.template at<uint64_t>(p); p += 8;
-		_target.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
+		_credentialId = b.template at<uint32_t>(p);
+		p += 4;
+		_threshold = (int64_t)b.template at<uint64_t>(p);
+		p += 8;
+		_flags = b.template at<uint64_t>(p);
+		p += 8;
+		_target.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		p += ZT_ADDRESS_LENGTH;
+		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		p += ZT_ADDRESS_LENGTH;
 		_type = (Credential::Type)b[p++];
 
 		if (b[p++] == 1) {

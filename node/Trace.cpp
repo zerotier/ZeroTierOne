@@ -72,7 +72,10 @@ void Trace::peerConfirmingUnknownPath(void *const tPtr,const uint64_t networkId,
 	ZT_LOCAL_TRACE(tPtr,RR,"trying unknown path %s to %.10llx (packet %.16llx verb %d local socket %lld network %.16llx)",path->address().toString(tmp),peer.address().toInt(),packetId,verb,path->localSocket(),networkId);
 
 	std::pair<Address,Trace::Level> byn;
-	if (networkId) { Mutex::Lock l(_byNet_m); _byNet.get(networkId,byn); }
+	if (networkId) {
+		Mutex::Lock l(_byNet_m);
+		_byNet.get(networkId,byn);
+	}
 
 	if ((_globalTarget)||(byn.first)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
@@ -107,7 +110,10 @@ void Trace::peerLearnedNewPath(void *const tPtr,const uint64_t networkId,Peer &p
 	ZT_LOCAL_TRACE(tPtr,RR,"learned new path %s to %.10llx (packet %.16llx local socket %lld network %.16llx)",newPath->address().toString(tmp),peer.address().toInt(),packetId,newPath->localSocket(),networkId);
 
 	std::pair<Address,Trace::Level> byn;
-	if (networkId) { Mutex::Lock l(_byNet_m); _byNet.get(networkId,byn); }
+	if (networkId) {
+		Mutex::Lock l(_byNet_m);
+		_byNet.get(networkId,byn);
+	}
 
 	if ((_globalTarget)||(byn.first)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
@@ -134,7 +140,10 @@ void Trace::peerRedirected(void *const tPtr,const uint64_t networkId,Peer &peer,
 	ZT_LOCAL_TRACE(tPtr,RR,"explicit redirect from %.10llx to path %s",peer.address().toInt(),newPath->address().toString(tmp));
 
 	std::pair<Address,Trace::Level> byn;
-	if (networkId) { Mutex::Lock l(_byNet_m); _byNet.get(networkId,byn); }
+	if (networkId) {
+		Mutex::Lock l(_byNet_m);
+		_byNet.get(networkId,byn);
+	}
 
 	if ((_globalTarget)||(byn.first)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
@@ -379,7 +388,10 @@ void Trace::networkFilter(
 void Trace::credentialRejected(void *const tPtr,const CertificateOfMembership &c,const char *reason)
 {
 	std::pair<Address,Trace::Level> byn;
-	if (c.networkId()) { Mutex::Lock l(_byNet_m); _byNet.get(c.networkId(),byn); }
+	if (c.networkId()) {
+		Mutex::Lock l(_byNet_m);
+		_byNet.get(c.networkId(),byn);
+	}
 
 	if ((_globalTarget)||(byn.first)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
@@ -402,7 +414,10 @@ void Trace::credentialRejected(void *const tPtr,const CertificateOfMembership &c
 void Trace::credentialRejected(void *const tPtr,const CertificateOfOwnership &c,const char *reason)
 {
 	std::pair<Address,Trace::Level> byn;
-	if (c.networkId()) { Mutex::Lock l(_byNet_m); _byNet.get(c.networkId(),byn); }
+	if (c.networkId()) {
+		Mutex::Lock l(_byNet_m);
+		_byNet.get(c.networkId(),byn);
+	}
 
 	if ((_globalTarget)||(byn.first)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
@@ -425,7 +440,10 @@ void Trace::credentialRejected(void *const tPtr,const CertificateOfOwnership &c,
 void Trace::credentialRejected(void *const tPtr,const Capability &c,const char *reason)
 {
 	std::pair<Address,Trace::Level> byn;
-	if (c.networkId()) { Mutex::Lock l(_byNet_m); _byNet.get(c.networkId(),byn); }
+	if (c.networkId()) {
+		Mutex::Lock l(_byNet_m);
+		_byNet.get(c.networkId(),byn);
+	}
 
 	if ((_globalTarget)||(byn.first)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
@@ -448,7 +466,10 @@ void Trace::credentialRejected(void *const tPtr,const Capability &c,const char *
 void Trace::credentialRejected(void *const tPtr,const Tag &c,const char *reason)
 {
 	std::pair<Address,Trace::Level> byn;
-	if (c.networkId()) { Mutex::Lock l(_byNet_m); _byNet.get(c.networkId(),byn); }
+	if (c.networkId()) {
+		Mutex::Lock l(_byNet_m);
+		_byNet.get(c.networkId(),byn);
+	}
 
 	if ((_globalTarget)||(byn.first)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;
@@ -472,7 +493,10 @@ void Trace::credentialRejected(void *const tPtr,const Tag &c,const char *reason)
 void Trace::credentialRejected(void *const tPtr,const Revocation &c,const char *reason)
 {
 	std::pair<Address,Trace::Level> byn;
-	if (c.networkId()) { Mutex::Lock l(_byNet_m); _byNet.get(c.networkId(),byn); }
+	if (c.networkId()) {
+		Mutex::Lock l(_byNet_m);
+		_byNet.get(c.networkId(),byn);
+	}
 
 	if ((_globalTarget)||(byn.first)) {
 		Dictionary<ZT_MAX_REMOTE_TRACE_SIZE> d;

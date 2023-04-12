@@ -560,7 +560,8 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		_lastConfigUpdate = 0; // still want to re-request since it's likely outdated
 	} else {
 		uint64_t tmp[2];
-		tmp[0] = nwid; tmp[1] = 0;
+		tmp[0] = nwid;
+		tmp[1] = 0;
 
 		bool got = false;
 		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> *dict = new Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY>();
@@ -871,8 +872,10 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 	const unsigned int start = ptr;
 
 	ptr += 8; // skip network ID, which is already obviously known
-	const unsigned int chunkLen = chunk.at<uint16_t>(ptr); ptr += 2;
-	const void *chunkData = chunk.field(ptr,chunkLen); ptr += chunkLen;
+	const unsigned int chunkLen = chunk.at<uint16_t>(ptr);
+	ptr += 2;
+	const void *chunkData = chunk.field(ptr,chunkLen);
+	ptr += chunkLen;
 
 	NetworkConfig *nc = (NetworkConfig *)0;
 	uint64_t configUpdateId;
@@ -884,9 +887,12 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 		unsigned long totalLength,chunkIndex;
 		if (ptr < chunk.size()) {
 			const bool fastPropagate = ((chunk[ptr++] & 0x01) != 0);
-			configUpdateId = chunk.at<uint64_t>(ptr); ptr += 8;
-			totalLength = chunk.at<uint32_t>(ptr); ptr += 4;
-			chunkIndex = chunk.at<uint32_t>(ptr); ptr += 4;
+			configUpdateId = chunk.at<uint64_t>(ptr);
+			ptr += 8;
+			totalLength = chunk.at<uint32_t>(ptr);
+			ptr += 4;
+			chunkIndex = chunk.at<uint32_t>(ptr);
+			ptr += 4;
 
 			if (((chunkIndex + chunkLen) > totalLength)||(totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)) // >= since we need room for a null at the end
 				return 0;
@@ -1029,7 +1035,8 @@ int Network::setConfiguration(void *tPtr,const NetworkConfig &nconf,bool saveToD
 			try {
 				if (nconf.toDictionary(*d,false)) {
 					uint64_t tmp[2];
-					tmp[0] = _id; tmp[1] = 0;
+					tmp[0] = _id;
+					tmp[1] = 0;
 					RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_NETWORK_CONFIG,tmp,d->data(),d->sizeBytes());
 				}
 			} catch ( ... ) {}

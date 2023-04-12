@@ -89,26 +89,66 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr,int32_t f
 					Metrics::pkt_nop_in++;
 					peer->received(tPtr,_path,hops(),packetId(),payloadLength(),v,0,Packet::VERB_NOP,false,0,ZT_QOS_NO_FLOW);
 					break;
-				case Packet::VERB_HELLO:                      r = _doHELLO(RR,tPtr,true); break;
-				case Packet::VERB_ACK            :            r = _doACK(RR,tPtr,peer); break;
-				case Packet::VERB_QOS_MEASUREMENT:            r = _doQOS_MEASUREMENT(RR,tPtr,peer); break;
-				case Packet::VERB_ERROR:                      r = _doERROR(RR,tPtr,peer); break;
-				case Packet::VERB_OK:                         r = _doOK(RR,tPtr,peer); break;
-				case Packet::VERB_WHOIS:                      r = _doWHOIS(RR,tPtr,peer); break;
-				case Packet::VERB_RENDEZVOUS:                 r = _doRENDEZVOUS(RR,tPtr,peer); break;
-				case Packet::VERB_FRAME:                      r = _doFRAME(RR,tPtr,peer,flowId); break;
-				case Packet::VERB_EXT_FRAME:                  r = _doEXT_FRAME(RR,tPtr,peer,flowId); break;
-				case Packet::VERB_ECHO:                       r = _doECHO(RR,tPtr,peer); break;
-				case Packet::VERB_MULTICAST_LIKE:             r = _doMULTICAST_LIKE(RR,tPtr,peer); break;
-				case Packet::VERB_NETWORK_CREDENTIALS:        r = _doNETWORK_CREDENTIALS(RR,tPtr,peer); break;
-				case Packet::VERB_NETWORK_CONFIG_REQUEST:     r = _doNETWORK_CONFIG_REQUEST(RR,tPtr,peer); break;
-				case Packet::VERB_NETWORK_CONFIG:             r = _doNETWORK_CONFIG(RR,tPtr,peer); break;
-				case Packet::VERB_MULTICAST_GATHER:           r = _doMULTICAST_GATHER(RR,tPtr,peer); break;
-				case Packet::VERB_MULTICAST_FRAME:            r = _doMULTICAST_FRAME(RR,tPtr,peer); break;
-				case Packet::VERB_PUSH_DIRECT_PATHS:          r = _doPUSH_DIRECT_PATHS(RR,tPtr,peer); break;
-				case Packet::VERB_USER_MESSAGE:               r = _doUSER_MESSAGE(RR,tPtr,peer); break;
-				case Packet::VERB_REMOTE_TRACE:               r = _doREMOTE_TRACE(RR,tPtr,peer); break;
-				case Packet::VERB_PATH_NEGOTIATION_REQUEST:   r = _doPATH_NEGOTIATION_REQUEST(RR,tPtr,peer); break;
+				case Packet::VERB_HELLO:
+					r = _doHELLO(RR, tPtr, true);
+					break;
+				case Packet::VERB_ACK:
+					r = _doACK(RR, tPtr, peer);
+					break;
+				case Packet::VERB_QOS_MEASUREMENT:
+					r = _doQOS_MEASUREMENT(RR, tPtr, peer);
+					break;
+				case Packet::VERB_ERROR:
+					r = _doERROR(RR, tPtr, peer);
+					break;
+				case Packet::VERB_OK:
+					r = _doOK(RR, tPtr, peer);
+					break;
+				case Packet::VERB_WHOIS:
+					r = _doWHOIS(RR, tPtr, peer);
+					break;
+				case Packet::VERB_RENDEZVOUS:
+					r = _doRENDEZVOUS(RR, tPtr, peer);
+					break;
+				case Packet::VERB_FRAME:
+					r = _doFRAME(RR, tPtr, peer, flowId);
+					break;
+				case Packet::VERB_EXT_FRAME:
+					r = _doEXT_FRAME(RR, tPtr, peer, flowId);
+					break;
+				case Packet::VERB_ECHO:
+					r = _doECHO(RR, tPtr, peer);
+					break;
+				case Packet::VERB_MULTICAST_LIKE:
+					r = _doMULTICAST_LIKE(RR, tPtr, peer);
+					break;
+				case Packet::VERB_NETWORK_CREDENTIALS:
+					r = _doNETWORK_CREDENTIALS(RR, tPtr, peer);
+					break;
+				case Packet::VERB_NETWORK_CONFIG_REQUEST:
+					r = _doNETWORK_CONFIG_REQUEST(RR, tPtr, peer);
+					break;
+				case Packet::VERB_NETWORK_CONFIG:
+					r = _doNETWORK_CONFIG(RR, tPtr, peer);
+					break;
+				case Packet::VERB_MULTICAST_GATHER:
+					r = _doMULTICAST_GATHER(RR, tPtr, peer);
+					break;
+				case Packet::VERB_MULTICAST_FRAME:
+					r = _doMULTICAST_FRAME(RR, tPtr, peer);
+					break;
+				case Packet::VERB_PUSH_DIRECT_PATHS:
+					r = _doPUSH_DIRECT_PATHS(RR, tPtr, peer);
+					break;
+				case Packet::VERB_USER_MESSAGE:
+					r = _doUSER_MESSAGE(RR, tPtr, peer);
+					break;
+				case Packet::VERB_REMOTE_TRACE:
+					r = _doREMOTE_TRACE(RR, tPtr, peer);
+					break;
+				case Packet::VERB_PATH_NEGOTIATION_REQUEST:
+					r = _doPATH_NEGOTIATION_REQUEST(RR, tPtr, peer);
+					break;
 			}
 			if (r) {
 				RR->node->statsLogVerb((unsigned int)v,(unsigned int)size());
@@ -263,7 +303,8 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			Metrics::pkt_error_authentication_required_in++;
 		}	break;
 
-		default: break;
+		default:
+			break;
 	}
 
 	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_ERROR,inRePacketId,inReVerb,false,networkId,ZT_QOS_NO_FLOW);
@@ -433,8 +474,10 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 	uint64_t planetWorldId = 0;
 	uint64_t planetWorldTimestamp = 0;
 	if ((ptr + 16) <= size()) {
-		planetWorldId = at<uint64_t>(ptr); ptr += 8;
-		planetWorldTimestamp = at<uint64_t>(ptr); ptr += 8;
+		planetWorldId = at<uint64_t>(ptr);
+		ptr += 8;
+		planetWorldTimestamp = at<uint64_t>(ptr);
+		ptr += 8;
 	}
 
 	std::vector< std::pair<uint64_t,uint64_t> > moonIdsAndTimestamps;
@@ -444,7 +487,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 
 		// Get moon IDs and timestamps if present
 		if ((ptr + 2) <= size()) {
-			const unsigned int numMoons = at<uint16_t>(ptr); ptr += 2;
+			const unsigned int numMoons = at<uint16_t>(ptr);
+			ptr += 2;
 			for(unsigned int i=0;i<numMoons;++i) {
 				if ((World::Type)(*this)[ptr++] == World::TYPE_MOON)
 					moonIdsAndTimestamps.push_back(std::pair<uint64_t,uint64_t>(at<uint64_t>(ptr),at<uint64_t>(ptr + 8)));
@@ -555,7 +599,8 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 
 			// Handle planet or moon updates if present
 			if ((ptr + 2) <= size()) {
-				const unsigned int worldsLen = at<uint16_t>(ptr); ptr += 2;
+				const unsigned int worldsLen = at<uint16_t>(ptr);
+				ptr += 2;
 				if (RR->topology->shouldAcceptWorldUpdateFrom(peer->address())) {
 					const unsigned int endOfWorlds = ptr + worldsLen;
 					while (ptr < endOfWorlds) {
@@ -624,14 +669,17 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 				if ((flags & 0x02) != 0) {
 					// OK(MULTICAST_FRAME) includes implicit gather results
 					offset += ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS;
-					unsigned int totalKnown = at<uint32_t>(offset); offset += 4;
-					unsigned int count = at<uint16_t>(offset); offset += 2;
+					unsigned int totalKnown = at<uint32_t>(offset);
+					offset += 4;
+					unsigned int count = at<uint16_t>(offset);
+					offset += 2;
 					RR->mc->addMultiple(tPtr,RR->node->now(),networkId,mg,field(offset,count * 5),count,totalKnown);
 				}
 			}
 		}	break;
 
-		default: break;
+		default:
+			break;
 	}
 
 	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_OK,inRePacketId,inReVerb,false,networkId,ZT_QOS_NO_FLOW);
@@ -993,7 +1041,8 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *t
 	++p; // skip trailing 0 after COMs if present
 
 	if (p < size()) { // older ZeroTier versions do not send capabilities, tags, or revocations
-		const unsigned int numCapabilities = at<uint16_t>(p); p += 2;
+		const unsigned int numCapabilities = at<uint16_t>(p);
+		p += 2;
 		for(unsigned int i=0;i<numCapabilities;++i) {
 			p += cap.deserialize(*this,p);
 			if ((!network)||(network->id() != cap.networkId()))
@@ -1014,7 +1063,8 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *t
 
 		if (p >= size()) return true;
 
-		const unsigned int numTags = at<uint16_t>(p); p += 2;
+		const unsigned int numTags = at<uint16_t>(p);
+		p += 2;
 		for(unsigned int i=0;i<numTags;++i) {
 			p += tag.deserialize(*this,p);
 			if ((!network)||(network->id() != tag.networkId()))
@@ -1035,7 +1085,8 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *t
 
 		if (p >= size()) return true;
 
-		const unsigned int numRevocations = at<uint16_t>(p); p += 2;
+		const unsigned int numRevocations = at<uint16_t>(p);
+		p += 2;
 		for(unsigned int i=0;i<numRevocations;++i) {
 			p += revocation.deserialize(*this,p);
 			if ((!network)||(network->id() != revocation.networkId()))
@@ -1056,7 +1107,8 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *t
 
 		if (p >= size()) return true;
 
-		const unsigned int numCoos = at<uint16_t>(p); p += 2;
+		const unsigned int numCoos = at<uint16_t>(p);
+		p += 2;
 		for(unsigned int i=0;i<numCoos;++i) {
 			p += coo.deserialize(*this,p);
 			if ((!network)||(network->id() != coo.networkId()))
@@ -1293,7 +1345,8 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 
 	while (count--) { // if ptr overflows Buffer will throw
 		unsigned int flags = (*this)[ptr++];
-		unsigned int extLen = at<uint16_t>(ptr); ptr += 2;
+		unsigned int extLen = at<uint16_t>(ptr);
+		ptr += 2;
 		ptr += extLen; // unused right now
 		unsigned int addrType = (*this)[ptr++];
 		unsigned int addrLen = (*this)[ptr++];

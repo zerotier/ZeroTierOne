@@ -195,17 +195,27 @@ public:
 		_roots.clear();
 
 		switch((Type)b[p++]) {
-			case TYPE_NULL: _type = TYPE_NULL; break; // shouldn't ever really happen in serialized data but it's not invalid
-			case TYPE_PLANET: _type = TYPE_PLANET; break;
-			case TYPE_MOON: _type = TYPE_MOON; break;
+			case TYPE_NULL: // shouldn't ever really happen in serialized data but it's not invalid
+				_type = TYPE_NULL;
+				break;
+			case TYPE_PLANET:
+				_type = TYPE_PLANET;
+				break;
+			case TYPE_MOON:
+				_type = TYPE_MOON;
+				break;
 			default:
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 		}
 
-		_id = b.template at<uint64_t>(p); p += 8;
-		_ts = b.template at<uint64_t>(p); p += 8;
-		memcpy(_updatesMustBeSignedBy.data,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN); p += ZT_C25519_PUBLIC_KEY_LEN;
-		memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+		_id = b.template at<uint64_t>(p);
+		p += 8;
+		_ts = b.template at<uint64_t>(p);
+		p += 8;
+		memcpy(_updatesMustBeSignedBy.data,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
+		p += ZT_C25519_PUBLIC_KEY_LEN;
+		memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
+		p += ZT_C25519_SIGNATURE_LEN;
 		const unsigned int numRoots = (unsigned int)b[p++];
 		if (numRoots > ZT_WORLD_MAX_ROOTS)
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;

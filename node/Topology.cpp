@@ -32,7 +32,8 @@ Topology::Topology(const RuntimeEnvironment *renv,void *tPtr) :
 {
 	uint8_t tmp[ZT_WORLD_MAX_SERIALIZED_LENGTH];
 	uint64_t idtmp[2];
-	idtmp[0] = 0; idtmp[1] = 0;
+	idtmp[0] = 0;
+	idtmp[1] = 0;
 	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PLANET,idtmp,tmp,sizeof(tmp));
 	if (n > 0) {
 		try {
@@ -86,7 +87,9 @@ SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 
 	try {
 		Buffer<ZT_PEER_MAX_SERIALIZED_STATE_SIZE> buf;
-		uint64_t idbuf[2]; idbuf[0] = zta.toInt(); idbuf[1] = 0;
+		uint64_t idbuf[2];
+		idbuf[0] = zta.toInt();
+		idbuf[1] = 0;
 		int len = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_PEER,idbuf,buf.unsafeData(),ZT_PEER_MAX_SERIALIZED_STATE_SIZE);
 		if (len > 0) {
 			buf.setSize(len);
@@ -268,7 +271,8 @@ bool Topology::addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew)
 		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> sbuf;
 		existing->serialize(sbuf,false);
 		uint64_t idtmp[2];
-		idtmp[0] = existing->id(); idtmp[1] = 0;
+		idtmp[0] = existing->id();
+		idtmp[1] = 0;
 		RR->node->stateObjectPut(tPtr,(existing->type() == World::TYPE_PLANET) ? ZT_STATE_OBJECT_PLANET : ZT_STATE_OBJECT_MOON,idtmp,sbuf.data(),sbuf.size());
 	} catch ( ... ) {}
 
@@ -281,7 +285,8 @@ void Topology::addMoon(void *tPtr,const uint64_t id,const Address &seed)
 {
 	char tmp[ZT_WORLD_MAX_SERIALIZED_LENGTH];
 	uint64_t idtmp[2];
-	idtmp[0] = id; idtmp[1] = 0;
+	idtmp[0] = id;
+	idtmp[1] = 0;
 	int n = RR->node->stateObjectGet(tPtr,ZT_STATE_OBJECT_MOON,idtmp,tmp,sizeof(tmp));
 	if (n > 0) {
 		try {
@@ -312,7 +317,8 @@ void Topology::removeMoon(void *tPtr,const uint64_t id)
 			nm.push_back(*m);
 		} else {
 			uint64_t idtmp[2];
-			idtmp[0] = id; idtmp[1] = 0;
+			idtmp[0] = id;
+			idtmp[1] = 0;
 			RR->node->stateObjectDelete(tPtr,ZT_STATE_OBJECT_MOON,idtmp);
 		}
 	}
@@ -396,7 +402,9 @@ void Topology::_savePeer(void *tPtr,const SharedPtr<Peer> &peer)
 	try {
 		Buffer<ZT_PEER_MAX_SERIALIZED_STATE_SIZE> buf;
 		peer->serializeForCache(buf);
-		uint64_t tmpid[2]; tmpid[0] = peer->address().toInt(); tmpid[1] = 0;
+		uint64_t tmpid[2];
+		tmpid[0] = peer->address().toInt();
+		tmpid[1] = 0;
 		RR->node->stateObjectPut(tPtr,ZT_STATE_OBJECT_PEER,tmpid,buf.data(),buf.size());
 	} catch ( ... ) {} // sanity check, discard invalid entries
 }

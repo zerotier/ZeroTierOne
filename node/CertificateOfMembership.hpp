@@ -241,7 +241,8 @@ public:
 		if (b[p++] != 1)
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 
-		unsigned int numq = b.template at<uint16_t>(p); p += sizeof(uint16_t);
+		unsigned int numq = b.template at<uint16_t>(p);
+		p += sizeof(uint16_t);
 		uint64_t lastId = 0;
 		for(unsigned int i=0;i<numq;++i) {
 			const uint64_t qid = b.template at<uint64_t>(p);

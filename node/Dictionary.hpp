@@ -164,11 +164,21 @@ public:
 					if (esc) {
 						esc = false;
 						switch(*p) {
-							case 'r': dest[j++] = 13; break;
-							case 'n': dest[j++] = 10; break;
-							case '0': dest[j++] = (char)0; break;
-							case 'e': dest[j++] = '='; break;
-							default: dest[j++] = *p; break;
+							case 'r':
+								dest[j++] = 13;
+								break;
+							case 'n':
+								dest[j++] = 10;
+								break;
+							case '0':
+								dest[j++] = (char)0;
+								break;
+							case 'e':
+								dest[j++] = '=';
+								break;
+							default:
+								dest[j++] = *p;
+								break;
 						}
 						if (j == (int)destlen) {
 							dest[j-1] = (char)0;
@@ -335,11 +345,21 @@ public:
 								return false;
 							}
 							switch(*p) {
-								case 0: _d[j++] = '0'; break;
-								case 13: _d[j++] = 'r'; break;
-								case 10: _d[j++] = 'n'; break;
-								case '\\': _d[j++] = '\\'; break;
-								case '=': _d[j++] = 'e'; break;
+								case 0:
+									_d[j++] = '0';
+									break;
+								case 13:
+									_d[j++] = 'r';
+									break;
+								case 10:
+									_d[j++] = 'n';
+									break;
+								case '\\':
+									_d[j++] = '\\';
+									break;
+								case '=':
+									_d[j++] = 'e';
+									break;
 							}
 							if (j == C) {
 								_d[i] = (char)0;

@@ -102,10 +102,17 @@ public:
 	 */
 	static inline unsigned int log2(uint32_t v)
 	{
-		uint32_t r = (v > 0xffff) << 4; v >>= r;
-		uint32_t shift = (v > 0xff) << 3; v >>= shift; r |= shift;
-		shift = (v > 0xf) << 2; v >>= shift; r |= shift;
-		shift = (v > 0x3) << 1; v >>= shift; r |= shift;
+		uint32_t r = (v > 0xffff) << 4;
+		v >>= r;
+		uint32_t shift = (v > 0xff) << 3;
+		v >>= shift;
+		r |= shift;
+		shift = (v > 0xf) << 2;
+		v >>= shift;
+		r |= shift;
+		shift = (v > 0x3) << 1;
+		v >>= shift;
+		r |= shift;
 		r |= (v >> 1);
 		return (unsigned int)r;
 	}

@@ -469,15 +469,20 @@ public:
 
 			SharedPtr<Peer> p(new Peer(renv,renv->identity,id));
 
-			p->_vProto = b.template at<uint16_t>(ptr); ptr += 2;
-			p->_vMajor = b.template at<uint16_t>(ptr); ptr += 2;
-			p->_vMinor = b.template at<uint16_t>(ptr); ptr += 2;
-			p->_vRevision = b.template at<uint16_t>(ptr); ptr += 2;
+			p->_vProto = b.template at<uint16_t>(ptr);
+			ptr += 2;
+			p->_vMajor = b.template at<uint16_t>(ptr);
+			ptr += 2;
+			p->_vMinor = b.template at<uint16_t>(ptr);
+			ptr += 2;
+			p->_vRevision = b.template at<uint16_t>(ptr);
+			ptr += 2;
 
 			// When we deserialize from the cache we don't actually restore paths. We
 			// just try them and then re-learn them if they happen to still be up.
 			// Paths are fairly ephemeral in the real world in most cases.
-			const unsigned int tryPathCount = b.template at<uint16_t>(ptr); ptr += 2;
+			const unsigned int tryPathCount = b.template at<uint16_t>(ptr);
+			ptr += 2;
 			for(unsigned int i=0;i<tryPathCount;++i) {
 				InetAddress inaddr;
 				try {

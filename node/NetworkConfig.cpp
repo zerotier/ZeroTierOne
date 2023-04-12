@@ -364,8 +364,10 @@ bool NetworkConfig::fromDictionary(const Dictionary<ZT_NETWORKCONFIG_DICT_CAPACI
 				while ((p < tmp->size())&&(routeCount < ZT_MAX_NETWORK_ROUTES)) {
 					p += reinterpret_cast<InetAddress *>(&(this->routes[this->routeCount].target))->deserialize(*tmp,p);
 					p += reinterpret_cast<InetAddress *>(&(this->routes[this->routeCount].via))->deserialize(*tmp,p);
-					this->routes[this->routeCount].flags = tmp->at<uint16_t>(p); p += 2;
-					this->routes[this->routeCount].metric = tmp->at<uint16_t>(p); p += 2;
+					this->routes[this->routeCount].flags = tmp->at<uint16_t>(p);
+					p += 2;
+					this->routes[this->routeCount].metric = tmp->at<uint16_t>(p);
+					p += 2;
 					++this->routeCount;
 				}
 			}

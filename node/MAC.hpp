@@ -71,11 +71,16 @@ public:
 			return;
 		}
 		const unsigned char *b = (const unsigned char *)bits;
-		_m =  ((((uint64_t)*b) & 0xff) << 40); ++b;
-		_m |= ((((uint64_t)*b) & 0xff) << 32); ++b;
-		_m |= ((((uint64_t)*b) & 0xff) << 24); ++b;
-		_m |= ((((uint64_t)*b) & 0xff) << 16); ++b;
-		_m |= ((((uint64_t)*b) & 0xff) << 8); ++b;
+		_m =  ((((uint64_t)*b) & 0xff) << 40);
+		++b;
+		_m |= ((((uint64_t)*b) & 0xff) << 32);
+		++b;
+		_m |= ((((uint64_t)*b) & 0xff) << 24);
+		++b;
+		_m |= ((((uint64_t)*b) & 0xff) << 16);
+		++b;
+		_m |= ((((uint64_t)*b) & 0xff) << 8);
+		++b;
 		_m |= (((uint64_t)*b) & 0xff);
 	}
 

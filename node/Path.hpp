@@ -165,8 +165,7 @@ public:
 		unsigned int pl = _latency;
 		if (pl < 0xffff) {
 			_latency = (pl + l) / 2;
-		}
-		else {
+		} else {
 			_latency = l;
 		}
 	}
