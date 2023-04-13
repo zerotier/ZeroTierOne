@@ -1,21 +1,24 @@
 # vim: ft=dockerfile
+FROM docker.io/library/debian:bullseye-slim as gpg
+
+RUN apt -y update \
+    && apt -y -o APT::Install-Suggests=0 -o APT::Install-Recommends=0 install ca-certificates gpg gpg-agent curl \
+    && curl -sSL https://download.zerotier.com/contact%40zerotier.com.gpg -o /zerotier.asc \
+    && gpg --no-default-keyring --keyring /tmp/zerotier.gpg --import /zerotier.asc
 
 FROM docker.io/library/debian:bullseye-slim
 
 ARG VERSION
 
 COPY entrypoint.sh.release /entrypoint.sh
+COPY --from=gpg /tmp/zerotier.gpg /etc/apt/keyrings/zerotier.gpg
 
-RUN apt -y update \
-    && apt -y -o APT::Install-Suggests=0 -o APT::Install-Recommends=0 install ca-certificates curl gpg \
-    && curl -sSL "https://download.zerotier.com/contact%40zerotier.com.gpg" | gpg --dearmor > /etc/apt/trusted.gpg.d/zerotier.gpg \
-    && echo "deb http://download.zerotier.com/debian/bullseye bullseye main" > /etc/apt/sources.list.d/zerotier.list \
+RUN echo "deb [signed-by=/etc/apt/keyrings/zerotier.gpg] http://download.zerotier.com/debian/bullseye bullseye main" > /etc/apt/sources.list.d/zerotier.list \
     && apt -y update \
-    && apt -y install zerotier-one=${VERSION} \
-    && apt -y -o APT::Install-Suggests=0 -o APT::Install-Recommends=0 install iproute2 net-tools iputils-ping \
-    && apt -y purge ca-certificates curl gpg gpgconf \
+    && apt -y install -o APT::Install-Suggests=0 -o APT::Install-Recommends=0 zerotier-one=${VERSION} iproute2 net-tools iputils-ping \
+    && apt -y purge ca-certificates gpg gpgconf \
     && chmod 755 /entrypoint.sh \
-    && rm -rf /etc/apt/trusted.gpg.d/zerotier.gpg /var/lib/zerotier-one /var/lib/apt/lists/* /var/cache/apt/*
+    && rm -rf /etc/apt/trusted.gpg.d/zerotier.gpg /var/lib/zerotier-one /var/lib/apt/lists/* /var/cache/apt/* /var/log/apt/* 
 
 HEALTHCHECK --interval=1s CMD bash /healthcheck.sh
 
