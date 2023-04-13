@@ -80,10 +80,12 @@ public:
 
 	inline bool owns(const InetAddress &ip) const
 	{
-		if (ip.ss_family == AF_INET)
+		if (ip.ss_family == AF_INET) {
 			return this->_owns(THING_IPV4_ADDRESS,&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
-		if (ip.ss_family == AF_INET6)
+		}
+		if (ip.ss_family == AF_INET6) {
 			return this->_owns(THING_IPV6_ADDRESS,reinterpret_cast<const struct sockaddr_in6 *>(&ip)->sin6_addr.s6_addr,16);
+		}
 		return false;
 	}
 
@@ -96,7 +98,9 @@ public:
 
 	inline void addThing(const InetAddress &ip)
 	{
-		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
+		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) {
+			return;
+		}
 		if (ip.ss_family == AF_INET) {
 			_thingTypes[_thingCount] = THING_IPV4_ADDRESS;
 			memcpy(_thingValues[_thingCount],&(reinterpret_cast<const struct sockaddr_in *>(&ip)->sin_addr.s_addr),4);
@@ -110,7 +114,9 @@ public:
 
 	inline void addThing(const MAC &mac)
 	{
-		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) return;
+		if (_thingCount >= ZT_CERTIFICATEOFOWNERSHIP_MAX_THINGS) {
+			return;
+		}
 		_thingTypes[_thingCount] = THING_MAC_ADDRESS;
 		mac.copyTo(_thingValues[_thingCount],6);
 		++_thingCount;
@@ -142,7 +148,9 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const
 	{
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		if (forSign) {
+			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		}
 
 		b.append(_networkId);
 		b.append(_ts);
@@ -164,7 +172,9 @@ public:
 
 		b.append((uint16_t)0); // length of additional fields, currently 0
 
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		if (forSign) {
+			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		}
 	}
 
 	template<unsigned int C>
@@ -197,8 +207,9 @@ public:
 		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		p += ZT_ADDRESS_LENGTH;
 		if (b[p++] == 1) {
-			if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
+			if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN) {
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
+			}
 			p += 2;
 			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
 			p += ZT_C25519_SIGNATURE_LEN;
@@ -207,8 +218,9 @@ public:
 		}
 
 		p += 2 + b.template at<uint16_t>(p);
-		if (p > b.size())
+		if (p > b.size()) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+		}
 
 		return (p - startAt);
 	}

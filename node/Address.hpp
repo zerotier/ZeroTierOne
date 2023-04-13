@@ -71,8 +71,9 @@ public:
 	 */
 	inline void copyTo(void *const bits,const unsigned int len) const
 	{
-		if (len < ZT_ADDRESS_LENGTH)
+		if (len < ZT_ADDRESS_LENGTH) {
 			return;
+		}
 		unsigned char *b = (unsigned char *)bits;
 		*(b++) = (unsigned char)((_a >> 32) & 0xff);
 		*(b++) = (unsigned char)((_a >> 24) & 0xff);

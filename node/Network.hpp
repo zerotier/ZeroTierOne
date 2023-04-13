@@ -332,8 +332,9 @@ public:
 	 */
 	inline Membership::AddCredentialResult addCredential(void *tPtr,const Capability &cap)
 	{
-		if (cap.networkId() != _id)
+		if (cap.networkId() != _id) {
 			return Membership::ADD_REJECTED;
+		}
 		Mutex::Lock _l(_lock);
 		return _membership(cap.issuedTo()).addCredential(RR,tPtr,_config,cap);
 	}
@@ -343,8 +344,9 @@ public:
 	 */
 	inline Membership::AddCredentialResult addCredential(void *tPtr,const Tag &tag)
 	{
-		if (tag.networkId() != _id)
+		if (tag.networkId() != _id) {
 			return Membership::ADD_REJECTED;
+		}
 		Mutex::Lock _l(_lock);
 		return _membership(tag.issuedTo()).addCredential(RR,tPtr,_config,tag);
 	}
@@ -359,8 +361,9 @@ public:
 	 */
 	inline Membership::AddCredentialResult addCredential(void *tPtr,const CertificateOfOwnership &coo)
 	{
-		if (coo.networkId() != _id)
+		if (coo.networkId() != _id) {
 			return Membership::ADD_REJECTED;
+		}
 		Mutex::Lock _l(_lock);
 		return _membership(coo.issuedTo()).addCredential(RR,tPtr,_config,coo);
 	}
@@ -377,8 +380,9 @@ public:
 		Mutex::Lock _l(_lock);
 		Membership &m = _membership(to);
 		const int64_t lastPushed = m.lastPushedCredentials();
-		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_CREDENTIALS_REQUEST_RATE_LIMIT))
+		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_CREDENTIALS_REQUEST_RATE_LIMIT)) {
 			m.pushCredentials(RR,tPtr,now,to,_config);
+		}
 	}
 
 	/**
@@ -393,8 +397,9 @@ public:
 		Mutex::Lock _l(_lock);
 		Membership &m = _membership(to);
 		const int64_t lastPushed = m.lastPushedCredentials();
-		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_ACTIVITY_TIMEOUT))
+		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_ACTIVITY_TIMEOUT)) {
 			m.pushCredentials(RR,tPtr,now,to,_config);
+		}
 	}
 
 	/**

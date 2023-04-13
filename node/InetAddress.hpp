@@ -94,29 +94,33 @@ struct InetAddress : public sockaddr_storage
 
 	inline InetAddress &operator=(const InetAddress &a)
 	{
-		if (&a != this)
+		if (&a != this) {
 			memcpy(this,&a,sizeof(InetAddress));
+		}
 		return *this;
 	}
 
 	inline InetAddress &operator=(const InetAddress *a)
 	{
-		if (a != this)
+		if (a != this) {
 			memcpy(this,a,sizeof(InetAddress));
+		}
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_storage &ss)
 	{
-		if (reinterpret_cast<const InetAddress *>(&ss) != this)
+		if (reinterpret_cast<const InetAddress *>(&ss) != this) {
 			memcpy(this,&ss,sizeof(InetAddress));
+		}
 		return *this;
 	}
 
 	inline InetAddress &operator=(const struct sockaddr_storage *ss)
 	{
-		if (reinterpret_cast<const InetAddress *>(ss) != this)
+		if (reinterpret_cast<const InetAddress *>(ss) != this) {
 			memcpy(this,ss,sizeof(InetAddress));
+		}
 		return *this;
 	}
 
@@ -230,8 +234,9 @@ struct InetAddress : public sockaddr_storage
 			case AF_INET6:
 				const uint8_t *ipb = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
 				for(int i=0;i<16;++i) {
-					if (ipb[i])
+					if (ipb[i]) {
 						return false;
+					}
 				}
 				return (reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port == 0);
 		}
@@ -398,10 +403,12 @@ struct InetAddress : public sockaddr_storage
 	inline bool ipsEqual(const InetAddress &a) const
 	{
 		if (ss_family == a.ss_family) {
-			if (ss_family == AF_INET)
+			if (ss_family == AF_INET) {
 				return (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr);
-			if (ss_family == AF_INET6)
+			}
+			if (ss_family == AF_INET6) {
 				return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,16) == 0);
+			}
 			return (memcmp(this,&a,sizeof(InetAddress)) == 0);
 		}
 		return false;
@@ -418,10 +425,12 @@ struct InetAddress : public sockaddr_storage
 	inline bool ipsEqual2(const InetAddress &a) const
 	{
 		if (ss_family == a.ss_family) {
-			if (ss_family == AF_INET)
+			if (ss_family == AF_INET) {
 				return (reinterpret_cast<const struct sockaddr_in *>(this)->sin_addr.s_addr == reinterpret_cast<const struct sockaddr_in *>(&a)->sin_addr.s_addr);
-			if (ss_family == AF_INET6)
-				return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr,reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr,8) == 0);
+			}
+			if (ss_family == AF_INET6) {
+				return (memcmp(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr, reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr, 8) == 0);
+			}
 			return (memcmp(this,&a,sizeof(InetAddress)) == 0);
 		}
 		return false;
@@ -434,14 +443,16 @@ struct InetAddress : public sockaddr_storage
 		} else if (ss_family == AF_INET6) {
 			unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
 			const uint8_t *a = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_addr.s6_addr);
-			for(long i=0;i<16;++i)
+			for(long i=0;i<16;++i) {
 				reinterpret_cast<uint8_t *>(&tmp)[i % sizeof(tmp)] ^= a[i];
+			}
 			return tmp;
 		} else {
 			unsigned long tmp = reinterpret_cast<const struct sockaddr_in6 *>(this)->sin6_port;
 			const uint8_t *a = reinterpret_cast<const uint8_t *>(this);
-			for(long i=0;i<(long)sizeof(InetAddress);++i)
+			for(long i=0;i<(long)sizeof(InetAddress);++i) {
 				reinterpret_cast<uint8_t *>(&tmp)[i % sizeof(tmp)] ^= a[i];
+			}
 			return tmp;
 		}
 	}
@@ -478,8 +489,9 @@ struct InetAddress : public sockaddr_storage
 					while ((ip0 >> 31) == (ip1 >> 31)) {
 						ip0 <<= 1;
 						ip1 <<= 1;
-						if (++c == 32)
+						if (++c == 32) {
 							break;
+						}
 					}
 				}	break;
 				case AF_INET6: {
@@ -493,8 +505,9 @@ struct InetAddress : public sockaddr_storage
 							uint8_t ip1b = ip1[i];
 							uint8_t bit = 0x80;
 							while (bit != 0) {
-								if ((ip0b & bit) != (ip1b & bit))
+								if ((ip0b & bit) != (ip1b & bit)) {
 									break;
+								}
 								++c;
 								bit >>= 1;
 							}

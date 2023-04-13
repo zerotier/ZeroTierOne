@@ -142,8 +142,9 @@ public:
 	inline int64_t timestamp() const
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
-			if (_qualifiers[i].id == COM_RESERVED_ID_TIMESTAMP)
+			if (_qualifiers[i].id == COM_RESERVED_ID_TIMESTAMP) {
 				return _qualifiers[i].value;
+			}
 		}
 		return 0;
 	}
@@ -154,8 +155,9 @@ public:
 	inline Address issuedTo() const
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
-			if (_qualifiers[i].id == COM_RESERVED_ID_ISSUED_TO)
+			if (_qualifiers[i].id == COM_RESERVED_ID_ISSUED_TO) {
 				return Address(_qualifiers[i].value);
+			}
 		}
 		return Address();
 	}
@@ -166,8 +168,9 @@ public:
 	inline uint64_t networkId() const
 	{
 		for(unsigned int i=0;i<_qualifierCount;++i) {
-			if (_qualifiers[i].id == COM_RESERVED_ID_NETWORK_ID)
+			if (_qualifiers[i].id == COM_RESERVED_ID_NETWORK_ID) {
 				return _qualifiers[i].value;
+			}
 		}
 		return 0ULL;
 	}
@@ -226,8 +229,9 @@ public:
 			b.append(_qualifiers[i].maxDelta);
 		}
 		_signedBy.appendTo(b);
-		if (_signedBy)
+		if (_signedBy) {
 			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+		}
 	}
 
 	template<unsigned int C>
@@ -238,17 +242,20 @@ public:
 		_qualifierCount = 0;
 		_signedBy.zero();
 
-		if (b[p++] != 1)
+		if (b[p++] != 1) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
+		}
 
 		unsigned int numq = b.template at<uint16_t>(p);
 		p += sizeof(uint16_t);
 		uint64_t lastId = 0;
 		for(unsigned int i=0;i<numq;++i) {
 			const uint64_t qid = b.template at<uint64_t>(p);
-			if (qid < lastId)
+			if (qid < lastId) {
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_BAD_ENCODING;
-			else lastId = qid;
+			} else {
+				lastId = qid;
+			}
 			if (_qualifierCount < ZT_NETWORK_COM_MAX_QUALIFIERS) {
 				_qualifiers[_qualifierCount].id = qid;
 				_qualifiers[_qualifierCount].value = b.template at<uint64_t>(p + 8);
@@ -273,15 +280,18 @@ public:
 
 	inline bool operator==(const CertificateOfMembership &c) const
 	{
-		if (_signedBy != c._signedBy)
+		if (_signedBy != c._signedBy) {
 			return false;
-		if (_qualifierCount != c._qualifierCount)
+		}
+		if (_qualifierCount != c._qualifierCount) {
 			return false;
+		}
 		for(unsigned int i=0;i<_qualifierCount;++i) {
 			const _Qualifier &a = _qualifiers[i];
 			const _Qualifier &b = c._qualifiers[i];
-			if ((a.id != b.id)||(a.value != b.value)||(a.maxDelta != b.maxDelta))
+			if ((a.id != b.id)||(a.value != b.value)||(a.maxDelta != b.maxDelta)) {
 				return false;
+			}
 		}
 		return (memcmp(_signature.data,c._signature.data,ZT_C25519_SIGNATURE_LEN) == 0);
 	}

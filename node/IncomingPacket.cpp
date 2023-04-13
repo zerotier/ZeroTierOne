@@ -186,8 +186,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			// Object not found, currently only meaningful from network controllers.
 			if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-				if ((network)&&(network->controller() == peer->address()))
+				if ((network)&&(network->controller() == peer->address())) {
 					network->setNotFound(tPtr);
+				}
 			}
 			Metrics::pkt_error_obj_not_found_in++;
 			break;
@@ -198,8 +199,9 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			// that the queried node does not support acting as a controller.
 			if (inReVerb == Packet::VERB_NETWORK_CONFIG_REQUEST) {
 				const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-				if ((network)&&(network->controller() == peer->address()))
+				if ((network)&&(network->controller() == peer->address())) {
 					network->setNotFound(tPtr);
+				}
 			}
 			Metrics::pkt_error_unsupported_op_in++;
 			break;
@@ -395,8 +397,9 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 				// Identity is different from the one we already have -- address collision
 
 				// Check rate limits
-				if (!RR->node->rateGateIdentityVerification(now,_path->address()))
+				if (!RR->node->rateGateIdentityVerification(now,_path->address())) {
 					return true;
+				}
 
 				uint8_t key[ZT_SYMMETRIC_KEY_SIZE];
 				if (RR->identity.agree(id,key)) {
@@ -466,8 +469,9 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 	InetAddress externalSurfaceAddress;
 	if (ptr < size()) {
 		ptr += externalSurfaceAddress.deserialize(*this,ptr);
-		if ((externalSurfaceAddress)&&(hops() == 0))
+		if ((externalSurfaceAddress)&&(hops() == 0)) {
 			RR->sa->iam(tPtr,id.address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(id),now);
+		}
 	}
 
 	// Get primary planet world ID and world timestamp if present
@@ -490,8 +494,9 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 			const unsigned int numMoons = at<uint16_t>(ptr);
 			ptr += 2;
 			for(unsigned int i=0;i<numMoons;++i) {
-				if ((World::Type)(*this)[ptr++] == World::TYPE_MOON)
+				if ((World::Type)(*this)[ptr++] == World::TYPE_MOON) {
 					moonIdsAndTimestamps.push_back(std::pair<uint64_t,uint64_t>(at<uint64_t>(ptr),at<uint64_t>(ptr + 8)));
+				}
 				ptr += 16;
 			}
 		}
@@ -550,8 +555,9 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 		for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
 			for(std::vector< std::pair<uint64_t,uint64_t> >::const_iterator i(moonIdsAndTimestamps.begin());i!=moonIdsAndTimestamps.end();++i) {
 				if (i->first == m->id()) {
-					if (m->timestamp() > i->second)
+					if (m->timestamp() > i->second) {
 						m->serialize(outp,false);
+					}
 					break;
 				}
 			}
@@ -576,8 +582,9 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 	const uint64_t inRePacketId = at<uint64_t>(ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID);
 	uint64_t networkId = 0;
 
-	if (!RR->node->expectingReplyTo(inRePacketId))
+	if (!RR->node->expectingReplyTo(inRePacketId)) {
 		return true;
+	}
 
 	switch(inReVerb) {
 
@@ -587,15 +594,17 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 			const unsigned int vMajor = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION];
 			const unsigned int vMinor = (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION];
 			const unsigned int vRevision = at<uint16_t>(ZT_PROTO_VERB_HELLO__OK__IDX_REVISION);
-			if (vProto < ZT_PROTO_VERSION_MIN)
+			if (vProto < ZT_PROTO_VERSION_MIN) {
 				return true;
+			}
 
 			InetAddress externalSurfaceAddress;
 			unsigned int ptr = ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2;
 
 			// Get reported external surface address if present
-			if (ptr < size())
+			if (ptr < size()) {
 				ptr += externalSurfaceAddress.deserialize(*this,ptr);
+			}
 
 			// Handle planet or moon updates if present
 			if ((ptr + 2) <= size()) {
@@ -622,8 +631,9 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 
 			peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
 
-			if ((externalSurfaceAddress)&&(hops() == 0))
+			if ((externalSurfaceAddress)&&(hops() == 0)) {
 				RR->sa->iam(tPtr,peer->address(),_path->localSocket(),_path->address(),externalSurfaceAddress,RR->topology->isUpstream(peer->identity()),RR->node->now());
+			}
 		}	break;
 
 		case Packet::VERB_WHOIS:
@@ -636,8 +646,9 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 		case Packet::VERB_NETWORK_CONFIG_REQUEST: {
 			networkId = at<uint64_t>(ZT_PROTO_VERB_OK_IDX_PAYLOAD);
 			const SharedPtr<Network> network(RR->node->network(networkId));
-			if (network)
+			if (network) {
 				network->handleConfigChunk(tPtr,packetId(),source(),*this,ZT_PROTO_VERB_OK_IDX_PAYLOAD);
+			}
 		}	break;
 
 		case Packet::VERB_MULTICAST_GATHER: {
@@ -662,8 +673,9 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 				if ((flags & 0x01) != 0) { // deprecated but still used by older peers
 					CertificateOfMembership com;
 					offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS);
-					if (com)
+					if (com) {
 						network->addCredential(tPtr,com);
+					}
 				}
 
 				if ((flags & 0x02) != 0) {
@@ -753,8 +765,9 @@ bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,void *tPtr,const
 // Returns true if packet appears valid; pos and proto will be set
 static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsigned int &pos,unsigned int &proto)
 {
-	if (frameLen < 40)
+	if (frameLen < 40) {
 		return false;
+	}
 	pos = 40;
 	proto = frameData[6];
 	while (pos <= frameLen) {
@@ -763,8 +776,9 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 			case 43: // routing
 			case 60: // destination options
 			case 135: // mobility options
-				if ((pos + 8) > frameLen)
+				if ((pos + 8) > frameLen) {
 					return false; // invalid!
+				}
 				proto = frameData[pos];
 				pos += ((unsigned int)frameData[pos + 1] * 8) + 8;
 				break;
@@ -859,8 +873,9 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const Shar
 				const MAC sourceMac(peer->address(),nwid);
 				const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
 				const uint8_t *const frameData = reinterpret_cast<const uint8_t *>(data()) + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
-				if (network->filterIncomingPacket(tPtr,peer,RR->identity.address(),sourceMac,network->mac(),frameData,frameLen,etherType,0) > 0)
+				if (network->filterIncomingPacket(tPtr,peer,RR->identity.address(),sourceMac,network->mac(),frameData,frameLen,etherType,0) > 0) {
 					RR->node->putFrame(tPtr,nwid,network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen);
+				}
 			}
 		} else {
 			_sendErrorNeedCredentials(RR,tPtr,peer,nwid);
@@ -884,8 +899,9 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 		if ((flags & 0x01) != 0) { // inline COM with EXT_FRAME is deprecated but still used with old peers
 			CertificateOfMembership com;
 			comLen = com.deserialize(*this,ZT_PROTO_VERB_EXT_FRAME_IDX_COM);
-			if (com)
+			if (com) {
 				network->addCredential(tPtr,com);
+			}
 		}
 
 		if (!network->gate(tPtr,peer)) {
@@ -967,8 +983,9 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const Share
 	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 	outp.append((unsigned char)Packet::VERB_ECHO);
 	outp.append((uint64_t)pid);
-	if (size() > ZT_PACKET_IDX_PAYLOAD)
+	if (size() > ZT_PACKET_IDX_PAYLOAD) {
 		outp.append(reinterpret_cast<const unsigned char *>(data()) + ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
+	}
 	outp.armor(peer->key(),true,peer->aesKeysIfSupported());
 	peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
 	_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
@@ -991,13 +1008,16 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,c
 		if (nwid != lastNwid) {
 			lastNwid = nwid;
 			SharedPtr<Network> network(RR->node->network(nwid));
-			if (network)
+			if (network) {
 				authorized = network->gate(tPtr,peer);
-			if (!authorized)
+			}
+			if (!authorized) {
 				authorized = ((RR->topology->amUpstream())||(RR->node->localControllerHasAuthorized(now,nwid,peer->address())));
+			}
 		}
-		if (authorized)
+		if (authorized) {
 			RR->mc->add(tPtr,now,nwid,MulticastGroup(MAC(field(ptr + 8,6),6),at<uint32_t>(ptr + 14)),peer->address());
+		}
 	}
 
 	peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_MULTICAST_LIKE,0,Packet::VERB_NOP,false,0,ZT_QOS_NO_FLOW);
@@ -1045,8 +1065,9 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *t
 		p += 2;
 		for(unsigned int i=0;i<numCapabilities;++i) {
 			p += cap.deserialize(*this,p);
-			if ((!network)||(network->id() != cap.networkId()))
+			if ((!network)||(network->id() != cap.networkId())) {
 				network = RR->node->network(cap.networkId());
+			}
 			if (network) {
 				switch (network->addCredential(tPtr,cap)) {
 					case Membership::ADD_REJECTED:
@@ -1061,14 +1082,17 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *t
 			}
 		}
 
-		if (p >= size()) return true;
+		if (p >= size()) {
+			return true;
+		}
 
 		const unsigned int numTags = at<uint16_t>(p);
 		p += 2;
 		for(unsigned int i=0;i<numTags;++i) {
 			p += tag.deserialize(*this,p);
-			if ((!network)||(network->id() != tag.networkId()))
+			if ((!network)||(network->id() != tag.networkId())) {
 				network = RR->node->network(tag.networkId());
+			}
 			if (network) {
 				switch (network->addCredential(tPtr,tag)) {
 					case Membership::ADD_REJECTED:
@@ -1083,14 +1107,17 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *t
 			}
 		}
 
-		if (p >= size()) return true;
+		if (p >= size()) {
+			return true;
+		}
 
 		const unsigned int numRevocations = at<uint16_t>(p);
 		p += 2;
 		for(unsigned int i=0;i<numRevocations;++i) {
 			p += revocation.deserialize(*this,p);
-			if ((!network)||(network->id() != revocation.networkId()))
+			if ((!network)||(network->id() != revocation.networkId())) {
 				network = RR->node->network(revocation.networkId());
+			}
 			if (network) {
 				switch(network->addCredential(tPtr,peer->address(),revocation)) {
 					case Membership::ADD_REJECTED:
@@ -1105,14 +1132,17 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *t
 			}
 		}
 
-		if (p >= size()) return true;
+		if (p >= size()) {
+			return true;
+		}
 
 		const unsigned int numCoos = at<uint16_t>(p);
 		p += 2;
 		for(unsigned int i=0;i<numCoos;++i) {
 			p += coo.deserialize(*this,p);
-			if ((!network)||(network->id() != coo.networkId()))
+			if ((!network)||(network->id() != coo.networkId())) {
 				network = RR->node->network(coo.networkId());
+			}
 			if (network) {
 				switch(network->addCredential(tPtr,coo)) {
 					case Membership::ADD_REJECTED:
@@ -1198,8 +1228,9 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 		try {
 			CertificateOfMembership com;
 			com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM);
-			if ((com)&&(network))
+			if ((com)&&(network)) {
 				network->addCredential(tPtr,com);
+			}
 		} catch ( ... ) {} // discard invalid COMs
 	}
 
@@ -1240,8 +1271,9 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 			// This is deprecated but may still be sent by old peers
 			CertificateOfMembership com;
 			offset += com.deserialize(*this,ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM);
-			if (com)
+			if (com) {
 				network->addCredential(tPtr,com);
+			}
 		}
 
 		if (!network->gate(tPtr,peer)) {
@@ -1287,8 +1319,9 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 
 			const uint8_t *const frameData = (const uint8_t *)field(offset + ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME,frameLen);
 
-			if ((flags & 0x08)&&(network->config().isMulticastReplicator(RR->identity.address())))
+			if ((flags & 0x08)&&(network->config().isMulticastReplicator(RR->identity.address()))) {
 				RR->mc->send(tPtr,RR->node->now(),network,peer->address(),to,from,etherType,frameData,frameLen);
+			}
 
 			if (from != MAC(peer->address(),nwid)) {
 				if (network->config().permitsBridging(peer->address())) {
@@ -1300,8 +1333,9 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 				}
 			}
 
-			if (network->filterIncomingPacket(tPtr,peer,RR->identity.address(),from,to.mac(),frameData,frameLen,etherType,0) > 0)
+			if (network->filterIncomingPacket(tPtr,peer,RR->identity.address(),from,to.mac(),frameData,frameLen,etherType,0) > 0) {
 				RR->node->putFrame(tPtr,nwid,network->userPtr(),from,to.mac(),etherType,0,(const void *)frameData,frameLen);
+			}
 		}
 
 		if (gatherLimit) {

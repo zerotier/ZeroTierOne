@@ -192,8 +192,9 @@ static inline void poly1305_finish(poly1305_context *ctx, unsigned char mac[16])
   if (st->leftover) {
     size_t i = st->leftover;
     st->buffer[i] = 1;
-    for (i = i + 1; i < poly1305_block_size; i++)
+    for (i = i + 1; i < poly1305_block_size; i++) {
       st->buffer[i] = 0;
+    }
     st->final = 1;
     poly1305_blocks(st, st->buffer, poly1305_block_size);
   }
@@ -391,8 +392,9 @@ poly1305_finish(poly1305_context *ctx, unsigned char mac[16]) {
   if (st->leftover) {
     size_t i = st->leftover;
     st->buffer[i++] = 1;
-    for (; i < poly1305_block_size; i++)
+    for (; i < poly1305_block_size; i++) {
       st->buffer[i] = 0;
+    }
     st->final = 1;
     poly1305_blocks(st, st->buffer, poly1305_block_size);
   }
@@ -477,15 +479,18 @@ static inline void poly1305_update(poly1305_context *ctx, const unsigned char *m
   /* handle leftover */
   if (st->leftover) {
     size_t want = (poly1305_block_size - st->leftover);
-    if (want > bytes)
+    if (want > bytes) {
       want = bytes;
-    for (i = 0; i < want; i++)
+    }
+    for (i = 0; i < want; i++) {
       st->buffer[st->leftover + i] = m[i];
+    }
     bytes -= want;
     m += want;
     st->leftover += want;
-    if (st->leftover < poly1305_block_size)
+    if (st->leftover < poly1305_block_size) {
       return;
+    }
     poly1305_blocks(st, st->buffer, poly1305_block_size);
     st->leftover = 0;
   }
@@ -500,8 +505,9 @@ static inline void poly1305_update(poly1305_context *ctx, const unsigned char *m
 
   /* store leftover */
   if (bytes) {
-    for (i = 0; i < bytes; i++)
+    for (i = 0; i < bytes; i++) {
       st->buffer[st->leftover + i] = m[i];
+    }
     st->leftover += bytes;
   }
 }

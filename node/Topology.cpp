@@ -56,8 +56,9 @@ Topology::~Topology()
 	Hashtable< Address,SharedPtr<Peer> >::Iterator i(_peers);
 	Address *a = (Address *)0;
 	SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
-	while (i.next(a,p))
+	while (i.next(a,p)) {
 		_savePeer((void *)0,*p);
+	}
 }
 
 SharedPtr<Peer> Topology::addPeer(void *tPtr,const SharedPtr<Peer> &peer)
@@ -66,8 +67,9 @@ SharedPtr<Peer> Topology::addPeer(void *tPtr,const SharedPtr<Peer> &peer)
 	{
 		Mutex::Lock _l(_peers_m);
 		SharedPtr<Peer> &hp = _peers[peer->address()];
-		if (!hp)
+		if (!hp) {
 			hp = peer;
+		}
 		np = hp;
 	}
 	return np;
@@ -75,14 +77,16 @@ SharedPtr<Peer> Topology::addPeer(void *tPtr,const SharedPtr<Peer> &peer)
 
 SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 {
-	if (zta == RR->identity.address())
+	if (zta == RR->identity.address()) {
 		return SharedPtr<Peer>();
+	}
 
 	{
 		Mutex::Lock _l(_peers_m);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
-		if (ap)
+		if (ap) {
 			return *ap;
+		}
 	}
 
 	try {
@@ -95,8 +99,9 @@ SharedPtr<Peer> Topology::getPeer(void *tPtr,const Address &zta)
 			buf.setSize(len);
 			Mutex::Lock _l(_peers_m);
 			SharedPtr<Peer> &ap = _peers[zta];
-			if (ap)
+			if (ap) {
 				return ap;
+			}
 			ap = Peer::deserializeFromCache(RR->node->now(),tPtr,buf,RR);
 			if (!ap) {
 				_peers.erase(zta);
@@ -115,8 +120,9 @@ Identity Topology::getIdentity(void *tPtr,const Address &zta)
 	} else {
 		Mutex::Lock _l(_peers_m);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
-		if (ap)
+		if (ap) {
 			return (*ap)->identity();
+		}
 	}
 	return Identity();
 }
@@ -141,8 +147,9 @@ SharedPtr<Peer> Topology::getUpstreamPeer()
 		}
 	}
 
-	if (!best)
+	if (!best) {
 		return SharedPtr<Peer>();
+	}
 	return *best;
 }
 
@@ -155,11 +162,13 @@ bool Topology::isUpstream(const Identity &id) const
 bool Topology::shouldAcceptWorldUpdateFrom(const Address &addr) const
 {
 	Mutex::Lock _l(_upstreams_m);
-	if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),addr) != _upstreamAddresses.end())
+	if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),addr) != _upstreamAddresses.end()) {
 		return true;
+	}
 	for(std::vector< std::pair< uint64_t,Address> >::const_iterator s(_moonSeeds.begin());s!=_moonSeeds.end();++s) {
-		if (s->second == addr)
+		if (s->second == addr) {
 			return true;
+		}
 	}
 	return false;
 }
@@ -169,8 +178,9 @@ ZT_PeerRole Topology::role(const Address &ztaddr) const
 	Mutex::Lock _l(_upstreams_m);
 	if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),ztaddr) != _upstreamAddresses.end()) {
 		for(std::vector<World::Root>::const_iterator i(_planet.roots().begin());i!=_planet.roots().end();++i) {
-			if (i->identity.address() == ztaddr)
+			if (i->identity.address() == ztaddr) {
 				return ZT_PEER_ROLE_PLANET;
+			}
 		}
 		return ZT_PEER_ROLE_MOON;
 	}
@@ -186,22 +196,26 @@ bool Topology::isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipa
 	if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),ztaddr) != _upstreamAddresses.end()) {
 		for(std::vector<World::Root>::const_iterator r(_planet.roots().begin());r!=_planet.roots().end();++r) {
 			if (r->identity.address() == ztaddr) {
-				if (r->stableEndpoints.empty())
+				if (r->stableEndpoints.empty()) {
 					return false; // no stable endpoints specified, so allow dynamic paths
+				}
 				for(std::vector<InetAddress>::const_iterator e(r->stableEndpoints.begin());e!=r->stableEndpoints.end();++e) {
-					if (ipaddr.ipsEqual(*e))
+					if (ipaddr.ipsEqual(*e)) {
 						return false;
+					}
 				}
 			}
 		}
 		for(std::vector<World>::const_iterator m(_moons.begin());m!=_moons.end();++m) {
 			for(std::vector<World::Root>::const_iterator r(m->roots().begin());r!=m->roots().end();++r) {
 				if (r->identity.address() == ztaddr) {
-					if (r->stableEndpoints.empty())
+					if (r->stableEndpoints.empty()) {
 						return false; // no stable endpoints specified, so allow dynamic paths
+					}
 					for(std::vector<InetAddress>::const_iterator e(r->stableEndpoints.begin());e!=r->stableEndpoints.end();++e) {
-						if (ipaddr.ipsEqual(*e))
+						if (ipaddr.ipsEqual(*e)) {
 							return false;
+						}
 					}
 				}
 			}
@@ -214,8 +228,9 @@ bool Topology::isProhibitedEndpoint(const Address &ztaddr,const InetAddress &ipa
 
 bool Topology::addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew)
 {
-	if ((newWorld.type() != World::TYPE_PLANET)&&(newWorld.type() != World::TYPE_MOON))
+	if ((newWorld.type() != World::TYPE_PLANET)&&(newWorld.type() != World::TYPE_MOON)) {
 		return false;
+	}
 
 	Mutex::Lock _l2(_peers_m);
 	Mutex::Lock _l1(_upstreams_m);
@@ -238,9 +253,11 @@ bool Topology::addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew)
 	}
 
 	if (existing) {
-		if (existing->shouldBeReplacedBy(newWorld))
+		if (existing->shouldBeReplacedBy(newWorld)) {
 			*existing = newWorld;
-		else return false;
+		} else {
+			return false;
+		}
 	} else if (newWorld.type() == World::TYPE_MOON) {
 		if (alwaysAcceptNew) {
 			_moons.push_back(newWorld);
@@ -256,13 +273,15 @@ bool Topology::addWorld(void *tPtr,const World &newWorld,bool alwaysAcceptNew)
 							break;
 						}
 					}
-					if (existing)
+					if (existing) {
 						break;
+					}
 				}
 			}
 		}
-		if (!existing)
+		if (!existing) {
 			return false;
+		}
 	} else {
 		return false;
 	}
@@ -301,8 +320,9 @@ void Topology::addMoon(void *tPtr,const uint64_t id,const Address &seed)
 
 	if (seed) {
 		Mutex::Lock _l(_upstreams_m);
-		if (std::find(_moonSeeds.begin(),_moonSeeds.end(),std::pair<uint64_t,Address>(id,seed)) == _moonSeeds.end())
+		if (std::find(_moonSeeds.begin(),_moonSeeds.end(),std::pair<uint64_t,Address>(id,seed)) == _moonSeeds.end()) {
 			_moonSeeds.push_back(std::pair<uint64_t,Address>(id,seed));
+		}
 	}
 }
 
@@ -326,8 +346,9 @@ void Topology::removeMoon(void *tPtr,const uint64_t id)
 
 	std::vector< std::pair<uint64_t,Address> > cm;
 	for(std::vector< std::pair<uint64_t,Address> >::const_iterator m(_moonSeeds.begin());m!=_moonSeeds.end();++m) {
-		if (m->first != id)
+		if (m->first != id) {
 			cm.push_back(*m);
+		}
 	}
 	_moonSeeds.swap(cm);
 
@@ -356,8 +377,9 @@ void Topology::doPeriodicTasks(void *tPtr,int64_t now)
 		Path::HashKey *k = (Path::HashKey *)0;
 		SharedPtr<Path> *p = (SharedPtr<Path> *)0;
 		while (i.next(k,p)) {
-			if (p->references() <= 1)
+			if (p->references() <= 1) {
 				_paths.erase(*k);
+			}
 		}
 	}
 }
@@ -388,8 +410,9 @@ void Topology::_memoizeUpstreams(void *tPtr)
 			} else if (std::find(_upstreamAddresses.begin(),_upstreamAddresses.end(),i->identity.address()) == _upstreamAddresses.end()) {
 				_upstreamAddresses.push_back(i->identity.address());
 				SharedPtr<Peer> &hp = _peers[i->identity.address()];
-				if (!hp)
+				if (!hp) {
 					hp = new Peer(RR,RR->identity,i->identity);
+				}
 			}
 		}
 	}

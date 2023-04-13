@@ -731,7 +731,9 @@ static void crypto_scalarmult(u8 *mypublic, const u8 *secret, const u8 *basepoin
 	uint8_t e[32];
   int i;
 
-  for (i = 0; i < 32; ++i) e[i] = secret[i];
+  for (i = 0; i < 32; ++i) {
+    e[i] = secret[i];
+  }
   e[0] &= 248;
   e[31] &= 127;
   e[31] |= 64;
@@ -873,22 +875,26 @@ static inline void fe25519_freeze(fe25519 *r)
 {
 	int i;
 	crypto_uint32 m = equal(r->v[31],127);
-	for(i=30;i>0;i--)
+	for(i=30;i>0;i--) {
 		m &= equal(r->v[i],255);
+	}
 	m &= ge(r->v[0],237);
 
 	m = -m;
 
 	r->v[31] -= m&127;
-	for(i=30;i>0;i--)
+	for(i=30;i>0;i--) {
 		r->v[i] -= m&255;
+	}
 	r->v[0] -= m&237;
 }
 
 static inline void fe25519_unpack(fe25519 *r, const unsigned char x[32])
 {
 	int i;
-	for(i=0;i<32;i++) r->v[i] = x[i];
+	for(i=0;i<32;i++) {
+		r->v[i] = x[i];
+	}
 	r->v[31] &= 127;
 }
 
@@ -898,8 +904,9 @@ static inline void fe25519_pack(unsigned char r[32], const fe25519 *x)
 	int i;
 	fe25519 y = *x;
 	fe25519_freeze(&y);
-	for(i=0;i<32;i++)
+	for(i=0;i<32;i++) {
 		r[i] = y.v[i];
+	}
 }
 
 static inline int fe25519_iseq_vartime(const fe25519 *x, const fe25519 *y)
@@ -909,8 +916,11 @@ static inline int fe25519_iseq_vartime(const fe25519 *x, const fe25519 *y)
 	fe25519 t2 = *y;
 	fe25519_freeze(&t1);
 	fe25519_freeze(&t2);
-	for(i=0;i<32;i++)
-		if(t1.v[i] != t2.v[i]) return 0;
+	for(i=0;i<32;i++) {
+		if (t1.v[i] != t2.v[i]) {
+			return 0;
+		}
+	}
 	return 1;
 }
 
@@ -919,7 +929,9 @@ static inline void fe25519_cmov(fe25519 *r, const fe25519 *x, unsigned char b)
 	int i;
 	crypto_uint32 mask = b;
 	mask = -mask;
-	for(i=0;i<32;i++) r->v[i] ^= mask & (x->v[i] ^ r->v[i]);
+	for(i=0;i<32;i++) {
+		r->v[i] ^= mask & (x->v[i] ^ r->v[i]);
+	}
 }
 
 static inline unsigned char fe25519_getparity(const fe25519 *x)
@@ -933,20 +945,26 @@ static inline void fe25519_setone(fe25519 *r)
 {
 	int i;
 	r->v[0] = 1;
-	for(i=1;i<32;i++) r->v[i]=0;
+	for(i=1;i<32;i++) {
+		r->v[i]=0;
+	}
 }
 
 static inline void fe25519_setzero(fe25519 *r)
 {
 	int i;
-	for(i=0;i<32;i++) r->v[i]=0;
+	for(i=0;i<32;i++) {
+		r->v[i]=0;
+	}
 }
 
 static inline void fe25519_neg(fe25519 *r, const fe25519 *x)
 {
 	fe25519 t;
 	int i;
-	for(i=0;i<32;i++) t.v[i]=x->v[i];
+	for(i=0;i<32;i++) {
+		t.v[i]=x->v[i];
+	}
 	fe25519_setzero(r);
 	fe25519_sub(r, r, &t);
 }
@@ -954,7 +972,9 @@ static inline void fe25519_neg(fe25519 *r, const fe25519 *x)
 static inline void fe25519_add(fe25519 *r, const fe25519 *x, const fe25519 *y)
 {
 	int i;
-	for(i=0;i<32;i++) r->v[i] = x->v[i] + y->v[i];
+	for(i=0;i<32;i++) {
+		r->v[i] = x->v[i] + y->v[i];
+	}
 	reduce_add_sub(r);
 }
 
@@ -964,8 +984,12 @@ static inline void fe25519_sub(fe25519 *r, const fe25519 *x, const fe25519 *y)
 	crypto_uint32 t[32];
 	t[0] = x->v[0] + 0x1da;
 	t[31] = x->v[31] + 0xfe;
-	for(i=1;i<31;i++) t[i] = x->v[i] + 0x1fe;
-	for(i=0;i<32;i++) r->v[i] = t[i] - y->v[i];
+	for(i=1;i<31;i++) {
+		t[i] = x->v[i] + 0x1fe;
+	}
+	for(i=0;i<32;i++) {
+		r->v[i] = t[i] - y->v[i];
+	}
 	reduce_add_sub(r);
 }
 
@@ -973,14 +997,19 @@ static inline void fe25519_mul(fe25519 *r, const fe25519 *x, const fe25519 *y)
 {
 	int i,j;
 	crypto_uint32 t[63];
-	for(i=0;i<63;i++)t[i] = 0;
+	for(i=0;i<63;i++) {
+		t[i] = 0;
+	}
 
-	for(i=0;i<32;i++)
-		for(j=0;j<32;j++)
+	for(i=0;i<32;i++) {
+		for(j=0;j<32;j++) {
 			t[i+j] += x->v[i] * y->v[j];
+		}
+	}
 
-	for(i=32;i<63;i++)
+	for(i=32;i<63;i++) {
 		r->v[i-32] = t[i-32] + times38(t[i]);
+	}
 	r->v[31] = t[31]; /* result now in r[0]...r[31] */
 
 	reduce_mul(r);
@@ -1139,8 +1168,9 @@ static inline void reduce_add_sub(sc25519 *r)
 		pb = b;
 	}
 	mask = b - 1;
-	for(i=0;i<32;i++)
+	for(i=0;i<32;i++) {
 		r->v[i] ^= mask & (r->v[i] ^ t[i]);
+	}
 }
 
 /* Reduce coefficients of x before calling barrett_reduce */
@@ -1156,21 +1186,35 @@ static inline void barrett_reduce(sc25519 *r, const crypto_uint32 x[64])
 	crypto_uint32 pb = 0;
 	crypto_uint32 b;
 
-	for (i = 0;i < 66;++i) q2[i] = 0;
-	for (i = 0;i < 33;++i) r2[i] = 0;
+	for (i = 0;i < 66;++i) {
+		q2[i] = 0;
+	}
+	for (i = 0;i < 33;++i) {
+		r2[i] = 0;
+	}
 
-	for(i=0;i<33;i++)
-		for(j=0;j<33;j++)
-			if(i+j >= 31) q2[i+j] += mu[i]*x[j+31];
+	for(i=0;i<33;i++) {
+		for(j=0;j<33;j++) {
+			if(i+j >= 31) {
+				q2[i+j] += mu[i]*x[j+31];
+			}
+		}
+	}
 	carry = q2[31] >> 8;
 	q2[32] += carry;
 	carry = q2[32] >> 8;
 	q2[33] += carry;
 
-	for(i=0;i<33;i++)r1[i] = x[i];
-	for(i=0;i<32;i++)
-		for(j=0;j<33;j++)
-			if(i+j < 33) r2[i+j] += m[i]*q3[j];
+	for(i=0;i<33;i++) {
+		r1[i] = x[i];
+	}
+	for(i=0;i<32;i++) {
+		for(j=0;j<33;j++) {
+			if(i+j < 33) {
+				r2[i+j] += m[i]*q3[j];
+			}
+		}
+	}
 
 	for(i=0;i<32;i++) {
 		carry = r2[i] >> 8;
@@ -1197,8 +1241,12 @@ static inline void sc25519_from32bytes(sc25519 *r, const unsigned char x[32])
 {
 	int i;
 	crypto_uint32 t[64];
-	for(i=0;i<32;i++) t[i] = x[i];
-	for(i=32;i<64;++i) t[i] = 0;
+	for(i=0;i<32;i++) {
+		t[i] = x[i];
+	}
+	for(i=32;i<64;++i) {
+		t[i] = 0;
+	}
 	barrett_reduce(r, t);
 }
 
@@ -1206,20 +1254,26 @@ static inline void sc25519_from64bytes(sc25519 *r, const unsigned char x[64])
 {
 	int i;
 	crypto_uint32 t[64];
-	for(i=0;i<64;i++) t[i] = x[i];
+	for(i=0;i<64;i++) {
+		t[i] = x[i];
+	}
 	barrett_reduce(r, t);
 }
 
 static inline void sc25519_to32bytes(unsigned char r[32], const sc25519 *x)
 {
 	int i;
-	for(i=0;i<32;i++) r[i] = x->v[i];
+	for(i=0;i<32;i++) {
+		r[i] = x->v[i];
+	}
 }
 
 static inline void sc25519_add(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
 	int i, carry;
-	for(i=0;i<32;i++) r->v[i] = x->v[i] + y->v[i];
+	for(i=0;i<32;i++) {
+		r->v[i] = x->v[i] + y->v[i];
+	}
 	for(i=0;i<31;i++) {
 		carry = r->v[i] >> 8;
 		r->v[i+1] += carry;
@@ -1232,11 +1286,15 @@ static inline void sc25519_mul(sc25519 *r, const sc25519 *x, const sc25519 *y)
 {
 	int i,j,carry;
 	crypto_uint32 t[64];
-	for(i=0;i<64;i++)t[i] = 0;
+	for(i=0;i<64;i++) {
+		t[i] = 0;
+	}
 
-	for(i=0;i<32;i++)
-		for(j=0;j<32;j++)
+	for(i=0;i<32;i++) {
+		for(j=0;j<32;j++) {
 			t[i+j] += x->v[i] * y->v[j];
+		}
+	}
 
 	for(i=0;i<63;i++) {
 		carry = t[i] >> 8;
@@ -2329,18 +2387,21 @@ static inline int ge25519_unpackneg_vartime(ge25519_p3 *r, const unsigned char p
 	/* 3. Check whether sqrt computation gave correct result, multiply by sqrt(-1) if not: */
 	fe25519_square(&chk, &r->x);
 	fe25519_mul(&chk, &chk, &den);
-	if (!fe25519_iseq_vartime(&chk, &num))
+	if (!fe25519_iseq_vartime(&chk, &num)) {
 		fe25519_mul(&r->x, &r->x, &ge25519_sqrtm1);
+	}
 
 	/* 4. Now we have one of the two square roots, except if input was not a square */
 	fe25519_square(&chk, &r->x);
 	fe25519_mul(&chk, &chk, &den);
-	if (!fe25519_iseq_vartime(&chk, &num))
+	if (!fe25519_iseq_vartime(&chk, &num)) {
 		return -1;
+	}
 
 	/* 5. Choose the desired square root according to parity: */
-	if(fe25519_getparity(&r->x) != (1-par))
+	if(fe25519_getparity(&r->x) != (1-par)) {
 		fe25519_neg(&r->x, &r->x);
+	}
 
 	fe25519_mul(&r->t, &r->x, &r->y);
 	return 0;
@@ -2395,8 +2456,11 @@ static inline void ge25519_double_scalarmult_vartime(ge25519_p3 *r, const ge2551
 			p1p1_to_p3(r, &tp1p1);
 			add_p1p1(&tp1p1, r, &pre[b[i]]);
 		}
-		if(i != 0) p1p1_to_p2((ge25519_p2 *)r, &tp1p1);
-		else p1p1_to_p3(r, &tp1p1);
+		if (i != 0) {
+			p1p1_to_p2((ge25519_p2 *)r, &tp1p1);
+		} else {
+			p1p1_to_p3(r, &tp1p1);
+		}
 	}
 }
 
@@ -2420,9 +2484,15 @@ static inline void get_hram(unsigned char *hram, const unsigned char *sm, const 
 {
 	unsigned long long i;
 
-	for (i =  0;i < 32;++i)    playground[i] = sm[i];
-	for (i = 32;i < 64;++i)    playground[i] = pk[i-32];
-	for (i = 64;i < smlen;++i) playground[i] = sm[i];
+	for (i =  0;i < 32;++i) {
+		playground[i] = sm[i];
+	}
+	for (i = 32;i < 64;++i) {
+		playground[i] = pk[i-32];
+	}
+	for (i = 64;i < smlen;++i) {
+		playground[i] = sm[i];
+	}
 
 	ZeroTier::SHA512(hram,playground,(unsigned int)smlen);
 }
@@ -2476,10 +2546,12 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	extsk[31] &= 127;
 	extsk[31] |= 64;
 
-	for(unsigned int i=0;i<32;i++)
+	for(unsigned int i=0;i<32;i++) {
 		sig[32 + i] = extsk[32 + i];
-	for(unsigned int i=0;i<32;i++)
+	}
+	for(unsigned int i=0;i<32;i++) {
 		sig[64 + i] = digest[i];
+	}
 
 	SHA512(hmg,sig + 32,64);
 
@@ -2489,8 +2561,9 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	ge25519_pack(r, &ger);
 
 	/* Computation of s */
-	for(unsigned int i=0;i<32;i++)
+	for(unsigned int i=0;i<32;i++) {
 		sig[i] = r[i];
+	}
 
 	get_hram(hram,sig,myPublic.data + 32,sig,96);
 
@@ -2501,8 +2574,9 @@ void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPubli
 	sc25519_add(&scs, &scs, &sck);
 
 	sc25519_to32bytes(s,&scs); /* cat s */
-	for(unsigned int i=0;i<32;i++)
+	for(unsigned int i=0;i<32;i++) {
 		sig[32 + i] = s[i];
+	}
 #endif
 }
 
@@ -2511,8 +2585,9 @@ bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len
 	const unsigned char *const sig = (const unsigned char *)signature;
 	unsigned char digest[64]; // we sign the first 32 bytes of SHA-512(msg)
 	SHA512(digest,msg,len);
-	if (!Utils::secureEq(sig + 64,digest,32))
+	if (!Utils::secureEq(sig + 64,digest,32)) {
 		return false;
+	}
 
 	unsigned char t2[32];
 	ge25519 get1, get2;
@@ -2520,8 +2595,9 @@ bool C25519::verify(const C25519::Public &their,const void *msg,unsigned int len
 	unsigned char hram[crypto_hash_sha512_BYTES];
 	unsigned char m[96];
 
-	if (ge25519_unpackneg_vartime(&get1,their.data + 32))
+	if (ge25519_unpackneg_vartime(&get1,their.data + 32)) {
 		return false;
+	}
 
 	get_hram(hram,sig,their.data + 32,m,96);
 

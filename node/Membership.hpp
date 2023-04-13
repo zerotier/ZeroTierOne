@@ -115,8 +115,9 @@ public:
 		CertificateOfOwnership *v = (CertificateOfOwnership *)0;
 		Hashtable< uint32_t,CertificateOfOwnership >::Iterator i(*(const_cast< Hashtable< uint32_t,CertificateOfOwnership> *>(&_remoteCoos)));
 		while (i.next(k,v)) {
-			if (_isCredentialTimestampValid(nconf,*v)&&(v->owns(r)))
+			if (_isCredentialTimestampValid(nconf,*v)&&(v->owns(r))) {
 				return true;
+			}
 		}
 		return _isV6NDPEmulated(nconf,r);
 	}
@@ -187,8 +188,9 @@ private:
 							break;
 						}
 					}
-					if (prefixMatches)
+					if (prefixMatches) {
 						return true;
+					}
 					break;
 				}
 			}
@@ -203,8 +205,9 @@ private:
 							break;
 						}
 					}
-					if (prefixMatches)
+					if (prefixMatches) {
 						return true;
+					}
 					break;
 				}
 			}
@@ -230,8 +233,9 @@ private:
 		C *v = (C *)0;
 		typename Hashtable<uint32_t,C>::Iterator i(remoteCreds);
 		while (i.next(k,v)) {
-			if (!_isCredentialTimestampValid(nconf,*v))
+			if (!_isCredentialTimestampValid(nconf,*v)) {
 				remoteCreds.erase(*k);
+			}
 		}
 	}
 
@@ -271,8 +275,9 @@ public:
 		inline Capability *next()
 		{
 			while (_hti.next(_k,_c)) {
-				if (_m._isCredentialTimestampValid(_nconf,*_c))
+				if (_m._isCredentialTimestampValid(_nconf,*_c)) {
 					return _c;
+				}
 			}
 			return (Capability *)0;
 		}

@@ -90,8 +90,9 @@ public:
 	 */
 	inline void copyTo(void *buf,unsigned int len) const
 	{
-		if (len < 6)
+		if (len < 6) {
 			return;
+		}
 		unsigned char *b = (unsigned char *)buf;
 		*(b++) = (unsigned char)((_m >> 40) & 0xff);
 		*(b++) = (unsigned char)((_m >> 32) & 0xff);

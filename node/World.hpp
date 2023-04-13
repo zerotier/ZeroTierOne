@@ -148,8 +148,9 @@ public:
 	 */
 	inline bool shouldBeReplacedBy(const World &update)
 	{
-		if ((_id == 0)||(_type == TYPE_NULL))
+		if ((_id == 0)||(_type == TYPE_NULL)) {
 			return true;
+		}
 		if ((_id == update._id)&&(_ts < update._ts)&&(_type == update._type)) {
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> tmp;
 			update.serialize(tmp,true);
@@ -166,25 +167,32 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,bool forSign = false) const
 	{
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		if (forSign) {
+			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		}
 
 		b.append((uint8_t)_type);
 		b.append((uint64_t)_id);
 		b.append((uint64_t)_ts);
 		b.append(_updatesMustBeSignedBy.data,ZT_C25519_PUBLIC_KEY_LEN);
-		if (!forSign)
+		if (!forSign) {
 			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+		}
 		b.append((uint8_t)_roots.size());
 		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
 			r->identity.serialize(b);
 			b.append((uint8_t)r->stableEndpoints.size());
-			for(std::vector<InetAddress>::const_iterator ep(r->stableEndpoints.begin());ep!=r->stableEndpoints.end();++ep)
+			for(std::vector<InetAddress>::const_iterator ep(r->stableEndpoints.begin());ep!=r->stableEndpoints.end();++ep) {
 				ep->serialize(b);
+			}
 		}
-		if (_type == TYPE_MOON)
+		if (_type == TYPE_MOON) {
 			b.append((uint16_t)0); // no attached dictionary (for future use)
+		}
 
-		if (forSign) b.append((uint64_t)0xf7f7f7f7f7f7f7f7ULL);
+		if (forSign) {
+			b.append((uint64_t)0xf7f7f7f7f7f7f7f7ULL);
+		}
 	}
 
 	template<unsigned int C>
@@ -217,22 +225,25 @@ public:
 		memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
 		p += ZT_C25519_SIGNATURE_LEN;
 		const unsigned int numRoots = (unsigned int)b[p++];
-		if (numRoots > ZT_WORLD_MAX_ROOTS)
+		if (numRoots > ZT_WORLD_MAX_ROOTS) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+		}
 		for(unsigned int k=0;k<numRoots;++k) {
 			_roots.push_back(Root());
 			Root &r = _roots.back();
 			p += r.identity.deserialize(b,p);
 			unsigned int numStableEndpoints = b[p++];
-			if (numStableEndpoints > ZT_WORLD_MAX_STABLE_ENDPOINTS_PER_ROOT)
+			if (numStableEndpoints > ZT_WORLD_MAX_STABLE_ENDPOINTS_PER_ROOT) {
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+			}
 			for(unsigned int kk=0;kk<numStableEndpoints;++kk) {
 				r.stableEndpoints.push_back(InetAddress());
 				p += r.stableEndpoints.back().deserialize(b,p);
 			}
 		}
-		if (_type == TYPE_MOON)
+		if (_type == TYPE_MOON) {
 			p += b.template at<uint16_t>(p) + 2;
+		}
 
 		return (p - startAt);
 	}

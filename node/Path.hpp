@@ -229,8 +229,9 @@ public:
 						// tunnels due to very spotty performance and low MTU issues over
 						// these IPv6 tunnel links.
 						const uint8_t *ipd = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr);
-						if ((ipd[0] == 0x20)&&(ipd[1] == 0x01)&&(ipd[2] == 0x04)&&(ipd[3] == 0x70))
+						if ((ipd[0] == 0x20)&&(ipd[1] == 0x01)&&(ipd[2] == 0x04)&&(ipd[3] == 0x70)) {
 							return false;
+						}
 					}
 					return true;
 				default:

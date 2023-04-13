@@ -55,10 +55,14 @@ public:
 	{
 		for(unsigned int i=0;i<C;++i) {
 			if ((s)&&(i < len)) {
-				if (!(_d[i] = *s))
+				if (!(_d[i] = *s)) {
 					s = (const char *)0;
-				else ++s;
-			} else _d[i] = (char)0;
+				} else {
+					++s;
+				}
+			} else {
+				_d[i] = (char)0;
+			}
 		}
 		_d[C - 1] = (char)0;
 	}
@@ -82,10 +86,14 @@ public:
 	{
 		for(unsigned int i=0;i<C;++i) {
 			if (s) {
-				if (!(_d[i] = *s))
+				if (!(_d[i] = *s)) {
 					s = (const char *)0;
-				else ++s;
-			} else _d[i] = (char)0;
+				} else {
+					++s;
+				}
+			} else {
+				_d[i] = (char)0;
+			}
 		}
 		_d[C - 1] = (char)0;
 		return (!s);
@@ -105,8 +113,9 @@ public:
 	inline unsigned int sizeBytes() const
 	{
 		for(unsigned int i=0;i<C;++i) {
-			if (!_d[i])
+			if (!_d[i]) {
 				return i;
+			}
 		}
 		return C-1;
 	}
@@ -141,14 +150,16 @@ public:
 		bool esc;
 		int j;
 
-		if (!destlen) // sanity check
+		if (!destlen) { // sanity check
 			return -1;
+		}
 
 		while (*p) {
 			k = key;
 			while ((*k)&&(*p)) {
-				if (*p != *k)
+				if (*p != *k) {
 					break;
+				}
 				++k;
 				if (++p == eof) {
 					dest[0] = (char)0;
@@ -212,8 +223,9 @@ public:
 						dest[0] = (char)0;
 						return -1;
 					}
+				} else {
+					break;
 				}
-				else break;
 			}
 		}
 
@@ -252,8 +264,9 @@ public:
 	bool getB(const char *key,bool dfl = false) const
 	{
 		char tmp[4];
-		if (this->get(key,tmp,sizeof(tmp)) >= 0)
+		if (this->get(key,tmp,sizeof(tmp)) >= 0) {
 			return ((*tmp == '1')||(*tmp == 't')||(*tmp == 'T'));
+		}
 		return dfl;
 	}
 
@@ -267,8 +280,9 @@ public:
 	inline uint64_t getUI(const char *key,uint64_t dfl = 0) const
 	{
 		char tmp[128];
-		if (this->get(key,tmp,sizeof(tmp)) >= 1)
+		if (this->get(key,tmp,sizeof(tmp)) >= 1) {
 			return Utils::hexStrToU64(tmp);
+		}
 		return dfl;
 	}
 
@@ -282,8 +296,9 @@ public:
 	inline int64_t getI(const char *key,int64_t dfl = 0) const
 	{
 		char tmp[128];
-		if (this->get(key,tmp,sizeof(tmp)) >= 1)
+		if (this->get(key,tmp,sizeof(tmp)) >= 1) {
 			return Utils::hexStrTo64(tmp);
+		}
 		return dfl;
 	}
 

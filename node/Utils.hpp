@@ -128,8 +128,9 @@ public:
 	static inline bool secureEq(const void *a,const void *b,unsigned int len)
 	{
 		uint8_t diff = 0;
-		for(unsigned int i=0;i<len;++i)
+		for(unsigned int i=0;i<len;++i) {
 			diff |= ( (reinterpret_cast<const uint8_t *>(a))[i] ^ (reinterpret_cast<const uint8_t *>(b))[i] );
+		}
 		return (diff == 0);
 	}
 
@@ -232,26 +233,32 @@ public:
 		unsigned int l = 0;
 		while (l < buflen) {
 			uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
-			if (!hc) break;
+			if (!hc) {
+				break;
+			}
 
 			uint8_t c = 0;
-			if ((hc >= 48)&&(hc <= 57)) // 0..9
+			if ((hc >= 48)&&(hc <= 57)) { // 0..9
 				c = hc - 48;
-			else if ((hc >= 97)&&(hc <= 102)) // a..f
+			} else if ((hc >= 97)&&(hc <= 102)) { // a..f
 				c = hc - 87;
-			else if ((hc >= 65)&&(hc <= 70)) // A..F
+			} else if ((hc >= 65)&&(hc <= 70)) { // A..F
 				c = hc - 55;
+			}
 
 			hc = *(reinterpret_cast<const uint8_t *>(h++));
-			if (!hc) break;
+			if (!hc) {
+				break;
+			}
 
 			c <<= 4;
-			if ((hc >= 48)&&(hc <= 57))
+			if ((hc >= 48)&&(hc <= 57)) {
 				c |= hc - 48;
-			else if ((hc >= 97)&&(hc <= 102))
+			} else if ((hc >= 97)&&(hc <= 102)) {
 				c |= hc - 87;
-			else if ((hc >= 65)&&(hc <= 70))
+			} else if ((hc >= 65)&&(hc <= 70)) {
 				c |= hc - 55;
+			}
 
 			reinterpret_cast<uint8_t *>(buf)[l++] = c;
 		}
@@ -263,29 +270,39 @@ public:
 		unsigned int l = 0;
 		const char *hend = h + hlen;
 		while (l < buflen) {
-			if (h == hend) break;
+			if (h == hend) {
+				break;
+			}
 			uint8_t hc = *(reinterpret_cast<const uint8_t *>(h++));
-			if (!hc) break;
+			if (!hc) {
+				break;
+			}
 
 			uint8_t c = 0;
-			if ((hc >= 48)&&(hc <= 57))
+			if ((hc >= 48)&&(hc <= 57)) {
 				c = hc - 48;
-			else if ((hc >= 97)&&(hc <= 102))
+			} else if ((hc >= 97)&&(hc <= 102)) {
 				c = hc - 87;
-			else if ((hc >= 65)&&(hc <= 70))
+			} else if ((hc >= 65)&&(hc <= 70)) {
 				c = hc - 55;
+			}
 
-			if (h == hend) break;
+			if (h == hend) {
+				break;
+			}
 			hc = *(reinterpret_cast<const uint8_t *>(h++));
-			if (!hc) break;
+			if (!hc) {
+				break;
+			}
 
 			c <<= 4;
-			if ((hc >= 48)&&(hc <= 57))
+			if ((hc >= 48)&&(hc <= 57)) {
 				c |= hc - 48;
-			else if ((hc >= 97)&&(hc <= 102))
+			} else if ((hc >= 97)&&(hc <= 102)) {
 				c |= hc - 87;
-			else if ((hc >= 65)&&(hc <= 70))
+			} else if ((hc >= 65)&&(hc <= 70)) {
 				c |= hc - 55;
+			}
 
 			reinterpret_cast<uint8_t *>(buf)[l++] = c;
 		}
@@ -382,8 +399,9 @@ public:
 	 */
 	static inline bool scopy(char *dest,unsigned int len,const char *src)
 	{
-		if (!len)
+		if (!len) {
 			return false; // sanity check
+		}
 		if (!src) {
 			*dest = (char)0;
 			return true;
@@ -435,8 +453,9 @@ public:
 	static inline bool isZero(const void *p,unsigned int len)
 	{
 		for(unsigned int i=0;i<len;++i) {
-			if (((const unsigned char *)p)[i])
+			if (((const unsigned char *)p)[i]) {
 				return false;
+			}
 		}
 		return true;
 	}
@@ -660,8 +679,9 @@ public:
 	{
 	#ifdef ZT_NO_UNALIGNED_ACCESS
 		I tmp;
-		for(int i=0;i<(int)sizeof(I);++i)
+		for(int i=0;i<(int)sizeof(I);++i) {
 			reinterpret_cast<uint8_t *>(&tmp)[i] = reinterpret_cast<const uint8_t *>(p)[i];
+		}
 		return tmp;
 	#else
 		return *reinterpret_cast<const I *>(p);
@@ -679,8 +699,9 @@ public:
 	static ZT_INLINE void storeMachineEndian(void *const p, const I i) noexcept
 	{
 	#ifdef ZT_NO_UNALIGNED_ACCESS
-		for(unsigned int k=0;k<sizeof(I);++k)
+		for(unsigned int k=0;k<sizeof(I);++k) {
 			reinterpret_cast<uint8_t *>(p)[k] = reinterpret_cast<const uint8_t *>(&i)[k];
+		}
 	#else
 		*reinterpret_cast<I *>(p) = i;
 	#endif
