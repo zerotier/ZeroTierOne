@@ -642,6 +642,7 @@ void Switch::aqm_enqueue(void *tPtr, const SharedPtr<Network> &network, Packet &
 		}
 	}
 	if (!selectedQueue) {
+		_aqm_m.unlock();
 		return;
 	}
 
