@@ -521,6 +521,7 @@ public:
 	 * @return The bonding policy used to reach this peer
 	 */
 	SharedPtr<Bond> bond() {
+		Mutex::Lock l(_bond_m);
 		return _bond;
 	}
 

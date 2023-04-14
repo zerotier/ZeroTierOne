@@ -1946,17 +1946,20 @@ void Bond::dumpInfo(int64_t now, bool force)
 	_lastSummaryDump = now;
 	float overhead = (_overheadBytes / (timeSinceLastDump / 1000.0f) / 1000.0f);
 	_overheadBytes = 0;
-	log("bond: bp=%d, fi=%" PRIu64 ", mi=%d, ud=%d, dd=%d, flows=%zu, leaf=%d, overhead=%f KB/s, links=(%d/%d)",
-		_policy,
-		_failoverInterval,
-		_monitorInterval,
-		_upDelay,
-		_downDelay,
-		_flows.size(),
-		_isLeaf,
-		overhead,
-		_numAliveLinks,
-		_numTotalLinks);
+    {
+        Mutex::Lock l(_flows_m);
+        log("bond: bp=%d, fi=%" PRIu64 ", mi=%d, ud=%d, dd=%d, flows=%zu, leaf=%d, overhead=%f KB/s, links=(%d/%d)",
+            _policy,
+            _failoverInterval,
+            _monitorInterval,
+            _upDelay,
+            _downDelay,
+            _flows.size(),
+            _isLeaf,
+            overhead,
+            _numAliveLinks,
+            _numTotalLinks);
+    }
 	for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
 		if (_paths[i].p) {
 			dumpPathStatus(now, i);

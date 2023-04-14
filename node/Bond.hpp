@@ -344,6 +344,7 @@ class Bond {
 	 */
 	static bool inUse()
 	{
+		Mutex::Lock l(_bonds_m);
 		return ! _bondPolicyTemplates.empty() || _defaultPolicy;
 	}
 
