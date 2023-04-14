@@ -2,7 +2,7 @@ CC=clang
 CXX=clang++
 TOPDIR=$(shell PWD)
 
-INCLUDES=-I$(shell PWD)/zeroidc/target -isystem $(TOPDIR)/ext
+INCLUDES=-I$(shell PWD)/zeroidc/target -isystem $(TOPDIR)/ext  -I$(TOPDIR)/ext/prometheus-cpp-lite-1.0/core/include -I$(TOPDIR)/ext-prometheus-cpp-lite-1.0/3rdparty/http-client-lite/include -I$(TOPDIR)/ext/prometheus-cpp-lite-1.0/simpleapi/include
 DEFS=
 LIBS=
 ARCH_FLAGS=-arch x86_64 -arch arm64 

@@ -9,7 +9,7 @@ ifeq ($(origin CXX),default)
 	CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
 endif
 
-INCLUDES?=-Izeroidc/target -isystem ext
+INCLUDES?=-Izeroidc/target -isystem ext -Iext/prometheus-cpp-lite-1.0/core/include -Iext-prometheus-cpp-lite-1.0/3rdparty/http-client-lite/include -Iext/prometheus-cpp-lite-1.0/simpleapi/include
 DEFS?=
 LDLIBS?=
 DESTDIR?=
