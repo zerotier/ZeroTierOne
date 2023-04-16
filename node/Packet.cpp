@@ -543,7 +543,8 @@ FORCE_INLINE int LZ4_compress_generic(
 					} else {
 						refDelta = 0;
 						lowLimit = (const BYTE*)source;
-				}   }
+					}
+				}
 				forwardH = LZ4_hashPosition(forwardIp, tableType);
 				LZ4_putPositionOnHash(ip, h, cctx->hashTable, tableType, base);
 
@@ -633,7 +634,8 @@ _next_match:
 			} else {
 				refDelta = 0;
 				lowLimit = (const BYTE*)source;
-		}   }
+			}
+		}
 		LZ4_putPosition(ip, cctx->hashTable, tableType, base);
 		if ( ((dictIssue==dictSmall) ? (match>=lowRefLimit) : 1)
 			&& (match+MAX_DISTANCE>=ip)
@@ -823,7 +825,8 @@ FORCE_INLINE int LZ4_decompress_generic(
 				} else {
 					memcpy(op, lowPrefix, restSize);
 					op += restSize;
-			}   }
+				}
+			}
 			continue;
 		}
 

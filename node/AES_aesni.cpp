@@ -438,9 +438,9 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 
 #if !defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
 		if (Utils::CPUID.vaes && (len >= 256)) {
-				p_aesCtrInnerVAES256(len, _ctr[0], c1, in, out, k);
-				goto skip_conventional_aesni_64;
-			}
+			p_aesCtrInnerVAES256(len, _ctr[0], c1, in, out, k);
+			goto skip_conventional_aesni_64;
+		}
 #endif
 
 		const uint8_t *const eof64 = in + (len & ~((unsigned int)63));
