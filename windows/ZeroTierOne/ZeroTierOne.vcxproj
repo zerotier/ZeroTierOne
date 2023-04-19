@@ -81,6 +81,7 @@
     <ClCompile Include="..\..\node\IncomingPacket.cpp" />
     <ClCompile Include="..\..\node\InetAddress.cpp" />
     <ClCompile Include="..\..\node\Membership.cpp" />
+    <ClCompile Include="..\..\node\Metrics.cpp" />
     <ClCompile Include="..\..\node\Multicaster.cpp" />
     <ClCompile Include="..\..\node\Network.cpp" />
     <ClCompile Include="..\..\node\NetworkConfig.cpp" />
@@ -210,6 +211,7 @@
     <ClInclude Include="..\..\node\InetAddress.hpp" />
     <ClInclude Include="..\..\node\MAC.hpp" />
     <ClInclude Include="..\..\node\Membership.hpp" />
+    <ClInclude Include="..\..\node\Metrics.hpp" />
     <ClInclude Include="..\..\node\Multicaster.hpp" />
     <ClInclude Include="..\..\node\MulticastGroup.hpp" />
     <ClInclude Include="..\..\node\Mutex.hpp" />
