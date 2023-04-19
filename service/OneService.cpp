@@ -94,8 +94,7 @@ namespace prometheus {
 
     std::shared_ptr<Registry> registry_ptr = std::make_shared<Registry>();
     Registry&                 registry = *registry_ptr;
-    SaveToFile saver(registry_ptr, std::chrono::seconds(5), std::string("./metrics.prom"));
-
+    SaveToFile saver;
   }
 }
 
@@ -858,6 +857,10 @@ public:
 		_ports[0] = 0;
 		_ports[1] = 0;
 		_ports[2] = 0;
+
+        ::prometheus::simpleapi::saver.set_registry(::prometheus::simpleapi::registry_ptr);
+        ::prometheus::simpleapi::saver.set_delay(std::chrono::seconds(5));
+        ::prometheus::simpleapi::saver.set_out_file(_homePath + ZT_PATH_SEPARATOR + "metrics.prom");
 
 #if ZT_VAULT_SUPPORT
 		curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -1758,6 +1761,14 @@ public:
 					scode = 404;
 				}
 #endif
+            } else if (ps[0] == "metrics") {
+                std::string statspath = _homePath + ZT_PATH_SEPARATOR + "metrics.prom";
+                if (!OSUtils::readFile(statspath.c_str(), responseBody)) {
+                    scode = 500;
+                } else {
+                    scode = 200;
+                    responseContentType = "text/plain";
+                }
 			} else {
 				scode = 401; // isAuth == false && !sso
 			}
