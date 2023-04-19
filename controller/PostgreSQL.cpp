@@ -720,6 +720,7 @@ void PostgreSQL::initializeNetworks()
 			fprintf(stderr, "Took %llu us per network to load\n", (total/count));
 		}
 		stream.complete();
+		_network_count = count;
 
 		w.commit();
 		_pool->unborrow(c2);
@@ -1034,7 +1035,6 @@ void PostgreSQL::heartbeat()
 				w.commit();
 			} catch (std::exception &e) {
 				fprintf(stderr, "%s: Heartbeat update failed: %s\n", controllerId, e.what());
-				w.abort();
 				_pool->unborrow(c);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				continue;

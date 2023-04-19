@@ -35,6 +35,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <prometheus/simpleapi.h>
+
 #define ZT_MEMBER_AUTH_TIMEOUT_NOTIFY_BEFORE 25000
 
 namespace ZeroTier
@@ -188,6 +190,9 @@ protected:
 	std::unordered_multimap< uint64_t,uint64_t > _networkByMember;
 	mutable std::mutex _changeListeners_l;
 	mutable std::mutex _networks_l;
+
+	prometheus::simpleapi::counter_metric_t _network_count { "contrller_network_count", "number of networks the controller is serving" };
+	prometheus::simpleapi::counter_metric_t _member_count { "controller_member_count", "number of network members the controller is serving" };
 };
 
 } // namespace ZeroTier
