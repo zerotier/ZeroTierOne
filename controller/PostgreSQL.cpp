@@ -705,6 +705,8 @@ void PostgreSQL::initializeNetworks()
 				}
 			}
 
+			_network_count++;
+
 		 	_networkChanged(empty, config, false);
 
 			auto end = std::chrono::high_resolution_clock::now();
@@ -720,7 +722,6 @@ void PostgreSQL::initializeNetworks()
 			fprintf(stderr, "Took %llu us per network to load\n", (total/count));
 		}
 		stream.complete();
-		_network_count = count;
 
 		w.commit();
 		_pool->unborrow(c2);
@@ -925,6 +926,8 @@ void PostgreSQL::initializeMembers()
 					config["ipAssignments"].push_back(*it);
 				}
 			}
+
+			_member_count++;
 
 			_memberChanged(empty, config, false);
 

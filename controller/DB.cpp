@@ -211,16 +211,19 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 			{
 				std::lock_guard<std::mutex> l(_networks_l);
 				auto nw2 = _networks.find(networkId);
-				if (nw2 != _networks.end())
+				if (nw2 != _networks.end()) {
 					nw = nw2->second;
+				}
 			}
 			if (nw) {
 				std::lock_guard<std::mutex> l(nw->lock);
-				if (OSUtils::jsonBool(old["activeBridge"],false))
+				if (OSUtils::jsonBool(old["activeBridge"],false)) {
 					nw->activeBridgeMembers.erase(memberId);
+				}
 				wasAuth = OSUtils::jsonBool(old["authorized"],false);
-				if (wasAuth)
+				if (wasAuth) {
 					nw->authorizedMembers.erase(memberId);
+				}
 				json &ips = old["ipAssignments"];
 				if (ips.is_array()) {
 					for(unsigned long i=0;i<ips.size();++i) {
@@ -255,11 +258,14 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 
 			nw->members[memberId] = memberConfig;
 
-			if (OSUtils::jsonBool(memberConfig["activeBridge"],false))
+			if (OSUtils::jsonBool(memberConfig["activeBridge"],false)) {
 				nw->activeBridgeMembers.insert(memberId);
+			}
 			isAuth = OSUtils::jsonBool(memberConfig["authorized"],false);
-			if (isAuth)
+			if (isAuth) {
+				_member_auths++;
 				nw->authorizedMembers.insert(memberId);
+			}
 			json &ips = memberConfig["ipAssignments"];
 			if (ips.is_array()) {
 				for(unsigned long i=0;i<ips.size();++i) {
@@ -303,6 +309,24 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 		}
 	}
 
+	if (notifyListeners) {
+		if(networkId != 0 && memberId != 0 && old.is_object() && !memberConfig.is_object()) {
+			// member delete
+			_member_count--;
+		} else if (networkId != 0 && memberId != 0 && !old.is_object() && memberConfig.is_object()) {
+			// new member
+			_member_count++;
+		}
+
+		if (!wasAuth && isAuth) {
+			_member_auths++;
+		} else if (wasAuth && !isAuth) {
+			_member_deauths++;
+		} else {
+			_member_changes++;
+		}
+	}
+
 	if ((notifyListeners)&&((wasAuth)&&(!isAuth)&&(networkId)&&(memberId))) {
 		std::lock_guard<std::mutex> ll(_changeListeners_l);
 		for(auto i=_changeListeners.begin();i!=_changeListeners.end();++i) {
@@ -313,6 +337,16 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 
 void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool notifyListeners)
 {
+	if (notifyListeners) {
+		if (old.is_object() && old.contains("id") && networkConfig.is_object() && networkConfig.contains("id")) {
+			_network_changes++;
+		} else if (!old.is_object() && networkConfig.is_object() && networkConfig.contains("id")) {
+			_network_count++;
+		} else if (old.is_object() && old.contains("id") && !networkConfig.is_object()) {
+			_network_count--;
+		}
+	}
+
 	if (networkConfig.is_object()) {
 		const std::string ids = networkConfig["id"];
 		const uint64_t networkId = Utils::hexStrToU64(ids.c_str());

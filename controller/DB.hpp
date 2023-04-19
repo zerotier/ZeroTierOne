@@ -191,8 +191,12 @@ protected:
 	mutable std::mutex _changeListeners_l;
 	mutable std::mutex _networks_l;
 
-	prometheus::simpleapi::counter_metric_t _network_count { "contrller_network_count", "number of networks the controller is serving" };
-	prometheus::simpleapi::counter_metric_t _member_count { "controller_member_count", "number of network members the controller is serving" };
+	prometheus::simpleapi::gauge_metric_t _network_count { "controller_network_count", "number of networks the controller is serving" };
+	prometheus::simpleapi::gauge_metric_t _member_count { "controller_member_count", "number of network members the controller is serving" };
+	prometheus::simpleapi::counter_metric_t _network_changes { "controller_network_change_count", "number of times a network configuration is changed" };
+	prometheus::simpleapi::counter_metric_t _member_changes { "controller_member_change_count", "number of times a network member configuration is changed" };
+	prometheus::simpleapi::counter_metric_t _member_auths { "controller_member_auth_count", "number of network member auths" };
+	prometheus::simpleapi::counter_metric_t _member_deauths { "controller_member_deauth_count", "number of network member deauths" };
 };
 
 } // namespace ZeroTier
