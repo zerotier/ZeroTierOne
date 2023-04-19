@@ -34,6 +34,7 @@
 #include "SelfAwareness.hpp"
 #include "Network.hpp"
 #include "Trace.hpp"
+#include "Metrics.hpp"
 
 namespace ZeroTier {
 
