@@ -119,6 +119,7 @@ MemberNotificationReceiver::MemberNotificationReceiver(PostgreSQL *p, pqxx::conn
 
 void MemberNotificationReceiver::operator() (const std::string &payload, int packend_pid) {
 	fprintf(stderr, "Member Notification received: %s\n", payload.c_str());
+	_mem_notifications++;
 	json tmp(json::parse(payload));
 	json &ov = tmp["old_val"];
 	json &nv = tmp["new_val"];
@@ -141,6 +142,7 @@ NetworkNotificationReceiver::NetworkNotificationReceiver(PostgreSQL *p, pqxx::co
 
 void NetworkNotificationReceiver::operator() (const std::string &payload, int packend_pid) {
 	fprintf(stderr, "Network Notification received: %s\n", payload.c_str());
+	_net_notifications++;
 	json tmp(json::parse(payload));
 	json &ov = tmp["old_val"];
 	json &nv = tmp["new_val"];
@@ -1233,6 +1235,7 @@ void PostgreSQL::_networksWatcher_Redis() {
 						}
 						lastID = id;
 					}
+					_redis_net_notif++;
 				}
 			}
 		} catch (sw::redis::Error &e) {
@@ -1791,6 +1794,7 @@ uint64_t PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &con
 			.sadd("network-nodes-all:{"+controllerId+"}:"+networkId, memberId)
 			.hmset("member:{"+controllerId+"}:"+networkId+":"+memberId, record.begin(), record.end());
 		++count;
+		_redis_mem_notif++;
 	}
 
 	// expire records from all-nodes and network-nodes member list
