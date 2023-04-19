@@ -112,6 +112,7 @@ using namespace ZeroTier;
 MemberNotificationReceiver::MemberNotificationReceiver(PostgreSQL *p, pqxx::connection &c, const std::string &channel)
 	: pqxx::notification_receiver(c, channel)
 	, _psql(p)
+	, _mem_notifications{"controller_pgsql_member_notifications_received", "number of member change notifications received via pgsql NOTIFY"}
 {
 	fprintf(stderr, "initialize MemberNotificationReceiver\n");
 }
@@ -136,6 +137,7 @@ void MemberNotificationReceiver::operator() (const std::string &payload, int pac
 NetworkNotificationReceiver::NetworkNotificationReceiver(PostgreSQL *p, pqxx::connection &c, const std::string &channel)
 	: pqxx::notification_receiver(c, channel)
 	, _psql(p)
+	, _net_notifications{"controller_pgsql_network_notifications_received", "number of network change notifications received via pgsql NOTIFY"}
 {
 	fprintf(stderr, "initialize NetworkNotificationReceiver\n");
 }
@@ -173,6 +175,8 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	, _redis(NULL)
 	, _cluster(NULL)
 	, _redisMemberStatus(false)
+	, _redis_mem_notif{"controller_redis_member_notifications_received", "number of member change notifications received via redis"}
+	, _redis_net_notif{"controller_redis_network_notifications_received", "number of network change notifications received via redis"}
 {
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);

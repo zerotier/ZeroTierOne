@@ -101,7 +101,14 @@ void DB::cleanMember(nlohmann::json &member)
 	member.erase("authenticationClientID"); // computed
 }
 
-DB::DB() {}
+DB::DB()
+	: _network_count{"controller_network_count", "number of networks the controller is serving"}
+	, _member_count{"controller_member_count", "number of network members the controller is serving"}
+	, _network_changes{"controller_network_change_count", "number of times a network configuration is changed"}
+	, _member_changes{"controller_member_change_count", "number of times a network member configuration is changed"}
+	, _member_auths{"controller_member_auth_count", "number of network member auths"}
+	, _member_deauths{"controller_member_deauth_count", "number of network member deauths"}
+{}
 DB::~DB() {}
 
 bool DB::get(const uint64_t networkId,nlohmann::json &network)

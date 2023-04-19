@@ -51,6 +51,7 @@ class PostgresConnFactory : public ConnectionFactory {
 public:
 	PostgresConnFactory(std::string &connString) 
 		: m_connString(connString)
+		, _conn_counter{ "controller_pgsql_connections_created", "number of pgsql connections created"}
 	{
 	}
 
@@ -62,7 +63,7 @@ public:
 	}
 private:
 	std::string m_connString;
-	prometheus::simpleapi::counter_metric_t _conn_counter { "controller_pgsql_connections_created", "number of pgsql connections created" };
+	prometheus::simpleapi::counter_metric_t _conn_counter;
 };
 
 class PostgreSQL;
@@ -77,7 +78,7 @@ public:
 	virtual void operator() (const std::string &payload, int backendPid);
 private:
 	PostgreSQL *_psql;
-	prometheus::simpleapi::counter_metric_t _mem_notifications { "controller_pgsql_member_notifications_received", "number of member change notifications received via pgsql NOTIFY" };
+	prometheus::simpleapi::counter_metric_t _mem_notifications;
 };
 
 class NetworkNotificationReceiver : public pqxx::notification_receiver {
@@ -90,7 +91,7 @@ public:
 	virtual void operator() (const std::string &payload, int packend_pid);
 private:
 	PostgreSQL *_psql;
-	prometheus::simpleapi::counter_metric_t _net_notifications { "controller_pgsql_network_notifications_received", "number of network change notifications received via pgsql NOTIFY" };
+	prometheus::simpleapi::counter_metric_t _net_notifications;
 };
 
 /**
@@ -182,9 +183,8 @@ private:
 	std::shared_ptr<sw::redis::RedisCluster> _cluster;
     bool _redisMemberStatus;
 
-	prometheus::simpleapi::counter_metric_t _redis_mem_notif { "controller_redis_member_notifications_received", "number of member change notifications received via redis" };
-	prometheus::simpleapi::counter_metric_t _redis_net_notif { "controller_redis_network_notifications_received", "number of network change notifications received via redis" };
-
+	prometheus::simpleapi::counter_metric_t _redis_mem_notif;
+	prometheus::simpleapi::counter_metric_t _redis_net_notif;
 };
 
 } // namespace ZeroTier
