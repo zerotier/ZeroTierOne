@@ -112,7 +112,6 @@ using namespace ZeroTier;
 MemberNotificationReceiver::MemberNotificationReceiver(PostgreSQL *p, pqxx::connection &c, const std::string &channel)
 	: pqxx::notification_receiver(c, channel)
 	, _psql(p)
-	, _mem_notifications{"controller_pgsql_member_notifications_received", "number of member change notifications received via pgsql NOTIFY"}
 {
 	fprintf(stderr, "initialize MemberNotificationReceiver\n");
 }
@@ -120,7 +119,7 @@ MemberNotificationReceiver::MemberNotificationReceiver(PostgreSQL *p, pqxx::conn
 
 void MemberNotificationReceiver::operator() (const std::string &payload, int packend_pid) {
 	fprintf(stderr, "Member Notification received: %s\n", payload.c_str());
-	_mem_notifications++;
+	Metrics::pgsql_mem_notification++;
 	json tmp(json::parse(payload));
 	json &ov = tmp["old_val"];
 	json &nv = tmp["new_val"];
@@ -137,14 +136,13 @@ void MemberNotificationReceiver::operator() (const std::string &payload, int pac
 NetworkNotificationReceiver::NetworkNotificationReceiver(PostgreSQL *p, pqxx::connection &c, const std::string &channel)
 	: pqxx::notification_receiver(c, channel)
 	, _psql(p)
-	, _net_notifications{"controller_pgsql_network_notifications_received", "number of network change notifications received via pgsql NOTIFY"}
 {
 	fprintf(stderr, "initialize NetworkNotificationReceiver\n");
 }
 
 void NetworkNotificationReceiver::operator() (const std::string &payload, int packend_pid) {
 	fprintf(stderr, "Network Notification received: %s\n", payload.c_str());
-	_net_notifications++;
+	Metrics::pgsql_net_notification++;
 	json tmp(json::parse(payload));
 	json &ov = tmp["old_val"];
 	json &nv = tmp["new_val"];
@@ -175,8 +173,6 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	, _redis(NULL)
 	, _cluster(NULL)
 	, _redisMemberStatus(false)
-	, _redis_mem_notif{"controller_redis_member_notifications_received", "number of member change notifications received via redis"}
-	, _redis_net_notif{"controller_redis_network_notifications_received", "number of network change notifications received via redis"}
 {
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
@@ -711,7 +707,7 @@ void PostgreSQL::initializeNetworks()
 				}
 			}
 
-			_network_count++;
+			Metrics::network_count++;
 
 		 	_networkChanged(empty, config, false);
 
@@ -933,7 +929,7 @@ void PostgreSQL::initializeMembers()
 				}
 			}
 
-			_member_count++;
+			Metrics::member_count++;
 
 			_memberChanged(empty, config, false);
 
@@ -1239,7 +1235,7 @@ void PostgreSQL::_networksWatcher_Redis() {
 						}
 						lastID = id;
 					}
-					_redis_net_notif++;
+					Metrics::redis_net_notification++;
 				}
 			}
 		} catch (sw::redis::Error &e) {
@@ -1798,7 +1794,7 @@ uint64_t PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &con
 			.sadd("network-nodes-all:{"+controllerId+"}:"+networkId, memberId)
 			.hmset("member:{"+controllerId+"}:"+networkId+":"+memberId, record.begin(), record.end());
 		++count;
-		_redis_mem_notif++;
+		Metrics::redis_mem_notification++;
 	}
 
 	// expire records from all-nodes and network-nodes member list

@@ -190,13 +190,6 @@ protected:
 	std::unordered_multimap< uint64_t,uint64_t > _networkByMember;
 	mutable std::mutex _changeListeners_l;
 	mutable std::mutex _networks_l;
-
-	prometheus::simpleapi::gauge_metric_t _network_count;
-	prometheus::simpleapi::gauge_metric_t _member_count;
-	prometheus::simpleapi::counter_metric_t _network_changes;
-	prometheus::simpleapi::counter_metric_t _member_changes;
-	prometheus::simpleapi::counter_metric_t _member_auths;
-	prometheus::simpleapi::counter_metric_t _member_deauths;
 };
 
 } // namespace ZeroTier

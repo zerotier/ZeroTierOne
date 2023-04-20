@@ -19,7 +19,7 @@
 	#define _DEBUG(x)
 #endif
 
-#include <prometheus/simpleapi.h>
+#include "../node/Metrics.hpp"
 
 #include <deque>
 #include <set>
@@ -63,7 +63,7 @@ public:
     {
         while(m_pool.size() < m_minPoolSize){
             m_pool.push_back(m_factory->create());
-            _pool_avail++;
+            Metrics::pool_avail++;
         }
     };
 
@@ -94,7 +94,7 @@ public:
         while((m_pool.size() + m_borrowed.size()) < m_minPoolSize) {
             std::shared_ptr<Connection> conn = m_factory->create();
             m_pool.push_back(conn);
-            _pool_avail++;
+            Metrics::pool_avail++;
         }
 
         if(m_pool.size()==0){
@@ -103,10 +103,10 @@ public:
                 try {
                     std::shared_ptr<Connection> conn = m_factory->create();
                     m_borrowed.insert(conn);
-                    _pool_in_use++;
+                    Metrics::pool_in_use++;
                     return std::static_pointer_cast<T>(conn);
                 } catch (std::exception &e) {
-                    _pool_errors++;
+                    Metrics::pool_errors++;
                     throw ConnectionUnavailable();
                 }
             } else {
@@ -122,13 +122,13 @@ public:
                             return std::static_pointer_cast<T>(conn);
                         } catch(std::exception& e) {
                             // Error creating a replacement connection
-                            _pool_errors++;
+                            Metrics::pool_errors++;
                             throw ConnectionUnavailable();
                         }
                     }
                 }
                 // Nothing available
-                _pool_errors++;
+                Metrics::pool_errors++;
                 throw ConnectionUnavailable();
             }
         }
@@ -136,10 +136,10 @@ public:
         // Take one off the front
         std::shared_ptr<Connection> conn = m_pool.front();
         m_pool.pop_front();
-        _pool_avail--;
+        Metrics::pool_avail--;
         // Add it to the borrowed list
         m_borrowed.insert(conn);
-        _pool_in_use++;
+        Metrics::pool_in_use++;
         return std::static_pointer_cast<T>(conn);
     };
 
@@ -153,9 +153,9 @@ public:
         // Lock
         std::unique_lock<std::mutex> lock(m_poolMutex);
         m_borrowed.erase(conn);
-        _pool_in_use--;
+        Metrics::pool_in_use--;
         if ((m_pool.size() + m_borrowed.size()) < m_maxPoolSize) {
-            _pool_avail++;
+            Metrics::pool_avail++;
             m_pool.push_back(conn);
         }
     };
@@ -166,12 +166,6 @@ protected:
     std::deque<std::shared_ptr<Connection> > m_pool;
     std::set<std::shared_ptr<Connection> > m_borrowed;
     std::mutex m_poolMutex;
-
-    prometheus::simpleapi::counter_metric_t _max_pool_size { "controller_pgsql_max_conn_pool_size", "max connection pool size for postgres"};
-    prometheus::simpleapi::counter_metric_t _min_pool_size { "controller_pgsql_min_conn_pool_size", "minimum connection pool size for postgres" };
-    prometheus::simpleapi::gauge_metric_t _pool_avail { "controller_pgsql_available_conns", "number of available postgres connections" };
-    prometheus::simpleapi::gauge_metric_t _pool_in_use { "controller_pgsql_in_use_conns", "number of postgres database connections in use" };
-    prometheus::simpleapi::counter_metric_t _pool_errors { "controller_pgsql_connection_errors", "number of connection errors the connection pool has seen" };
 };
 
 }

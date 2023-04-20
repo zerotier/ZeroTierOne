@@ -13,6 +13,7 @@
 
 #include "DB.hpp"
 #include "EmbeddedNetworkController.hpp"
+#include "../node/Metrics.hpp"
 
 #include <chrono>
 #include <algorithm>
@@ -101,14 +102,7 @@ void DB::cleanMember(nlohmann::json &member)
 	member.erase("authenticationClientID"); // computed
 }
 
-DB::DB()
-	: _network_count{"controller_network_count", "number of networks the controller is serving"}
-	, _member_count{"controller_member_count", "number of network members the controller is serving"}
-	, _network_changes{"controller_network_change_count", "number of times a network configuration is changed"}
-	, _member_changes{"controller_member_change_count", "number of times a network member configuration is changed"}
-	, _member_auths{"controller_member_auth_count", "number of network member auths"}
-	, _member_deauths{"controller_member_deauth_count", "number of network member deauths"}
-{}
+DB::DB() {}
 DB::~DB() {}
 
 bool DB::get(const uint64_t networkId,nlohmann::json &network)
@@ -270,7 +264,7 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 			}
 			isAuth = OSUtils::jsonBool(memberConfig["authorized"],false);
 			if (isAuth) {
-				_member_auths++;
+				Metrics::member_auths++;
 				nw->authorizedMembers.insert(memberId);
 			}
 			json &ips = memberConfig["ipAssignments"];
@@ -319,18 +313,18 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 	if (notifyListeners) {
 		if(networkId != 0 && memberId != 0 && old.is_object() && !memberConfig.is_object()) {
 			// member delete
-			_member_count--;
+			Metrics::member_count--;
 		} else if (networkId != 0 && memberId != 0 && !old.is_object() && memberConfig.is_object()) {
 			// new member
-			_member_count++;
+			Metrics::member_count++;
 		}
 
 		if (!wasAuth && isAuth) {
-			_member_auths++;
+			Metrics::member_auths++;
 		} else if (wasAuth && !isAuth) {
-			_member_deauths++;
+			Metrics::member_deauths++;
 		} else {
-			_member_changes++;
+			Metrics::member_changes++;
 		}
 	}
 
@@ -346,11 +340,11 @@ void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool 
 {
 	if (notifyListeners) {
 		if (old.is_object() && old.contains("id") && networkConfig.is_object() && networkConfig.contains("id")) {
-			_network_changes++;
+			Metrics::network_changes++;
 		} else if (!old.is_object() && networkConfig.is_object() && networkConfig.contains("id")) {
-			_network_count++;
+			Metrics::network_count++;
 		} else if (old.is_object() && old.contains("id") && !networkConfig.is_object()) {
-			_network_count--;
+			Metrics::network_count--;
 		}
 	}
 
