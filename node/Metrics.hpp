@@ -3,6 +3,12 @@
 
 #include <prometheus/simpleapi.h>
 
+namespace prometheus {
+    namespace simpleapi {
+        extern std::shared_ptr<Registry> registry_ptr;
+    }
+}
+
 namespace ZeroTier {
     namespace Metrics {
         // General Controller Metrics

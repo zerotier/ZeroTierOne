@@ -1,5 +1,13 @@
 #include <prometheus/simpleapi.h>
 
+namespace prometheus {
+    namespace simpleapi {
+        std::shared_ptr<Registry> registry_ptr = std::make_shared<Registry>();
+        Registry&                 registry = *registry_ptr;
+        SaveToFile saver;
+    }
+}
+
 namespace ZeroTier {
     namespace Metrics {
         // General Controller Metrics

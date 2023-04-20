@@ -87,17 +87,7 @@
 #include "../ext/http-parser/http_parser.h"
 #endif
 
-#include <prometheus/simpleapi.h>
-
-namespace prometheus {
-  namespace simpleapi {
-
-    std::shared_ptr<Registry> registry_ptr = std::make_shared<Registry>();
-    Registry&                 registry = *registry_ptr;
-    SaveToFile saver;
-  }
-}
-
+#include "../node/Metrics.hpp"
 
 #if ZT_VAULT_SUPPORT
 extern "C" {
@@ -858,9 +848,9 @@ public:
 		_ports[1] = 0;
 		_ports[2] = 0;
 
-        ::prometheus::simpleapi::saver.set_registry(::prometheus::simpleapi::registry_ptr);
-        ::prometheus::simpleapi::saver.set_delay(std::chrono::seconds(5));
-        ::prometheus::simpleapi::saver.set_out_file(_homePath + ZT_PATH_SEPARATOR + "metrics.prom");
+        prometheus::simpleapi::saver.set_registry(prometheus::simpleapi::registry_ptr);
+        prometheus::simpleapi::saver.set_delay(std::chrono::seconds(5));
+        prometheus::simpleapi::saver.set_out_file(_homePath + ZT_PATH_SEPARATOR + "metrics.prom");
 
 #if ZT_VAULT_SUPPORT
 		curl_global_init(CURL_GLOBAL_DEFAULT);
