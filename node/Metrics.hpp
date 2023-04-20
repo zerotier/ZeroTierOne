@@ -12,7 +12,7 @@ namespace prometheus {
 namespace ZeroTier {
     namespace Metrics {
         // General Controller Metrics
-        static prometheus::simpleapi::gauge_metric_t   network_count;
+        extern prometheus::simpleapi::gauge_metric_t   network_count;
         extern prometheus::simpleapi::gauge_metric_t   member_count;
         extern prometheus::simpleapi::counter_metric_t network_changes;
         extern prometheus::simpleapi::counter_metric_t member_changes;
