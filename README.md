@@ -61,6 +61,7 @@ To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU 
    - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **FreeBSD**
    - GNU make is required. Type `gmake` to build.
+   - `binutils` is required.  Type `pkg install binutils` to install.
    - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **OpenBSD**
    - There is a limit of four network memberships on OpenBSD as there are only four tap devices (`/dev/tap0` through `/dev/tap3`).
