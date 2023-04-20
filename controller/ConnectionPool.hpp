@@ -106,6 +106,7 @@ public:
                     _pool_in_use++;
                     return std::static_pointer_cast<T>(conn);
                 } catch (std::exception &e) {
+                    _pool_errors++;
                     throw ConnectionUnavailable();
                 }
             } else {
@@ -121,11 +122,13 @@ public:
                             return std::static_pointer_cast<T>(conn);
                         } catch(std::exception& e) {
                             // Error creating a replacement connection
+                            _pool_errors++;
                             throw ConnectionUnavailable();
                         }
                     }
                 }
                 // Nothing available
+                _pool_errors++;
                 throw ConnectionUnavailable();
             }
         }
