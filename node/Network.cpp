@@ -538,19 +538,29 @@ static _doZtFilterResult _doZtFilter(
 
 } // anonymous namespace
 
+std::string nwid_printf(int64_t id) {
+	char out[32] = {};
+	sprintf(out, "%.16llx", id);
+	return std::string(out);
+}
+
+
+prometheus::simpleapi::gauge_family_t multicastGroupsFamily{"network_multicast_groups", "number of joined multicast groups"};
+
 const ZeroTier::MulticastGroup Network::BROADCAST(ZeroTier::MAC(0xffffffffffffULL),0);
 
-Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *uptr,const NetworkConfig *nconf) :
-	RR(renv),
-	_uPtr(uptr),
-	_id(nwid),
-	_lastAnnouncedMulticastGroupsUpstream(0),
-	_mac(renv->identity.address(),nwid),
-	_portInitialized(false),
-	_lastConfigUpdate(0),
-	_destroyed(false),
-	_netconfFailure(NETCONF_FAILURE_NONE),
-	_portError(0)
+Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *uptr,const NetworkConfig *nconf)
+	: RR(renv)
+	, _uPtr(uptr)
+	, _id(nwid)
+	, _lastAnnouncedMulticastGroupsUpstream(0)
+	, _mac(renv->identity.address(),nwid)
+	, _portInitialized(false)
+	, _lastConfigUpdate(0)
+	, _destroyed(false)
+	, _netconfFailure(NETCONF_FAILURE_NONE)
+	, _portError(0)
+	, _multicast_groups_gauge{multicastGroupsFamily.Add({{"networkId", nwid_printf(_id).c_str()}})}
 {
 	for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i)
 		_incomingConfigChunks[i].ts = 0;
@@ -852,6 +862,7 @@ void Network::multicastSubscribe(void *tPtr,const MulticastGroup &mg)
 	if (!std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg)) {
 		_myMulticastGroups.insert(std::upper_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg),mg);
 		_sendUpdatesToMembers(tPtr,&mg);
+		_multicast_groups_gauge++;
 	}
 }
 
@@ -859,8 +870,10 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 {
 	Mutex::Lock _l(_lock);
 	std::vector<MulticastGroup>::iterator i(std::lower_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg));
-	if ( (i != _myMulticastGroups.end()) && (*i == mg) )
+	if ( (i != _myMulticastGroups.end()) && (*i == mg) ) {
 		_myMulticastGroups.erase(i);
+		_multicast_groups_gauge--;
+	}
 }
 
 uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Address &source,const Buffer<ZT_PROTO_MAX_PACKET_LENGTH> &chunk,unsigned int ptr)

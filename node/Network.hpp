@@ -38,6 +38,8 @@
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
 
+#include <prometheus/simpleapi.h>
+
 #define ZT_NETWORK_MAX_INCOMING_UPDATES 3
 #define ZT_NETWORK_MAX_UPDATE_CHUNKS ((ZT_NETWORKCONFIG_DICT_CAPACITY / 1024) + 1)
 
@@ -45,6 +47,9 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 class Peer;
+
+
+
 
 /**
  * A virtual LAN
@@ -474,6 +479,8 @@ private:
 	Mutex _lock;
 
 	AtomicCounter __refCount;
+
+	prometheus::simpleapi::gauge_metric_t _multicast_groups_gauge;
 };
 
 }	// namespace ZeroTier
