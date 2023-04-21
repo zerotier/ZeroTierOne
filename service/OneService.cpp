@@ -2470,9 +2470,11 @@ public:
 		if (_forceTcpRelay) {
 			return;
 		}
+        Metrics::udp_recv += len;
 		const uint64_t now = OSUtils::now();
-		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL))
+		if ((len >= 16)&&(reinterpret_cast<const InetAddress *>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
 			_lastDirectReceiveFromGlobal = now;
+        }
 		const ZT_ResultCode rc = _node->processWirePacket(nullptr,now,reinterpret_cast<int64_t>(sock),reinterpret_cast<const struct sockaddr_storage *>(from),data,len,&_nextBackgroundTaskDeadline);
 		if (ZT_ResultCode_isFatal(rc)) {
 			char tmp[256];
@@ -2559,6 +2561,7 @@ public:
 	{
 		try {
 			if (!len) return; // sanity check, should never happen
+            Metrics::tcp_recv += len;
 			TcpConnection *tc = reinterpret_cast<TcpConnection *>(*uptr);
 			tc->lastReceive = OSUtils::now();
 			switch(tc->type) {
@@ -2697,6 +2700,7 @@ public:
 			Mutex::Lock _l(tc->writeq_m);
 			if (tc->writeq.length() > 0) {
 				long sent = (long)_phy.streamSend(sock,tc->writeq.data(),(unsigned long)tc->writeq.length(),true);
+                Metrics::tcp_send += sent;
 				if (sent > 0) {
 					if ((unsigned long)sent >= (unsigned long)tc->writeq.length()) {
 						tc->writeq.clear();
@@ -3235,9 +3239,13 @@ public:
 		// working we can instantly "fail forward" to it and stop using TCP
 		// proxy fallback, which is slow.
 		if ((localSocket != -1)&&(localSocket != 0)&&(_binder.isUdpSocketValid((PhySocket *)((uintptr_t)localSocket)))) {
-			if ((ttl)&&(addr->ss_family == AF_INET)) _phy.setIp4UdpTtl((PhySocket *)((uintptr_t)localSocket),ttl);
+			if ((ttl)&&(addr->ss_family == AF_INET)) {
+                _phy.setIp4UdpTtl((PhySocket *)((uintptr_t)localSocket),ttl);
+            }
 			const bool r = _phy.udpSend((PhySocket *)((uintptr_t)localSocket),(const struct sockaddr *)addr,data,len);
-			if ((ttl)&&(addr->ss_family == AF_INET)) _phy.setIp4UdpTtl((PhySocket *)((uintptr_t)localSocket),255);
+			if ((ttl)&&(addr->ss_family == AF_INET)) {
+                _phy.setIp4UdpTtl((PhySocket *)((uintptr_t)localSocket),255);
+            }
 			return ((r) ? 0 : -1);
 		} else {
 			return ((_binder.udpSendAll(_phy,addr,data,len,ttl)) ? 0 : -1);

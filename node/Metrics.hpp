@@ -22,6 +22,12 @@ namespace prometheus {
 
 namespace ZeroTier {
     namespace Metrics {
+        // Data Sent/Received Metrics
+        extern prometheus::simpleapi::counter_metric_t udp_send;
+        extern prometheus::simpleapi::counter_metric_t udp_recv;
+        extern prometheus::simpleapi::counter_metric_t tcp_send;
+        extern prometheus::simpleapi::counter_metric_t tcp_recv;
+
         // General Controller Metrics
         extern prometheus::simpleapi::gauge_metric_t   network_count;
         extern prometheus::simpleapi::gauge_metric_t   member_count;

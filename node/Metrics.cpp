@@ -22,6 +22,16 @@ namespace prometheus {
 
 namespace ZeroTier {
     namespace Metrics {
+        // Data Sent/Received Metrics
+        prometheus::simpleapi::counter_metric_t udp_send
+        { "zt_udp_data_sent", "number of bytes ZeroTier has sent via UDP" };
+        prometheus::simpleapi::counter_metric_t udp_recv
+        { "zt_udp_data_recv", "number of bytes ZeroTier has received via UDP" };
+        prometheus::simpleapi::counter_metric_t tcp_send
+        { "zt_tcp_data_sent", "number of bytes ZeroTier has sent via TCP" };
+        prometheus::simpleapi::counter_metric_t tcp_recv
+        { "zt_tcp_data_recv", "number of bytes ZeroTier has received via TCP" };
+
         // General Controller Metrics
         prometheus::simpleapi::gauge_metric_t   network_count
         {"controller_network_count", "number of networks the controller is serving"};
