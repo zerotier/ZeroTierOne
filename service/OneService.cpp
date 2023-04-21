@@ -1673,7 +1673,15 @@ public:
 
 						} else scode = 404;
 						_node->freeQueryResult((void *)pl);
-					} else scode = 500;
+					} else scode = 500;\
+                } else if (ps[0] == "metrics") {
+                    std::string statspath = _homePath + ZT_PATH_SEPARATOR + "metrics.prom";
+                    if (!OSUtils::readFile(statspath.c_str(), responseBody)) {
+                        scode = 500;
+                    } else {
+                        scode = 200;
+                        responseContentType = "text/plain";
+                    }
 				} else {
 					if (_controller) {
 						scode = _controller->handleControlPlaneHttpGET(std::vector<std::string>(ps.begin()+1,ps.end()),urlArgs,headers,body,responseBody,responseContentType);
@@ -1751,14 +1759,6 @@ public:
 					scode = 404;
 				}
 #endif
-            } else if (ps[0] == "metrics") {
-                std::string statspath = _homePath + ZT_PATH_SEPARATOR + "metrics.prom";
-                if (!OSUtils::readFile(statspath.c_str(), responseBody)) {
-                    scode = 500;
-                } else {
-                    scode = 200;
-                    responseContentType = "text/plain";
-                }
 			} else {
 				scode = 401; // isAuth == false && !sso
 			}
