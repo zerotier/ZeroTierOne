@@ -58,6 +58,9 @@ mkdir -p /var/lib/zerotier-one
 pushd /var/lib/zerotier-one
 ln -s $ZT_IDENTITY_PATH/identity.public identity.public
 ln -s $ZT_IDENTITY_PATH/identity.secret identity.secret
+if [ -f  "$ZT_IDENTITY_PATH/authtoken.secret" ]; then
+    ln -s $ZT_IDENTITY_PATH/authtoken.secret authtoken.secret
+fi
 popd
 
 DEFAULT_PORT=9993
