@@ -26,6 +26,8 @@
 #include <memory>
 #include <redis++/redis++.h>
 
+#include "../node/Metrics.hpp"
+
 extern "C" {
 typedef struct pg_conn PGconn;
 }
@@ -53,6 +55,7 @@ public:
 	}
 
 	virtual std::shared_ptr<Connection> create() {
+		Metrics::conn_counter++;
 		auto c = std::shared_ptr<PostgresConnection>(new PostgresConnection());
 		c->c = std::make_shared<pqxx::connection>(m_connString);
 		return std::static_pointer_cast<Connection>(c);

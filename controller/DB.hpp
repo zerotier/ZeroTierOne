@@ -35,6 +35,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <prometheus/simpleapi.h>
+
 #define ZT_MEMBER_AUTH_TIMEOUT_NOTIFY_BEFORE 25000
 
 namespace ZeroTier

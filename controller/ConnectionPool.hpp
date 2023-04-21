@@ -19,6 +19,8 @@
 	#define _DEBUG(x)
 #endif
 
+#include "../node/Metrics.hpp"
+
 #include <deque>
 #include <set>
 #include <memory>
@@ -61,6 +63,7 @@ public:
     {
         while(m_pool.size() < m_minPoolSize){
             m_pool.push_back(m_factory->create());
+            Metrics::pool_avail++;
         }
     };
 
@@ -91,6 +94,7 @@ public:
         while((m_pool.size() + m_borrowed.size()) < m_minPoolSize) {
             std::shared_ptr<Connection> conn = m_factory->create();
             m_pool.push_back(conn);
+            Metrics::pool_avail++;
         }
 
         if(m_pool.size()==0){
@@ -99,8 +103,10 @@ public:
                 try {
                     std::shared_ptr<Connection> conn = m_factory->create();
                     m_borrowed.insert(conn);
+                    Metrics::pool_in_use++;
                     return std::static_pointer_cast<T>(conn);
                 } catch (std::exception &e) {
+                    Metrics::pool_errors++;
                     throw ConnectionUnavailable();
                 }
             } else {
@@ -116,11 +122,13 @@ public:
                             return std::static_pointer_cast<T>(conn);
                         } catch(std::exception& e) {
                             // Error creating a replacement connection
+                            Metrics::pool_errors++;
                             throw ConnectionUnavailable();
                         }
                     }
                 }
                 // Nothing available
+                Metrics::pool_errors++;
                 throw ConnectionUnavailable();
             }
         }
@@ -128,8 +136,10 @@ public:
         // Take one off the front
         std::shared_ptr<Connection> conn = m_pool.front();
         m_pool.pop_front();
+        Metrics::pool_avail--;
         // Add it to the borrowed list
         m_borrowed.insert(conn);
+        Metrics::pool_in_use++;
         return std::static_pointer_cast<T>(conn);
     };
 
@@ -143,7 +153,9 @@ public:
         // Lock
         std::unique_lock<std::mutex> lock(m_poolMutex);
         m_borrowed.erase(conn);
+        Metrics::pool_in_use--;
         if ((m_pool.size() + m_borrowed.size()) < m_maxPoolSize) {
+            Metrics::pool_avail++;
             m_pool.push_back(conn);
         }
     };

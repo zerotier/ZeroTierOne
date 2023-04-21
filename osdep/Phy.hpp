@@ -50,6 +50,8 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
+#include "../node/Metrics.hpp"
+
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
 #ifndef IPV6_DONTFRAG
 #define IPV6_DONTFRAG 62
@@ -452,9 +454,13 @@ public:
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
 #if defined(_WIN32) || defined(_WIN64)
-		return ((long)::sendto(sws.sock,reinterpret_cast<const char *>(data),len,0,remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
+		int sent = ((long)::sendto(sws.sock,reinterpret_cast<const char *>(data),len,0,remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
+		Metrics::udp_send += sent;
+		return sent;
 #else
-		return ((long)::sendto(sws.sock,data,len,0,remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
+		ssize_t sent = ((long)::sendto(sws.sock,data,len,0,remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
+		Metrics::udp_send += sent;
+		return sent;
 #endif
 	}
 
