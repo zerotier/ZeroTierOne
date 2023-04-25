@@ -77,6 +77,7 @@ echo "{
             \"nat64\"
         ],
         \"ssoRedirectURL\": \"${ZT_SSO_REDIRECT_URL}\",
+        \"allowManagementFrom\": [\"127.0.0.1\", \"::1\", \"10.0.0.0/8\"],
         ${REDIS}
     }
 }    
