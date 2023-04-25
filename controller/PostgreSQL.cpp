@@ -1145,6 +1145,7 @@ void PostgreSQL::_membersWatcher_Redis() {
 							_redis->xdel(key, id);
 						}
 						lastID = id;
+						Metrics::redis_mem_notification++;
 					}
 				}
 			}
@@ -1794,7 +1795,6 @@ uint64_t PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &con
 			.sadd("network-nodes-all:{"+controllerId+"}:"+networkId, memberId)
 			.hmset("member:{"+controllerId+"}:"+networkId+":"+memberId, record.begin(), record.end());
 		++count;
-		Metrics::redis_mem_notification++;
 	}
 
 	// expire records from all-nodes and network-nodes member list
