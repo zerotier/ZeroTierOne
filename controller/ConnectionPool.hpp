@@ -61,6 +61,8 @@ public:
         , m_minPoolSize(min_pool_size)
         , m_factory(factory)
     {
+        Metrics::max_pool_size += max_pool_size;
+        Metrics::min_pool_size += min_pool_size;
         while(m_pool.size() < m_minPoolSize){
             m_pool.push_back(m_factory->create());
             Metrics::pool_avail++;
