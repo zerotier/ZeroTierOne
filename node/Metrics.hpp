@@ -22,6 +22,40 @@ namespace prometheus {
 
 namespace ZeroTier {
     namespace Metrics {
+        // Packet Type Counts
+        extern prometheus::simpleapi::counter_family_t packets;
+        extern prometheus::simpleapi::counter_metric_t pkt_error;
+        extern prometheus::simpleapi::counter_metric_t pkt_ack;
+        extern prometheus::simpleapi::counter_metric_t pkt_qos;
+        extern prometheus::simpleapi::counter_metric_t pkt_hello;
+        extern prometheus::simpleapi::counter_metric_t pkt_ok;
+        extern prometheus::simpleapi::counter_metric_t pkt_whois;
+        extern prometheus::simpleapi::counter_metric_t pkt_rendezvous;
+        extern prometheus::simpleapi::counter_metric_t pkt_frame;
+        extern prometheus::simpleapi::counter_metric_t pkt_ext_frame;
+        extern prometheus::simpleapi::counter_metric_t pkt_echo;
+        extern prometheus::simpleapi::counter_metric_t pkt_multicast_like;
+        extern prometheus::simpleapi::counter_metric_t pkt_network_credentials;
+        extern prometheus::simpleapi::counter_metric_t pkt_network_config_request;
+        extern prometheus::simpleapi::counter_metric_t pkt_network_config;
+        extern prometheus::simpleapi::counter_metric_t pkt_multicast_gather;
+        extern prometheus::simpleapi::counter_metric_t pkt_multicast_frame;
+        extern prometheus::simpleapi::counter_metric_t pkt_push_direct_paths;
+        extern prometheus::simpleapi::counter_metric_t pkt_user_message;
+        extern prometheus::simpleapi::counter_metric_t pkt_remote_trace;
+        extern prometheus::simpleapi::counter_metric_t pkt_path_negotiation_request;
+
+        // Packet Error Counts
+        extern prometheus::simpleapi::counter_family_t packet_errors;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_unsupported_op;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_identity_collision;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_need_membership_cert;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_network_access_denied;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_authentication_required;
+
+
         // Data Sent/Received Metrics
         extern prometheus::simpleapi::counter_metric_t udp_send;
         extern prometheus::simpleapi::counter_metric_t udp_recv;

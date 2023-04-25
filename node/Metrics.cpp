@@ -22,6 +22,68 @@ namespace prometheus {
 
 namespace ZeroTier {
     namespace Metrics {
+        // Packet Type Counts
+        prometheus::simpleapi::counter_family_t packets
+        { "zt_packet_incoming", "incoming packet type counts"};
+        prometheus::simpleapi::counter_metric_t pkt_error
+        { packets.Add({{"packet_type", "error"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_ack
+        { packets.Add({{"packet_type", "ack"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_qos
+        { packets.Add({{"packet_type", "qos"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_hello
+        { packets.Add({{"packet_type", "hello"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_ok
+        { packets.Add({{"packet_type", "ok"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_whois
+        { packets.Add({{"packet_type", "whois"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_rendezvous
+        { packets.Add({{"packet_type", "rendezvous"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_frame
+        { packets.Add({{"packet_type", "frame"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_ext_frame
+        { packets.Add({{"packet_type", "ext_frame"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_echo
+        { packets.Add({{"packet_type", "echo"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_multicast_like
+        { packets.Add({{"packet_type", "multicast_like"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_network_credentials
+        { packets.Add({{"packet_type", "network_credentials"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_network_config_request
+        { packets.Add({{"packet_type", "network_config_request"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_network_config
+        { packets.Add({{"packet_type", "network_config"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_multicast_gather
+        { packets.Add({{"packet_type", "multicast_gather"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_multicast_frame
+        { packets.Add({{"packet_type", "multicast_frame"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_push_direct_paths
+        { packets.Add({{"packet_type", "push_direct_paths"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_user_message
+        { packets.Add({{"packet_type", "user_message"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_remote_trace
+        { packets.Add({{"packet_type", "remote_trace"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_path_negotiation_request
+        { packets.Add({{"packet_type", "path_negotiation_request"}}) };
+
+        // Packet Error Counts
+        prometheus::simpleapi::counter_family_t packet_errors
+        { "zt_packet_incoming_error", "incoming packet errors"};
+        prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found
+        { packet_errors.Add({{"error_type", "obj_not_found"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_unsupported_op
+        { packet_errors.Add({{"error_type", "unsupported_operation"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_identity_collision
+        { packet_errors.Add({{"error_type", "identity_collision"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_need_membership_cert
+        { packet_errors.Add({{"error_type", "need_membership_certificate"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_network_access_denied
+        { packet_errors.Add({{"error_type", "network_access_denied"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast
+        { packet_errors.Add({{"error_type", "unwanted_multicast"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_authentication_required
+        { packet_errors.Add({{"error_type", "authentication_required"}}) };
+
         // Data Sent/Received Metrics
         prometheus::simpleapi::counter_metric_t udp_send
         { "zt_udp_data_sent", "number of bytes ZeroTier has sent via UDP" };
