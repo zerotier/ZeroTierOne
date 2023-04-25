@@ -40,8 +40,10 @@ namespace ZeroTier {
         // Central Controller Metrics
         extern prometheus::simpleapi::counter_metric_t pgsql_mem_notification;
         extern prometheus::simpleapi::counter_metric_t pgsql_net_notification;
+        extern prometheus::simpleapi::counter_metric_t pgsql_node_checkin;
         extern prometheus::simpleapi::counter_metric_t redis_mem_notification;
         extern prometheus::simpleapi::counter_metric_t redis_net_notification;
+        extern prometheus::simpleapi::counter_metric_t redis_node_checkin;
 
         // Central DB Pool Metrics
         extern prometheus::simpleapi::counter_metric_t conn_counter;

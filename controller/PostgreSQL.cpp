@@ -1688,6 +1688,7 @@ void PostgreSQL::onlineNotification_Postgres()
 					<< " ON CONFLICT (network_id, member_id) DO UPDATE SET address = EXCLUDED.address, last_updated = EXCLUDED.last_updated";
 
 				pipe.insert(memberUpdate.str());
+				Metrics::pgsql_node_checkin++;
 			}
 			while(!pipe.empty()) {
 				pipe.retrieve();
@@ -1795,6 +1796,7 @@ uint64_t PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &con
 			.sadd("network-nodes-all:{"+controllerId+"}:"+networkId, memberId)
 			.hmset("member:{"+controllerId+"}:"+networkId+":"+memberId, record.begin(), record.end());
 		++count;
+		Metrics::redis_node_checkin++;
 	}
 
 	// expire records from all-nodes and network-nodes member list

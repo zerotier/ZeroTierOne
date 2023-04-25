@@ -52,10 +52,14 @@ namespace ZeroTier {
         { "controller_pgsql_member_notifications_received", "number of member change notifications received via pgsql NOTIFY" };
         prometheus::simpleapi::counter_metric_t pgsql_net_notification
         { "controller_pgsql_network_notifications_received", "number of network change notifications received via pgsql NOTIFY" };
+        prometheus::simpleapi::counter_metric_t pgsql_node_checkin
+        { "controller_pgsql_node_checkin_count", "number of node check-ins (pgsql)" };
         prometheus::simpleapi::counter_metric_t redis_mem_notification
         { "controller_redis_member_notifications_received", "number of member change notifications received via redis" };
         prometheus::simpleapi::counter_metric_t redis_net_notification
         { "controller_redis_network_notifications_received", "number of network change notifications received via redis" };
+        prometheus::simpleapi::counter_metric_t redis_node_checkin
+        { "controller_redis_node_checkin_count", "number of node check-ins (redis)" };
 
         // Central DB Pool Metrics
         prometheus::simpleapi::counter_metric_t conn_counter
