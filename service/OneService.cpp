@@ -1614,6 +1614,10 @@ public:
 		_controlPlane.Post("/moon/([0-9a-fA-F]{10})", moonPost);
 		_controlPlane.Put("/moon/([0-9a-fA-F]{10})", moonPost);
 
+		_controlPlane.Delete("/moon/([0-9a-fA-F]{10})", [this](const httplib::Request &req, httplib::Response &res) {
+			// TODO
+		});
+
 		_controlPlane.Get("/network", [this](const httplib::Request &req, httplib::Response &res) {
             Mutex::Lock _l(_nets_m);
             auto response = json::array();
@@ -1649,6 +1653,10 @@ public:
 		};
 		_controlPlane.Post("/network/([0-9a-fA-F])", networkPost);
 		_controlPlane.Put("/network/([0-9a-fA-F])", networkPost);
+
+		_controlPlane.Delete("/network/([0-9a-fA-F])", [this](const httplib::Request &req, httplib::Response &res) {
+
+		});
 
 		_controlPlane.Get("/peer", [this](const httplib::Request &req, httplib::Response &res) {
 			ZT_PeerList *pl = _node->peers();
