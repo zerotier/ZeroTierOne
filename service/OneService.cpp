@@ -1547,11 +1547,16 @@ public:
 			exit(0);
 			SharedPtr<Bond> bond = _node->bondController()->getBondByPeerId(id);
 			if (bond) {
-				scode = bond->abForciblyRotateLink() ? 200 : 400;
+				if (bond->abForciblyRotateLink()) {
+					res.status = 200;
+				} else {
+					res.status = 400;
+				}
 			} else {
 				fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)id);
-				scode = 400;
+				res.status = 400;
 			}
+			res.set_content("{}", "application/json");
 		};
 		_controlPlane.Post("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
 		_controlPlane.Put("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
@@ -1838,6 +1843,10 @@ public:
 		});
 
         _serverThread = std::thread([&] {
+			if (_primaryPort==0) {
+				fprintf(stderr, "unable to determine local control port");
+				exit(-1);
+			}
             fprintf(stderr, "Starting Control Plane...\n");
             _controlPlane.listen("0.0.0.0", _primaryPort);
             fprintf(stderr, "Control Plane Stopped\n");
