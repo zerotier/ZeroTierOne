@@ -1206,6 +1206,8 @@ public:
 
 	void readLocalSettings()
 	{
+		RedisConfig *_rc = new RedisConfig();
+
 		// Read local configuration
 		std::map<InetAddress,ZT_PhysicalPathConfiguration> ppc;
 
