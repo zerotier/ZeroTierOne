@@ -17,9 +17,22 @@ jobs:
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
-        target: aarch64-apple-darwin
+        target: x86_64-unknown-linux-gnu
         override: true
         components: rustfmt, clippy
+
+    - name: Set up cargo cache
+      uses: actions/cache@v3
+      continue-on-error: false
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml', '*/Cargo.toml') }}
+        restore-keys: ${{ runner.os }}-cargo-
 
     - name: validate-1m-linux
       env:
