@@ -1561,8 +1561,7 @@ public:
 		_controlPlane.Post("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
 		_controlPlane.Put("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
 
-
-        _controlPlane.Get("/config", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/config", [this](const httplib::Request &req, httplib::Response &res) {
 			std::string config;
 			{
 				Mutex::Lock lc(_localConfig_m);
@@ -1572,10 +1571,21 @@ public:
 				config = "{}";
 			}
             res.set_content(config, "application/json");
-        });
+		});
 
 		auto configPost = [this](const httplib::Request &req, httplib::Response &res) {
-			// TODO
+			json j(OSUtils::jsonParse(req.body));
+			if (j.is_object()) {
+				Mutex::Lock lcl(_localConfig_m);
+				json lc(_localConfig);
+				for(json::const_iterator s(j.begin()); s != j.end(); ++s) {
+					lc["settings"][s.key()] = s.value();
+				}
+				std::string lcStr = OSUtils::jsonDump(lc, 4);
+				if (OSUtils::writeFile((_homePath + ZT_PATH_SEPARATOR_S "local.conf").c_str(), lcStr)) {
+					_localConfig = lc;
+				}
+			}
 		};
 		_controlPlane.Post("/config/settings", configPost);
 		_controlPlane.Put("/config/settings", configPost);
@@ -1609,13 +1619,50 @@ public:
 		});
 
 		auto moonPost = [this](const httplib::Request &req, httplib::Response &res) {
-			// TODO
+			auto input = req.matches[1];
+			uint64_t seed = 0;
+			try {
+				json j(OSUtils::jsonParse(req.body));
+				if (j.is_object()) {
+					seed = Utils::hexStrToU64(OSUtils::jsonString(j["seed"],"0").c_str());
+				}
+			} catch ( ... ) {
+				// discard invalid JSON
+			}
+
+			std::vector<World> moons(_node->moons());
+			const uint64_t id = Utils::hexStrToU64(input.str().c_str());
+			auto out = json::object();
+			for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
+				if (m->id() == id) {
+					_moonToJson(out,*m);
+					break;
+				}
+			}
+
+			if (seed != 0) {
+				char tmp[64];
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",id);
+				out["id"] = tmp;
+				out["roots"] = json::array();
+				out["timestamp"] = 0;
+				out["signature"] = json();
+				out["updatesMustBeSignedBy"] = json();
+				out["waiting"] = true;
+				_node->orbit((void *)0,id,seed);
+			}
+			res.set_content(out.dump(), "application/json");
 		};
 		_controlPlane.Post("/moon/([0-9a-fA-F]{10})", moonPost);
 		_controlPlane.Put("/moon/([0-9a-fA-F]{10})", moonPost);
 
 		_controlPlane.Delete("/moon/([0-9a-fA-F]{10})", [this](const httplib::Request &req, httplib::Response &res) {
-			// TODO
+			auto input = req.matches[1];
+			uint64_t id = Utils::hexStrToU64(input.str().c_str());
+			auto out = json::object();
+			_node->deorbit((void*)0,id);
+			out["result"] = true;
+			res.set_content(out.dump(), "application/json");
 		});
 
 		_controlPlane.Get("/network", [this](const httplib::Request &req, httplib::Response &res) {
@@ -1649,13 +1696,61 @@ public:
         });
 
 		auto networkPost = [this](const httplib::Request &req, httplib::Response &res) {
-			// TODO
+			auto input = req.matches[1];
+			uint64_t wantnw = Utils::hexStrToU64(input.str().c_str());
+			_node->join(wantnw, (void*)0, (void*)0);
+			auto out = json::object();
+			Mutex::Lock l(_nets_m);
+			if (!_nets.empty()) {
+				NetworkState &ns = _nets[wantnw];
+				try {
+					json j(OSUtils::jsonParse(req.body));
+
+					json &allowManaged = j["allowManaged"];
+					if (allowManaged.is_boolean()) {
+						ns.setAllowManaged((bool)allowManaged);
+					}
+					json& allowGlobal = j["allowGlobal"];
+					if (allowGlobal.is_boolean()) {
+						ns.setAllowGlobal((bool)allowGlobal);
+					}
+					json& allowDefault = j["allowDefault"];
+					if (allowDefault.is_boolean()) {
+						ns.setAllowDefault((bool)allowDefault);
+					}
+					json& allowDNS = j["allowDNS"];
+					if (allowDNS.is_boolean()) {
+						ns.setAllowDNS((bool)allowDNS);
+					}
+				} catch (...) {
+					// discard invalid JSON
+				}
+				setNetworkSettings(wantnw, ns.settings());
+				if (ns.tap()) {
+					syncManagedStuff(ns,true,true,true);
+				}
+
+				_networkToJson(out, ns);
+			}
+
+			res.set_content(out.dump(), "application/json");
 		};
 		_controlPlane.Post("/network/([0-9a-fA-F])", networkPost);
 		_controlPlane.Put("/network/([0-9a-fA-F])", networkPost);
 
 		_controlPlane.Delete("/network/([0-9a-fA-F])", [this](const httplib::Request &req, httplib::Response &res) {
-
+			auto input = req.matches[1];
+			auto out = json::object();
+			ZT_VirtualNetworkList *nws = _node->networks();
+			uint64_t wantnw = Utils::hexStrToU64(input.str().c_str());
+			for(unsigned long i=0; i < nws->networkCount; ++i) {
+				if (nws->networks[i].nwid == wantnw) {
+					_node->leave(wantnw, (void**)0, (void*)0);
+					out["result"] = true;
+				}
+			}
+			_node->freeQueryResult((void*)nws);
+			res.set_content(out.dump(), "application/json");
 		});
 
 		_controlPlane.Get("/peer", [this](const httplib::Request &req, httplib::Response &res) {
