@@ -31,7 +31,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.toml', '*/Cargo.toml') }}
+        key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
         restore-keys: ${{ runner.os }}-cargo-
 
     - name: validate-1m-linux
