@@ -1767,10 +1767,10 @@ public:
 			}
 			setContent(req, res, out.dump());
 		};
-		_controlPlane.Post("/network/([0-9a-fA-F])", networkPost);
-		_controlPlane.Put("/network/([0-9a-fA-F])", networkPost);
+		_controlPlane.Post("/network/([0-9a-fA-F]{16})", networkPost);
+		_controlPlane.Put("/network/([0-9a-fA-F]){16}", networkPost);
 
-		_controlPlane.Delete("/network/([0-9a-fA-F])", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Delete("/network/([0-9a-fA-F]{16})", [&](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			auto out = json::object();
 			ZT_VirtualNetworkList *nws = _node->networks();
