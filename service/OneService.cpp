@@ -1985,6 +1985,7 @@ public:
 
 		if (_controller) {
 			// TODO: Wire up controller
+			_controller->configureHTTPControlPlane(_controlPlane, setContent);
 		}
 
 		_controlPlane.set_pre_routing_handler(authCheck);

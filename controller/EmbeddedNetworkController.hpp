@@ -37,6 +37,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cpp-httplib/httplib.h>
+
 #include "DB.hpp"
 #include "DBMirrorSet.hpp"
 
@@ -65,6 +67,10 @@ public:
 		uint64_t requestPacketId,
 		const Identity &identity,
 		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
+
+	void configureHTTPControlPlane(
+		httplib::Server &s,
+		const std::function<void(const httplib::Request&, httplib::Response&, std::string)>);
 
 	unsigned int handleControlPlaneHttpGET(
 		const std::vector<std::string> &path,
