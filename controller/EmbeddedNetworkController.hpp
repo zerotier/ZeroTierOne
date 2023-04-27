@@ -82,6 +82,8 @@ private:
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
 	void _startThreads();
 
+	std::string networkUpdateFromPostData(uint64_t networkID, const std::string &body);
+
 	struct _RQEntry
 	{
 		uint64_t nwid;

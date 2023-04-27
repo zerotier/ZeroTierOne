@@ -1002,8 +1002,6 @@ public:
 				return _termReason;
 			}
 
-            startHTTPControlPlane();
-
 			// Save primary port to a file so CLIs and GUIs can learn it easily
 			char portstr[64];
 			OSUtils::ztsnprintf(portstr,sizeof(portstr),"%u",_ports[0]);
@@ -1055,6 +1053,8 @@ public:
 				_controller->setSSORedirectURL(_ssoRedirectURL);
 			}
 			_node->setNetconfMaster((void *)_controller);
+
+			startHTTPControlPlane();
 
 			// Join existing networks in networks.d
 			{
@@ -1971,7 +1971,7 @@ public:
 
 		_controlPlane.set_exception_handler([&](const httplib::Request &req, httplib::Response &res, std::exception_ptr ep) {
 			char buf[1024];
-			auto fmt = "{\"error\": %d, \"description\": \"%\"}";
+			auto fmt = "{\"error\": %d, \"description\": \"%s\"}";
 			try {
 				std::rethrow_exception(ep);
 			} catch (std::exception &e) {
@@ -1984,7 +1984,6 @@ public:
 		});
 
 		if (_controller) {
-			// TODO: Wire up controller
 			_controller->configureHTTPControlPlane(_controlPlane, setContent);
 		}
 

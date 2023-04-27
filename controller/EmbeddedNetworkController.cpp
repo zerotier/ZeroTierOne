@@ -554,6 +554,262 @@ void EmbeddedNetworkController::request(
 	_queue.post(qe);
 }
 
+std::string EmbeddedNetworkController::networkUpdateFromPostData(uint64_t networkID, const std::string &body)
+{
+	json b = OSUtils::jsonParse(body);
+
+	char nwids[24];
+	OSUtils::ztsnprintf(nwids, sizeof(nwids), "%.16llx", networkID);
+
+	json network;
+	_db.get(networkID, network);
+	DB::initNetwork(network);
+	if (b.count("name")) network["name"] = OSUtils::jsonString(b["name"],"");
+	if (b.count("private")) network["private"] = OSUtils::jsonBool(b["private"],true);
+	if (b.count("enableBroadcast")) network["enableBroadcast"] = OSUtils::jsonBool(b["enableBroadcast"],false);
+	if (b.count("multicastLimit")) network["multicastLimit"] = OSUtils::jsonInt(b["multicastLimit"],32ULL);
+	if (b.count("mtu")) network["mtu"] = std::max(std::min((unsigned int)OSUtils::jsonInt(b["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
+
+	if (b.count("remoteTraceTarget")) {
+		const std::string rtt(OSUtils::jsonString(b["remoteTraceTarget"],""));
+		if (rtt.length() == 10) {
+			network["remoteTraceTarget"] = rtt;
+		} else {
+			network["remoteTraceTarget"] = json();
+		}
+	}
+	if (b.count("remoteTraceLevel")) network["remoteTraceLevel"] = OSUtils::jsonInt(b["remoteTraceLevel"],0ULL);
+
+	if (b.count("v4AssignMode")) {
+		json nv4m;
+		json &v4m = b["v4AssignMode"];
+		if (v4m.is_string()) { // backward compatibility
+			nv4m["zt"] = (OSUtils::jsonString(v4m,"") == "zt");
+		} else if (v4m.is_object()) {
+			nv4m["zt"] = OSUtils::jsonBool(v4m["zt"],false);
+		} else nv4m["zt"] = false;
+		network["v4AssignMode"] = nv4m;
+	}
+
+	if (b.count("v6AssignMode")) {
+		json nv6m;
+		json &v6m = b["v6AssignMode"];
+		if (!nv6m.is_object()) nv6m = json::object();
+		if (v6m.is_string()) { // backward compatibility
+			std::vector<std::string> v6ms(OSUtils::split(OSUtils::jsonString(v6m,"").c_str(),",","",""));
+			std::sort(v6ms.begin(),v6ms.end());
+			v6ms.erase(std::unique(v6ms.begin(),v6ms.end()),v6ms.end());
+			nv6m["rfc4193"] = false;
+			nv6m["zt"] = false;
+			nv6m["6plane"] = false;
+			for(std::vector<std::string>::iterator i(v6ms.begin());i!=v6ms.end();++i) {
+				if (*i == "rfc4193")
+					nv6m["rfc4193"] = true;
+				else if (*i == "zt")
+					nv6m["zt"] = true;
+				else if (*i == "6plane")
+					nv6m["6plane"] = true;
+			}
+		} else if (v6m.is_object()) {
+			if (v6m.count("rfc4193")) nv6m["rfc4193"] = OSUtils::jsonBool(v6m["rfc4193"],false);
+			if (v6m.count("zt")) nv6m["zt"] = OSUtils::jsonBool(v6m["zt"],false);
+			if (v6m.count("6plane")) nv6m["6plane"] = OSUtils::jsonBool(v6m["6plane"],false);
+		} else {
+			nv6m["rfc4193"] = false;
+			nv6m["zt"] = false;
+			nv6m["6plane"] = false;
+		}
+		network["v6AssignMode"] = nv6m;
+	}
+
+	if (b.count("routes")) {
+		json &rts = b["routes"];
+		if (rts.is_array()) {
+			json nrts = json::array();
+			for(unsigned long i=0;i<rts.size();++i) {
+				json &rt = rts[i];
+				if (rt.is_object()) {
+					json &target = rt["target"];
+					json &via = rt["via"];
+					if (target.is_string()) {
+						InetAddress t(target.get<std::string>().c_str());
+						InetAddress v;
+						if (via.is_string()) v.fromString(via.get<std::string>().c_str());
+						if ( ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) && (t.netmaskBitsValid()) ) {
+							json tmp;
+							char tmp2[64];
+							tmp["target"] = t.toString(tmp2);
+							if (v.ss_family == t.ss_family)
+								tmp["via"] = v.toIpString(tmp2);
+							else tmp["via"] = json();
+							nrts.push_back(tmp);
+							if (nrts.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+								break;
+						}
+					}
+				}
+			}
+			network["routes"] = nrts;
+		}
+	}
+
+	if (b.count("ipAssignmentPools")) {
+		json &ipp = b["ipAssignmentPools"];
+		if (ipp.is_array()) {
+			json nipp = json::array();
+			for(unsigned long i=0;i<ipp.size();++i) {
+				json &ip = ipp[i];
+				if ((ip.is_object())&&(ip.count("ipRangeStart"))&&(ip.count("ipRangeEnd"))) {
+					InetAddress f(OSUtils::jsonString(ip["ipRangeStart"],"").c_str());
+					InetAddress t(OSUtils::jsonString(ip["ipRangeEnd"],"").c_str());
+					if ( ((f.ss_family == AF_INET)||(f.ss_family == AF_INET6)) && (f.ss_family == t.ss_family) ) {
+						json tmp = json::object();
+						char tmp2[64];
+						tmp["ipRangeStart"] = f.toIpString(tmp2);
+						tmp["ipRangeEnd"] = t.toIpString(tmp2);
+						nipp.push_back(tmp);
+						if (nipp.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+							break;
+					}
+				}
+			}
+			network["ipAssignmentPools"] = nipp;
+		}
+	}
+
+	if (b.count("rules")) {
+		json &rules = b["rules"];
+		if (rules.is_array()) {
+			json nrules = json::array();
+			for(unsigned long i=0;i<rules.size();++i) {
+				json &rule = rules[i];
+				if (rule.is_object()) {
+					ZT_VirtualNetworkRule ztr;
+					if (_parseRule(rule,ztr)) {
+						nrules.push_back(_renderRule(ztr));
+						if (nrules.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+							break;
+					}
+				}
+			}
+			network["rules"] = nrules;
+		}
+	}
+
+	if (b.count("authTokens")) {
+		json &authTokens = b["authTokens"];
+		if (authTokens.is_object()) {
+			json nat;
+			for(json::iterator t(authTokens.begin());t!=authTokens.end();++t) {
+				if ((t.value().is_number())&&(t.value() >= 0))
+					nat[t.key()] = t.value();
+			}
+			network["authTokens"] = nat;
+		} else {
+			network["authTokens"] = {{}};
+		}
+	}
+
+	if (b.count("capabilities")) {
+		json &capabilities = b["capabilities"];
+		if (capabilities.is_array()) {
+			std::map< uint64_t,json > ncaps;
+			for(unsigned long i=0;i<capabilities.size();++i) {
+				json &cap = capabilities[i];
+				if (cap.is_object()) {
+					json ncap = json::object();
+					const uint64_t capId = OSUtils::jsonInt(cap["id"],0ULL);
+					ncap["id"] = capId;
+					ncap["default"] = OSUtils::jsonBool(cap["default"],false);
+
+					json &rules = cap["rules"];
+					json nrules = json::array();
+					if (rules.is_array()) {
+						for(unsigned long i=0;i<rules.size();++i) {
+							json &rule = rules[i];
+							if (rule.is_object()) {
+								ZT_VirtualNetworkRule ztr;
+								if (_parseRule(rule,ztr)) {
+									nrules.push_back(_renderRule(ztr));
+									if (nrules.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+										break;
+								}
+							}
+						}
+					}
+					ncap["rules"] = nrules;
+
+					ncaps[capId] = ncap;
+				}
+			}
+
+			json ncapsa = json::array();
+			for(std::map< uint64_t,json >::iterator c(ncaps.begin());c!=ncaps.end();++c) {
+				ncapsa.push_back(c->second);
+				if (ncapsa.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+					break;
+			}
+			network["capabilities"] = ncapsa;
+		}
+	}
+
+	if (b.count("tags")) {
+		json &tags = b["tags"];
+		if (tags.is_array()) {
+			std::map< uint64_t,json > ntags;
+			for(unsigned long i=0;i<tags.size();++i) {
+				json &tag = tags[i];
+				if (tag.is_object()) {
+					json ntag = json::object();
+					const uint64_t tagId = OSUtils::jsonInt(tag["id"],0ULL);
+					ntag["id"] = tagId;
+					json &dfl = tag["default"];
+					if (dfl.is_null())
+						ntag["default"] = dfl;
+					else ntag["default"] = OSUtils::jsonInt(dfl,0ULL);
+					ntags[tagId] = ntag;
+				}
+			}
+
+			json ntagsa = json::array();
+			for(std::map< uint64_t,json >::iterator t(ntags.begin());t!=ntags.end();++t) {
+				ntagsa.push_back(t->second);
+				if (ntagsa.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
+					break;
+			}
+			network["tags"] = ntagsa;
+		}
+	}
+
+	if (b.count("dns")) {
+		json &dns = b["dns"];
+		if (dns.is_object()) {
+			json nd;
+
+			nd["domain"] = dns["domain"];
+
+			json &srv = dns["servers"];
+			if (srv.is_array()) {
+				json ns = json::array();
+				for(unsigned int i=0;i<srv.size();++i) {
+					ns.push_back(srv[i]);
+				}
+				nd["servers"] = ns;
+			}
+
+			network["dns"] = nd;
+		}
+	}
+
+	network["id"] = nwids;
+	network["nwid"] = nwids;
+
+	DB::cleanNetwork(network);
+	_db.save(network, true);
+
+	return network.dump();
+}
+
 void EmbeddedNetworkController::configureHTTPControlPlane(
 	httplib::Server &s,
 	const std::function<void(const httplib::Request&, httplib::Response&, std::string)> setContent)
@@ -584,262 +840,8 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		setContent(req, res, network.dump());
 	});
 
-	auto _networkUpdateFromPostData = [&](uint64_t networkID, const std::string &body) -> std::string {
-		json b = OSUtils::jsonParse(body);
-
-		char nwids[24];
-		OSUtils::ztsnprintf(nwids, sizeof(nwids), "%.16llx", networkID);
-
-		json network;
-		_db.get(networkID, network);
-		DB::initNetwork(network);
-		if (b.count("name")) network["name"] = OSUtils::jsonString(b["name"],"");
-		if (b.count("private")) network["private"] = OSUtils::jsonBool(b["private"],true);
-		if (b.count("enableBroadcast")) network["enableBroadcast"] = OSUtils::jsonBool(b["enableBroadcast"],false);
-		if (b.count("multicastLimit")) network["multicastLimit"] = OSUtils::jsonInt(b["multicastLimit"],32ULL);
-		if (b.count("mtu")) network["mtu"] = std::max(std::min((unsigned int)OSUtils::jsonInt(b["mtu"],ZT_DEFAULT_MTU),(unsigned int)ZT_MAX_MTU),(unsigned int)ZT_MIN_MTU);
-
-		if (b.count("remoteTraceTarget")) {
-			const std::string rtt(OSUtils::jsonString(b["remoteTraceTarget"],""));
-			if (rtt.length() == 10) {
-				network["remoteTraceTarget"] = rtt;
-			} else {
-				network["remoteTraceTarget"] = json();
-			}
-		}
-		if (b.count("remoteTraceLevel")) network["remoteTraceLevel"] = OSUtils::jsonInt(b["remoteTraceLevel"],0ULL);
-
-		if (b.count("v4AssignMode")) {
-			json nv4m;
-			json &v4m = b["v4AssignMode"];
-			if (v4m.is_string()) { // backward compatibility
-				nv4m["zt"] = (OSUtils::jsonString(v4m,"") == "zt");
-			} else if (v4m.is_object()) {
-				nv4m["zt"] = OSUtils::jsonBool(v4m["zt"],false);
-			} else nv4m["zt"] = false;
-			network["v4AssignMode"] = nv4m;
-		}
-
-		if (b.count("v6AssignMode")) {
-			json nv6m;
-			json &v6m = b["v6AssignMode"];
-			if (!nv6m.is_object()) nv6m = json::object();
-			if (v6m.is_string()) { // backward compatibility
-				std::vector<std::string> v6ms(OSUtils::split(OSUtils::jsonString(v6m,"").c_str(),",","",""));
-				std::sort(v6ms.begin(),v6ms.end());
-				v6ms.erase(std::unique(v6ms.begin(),v6ms.end()),v6ms.end());
-				nv6m["rfc4193"] = false;
-				nv6m["zt"] = false;
-				nv6m["6plane"] = false;
-				for(std::vector<std::string>::iterator i(v6ms.begin());i!=v6ms.end();++i) {
-					if (*i == "rfc4193")
-						nv6m["rfc4193"] = true;
-					else if (*i == "zt")
-						nv6m["zt"] = true;
-					else if (*i == "6plane")
-						nv6m["6plane"] = true;
-				}
-			} else if (v6m.is_object()) {
-				if (v6m.count("rfc4193")) nv6m["rfc4193"] = OSUtils::jsonBool(v6m["rfc4193"],false);
-				if (v6m.count("zt")) nv6m["zt"] = OSUtils::jsonBool(v6m["zt"],false);
-				if (v6m.count("6plane")) nv6m["6plane"] = OSUtils::jsonBool(v6m["6plane"],false);
-			} else {
-				nv6m["rfc4193"] = false;
-				nv6m["zt"] = false;
-				nv6m["6plane"] = false;
-			}
-			network["v6AssignMode"] = nv6m;
-		}
-
-		if (b.count("routes")) {
-			json &rts = b["routes"];
-			if (rts.is_array()) {
-				json nrts = json::array();
-				for(unsigned long i=0;i<rts.size();++i) {
-					json &rt = rts[i];
-					if (rt.is_object()) {
-						json &target = rt["target"];
-						json &via = rt["via"];
-						if (target.is_string()) {
-							InetAddress t(target.get<std::string>().c_str());
-							InetAddress v;
-							if (via.is_string()) v.fromString(via.get<std::string>().c_str());
-							if ( ((t.ss_family == AF_INET)||(t.ss_family == AF_INET6)) && (t.netmaskBitsValid()) ) {
-								json tmp;
-								char tmp2[64];
-								tmp["target"] = t.toString(tmp2);
-								if (v.ss_family == t.ss_family)
-									tmp["via"] = v.toIpString(tmp2);
-								else tmp["via"] = json();
-								nrts.push_back(tmp);
-								if (nrts.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
-									break;
-							}
-						}
-					}
-				}
-				network["routes"] = nrts;
-			}
-		}
-
-		if (b.count("ipAssignmentPools")) {
-			json &ipp = b["ipAssignmentPools"];
-			if (ipp.is_array()) {
-				json nipp = json::array();
-				for(unsigned long i=0;i<ipp.size();++i) {
-					json &ip = ipp[i];
-					if ((ip.is_object())&&(ip.count("ipRangeStart"))&&(ip.count("ipRangeEnd"))) {
-						InetAddress f(OSUtils::jsonString(ip["ipRangeStart"],"").c_str());
-						InetAddress t(OSUtils::jsonString(ip["ipRangeEnd"],"").c_str());
-						if ( ((f.ss_family == AF_INET)||(f.ss_family == AF_INET6)) && (f.ss_family == t.ss_family) ) {
-							json tmp = json::object();
-							char tmp2[64];
-							tmp["ipRangeStart"] = f.toIpString(tmp2);
-							tmp["ipRangeEnd"] = t.toIpString(tmp2);
-							nipp.push_back(tmp);
-							if (nipp.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
-								break;
-						}
-					}
-				}
-				network["ipAssignmentPools"] = nipp;
-			}
-		}
-
-		if (b.count("rules")) {
-			json &rules = b["rules"];
-			if (rules.is_array()) {
-				json nrules = json::array();
-				for(unsigned long i=0;i<rules.size();++i) {
-					json &rule = rules[i];
-					if (rule.is_object()) {
-						ZT_VirtualNetworkRule ztr;
-						if (_parseRule(rule,ztr)) {
-							nrules.push_back(_renderRule(ztr));
-							if (nrules.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
-								break;
-						}
-					}
-				}
-				network["rules"] = nrules;
-			}
-		}
-
-		if (b.count("authTokens")) {
-			json &authTokens = b["authTokens"];
-			if (authTokens.is_object()) {
-				json nat;
-				for(json::iterator t(authTokens.begin());t!=authTokens.end();++t) {
-					if ((t.value().is_number())&&(t.value() >= 0))
-						nat[t.key()] = t.value();
-				}
-				network["authTokens"] = nat;
-			} else {
-				network["authTokens"] = {{}};
-			}
-		}
-
-		if (b.count("capabilities")) {
-			json &capabilities = b["capabilities"];
-			if (capabilities.is_array()) {
-				std::map< uint64_t,json > ncaps;
-				for(unsigned long i=0;i<capabilities.size();++i) {
-					json &cap = capabilities[i];
-					if (cap.is_object()) {
-						json ncap = json::object();
-						const uint64_t capId = OSUtils::jsonInt(cap["id"],0ULL);
-						ncap["id"] = capId;
-						ncap["default"] = OSUtils::jsonBool(cap["default"],false);
-
-						json &rules = cap["rules"];
-						json nrules = json::array();
-						if (rules.is_array()) {
-							for(unsigned long i=0;i<rules.size();++i) {
-								json &rule = rules[i];
-								if (rule.is_object()) {
-									ZT_VirtualNetworkRule ztr;
-									if (_parseRule(rule,ztr)) {
-										nrules.push_back(_renderRule(ztr));
-										if (nrules.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
-											break;
-									}
-								}
-							}
-						}
-						ncap["rules"] = nrules;
-
-						ncaps[capId] = ncap;
-					}
-				}
-
-				json ncapsa = json::array();
-				for(std::map< uint64_t,json >::iterator c(ncaps.begin());c!=ncaps.end();++c) {
-					ncapsa.push_back(c->second);
-					if (ncapsa.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
-						break;
-				}
-				network["capabilities"] = ncapsa;
-			}
-		}
-
-		if (b.count("tags")) {
-			json &tags = b["tags"];
-			if (tags.is_array()) {
-				std::map< uint64_t,json > ntags;
-				for(unsigned long i=0;i<tags.size();++i) {
-					json &tag = tags[i];
-					if (tag.is_object()) {
-						json ntag = json::object();
-						const uint64_t tagId = OSUtils::jsonInt(tag["id"],0ULL);
-						ntag["id"] = tagId;
-						json &dfl = tag["default"];
-						if (dfl.is_null())
-							ntag["default"] = dfl;
-						else ntag["default"] = OSUtils::jsonInt(dfl,0ULL);
-						ntags[tagId] = ntag;
-					}
-				}
-
-				json ntagsa = json::array();
-				for(std::map< uint64_t,json >::iterator t(ntags.begin());t!=ntags.end();++t) {
-					ntagsa.push_back(t->second);
-					if (ntagsa.size() >= ZT_CONTROLLER_MAX_ARRAY_SIZE)
-						break;
-				}
-				network["tags"] = ntagsa;
-			}
-		}
-
-		if (b.count("dns")) {
-			json &dns = b["dns"];
-			if (dns.is_object()) {
-				json nd;
-
-				nd["domain"] = dns["domain"];
-
-				json &srv = dns["servers"];
-				if (srv.is_array()) {
-					json ns = json::array();
-					for(unsigned int i=0;i<srv.size();++i) {
-						ns.push_back(srv[i]);
-					}
-					nd["servers"] = ns;
-				}
-
-				network["dns"] = nd;
-			}
-		}
-
-		network["id"] = nwids;
-		network["nwid"] = nwids;
-
-		DB::cleanNetwork(network);
-		_db.save(network, true);
-
-		return network.dump();
-	};
-
 	auto createNewNetwork = [&](const httplib::Request &req, httplib::Response &res) {
+		fprintf(stderr, "creating new network (new style)\n");
 		uint64_t nwid = 0;
 		uint64_t nwidPrefix = (Utils::hexStrToU64(_signingIdAddressString.c_str()) << 24) & 0xffffffffff000000ULL;
 		uint64_t nwidPostfix = 0;
@@ -857,7 +859,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 			return;
 		}
 
-		setContent(req, res, _networkUpdateFromPostData(nwid, req.body));
+		setContent(req, res, networkUpdateFromPostData(nwid, req.body));
 	};
 	s.Put("/controller/network", createNewNetwork);
 	s.Post("/controller/network", createNewNetwork);
@@ -886,7 +888,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 			res.status = 503;
 			return;
 		}
-		setContent(req, res, _networkUpdateFromPostData(nwid, req.body));
+		setContent(req, res, networkUpdateFromPostData(nwid, req.body));
 	};
 	s.Put("/controller/network/([0-9a-fA-F]{10})______", createNewNetworkOldAndBusted);
 	s.Post("/controller/network/([0-9a-fA-F]{10})______", createNewNetworkOldAndBusted);
