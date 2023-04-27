@@ -1444,7 +1444,7 @@ public:
 
     // Internal HTTP Control Plane
     void startHTTPControlPlane() {
-        std::vector<std::string> noAuthEndpoints { "/sso" };
+        std::vector<std::string> noAuthEndpoints { "/sso", "/health" };
 
         auto authCheck = [=] (const httplib::Request &req, httplib::Response &res) {
             std::string r = req.remote_addr + "/32";
@@ -1589,6 +1589,26 @@ public:
 		};
 		_controlPlane.Post("/config/settings", configPost);
 		_controlPlane.Put("/config/settings", configPost);
+
+		_controlPlane.Get("/health", [this](const httplib::Request &req, httplib::Response &res) {
+			json out = json::object();
+
+			char tmp[256];
+
+			ZT_NodeStatus status;
+			_node->status(&status);
+
+			out["online"] = (bool)(status.online != 0);
+			out["versionMajor"] = ZEROTIER_ONE_VERSION_MAJOR;
+			out["versionMinor"] = ZEROTIER_ONE_VERSION_MINOR;
+			out["versionRev"] = ZEROTIER_ONE_VERSION_REVISION;
+			out["versionBuild"] = ZEROTIER_ONE_VERSION_BUILD;
+			OSUtils::ztsnprintf(tmp,sizeof(tmp),"%d.%d.%d",ZEROTIER_ONE_VERSION_MAJOR,ZEROTIER_ONE_VERSION_MINOR,ZEROTIER_ONE_VERSION_REVISION);
+			out["version"] = tmp;
+			out["clock"] = OSUtils::now();
+
+			res.set_content(out.dump(), "application/json");
+		});
 
 		_controlPlane.Get("/moon", [this](const httplib::Request &req, httplib::Response &res) {
 			std::vector<World> moons(_node->moons());
