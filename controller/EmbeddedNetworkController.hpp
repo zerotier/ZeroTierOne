@@ -72,28 +72,6 @@ public:
 		httplib::Server &s,
 		const std::function<void(const httplib::Request&, httplib::Response&, std::string)>);
 
-	unsigned int handleControlPlaneHttpGET(
-		const std::vector<std::string> &path,
-		const std::map<std::string,std::string> &urlArgs,
-		const std::map<std::string,std::string> &headers,
-		const std::string &body,
-		std::string &responseBody,
-		std::string &responseContentType);
-	unsigned int handleControlPlaneHttpPOST(
-		const std::vector<std::string> &path,
-		const std::map<std::string,std::string> &urlArgs,
-		const std::map<std::string,std::string> &headers,
-		const std::string &body,
-		std::string &responseBody,
-		std::string &responseContentType);
-	unsigned int handleControlPlaneHttpDELETE(
-		const std::vector<std::string> &path,
-		const std::map<std::string,std::string> &urlArgs,
-		const std::map<std::string,std::string> &headers,
-		const std::string &body,
-		std::string &responseBody,
-		std::string &responseContentType);
-
 	void handleRemoteTrace(const ZT_RemoteTrace &rt);
 
 	virtual void onNetworkUpdate(const void *db,uint64_t networkId,const nlohmann::json &network);
