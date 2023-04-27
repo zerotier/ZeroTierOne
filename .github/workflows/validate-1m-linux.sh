@@ -182,11 +182,31 @@ ping_loss_percent_2_to_1=$(cat $PING21_FILENAME | \
 ping_loss_percent_1_to_2=$(echo "scale=2; $ping_loss_percent_1_to_2/100.0" | bc)
 ping_loss_percent_2_to_1=$(echo "scale=2; $ping_loss_percent_2_to_1/100.0" | bc)
 
-#########################################################PING12_FILENAME#######################
+################################################################################
 # CLI Check                                                                    #
 ################################################################################
 
 echo "Testing basic CLI functionality..."
+
+# Rapidly spam the CLI with joins/leaves
+
+SPAM_TRIES=128
+
+for ((s=0; s<=SPAM_TRIES; s++))
+do
+      $ZT1 join $TEST_NETWORK
+done
+
+for ((s=0; s<=SPAM_TRIES; s++))
+do
+      $ZT1 leave $TEST_NETWORK
+done
+
+for ((s=0; s<=SPAM_TRIES; s++))
+do
+      $ZT1 leave $TEST_NETWORK
+      $ZT1 join $TEST_NETWORK
+done
 
 $ZT1 join $TEST_NETWORK
 
