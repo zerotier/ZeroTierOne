@@ -1627,7 +1627,7 @@ public:
 		_controlPlane.Get("/moon", [&](const httplib::Request &req, httplib::Response &res) {
 			std::vector<World> moons(_node->moons());
 
-			auto out = json::object();
+			auto out = json::array();
 			for (auto i = moons.begin(); i != moons.end(); ++i) {
 				json mj;
 				_moonToJson(mj, *i);
