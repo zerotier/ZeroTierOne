@@ -1632,15 +1632,17 @@ public:
 
 			std::vector<World> moons(_node->moons());
 			const uint64_t id = Utils::hexStrToU64(input.str().c_str());
+			bool found = false;
 			auto out = json::object();
 			for(std::vector<World>::const_iterator m(moons.begin());m!=moons.end();++m) {
 				if (m->id() == id) {
 					_moonToJson(out,*m);
+					found = true;
 					break;
 				}
 			}
 
-			if (seed != 0) {
+			if (!found && seed != 0) {
 				char tmp[64];
 				OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",id);
 				out["id"] = tmp;
