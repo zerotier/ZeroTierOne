@@ -1449,9 +1449,24 @@ public:
     void startHTTPControlPlane() {
         std::vector<std::string> noAuthEndpoints { "/sso", "/health" };
 
-        auto authCheck = [=] (const httplib::Request &req, httplib::Response &res) {
-			char buf[64];
+		auto setContent = [=] (const httplib::Request &req, httplib::Response &res, std::string content) {
+			if (req.has_param("jsonp")) {
+				if (content.length() > 0) {
+					res.set_content(req.get_param_value("jsonp") + "(" + content + ");", "application/javascript");
+				} else {
+					res.set_content(req.get_param_value("jsonp") + "(null);", "application/javascript");
+				}
+			} else {
+				if (content.length() > 0) {
+					res.set_content(content, "application/json");
+				} else {
+					res.set_content("{}", "application/json");
+				}
+			}
+		};
 
+
+        auto authCheck = [=] (const httplib::Request &req, httplib::Response &res) {
             std::string r = req.remote_addr;
             InetAddress remoteAddr(r.c_str());
 
@@ -1497,16 +1512,16 @@ public:
             if (ipAllowed && isAuth) {
                 return httplib::Server::HandlerResponse::Unhandled;
             }
+			setContent(req, res, "{}");
             res.status = 401;
-            res.set_content("{}", "application/json");
             return httplib::Server::HandlerResponse::Handled;
         };
 
 
 
-		_controlPlane.Get("/bond/show/([0-9a-fA-F]{10})", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/bond/show/([0-9a-fA-F]{10})", [&](const httplib::Request &req, httplib::Response &res) {
 			if (!_node->bondController()->inUse()) {
-				res.set_content("{}", "application/json");
+				setContent(req, res, "");
 				res.status = 400;
 				return;
 			}
@@ -1521,9 +1536,9 @@ public:
 						SharedPtr<Bond> bond = _node->bondController()->getBondByPeerId(wantp);
 						if (bond) {
 							_peerToJson(out,&(pl->peers[i]),bond,(_tcpFallbackTunnel != (TcpConnection *)0));
-							res.set_content(out.dump(), "application/json");
+							setContent(req, res, out.dump());
 						} else {
-							res.set_content("{}", "application/json");
+							setContent(req, res, "");
 							res.status = 400;
 						}
 					}
@@ -1532,9 +1547,9 @@ public:
 			_node->freeQueryResult((void *)pl);
 		});
 
-		auto bondRotate = [this](const httplib::Request &req, httplib::Response &res) {
+		auto bondRotate = [&](const httplib::Request &req, httplib::Response &res) {
 			if (!_node->bondController()->inUse()) {
-				res.set_content("{}", "application/json");
+				setContent(req, res, "");
 				res.status = 400;
 				return;
 			}
@@ -1554,12 +1569,12 @@ public:
 				fprintf(stderr, "unable to find bond to peer %llx\n", (unsigned long long)id);
 				res.status = 400;
 			}
-			res.set_content("{}", "application/json");
+			setContent(req, res, "{}");
 		};
 		_controlPlane.Post("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
 		_controlPlane.Put("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
 
-		_controlPlane.Get("/config", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/config", [&](const httplib::Request &req, httplib::Response &res) {
 			std::string config;
 			{
 				Mutex::Lock lc(_localConfig_m);
@@ -1568,10 +1583,10 @@ public:
 			if (config == "null") {
 				config = "{}";
 			}
-            res.set_content(config, "application/json");
+			setContent(req, res, config);
 		});
 
-		auto configPost = [this](const httplib::Request &req, httplib::Response &res) {
+		auto configPost = [&](const httplib::Request &req, httplib::Response &res) {
 			json j(OSUtils::jsonParse(req.body));
 			if (j.is_object()) {
 				Mutex::Lock lcl(_localConfig_m);
@@ -1584,11 +1599,12 @@ public:
 					_localConfig = lc;
 				}
 			}
+			setContent(req, res, "{}");
 		};
 		_controlPlane.Post("/config/settings", configPost);
 		_controlPlane.Put("/config/settings", configPost);
 
-		_controlPlane.Get("/health", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/health", [&](const httplib::Request &req, httplib::Response &res) {
 			json out = json::object();
 
 			char tmp[256];
@@ -1605,10 +1621,10 @@ public:
 			out["version"] = tmp;
 			out["clock"] = OSUtils::now();
 
-			res.set_content(out.dump(), "application/json");
+			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/moon", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/moon", [&](const httplib::Request &req, httplib::Response &res) {
 			std::vector<World> moons(_node->moons());
 
 			auto out = json::object();
@@ -1617,11 +1633,10 @@ public:
 				_moonToJson(mj, *i);
 				out.push_back(mj);
 			}
-
-			res.set_content(out.dump(), "application/json");
+			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/moon/([0-9a-fA-F]{10})", [this](const httplib::Request &req, httplib::Response &res){
+		_controlPlane.Get("/moon/([0-9a-fA-F]{10})", [&](const httplib::Request &req, httplib::Response &res){
 			std::vector<World> moons(_node->moons());
 			auto input = req.matches[1];
 			auto out = json::object();
@@ -1632,11 +1647,10 @@ public:
 					break;
 				}
 			}
-
-			res.set_content(out.dump(), "application/json");
+			setContent(req, res, out.dump());
 		});
 
-		auto moonPost = [this](const httplib::Request &req, httplib::Response &res) {
+		auto moonPost = [&](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			uint64_t seed = 0;
 			try {
@@ -1671,35 +1685,34 @@ public:
 				out["waiting"] = true;
 				_node->orbit((void *)0,id,seed);
 			}
-			res.set_content(out.dump(), "application/json");
+			setContent(req, res, out.dump());
 		};
 		_controlPlane.Post("/moon/([0-9a-fA-F]{10})", moonPost);
 		_controlPlane.Put("/moon/([0-9a-fA-F]{10})", moonPost);
 
-		_controlPlane.Delete("/moon/([0-9a-fA-F]{10})", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Delete("/moon/([0-9a-fA-F]{10})", [&](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			uint64_t id = Utils::hexStrToU64(input.str().c_str());
 			auto out = json::object();
 			_node->deorbit((void*)0,id);
 			out["result"] = true;
-			res.set_content(out.dump(), "application/json");
+			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/network", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/network", [&](const httplib::Request &req, httplib::Response &res) {
             Mutex::Lock _l(_nets_m);
-            auto response = json::array();
+            auto out = json::array();
 
             for (auto it = _nets.begin(); it != _nets.end(); ++it) {
                 NetworkState &ns = it->second;
                 json nj;
                 _networkToJson(nj, ns);
-                response.push_back(nj);
+                out.push_back(nj);
             }
-
-            res.set_content(response.dump(), "application/json");
+			setContent(req, res, out.dump());
         });
 
-        _controlPlane.Get("/network/([0-9a-fA-F]{16})", [this](const httplib::Request &req, httplib::Response &res) {
+        _controlPlane.Get("/network/([0-9a-fA-F]{16})", [&](const httplib::Request &req, httplib::Response &res) {
 			Mutex::Lock _l(_nets_m);
 
             auto input = req.matches[1];
@@ -1708,14 +1721,14 @@ public:
 				auto out = json::object();
 				NetworkState &ns = _nets[nwid];
 				_networkToJson(out, ns);
-				res.set_content(out.dump(), "application/json");
+				setContent(req, res, out.dump());
 				return;
 			}
-            res.set_content("{}", "application/json");
+			setContent(req, res, "");
 			res.status = 404;
         });
 
-		auto networkPost = [this](const httplib::Request &req, httplib::Response &res) {
+		auto networkPost = [&](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			uint64_t wantnw = Utils::hexStrToU64(input.str().c_str());
 			_node->join(wantnw, (void*)0, (void*)0);
@@ -1752,13 +1765,12 @@ public:
 
 				_networkToJson(out, ns);
 			}
-
-			res.set_content(out.dump(), "application/json");
+			setContent(req, res, out.dump());
 		};
 		_controlPlane.Post("/network/([0-9a-fA-F])", networkPost);
 		_controlPlane.Put("/network/([0-9a-fA-F])", networkPost);
 
-		_controlPlane.Delete("/network/([0-9a-fA-F])", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Delete("/network/([0-9a-fA-F])", [&](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			auto out = json::object();
 			ZT_VirtualNetworkList *nws = _node->networks();
@@ -1770,10 +1782,10 @@ public:
 				}
 			}
 			_node->freeQueryResult((void*)nws);
-			res.set_content(out.dump(), "application/json");
+			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/peer", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/peer", [&](const httplib::Request &req, httplib::Response &res) {
 			ZT_PeerList *pl = _node->peers();
 			auto out = nlohmann::json::array();
 
@@ -1787,11 +1799,11 @@ public:
 				_peerToJson(pj,&(pl->peers[i]),bond,(_tcpFallbackTunnel != (TcpConnection *)0));
 				out.push_back(pj);
 			}
-			res.set_content(out.dump(), "application/json");
 			_node->freeQueryResult((void*)pl);
+			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/peer/([0-9a-fA-F]{10})", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/peer/([0-9a-fA-F]{10})", [&](const httplib::Request &req, httplib::Response &res) {
 			ZT_PeerList *pl = _node->peers();
 
 			auto input = req.matches[1];
@@ -1807,11 +1819,11 @@ public:
 					break;
 				}
 			}
-			res.set_content(out.dump(), "application/json");
 			_node->freeQueryResult((void*)pl);
+			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/status", [this](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/status", [&](const httplib::Request &req, httplib::Response &res) {
             ZT_NodeStatus status;
             _node->status(&status);
 
@@ -1873,7 +1885,7 @@ public:
             out["planetWorldId"] = planet.id();
             out["planetWorldTimestamp"] = planet.timestamp();
 
-            res.set_content(out.dump(), "application/json");
+			setContent(req, res, out.dump());
         });
 
 #if ZT_SSO_ENABLED
@@ -1957,7 +1969,7 @@ public:
             }
         });
 
-		_controlPlane.set_exception_handler([](const httplib::Request &req, httplib::Response &res, std::exception_ptr ep) {
+		_controlPlane.set_exception_handler([&](const httplib::Request &req, httplib::Response &res, std::exception_ptr ep) {
 			char buf[1024];
 			auto fmt = "{\"error\": %d, \"description\": \"%\"}";
 			try {
@@ -1967,7 +1979,7 @@ public:
 			} catch (...) {
 				snprintf(buf, sizeof(buf), fmt, 500, "Unknown Exception");
 			}
-			res.set_content(buf, "application/json");
+			setContent(req, res, buf);
 			res.status = 500;
 		});
 
