@@ -201,6 +201,7 @@ std::string ssoResponseTemplate = R"""(
 </html>
 )""";
 
+#if ZT_DEBUG==1
 std::string dump_headers(const httplib::Headers &headers) {
   std::string s;
   char buf[BUFSIZ];
@@ -250,6 +251,7 @@ std::string http_log(const httplib::Request &req, const httplib::Response &res) 
 
   return s;
 }
+#endif
 
 // Configured networks
 class NetworkState
@@ -1975,9 +1977,11 @@ public:
 
 		_controlPlane.set_pre_routing_handler(authCheck);
 
+#if ZT_DEBUG==1
 		_controlPlane.set_logger([](const httplib::Request &req, const httplib::Response &res) {
 			fprintf(stderr, "%s", http_log(req, res).c_str());
 		});
+#endif
 
         _serverThread = std::thread([&] {
 			if (_primaryPort==0) {
