@@ -850,8 +850,10 @@ void Switch::removeNetworkQoSControlBlock(uint64_t nwid)
 void Switch::send(void *tPtr,Packet &packet,bool encrypt,int32_t flowId)
 {
 	const Address dest(packet.destination());
-	if (dest == RR->identity.address())
+	if (dest == RR->identity.address()) {
 		return;
+	}
+	_recordOutgoingPacketMetrics(packet);
 	if (!_trySend(tPtr,packet,encrypt,flowId)) {
 		{
 			Mutex::Lock _l(_txQueue_m);
@@ -1077,6 +1079,74 @@ void Switch::_sendViaSpecificPath(void *tPtr,SharedPtr<Peer> peer,SharedPtr<Path
 				remaining -= chunkSize;
 			}
 		}
+	}
+}
+
+void Switch::_recordOutgoingPacketMetrics(const Packet &p) {
+	switch (p.verb()) {
+		case Packet::VERB_NOP:
+			Metrics::pkt_nop_out++;
+			break;
+		case Packet::VERB_HELLO:
+			Metrics::pkt_hello_out++;
+			break;
+		case Packet::VERB_ERROR:
+			Metrics::pkt_error_out++;
+			break;
+		case Packet::VERB_OK:
+			Metrics::pkt_ok_out++;
+			break;
+		case Packet::VERB_WHOIS:
+			Metrics::pkt_whois_out++;
+			break;
+		case Packet::VERB_RENDEZVOUS:
+			Metrics::pkt_rendezvous_out++;
+			break;
+		case Packet::VERB_FRAME:
+			Metrics::pkt_frame_out++;
+			break;
+		case Packet::VERB_EXT_FRAME:
+			Metrics::pkt_ext_frame_out++;
+			break;
+		case Packet::VERB_ECHO:
+			Metrics::pkt_echo_out++;
+			break;
+		case Packet::VERB_MULTICAST_LIKE:
+			Metrics::pkt_multicast_like_out++;
+			break;
+		case Packet::VERB_NETWORK_CREDENTIALS:
+			Metrics::pkt_network_credentials_out++;
+			break;
+		case Packet::VERB_NETWORK_CONFIG_REQUEST:
+			Metrics::pkt_network_config_request_out++;
+			break;
+		case Packet::VERB_NETWORK_CONFIG:
+			Metrics::pkt_network_config_out++;
+			break;
+		case Packet::VERB_MULTICAST_GATHER:
+			Metrics::pkt_multicast_gather_out++;
+			break;
+		case Packet::VERB_MULTICAST_FRAME:
+			Metrics::pkt_multicast_frame_out++;
+			break;
+		case Packet::VERB_PUSH_DIRECT_PATHS:
+			Metrics::pkt_push_direct_paths_out++;
+			break;
+		case Packet::VERB_ACK:
+			Metrics::pkt_ack_out++;
+			break;
+		case Packet::VERB_QOS_MEASUREMENT:
+			Metrics::pkt_qos_out++;
+			break;
+		case Packet::VERB_USER_MESSAGE:
+			Metrics::pkt_user_message_out++;
+			break;
+		case Packet::VERB_REMOTE_TRACE:
+			Metrics::pkt_remote_trace_out++;
+			break;
+		case Packet::VERB_PATH_NEGOTIATION_REQUEST:
+			Metrics::pkt_path_negotiation_request_out++;
+			break;
 	}
 }
 

@@ -82,6 +82,7 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t pkt_error_network_access_denied_in;
         extern prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast_in;
         extern prometheus::simpleapi::counter_metric_t pkt_error_authentication_required_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_internal_server_error_in;
 
         // outgoing errors
         extern prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found_out;
@@ -91,6 +92,7 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t pkt_error_network_access_denied_out;
         extern prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast_out;
         extern prometheus::simpleapi::counter_metric_t pkt_error_authentication_required_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_internal_server_error_out;
 
 
         // Data Sent/Received Metrics

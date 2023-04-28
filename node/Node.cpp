@@ -769,7 +769,6 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 				break;
 			case NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED: {
 				//fprintf(stderr, "\n\nGot auth required\n\n");
-
 				break;
 			} 
 
@@ -784,12 +783,15 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 			//case NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR:
 			default:
 				outp.append((unsigned char)Packet::ERROR_OBJ_NOT_FOUND);
+				Metrics::pkt_error_obj_not_found_out++;
 				break;
 			case NetworkController::NC_ERROR_ACCESS_DENIED:
 				outp.append((unsigned char)Packet::ERROR_NETWORK_ACCESS_DENIED_);
+				Metrics::pkt_error_network_access_denied_out++;
 				break;
 			case NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED:
 				outp.append((unsigned char)Packet::ERROR_NETWORK_AUTHENTICATION_REQUIRED);
+				Metrics::pkt_error_authentication_required_out++;
 				break;
 		}
 

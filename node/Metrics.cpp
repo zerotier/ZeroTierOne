@@ -134,6 +134,8 @@ namespace ZeroTier {
         { packet_errors.Add({{"error_type", "unwanted_multicast"}, {"direction", "rx"}}) };
         prometheus::simpleapi::counter_metric_t pkt_error_authentication_required_in
         { packet_errors.Add({{"error_type", "authentication_required"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_internal_server_error_in
+        { packet_errors.Add({{"error_type", "internal_server_error"}, {"direction", "rx"}}) };
 
         // Outgoing Error Counts
         prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found_out
@@ -150,6 +152,8 @@ namespace ZeroTier {
         { packet_errors.Add({{"error_type", "unwanted_multicast"}, {"direction", "tx"}}) };
         prometheus::simpleapi::counter_metric_t pkt_error_authentication_required_out
         { packet_errors.Add({{"error_type", "authentication_required"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_internal_server_error_out
+        { packet_errors.Add({{"error_type", "internal_server_error"}, {"direction", "tx"}}) };
 
         // Data Sent/Received Metrics
         prometheus::simpleapi::counter_metric_t udp_send
