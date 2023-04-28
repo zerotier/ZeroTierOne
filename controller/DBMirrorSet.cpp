@@ -15,9 +15,12 @@
 
 namespace ZeroTier {
 
-DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener) :
-	_listener(listener),
-	_running(true)
+DBMirrorSet::DBMirrorSet(DB::ChangeListener *listener)
+	: _listener(listener)
+	, _running(true)
+	, _syncCheckerThread()
+	, _dbs()
+	, _dbs_l()
 {
 	_syncCheckerThread = std::thread([this]() {
 		for(;;) {
