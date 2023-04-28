@@ -27,6 +27,8 @@ namespace ZeroTier {
         { "zt_packet_incoming", "incoming packet type counts"};
 
         // Incoming packets
+        prometheus::simpleapi::counter_metric_t pkt_nop_in
+        { packets.Add({{"packet_type", "nop"}, {"direction", "rx"}}) };
         prometheus::simpleapi::counter_metric_t pkt_error_in
         { packets.Add({{"packet_type", "error"}, {"direction", "rx"}}) };
         prometheus::simpleapi::counter_metric_t pkt_ack_in
@@ -69,6 +71,8 @@ namespace ZeroTier {
         { packets.Add({{"packet_type", "path_negotiation_request"}, {"direction", "rx"}}) };
 
         // Outgoing packets
+        prometheus::simpleapi::counter_metric_t pkt_nop_out
+        { packets.Add({{"packet_type", "nop"}, {"direction", "tx"}}) };
         prometheus::simpleapi::counter_metric_t pkt_error_out
         { packets.Add({{"packet_type", "error"}, {"direction", "tx"}}) };
         prometheus::simpleapi::counter_metric_t pkt_ack_out

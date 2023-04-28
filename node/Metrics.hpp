@@ -26,6 +26,7 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_family_t packets;
 
         // incoming packets
+        extern prometheus::simpleapi::counter_metric_t pkt_nop_in;
         extern prometheus::simpleapi::counter_metric_t pkt_error_in;
         extern prometheus::simpleapi::counter_metric_t pkt_ack_in;
         extern prometheus::simpleapi::counter_metric_t pkt_qos_in;
@@ -48,6 +49,7 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t pkt_path_negotiation_request_in;
 
         // outgoing packets
+        extern prometheus::simpleapi::counter_metric_t pkt_nop_out;
         extern prometheus::simpleapi::counter_metric_t pkt_error_out;
         extern prometheus::simpleapi::counter_metric_t pkt_ack_out;
         extern prometheus::simpleapi::counter_metric_t pkt_qos_out;
