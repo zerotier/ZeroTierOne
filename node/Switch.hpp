@@ -208,6 +208,7 @@ private:
 	bool _shouldUnite(const int64_t now,const Address &source,const Address &destination);
 	bool _trySend(void *tPtr,Packet &packet,bool encrypt,int32_t flowId = ZT_QOS_NO_FLOW); // packet is modified if return is true
 	void _sendViaSpecificPath(void *tPtr,SharedPtr<Peer> peer,SharedPtr<Path> viaPath,uint16_t userSpecifiedMtu, int64_t now,Packet &packet,bool encrypt,int32_t flowId);
+	void _recordOutgoingPacketMetrics(const Packet &p);
 
 	const RuntimeEnvironment *const RR;
 	int64_t _lastBeaconResponse;

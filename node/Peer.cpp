@@ -22,6 +22,7 @@
 #include "InetAddress.hpp"
 #include "RingBuffer.hpp"
 #include "Utils.hpp"
+#include "Metrics.hpp"
 
 namespace ZeroTier {
 
