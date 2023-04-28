@@ -25,64 +25,127 @@ namespace ZeroTier {
         // Packet Type Counts
         prometheus::simpleapi::counter_family_t packets
         { "zt_packet_incoming", "incoming packet type counts"};
-        prometheus::simpleapi::counter_metric_t pkt_error
-        { packets.Add({{"packet_type", "error"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_ack
-        { packets.Add({{"packet_type", "ack"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_qos
-        { packets.Add({{"packet_type", "qos"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_hello
-        { packets.Add({{"packet_type", "hello"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_ok
-        { packets.Add({{"packet_type", "ok"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_whois
-        { packets.Add({{"packet_type", "whois"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_rendezvous
-        { packets.Add({{"packet_type", "rendezvous"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_frame
-        { packets.Add({{"packet_type", "frame"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_ext_frame
-        { packets.Add({{"packet_type", "ext_frame"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_echo
-        { packets.Add({{"packet_type", "echo"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_multicast_like
-        { packets.Add({{"packet_type", "multicast_like"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_network_credentials
-        { packets.Add({{"packet_type", "network_credentials"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_network_config_request
-        { packets.Add({{"packet_type", "network_config_request"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_network_config
-        { packets.Add({{"packet_type", "network_config"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_multicast_gather
-        { packets.Add({{"packet_type", "multicast_gather"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_multicast_frame
-        { packets.Add({{"packet_type", "multicast_frame"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_push_direct_paths
-        { packets.Add({{"packet_type", "push_direct_paths"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_user_message
-        { packets.Add({{"packet_type", "user_message"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_remote_trace
-        { packets.Add({{"packet_type", "remote_trace"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_path_negotiation_request
-        { packets.Add({{"packet_type", "path_negotiation_request"}}) };
+
+        // Incoming packets
+        prometheus::simpleapi::counter_metric_t pkt_error_in
+        { packets.Add({{"packet_type", "error"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_ack_in
+        { packets.Add({{"packet_type", "ack"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_qos_in
+        { packets.Add({{"packet_type", "qos"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_hello_in
+        { packets.Add({{"packet_type", "hello"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_ok_in
+        { packets.Add({{"packet_type", "ok"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_whois_in
+        { packets.Add({{"packet_type", "whois"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_rendezvous_in
+        { packets.Add({{"packet_type", "rendezvous"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_frame_in
+        { packets.Add({{"packet_type", "frame"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_ext_frame_in
+        { packets.Add({{"packet_type", "ext_frame"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_echo_in
+        { packets.Add({{"packet_type", "echo"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_multicast_like_in
+        { packets.Add({{"packet_type", "multicast_like"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_network_credentials_in
+        { packets.Add({{"packet_type", "network_credentials"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_network_config_request_in
+        { packets.Add({{"packet_type", "network_config_request"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_network_config_in
+        { packets.Add({{"packet_type", "network_config"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_multicast_gather_in
+        { packets.Add({{"packet_type", "multicast_gather"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_multicast_frame_in
+        { packets.Add({{"packet_type", "multicast_frame"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_push_direct_paths_in
+        { packets.Add({{"packet_type", "push_direct_paths"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_user_message_in
+        { packets.Add({{"packet_type", "user_message"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_remote_trace_in
+        { packets.Add({{"packet_type", "remote_trace"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_path_negotiation_request_in
+        { packets.Add({{"packet_type", "path_negotiation_request"}, {"direction", "rx"}}) };
+
+        // Outgoing packets
+        prometheus::simpleapi::counter_metric_t pkt_error_out
+        { packets.Add({{"packet_type", "error"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_ack_out
+        { packets.Add({{"packet_type", "ack"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_qos_out
+        { packets.Add({{"packet_type", "qos"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_hello_out
+        { packets.Add({{"packet_type", "hello"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_ok_out
+        { packets.Add({{"packet_type", "ok"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_whois_out
+        { packets.Add({{"packet_type", "whois"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_rendezvous_out
+        { packets.Add({{"packet_type", "rendezvous"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_frame_out
+        { packets.Add({{"packet_type", "frame"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_ext_frame_out
+        { packets.Add({{"packet_type", "ext_frame"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_echo_out
+        { packets.Add({{"packet_type", "echo"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_multicast_like_out
+        { packets.Add({{"packet_type", "multicast_like"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_network_credentials_out
+        { packets.Add({{"packet_type", "network_credentials"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_network_config_request_out
+        { packets.Add({{"packet_type", "network_config_request"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_network_config_out
+        { packets.Add({{"packet_type", "network_config"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_multicast_gather_out
+        { packets.Add({{"packet_type", "multicast_gather"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_multicast_frame_out
+        { packets.Add({{"packet_type", "multicast_frame"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_push_direct_paths_out
+        { packets.Add({{"packet_type", "push_direct_paths"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_user_message_out
+        { packets.Add({{"packet_type", "user_message"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_remote_trace_out
+        { packets.Add({{"packet_type", "remote_trace"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_path_negotiation_request_out
+        { packets.Add({{"packet_type", "path_negotiation_request"}, {"direction", "tx"}}) };
+
 
         // Packet Error Counts
         prometheus::simpleapi::counter_family_t packet_errors
         { "zt_packet_incoming_error", "incoming packet errors"};
-        prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found
-        { packet_errors.Add({{"error_type", "obj_not_found"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_error_unsupported_op
-        { packet_errors.Add({{"error_type", "unsupported_operation"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_error_identity_collision
-        { packet_errors.Add({{"error_type", "identity_collision"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_error_need_membership_cert
-        { packet_errors.Add({{"error_type", "need_membership_certificate"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_error_network_access_denied
-        { packet_errors.Add({{"error_type", "network_access_denied"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast
-        { packet_errors.Add({{"error_type", "unwanted_multicast"}}) };
-        prometheus::simpleapi::counter_metric_t pkt_error_authentication_required
-        { packet_errors.Add({{"error_type", "authentication_required"}}) };
+
+        // Incoming Error Counts
+        prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found_in
+        { packet_errors.Add({{"error_type", "obj_not_found"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_unsupported_op_in
+        { packet_errors.Add({{"error_type", "unsupported_operation"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_identity_collision_in
+        { packet_errors.Add({{"error_type", "identity_collision"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_need_membership_cert_in
+        { packet_errors.Add({{"error_type", "need_membership_certificate"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_network_access_denied_in
+        { packet_errors.Add({{"error_type", "network_access_denied"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast_in
+        { packet_errors.Add({{"error_type", "unwanted_multicast"}, {"direction", "rx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_authentication_required_in
+        { packet_errors.Add({{"error_type", "authentication_required"}, {"direction", "rx"}}) };
+
+        // Outgoing Error Counts
+        prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found_out
+        { packet_errors.Add({{"error_type", "obj_not_found"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_unsupported_op_out
+        { packet_errors.Add({{"error_type", "unsupported_operation"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_identity_collision_out
+        { packet_errors.Add({{"error_type", "identity_collision"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_need_membership_cert_out
+        { packet_errors.Add({{"error_type", "need_membership_certificate"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_network_access_denied_out
+        { packet_errors.Add({{"error_type", "network_access_denied"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast_out
+        { packet_errors.Add({{"error_type", "unwanted_multicast"}, {"direction", "tx"}}) };
+        prometheus::simpleapi::counter_metric_t pkt_error_authentication_required_out
+        { packet_errors.Add({{"error_type", "authentication_required"}, {"direction", "tx"}}) };
 
         // Data Sent/Received Metrics
         prometheus::simpleapi::counter_metric_t udp_send
