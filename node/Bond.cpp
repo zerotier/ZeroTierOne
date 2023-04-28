@@ -809,6 +809,7 @@ void Bond::sendPATH_NEGOTIATION_REQUEST(void* tPtr, int pathIdx)
 	Packet outp(_peer->_id.address(), RR->identity.address(), Packet::VERB_PATH_NEGOTIATION_REQUEST);
 	outp.append<int16_t>(_localUtility);
 	if (_paths[pathIdx].p->address()) {
+		Metrics::pkt_path_negotiation_request_out++;
 		outp.armor(_peer->key(), false, _peer->aesKeysIfSupported());
 		RR->node->putPacket(tPtr, _paths[pathIdx].p->localSocket(), _paths[pathIdx].p->address(), outp.data(), outp.size());
 		_overheadBytes += outp.size();

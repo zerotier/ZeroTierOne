@@ -234,6 +234,7 @@ void Peer::received(
 						++p;
 					}
 					if (count) {
+						Metrics::pkt_push_direct_paths_out++;
 						outp->setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
 						outp->compress();
 						outp->armor(_key,true,aesKeysIfSupported());
