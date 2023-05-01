@@ -119,9 +119,9 @@ time_zt_node2_start=`date +%s`
 
 for ((s=0; s<=MAX_WAIT_SECS; s++))
 do
-    echo "Checking for online status: $s"
     node1_online="$($ZT1 -j info | jq '.online' 2>/dev/null)"
     node2_online="$($ZT2 -j info | jq '.online' 2>/dev/null)"
+    echo "Checking for online status: try #$s, node1:$node1_online, node2:$node2_online"
     if [[ "$node1_online" == "true" ]]
     then
         time_zt_node1_online=`date +%s`
@@ -138,18 +138,25 @@ do
     sleep 1
 done
 
+echo -e "\nStatus of each instance:"
+
+echo -e "\n\nNode 1:"
+$ZT1 status
+echo -e "\n\nNode 2:"
+$ZT2 status
+
+echo -e "\nps:"
+
+echo -e "\n\nNode 1:"
+$NS1 ps aux | grep zerotier-one
+echo -e "\n\nNode 2:"
+$NS2 ps aux | grep zerotier-one
+
 if [[ "$both_instances_online" != "true" ]]
 then
-    echo "One or more instances of ZeroTier failed to come online. Aborting test." >&2
-    $ZT1 -j info
-    $ZT2 -j info
+    echo "One or more instances of ZeroTier failed to come online. Aborting test."
     exit 1
 fi
-
-echo -e "\nChecking status of each instance:"
-
-$ZT1 status
-$ZT2 status
 
 echo -e "\nJoining networks"
 
