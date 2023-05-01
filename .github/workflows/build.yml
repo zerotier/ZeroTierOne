@@ -19,7 +19,7 @@ jobs:
         components: rustfmt, clippy
 
     - name: Set up cargo cache
-      uses: actions/rust-cache@v2
+      uses: Swatinem/rust-cache@v2
       continue-on-error: false
       with:
         workspaces: |
