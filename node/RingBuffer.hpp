@@ -193,11 +193,9 @@ public:
 	{
 		if (end == begin) {
 			return wrap ? S : 0;
-		}
-		else if (end > begin) {
+		} else if (end > begin) {
 			return end - begin;
-		}
-		else {
+		} else {
 			return S + end - begin;
 		}
 	}

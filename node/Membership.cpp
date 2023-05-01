@@ -39,18 +39,21 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 {
 	const Capability *sendCaps[ZT_MAX_NETWORK_CAPABILITIES];
 	unsigned int sendCapCount = 0;
-	for(unsigned int c=0;c<nconf.capabilityCount;++c)
+	for(unsigned int c=0;c<nconf.capabilityCount;++c) {
 		sendCaps[sendCapCount++] = &(nconf.capabilities[c]);
+	}
 
 	const Tag *sendTags[ZT_MAX_NETWORK_TAGS];
 	unsigned int sendTagCount = 0;
-	for(unsigned int t=0;t<nconf.tagCount;++t)
+	for(unsigned int t=0;t<nconf.tagCount;++t) {
 		sendTags[sendTagCount++] = &(nconf.tags[t]);
+	}
 
 	const CertificateOfOwnership *sendCoos[ZT_MAX_CERTIFICATES_OF_OWNERSHIP];
 	unsigned int sendCooCount = 0;
-	for(unsigned int c=0;c<nconf.certificateOfOwnershipCount;++c)
+	for(unsigned int c=0;c<nconf.certificateOfOwnershipCount;++c) {
 		sendCoos[sendCooCount++] = &(nconf.certificatesOfOwnership[c]);
+	}
 
 	unsigned int capPtr = 0;
 	unsigned int tagPtr = 0;
@@ -116,8 +119,9 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 		RR->t->credentialRejected(tPtr,com,"old");
 		return ADD_REJECTED;
 	}
-	if (_com == com)
+	if (_com == com) {
 		return ADD_ACCEPTED_REDUNDANT;
+	}
 
 	switch(com.verify(RR,tPtr)) {
 		default:
@@ -142,8 +146,9 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 			RR->t->credentialRejected(tPtr,cred,"old");
 			return Membership::ADD_REJECTED;
 		}
-		if (*rc == cred)
+		if (*rc == cred) {
 			return Membership::ADD_ACCEPTED_REDUNDANT;
+		}
 	}
 
 	const int64_t *const rt = revocations.get(Membership::credentialKey(C::credentialType(),cred.id()));
@@ -157,8 +162,9 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t,C> &remot
 			RR->t->credentialRejected(tPtr,cred,"invalid");
 			return Membership::ADD_REJECTED;
 		case 0:
-			if (!rc)
+			if (!rc) {
 				rc = &(remoteCreds[cred.id()]);
+			}
 			*rc = cred;
 			return Membership::ADD_ACCEPTED_NEW;
 		case 1:

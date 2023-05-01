@@ -121,8 +121,9 @@ void Salsa20::crypt12(const void *in,void *out,unsigned int bytes)
 	uint32_t j0, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10, j11, j12, j13, j14, j15;
 #endif
 
-	if (!bytes)
+	if (!bytes) {
 		return;
+	}
 
 #ifndef ZT_SALSA20_SSE
 	j0 = _state.i[0];
@@ -145,8 +146,9 @@ void Salsa20::crypt12(const void *in,void *out,unsigned int bytes)
 
 	for (;;) {
 		if (bytes < 64) {
-			for (i = 0;i < bytes;++i)
+			for (i = 0;i < bytes;++i) {
 				tmp[i] = m[i];
+			}
 			m = tmp;
 			ctarget = c;
 			c = tmp;
@@ -589,8 +591,9 @@ void Salsa20::crypt12(const void *in,void *out,unsigned int bytes)
 
 		if (bytes <= 64) {
 			if (bytes < 64) {
-				for (i = 0;i < bytes;++i)
+				for (i = 0;i < bytes;++i) {
 					ctarget[i] = c[i];
+				}
 			}
 
 #ifndef ZT_SALSA20_SSE
@@ -620,8 +623,9 @@ void Salsa20::crypt20(const void *in,void *out,unsigned int bytes)
 	uint32_t j0, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10, j11, j12, j13, j14, j15;
 #endif
 
-	if (!bytes)
+	if (!bytes) {
 		return;
+	}
 
 #ifndef ZT_SALSA20_SSE
 	j0 = _state.i[0];
@@ -644,8 +648,9 @@ void Salsa20::crypt20(const void *in,void *out,unsigned int bytes)
 
 	for (;;) {
 		if (bytes < 64) {
-			for (i = 0;i < bytes;++i)
+			for (i = 0;i < bytes;++i) {
 				tmp[i] = m[i];
+			}
 			m = tmp;
 			ctarget = c;
 			c = tmp;
@@ -1320,8 +1325,9 @@ void Salsa20::crypt20(const void *in,void *out,unsigned int bytes)
 
 		if (bytes <= 64) {
 			if (bytes < 64) {
-				for (i = 0;i < bytes;++i)
+				for (i = 0;i < bytes;++i) {
 					ctarget[i] = c[i];
+				}
 			}
 
 #ifndef ZT_SALSA20_SSE

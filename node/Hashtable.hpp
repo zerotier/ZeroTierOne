@@ -81,8 +81,9 @@ public:
 					return true;
 				}
 				++_idx;
-				if (_idx >= _ht->_bc)
+				if (_idx >= _ht->_bc) {
 					return false;
+				}
 				_b = _ht->_t[_idx];
 			}
 		}
@@ -102,10 +103,12 @@ public:
 		_bc(bc),
 		_s(0)
 	{
-		if (!_t)
+		if (!_t) {
 			throw ZT_EXCEPTION_OUT_OF_MEMORY;
-		for(unsigned long i=0;i<bc;++i)
+		}
+		for(unsigned long i=0;i<bc;++i) {
 			_t[i] = (_Bucket *)0;
+		}
 	}
 
 	Hashtable(const Hashtable<K,V> &ht) :
@@ -113,10 +116,12 @@ public:
 		_bc(ht._bc),
 		_s(ht._s)
 	{
-		if (!_t)
+		if (!_t) {
 			throw ZT_EXCEPTION_OUT_OF_MEMORY;
-		for(unsigned long i=0;i<_bc;++i)
+		}
+		for(unsigned long i=0;i<_bc;++i) {
 			_t[i] = (_Bucket *)0;
+		}
 		for(unsigned long i=0;i<_bc;++i) {
 			const _Bucket *b = ht._t[i];
 			while (b) {
@@ -234,8 +239,9 @@ public:
 	{
 		_Bucket *b = _t[_hc(k) % _bc];
 		while (b) {
-			if (b->k == k)
+			if (b->k == k) {
 				return &(b->v);
+			}
 			b = b->next;
 		}
 		return (V *)0;
@@ -268,8 +274,9 @@ public:
 	{
 		_Bucket *b = _t[_hc(k) % _bc];
 		while (b) {
-			if (b->k == k)
+			if (b->k == k) {
 				return true;
+			}
 			b = b->next;
 		}
 		return false;
@@ -286,9 +293,11 @@ public:
 		_Bucket *b = _t[bidx];
 		while (b) {
 			if (b->k == k) {
-				if (lastb)
+				if (lastb) {
 					lastb->next = b->next;
-				else _t[bidx] = b->next;
+				} else {
+					_t[bidx] = b->next;
+				}
 				delete b;
 				--_s;
 				return true;
@@ -341,8 +350,9 @@ public:
 
 		_Bucket *b = _t[bidx];
 		while (b) {
-			if (b->k == k)
+			if (b->k == k) {
 				return b->v;
+			}
 			b = b->next;
 		}
 
@@ -396,8 +406,9 @@ private:
 		const unsigned long nc = _bc * 2;
 		_Bucket **nt = reinterpret_cast<_Bucket **>(::malloc(sizeof(_Bucket *) * nc));
 		if (nt) {
-			for(unsigned long i=0;i<nc;++i)
+			for(unsigned long i=0;i<nc;++i) {
 				nt[i] = (_Bucket *)0;
+			}
 			for(unsigned long i=0;i<_bc;++i) {
 				_Bucket *b = _t[i];
 				while (b) {

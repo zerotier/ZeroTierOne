@@ -136,8 +136,9 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 
 	if (_rp) {
 		for (;;) {
-			if (!len)
+			if (!len) {
 				return;
+			}
 			--len;
 			_r[_rp++] = *(in++);
 			if (_rp == 16) {
@@ -160,8 +161,9 @@ void AES::GMAC::update(const void *const data, unsigned int len) noexcept
 	_y[0] = y0;
 	_y[1] = y1;
 
-	for (unsigned int i = 0; i < len; ++i)
+	for (unsigned int i = 0; i < len; ++i) {
 		_r[i] = in[i];
+	}
 	_rp = len; // len is always less than 16 here
 }
 
@@ -187,8 +189,9 @@ void AES::GMAC::finish(uint8_t tag[16]) noexcept
 	uint64_t y1 = _y[1];
 
 	if (_rp) {
-		while (_rp < 16)
+		while (_rp < 16) {
 			_r[_rp++] = 0;
+		}
 		y0 ^= Utils::loadMachineEndian< uint64_t >(_r);
 		y1 ^= Utils::loadMachineEndian< uint64_t >(_r + 8);
 		s_gfmul(h0, h1, y0, y1);
@@ -247,8 +250,9 @@ void AES::CTR::crypt(const void *const input, unsigned int len) noexcept
 				_aes.p_encryptSW(reinterpret_cast<const uint8_t *>(_ctr), reinterpret_cast<uint8_t *>(keyStream));
 				reinterpret_cast<uint32_t *>(_ctr)[3] = Utils::hton(++ctr);
 				uint8_t *outblk = out + (totalLen - 16);
-				for (int i = 0; i < 16; ++i)
+				for (int i = 0; i < 16; ++i) {
 					outblk[i] ^= reinterpret_cast<uint8_t *>(keyStream)[i];
+				}
 				break;
 			}
 		}
@@ -442,8 +446,9 @@ void AES::CTR::finish() noexcept
 	const unsigned int rem = _len & 15U;
 	if (rem) {
 		_aes.encrypt(_ctr, tmp);
-		for (unsigned int i = 0, j = _len - rem; i < rem; ++i)
+		for (unsigned int i = 0, j = _len - rem; i < rem; ++i) {
 			_out[j + i] ^= tmp[i];
+		}
 	}
 }
 
@@ -497,8 +502,9 @@ void AES::p_initSW(const uint8_t *key) noexcept
 		rk[9] = rk[1] ^ rk[8];
 		rk[10] = rk[2] ^ rk[9];
 		rk[11] = rk[3] ^ rk[10];
-		if (++i == 7)
+		if (++i == 7) {
 			break;
+		}
 		temp = rk[11];
 		rk[12] = rk[4] ^ (Te2_r(temp >> 24U) & 0xff000000U) ^ (Te3_r((temp >> 16U) & 0xffU) & 0x00ff0000U) ^ (Te0[(temp >> 8U) & 0xffU] & 0x0000ff00U) ^ (Te1_r((temp) & 0xffU) & 0x000000ffU);
 		rk[13] = rk[5] ^ rk[12];
@@ -511,8 +517,9 @@ void AES::p_initSW(const uint8_t *key) noexcept
 	p_k.sw.h[0] = Utils::ntoh(p_k.sw.h[0]);
 	p_k.sw.h[1] = Utils::ntoh(p_k.sw.h[1]);
 
-	for (int i = 0; i < 60; ++i)
+	for (int i = 0; i < 60; ++i) {
 		p_k.sw.dk[i] = p_k.sw.ek[i];
+	}
 	rk = p_k.sw.dk;
 
 	for (int i = 0, j = 56; i < j; i += 4, j -= 4) {
