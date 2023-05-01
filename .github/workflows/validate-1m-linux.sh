@@ -20,8 +20,8 @@ mkdir $TEST_DIR_PREFIX
 NS1="ip netns exec ns1"
 NS2="ip netns exec ns2"
 
-ZT1="$NS1 ./zerotier-cli -D$(pwd)/node1"
-ZT2="$NS2 ./zerotier-cli -D$(pwd)/node2"
+ZT1="$NS1 ./zerotier-cli -p9994 -D$(pwd)/node1"
+ZT2="$NS2 ./zerotier-cli -p9995 -D$(pwd)/node2"
 
 echo -e "Setting up network namespaces..."
 echo "Setting up ns1"
@@ -100,10 +100,10 @@ $NS1 sudo valgrind --demangle=yes --exit-on-first-error=yes \
       --xml=yes \
       --xml-file=$FILENAME_MEMORY_LOG \
       --leak-check=full \
-      ./zerotier-one node1 >>node_1.log 2>&1 &
+      ./zerotier-one node1 -p9994 >>node_1.log 2>&1 &
 
 # Second instance, not run in memory profiler
-$NS2 ./zerotier-one node2 >>node_2.log 2>&1 &
+$NS2 ./zerotier-one node2 -p9995 >>node_2.log 2>&1 &
 
 ################################################################################
 # Online Check                                                                 #
