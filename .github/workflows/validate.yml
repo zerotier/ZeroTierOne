@@ -13,12 +13,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - run: |
-          rustup set auto-self-update disable
-          rustup toolchain install stable --profile minimal
-      - uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: zeroidc -> target
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: x86_64-unknown-linux-gnu
+        override: true
+        components: rustfmt, clippy
+
+    - name: Set up cargo cache
+      uses: Swatinem/rust-cache@v2
+      continue-on-error: false
+      with:
+        key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
+        shared-key: ${{ runner.os }}-cargo-
+        workspaces: |
+          zeroidc/
 
     - name: validate-1m-linux
       env:
@@ -41,3 +51,4 @@ jobs:
       run: |
         sudo chmod +x ./.github/workflows/report.sh
         sudo ./.github/workflows/report.sh
+

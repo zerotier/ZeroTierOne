@@ -48,25 +48,30 @@ CertificateOfMembership::CertificateOfMembership(uint64_t timestamp,uint64_t tim
 
 bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other, const Identity &otherIdentity) const
 {
-	if ((_qualifierCount == 0)||(other._qualifierCount == 0))
+	if ((_qualifierCount == 0)||(other._qualifierCount == 0)) {
 		return false;
+	}
 
 	std::map< uint64_t, uint64_t > otherFields;
-	for(unsigned int i=0;i<other._qualifierCount;++i)
+	for(unsigned int i=0;i<other._qualifierCount;++i) {
 		otherFields[other._qualifiers[i].id] = other._qualifiers[i].value;
+	}
 
 	bool fullIdentityVerification = false;
 	for(unsigned int i=0;i<_qualifierCount;++i) {
 		const uint64_t qid = _qualifiers[i].id;
-		if ((qid >= 3)&&(qid <= 6))
+		if ((qid >= 3)&&(qid <= 6)) {
 			fullIdentityVerification = true;
+		}
 		std::map< uint64_t, uint64_t >::iterator otherQ(otherFields.find(qid));
-		if (otherQ == otherFields.end())
+		if (otherQ == otherFields.end()) {
 			return false;
+		}
 		const uint64_t a = _qualifiers[i].value;
 		const uint64_t b = otherQ->second;
-		if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[i].maxDelta)
+		if (((a >= b) ? (a - b) : (b - a)) > _qualifiers[i].maxDelta) {
 			return false;
+		}
 	}
 
 	// If this COM has a full hash of its identity, assume the other must have this as well.
@@ -76,10 +81,12 @@ bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other, c
 		otherIdentity.publicKeyHash(idHash);
 		for(unsigned long i=0;i<4;++i) {
 			std::map< uint64_t, uint64_t >::iterator otherQ(otherFields.find((uint64_t)(i + 3)));
-			if (otherQ == otherFields.end())
+			if (otherQ == otherFields.end()) {
 				return false;
-			if (otherQ->second != Utils::ntoh(idHash[i]))
+			}
+			if (otherQ->second != Utils::ntoh(idHash[i])) {
 				return false;
+			}
 		}
 	}
 
@@ -108,8 +115,9 @@ bool CertificateOfMembership::sign(const Identity &with)
 
 int CertificateOfMembership::verify(const RuntimeEnvironment *RR,void *tPtr) const
 {
-	if ((!_signedBy)||(_signedBy != Network::controllerFor(networkId()))||(_qualifierCount > ZT_NETWORK_COM_MAX_QUALIFIERS))
+	if ((!_signedBy)||(_signedBy != Network::controllerFor(networkId()))||(_qualifierCount > ZT_NETWORK_COM_MAX_QUALIFIERS)) {
 		return -1;
+	}
 
 	const Identity id(RR->topology->getIdentity(tPtr,_signedBy));
 	if (!id) {

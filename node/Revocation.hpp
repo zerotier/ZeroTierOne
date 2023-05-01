@@ -118,7 +118,9 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const
 	{
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		if (forSign) {
+			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		}
 
 		b.append((uint32_t)0); // 4 unused bytes, currently set to 0
 		b.append(_id);
@@ -140,7 +142,9 @@ public:
 		// This is the size of any additional fields, currently 0.
 		b.append((uint16_t)0);
 
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		if (forSign) {
+			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		}
 	}
 
 	template<unsigned int C>
@@ -151,14 +155,21 @@ public:
 		unsigned int p = startAt;
 
 		p += 4; // 4 bytes, currently unused
-		_id = b.template at<uint32_t>(p); p += 4;
-		_networkId = b.template at<uint64_t>(p); p += 8;
+		_id = b.template at<uint32_t>(p);
+		p += 4;
+		_networkId = b.template at<uint64_t>(p);
+		p += 8;
 		p += 4; // 4 bytes, currently unused
-		_credentialId = b.template at<uint32_t>(p); p += 4;
-		_threshold = (int64_t)b.template at<uint64_t>(p); p += 8;
-		_flags = b.template at<uint64_t>(p); p += 8;
-		_target.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
+		_credentialId = b.template at<uint32_t>(p);
+		p += 4;
+		_threshold = (int64_t)b.template at<uint64_t>(p);
+		p += 8;
+		_flags = b.template at<uint64_t>(p);
+		p += 8;
+		_target.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		p += ZT_ADDRESS_LENGTH;
+		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		p += ZT_ADDRESS_LENGTH;
 		_type = (Credential::Type)b[p++];
 
 		if (b[p++] == 1) {
@@ -166,14 +177,17 @@ public:
 				p += 2;
 				memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
 				p += ZT_C25519_SIGNATURE_LEN;
-			} else throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
+			} else {
+				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
+			}
 		} else {
 			p += 2 + b.template at<uint16_t>(p);
 		}
 
 		p += 2 + b.template at<uint16_t>(p);
-		if (p > b.size())
+		if (p > b.size()) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+		}
 
 		return (p - startAt);
 	}

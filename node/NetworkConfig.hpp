@@ -356,8 +356,9 @@ public:
 	{
 		std::vector<Address> r;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0) {
 				r.push_back(Address(specialists[i]));
+			}
 		}
 		return r;
 	}
@@ -366,8 +367,9 @@ public:
 	{
 		unsigned int c = 0;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0) {
 				ab[c++] = specialists[i];
+			}
 		}
 		return c;
 	}
@@ -375,8 +377,9 @@ public:
 	inline bool isActiveBridge(const Address &a) const
 	{
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if (((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)&&(a == specialists[i]))
+			if (((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)&&(a == specialists[i])) {
 				return true;
+			}
 		}
 		return false;
 	}
@@ -385,8 +388,9 @@ public:
 	{
 		std::vector<Address> r;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0)
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR) != 0) {
 				r.push_back(Address(specialists[i]));
+			}
 		}
 		return r;
 	}
@@ -395,8 +399,9 @@ public:
 	{
 		std::vector<Address> r;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0) {
 				r.push_back(Address(specialists[i]));
+			}
 		}
 		return r;
 	}
@@ -405,8 +410,9 @@ public:
 	{
 		unsigned int c = 0;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)
+			if ((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0) {
 				mr[c++] = specialists[i];
+			}
 		}
 		return c;
 	}
@@ -414,8 +420,9 @@ public:
 	inline bool isMulticastReplicator(const Address &a) const
 	{
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if (((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)&&(a == specialists[i]))
+			if (((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR) != 0)&&(a == specialists[i])) {
 				return true;
+			}
 		}
 		return false;
 	}
@@ -424,8 +431,9 @@ public:
 	{
 		std::vector<Address> r;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0)
+			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0) {
 				r.push_back(Address(specialists[i]));
+			}
 		}
 		return r;
 	}
@@ -434,8 +442,9 @@ public:
 	{
 		unsigned int c = 0;
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0)
+			if ((specialists[i] & (ZT_NETWORKCONFIG_SPECIALIST_TYPE_ANCHOR | ZT_NETWORKCONFIG_SPECIALIST_TYPE_MULTICAST_REPLICATOR)) != 0) {
 				ac[c++] = specialists[i];
+			}
 		}
 		return c;
 	}
@@ -456,8 +465,9 @@ public:
 	inline bool permitsBridging(const Address &fromPeer) const
 	{
 		for(unsigned int i=0;i<specialistCount;++i) {
-			if ((fromPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0))
+			if ((fromPeer == specialists[i])&&((specialists[i] & ZT_NETWORKCONFIG_SPECIALIST_TYPE_ACTIVE_BRIDGE) != 0)) {
 				return true;
+			}
 		}
 		return false;
 	}
@@ -495,8 +505,9 @@ public:
 	const Capability *capability(const uint32_t id) const
 	{
 		for(unsigned int i=0;i<capabilityCount;++i) {
-			if (capabilities[i].id() == id)
+			if (capabilities[i].id() == id) {
 				return &(capabilities[i]);
+			}
 		}
 		return (Capability *)0;
 	}
@@ -504,8 +515,9 @@ public:
 	const Tag *tag(const uint32_t id) const
 	{
 		for(unsigned int i=0;i<tagCount;++i) {
-			if (tags[i].id() == id)
+			if (tags[i].id() == id) {
 				return &(tags[i]);
+			}
 		}
 		return (Tag *)0;
 	}

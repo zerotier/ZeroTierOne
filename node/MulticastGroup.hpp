@@ -92,10 +92,11 @@ public:
 	inline bool operator!=(const MulticastGroup &g) const { return ((_mac != g._mac)||(_adi != g._adi)); }
 	inline bool operator<(const MulticastGroup &g) const
 	{
-		if (_mac < g._mac)
+		if (_mac < g._mac) {
 			return true;
-		else if (_mac == g._mac)
+		} else if (_mac == g._mac) {
 			return (_adi < g._adi);
+		}
 		return false;
 	}
 	inline bool operator>(const MulticastGroup &g) const { return (g < *this); }

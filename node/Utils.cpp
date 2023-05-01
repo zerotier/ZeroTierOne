@@ -188,18 +188,22 @@ const Utils::CPUIDRegisters Utils::CPUID;
 static void _Utils_doBurn(volatile uint8_t *ptr,unsigned int len)
 {
 	volatile uint8_t *const end = ptr + len;
-	while (ptr != end) *(ptr++) = (uint8_t)0;
+	while (ptr != end) {
+		*(ptr++) = (uint8_t)0;
+	}
 }
 static void (*volatile _Utils_doBurn_ptr)(volatile uint8_t *,unsigned int) = _Utils_doBurn;
 void Utils::burn(void *ptr,unsigned int len) { (_Utils_doBurn_ptr)((volatile uint8_t *)ptr,len); }
 
 static unsigned long _Utils_itoa(unsigned long n,char *s)
 {
-	if (n == 0)
+	if (n == 0) {
 		return 0;
+	}
 	unsigned long pos = _Utils_itoa(n / 10,s);
-	if (pos >= 22) // sanity check, should be impossible
+	if (pos >= 22) { // sanity check, should be impossible
 		pos = 22;
+	}
 	s[pos] = '0' + (char)(n % 10);
 	return pos + 1;
 }
@@ -288,7 +292,9 @@ void Utils::getSecureRandom(void *buf,unsigned int bytes)
 						exit(1);
 						return;
 					}
-				} else break;
+				} else {
+					break;
+				}
 			}
 			randomPtr = 0;
 			s20.crypt12(randomBuf,randomBuf,sizeof(randomBuf));

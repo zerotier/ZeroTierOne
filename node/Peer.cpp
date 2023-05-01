@@ -52,8 +52,9 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_localMultipathSupported(false),
 	_lastComputedAggregateMeanLatency(0)
 {
-	if (!myIdentity.agree(peerIdentity,_key))
+	if (!myIdentity.agree(peerIdentity,_key)) {
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
+	}
 
 	uint8_t ktmp[ZT_SYMMETRIC_KEY_SIZE];
 	KBKDFHMACSHA384(_key,ZT_KBKDF_LABEL_AES_GMAC_SIV_K0,0,0,ktmp);
@@ -146,8 +147,7 @@ void Peer::received(
 								}
 							}
 						}
-					}
-					else {
+					} else {
 						replacePath = i;
 						break;
 					}
@@ -268,7 +268,9 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int32
 					bestPath = i;
 				}
 			}
-		} else break;
+		} else {
+			break;
+		}
 	}
 	if (bestPath != ZT_MAX_PEER_NETWORK_PATHS) {
 		return _paths[bestPath].p;
@@ -317,7 +319,9 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 					}
 					break;
 			}
-		} else break;
+		} else {
+			break;
+		}
 	}
 
 	Mutex::Lock _l2(other->_paths_m);
@@ -340,7 +344,9 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 					}
 					break;
 			}
-		} else break;
+		} else {
+			break;
+		}
 	}
 
 	unsigned int mine = ZT_MAX_PEER_NETWORK_PATHS;
@@ -518,8 +524,7 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 		if (_paths[i].p) {
 			maxPriority = std::max(_paths[i].priority,maxPriority);
-		}
-		else {
+		} else {
 			break;
 		}
 	}
@@ -534,8 +539,7 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 					_paths[i].p->sent(now);
 					sent |= (_paths[i].p->address().ss_family == AF_INET) ? 0x1 : 0x2;
 				}
-			}
-			else {
+			} else {
 				_paths[i] = _PeerPath();
 				deletionOccurred = true;
 			}
@@ -572,7 +576,9 @@ void Peer::clusterRedirect(void *tPtr,const SharedPtr<Path> &originatingPath,con
 					newPriority = _paths[i].priority;
 					break;
 				}
-			} else break;
+			} else {
+				break;
+			}
 		}
 		newPriority += 2;
 
@@ -582,8 +588,9 @@ void Peer::clusterRedirect(void *tPtr,const SharedPtr<Path> &originatingPath,con
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 			if (_paths[i].p) {
 				if ((_paths[i].priority >= newPriority)&&(!_paths[i].p->address().ipsEqual2(remoteAddress))) {
-					if (i != j)
+					if (i != j) {
 						_paths[j] = _paths[i];
+					}
 					++j;
 				}
 			}
@@ -613,7 +620,9 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 				_paths[i].p->sent(now);
 				_paths[i].lr = 0; // path will not be used unless it speaks again
 			}
-		} else break;
+		} else {
+			break;
+		}
 	}
 }
 

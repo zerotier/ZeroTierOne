@@ -23,8 +23,9 @@ namespace ZeroTier {
 
 int CertificateOfOwnership::verify(const RuntimeEnvironment *RR,void *tPtr) const
 {
-	if ((!_signedBy)||(_signedBy != Network::controllerFor(_networkId)))
+	if ((!_signedBy)||(_signedBy != Network::controllerFor(_networkId))) {
 		return -1;
+	}
 	const Identity id(RR->topology->getIdentity(tPtr,_signedBy));
 	if (!id) {
 		RR->sw->requestWhois(tPtr,RR->node->now(),_signedBy);
@@ -45,12 +46,14 @@ bool CertificateOfOwnership::_owns(const CertificateOfOwnership::Thing &t,const 
 		if (_thingTypes[i] == (uint8_t)t) {
 			unsigned int k = 0;
 			while (k < l) {
-				if (reinterpret_cast<const uint8_t *>(v)[k] != _thingValues[i][k])
+				if (reinterpret_cast<const uint8_t *>(v)[k] != _thingValues[i][k]) {
 					break;
+				}
 				++k;
 			}
-			if (k == l)
+			if (k == l) {
 				return true;
+			}
 		}
 	}
 	return false;

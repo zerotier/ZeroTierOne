@@ -119,9 +119,12 @@ public:
 		Mutex::Lock _l(_paths_m);
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 			if (_paths[i].p) {
-				if (((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION)&&(_paths[i].p->address() == addr))
+				if (((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION)&&(_paths[i].p->address() == addr)) {
 					return true;
-			} else break;
+				}
+			} else {
+				break;
+			}
 		}
 		return false;
 	}
@@ -139,8 +142,9 @@ public:
 	inline bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force)
 	{
 		SharedPtr<Path> bp(getAppropriatePath(now,force));
-		if (bp)
+		if (bp) {
 			return bp->send(RR,tPtr,data,len,now);
+		}
 		return false;
 	}
 
@@ -281,7 +285,9 @@ public:
 		std::vector< SharedPtr<Path> > pp;
 		Mutex::Lock _l(_paths_m);
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (!_paths[i].p) break;
+			if (!_paths[i].p) {
+				break;
+			}
 			pp.push_back(_paths[i].p);
 		}
 		return pp;
@@ -334,11 +340,13 @@ public:
 	inline unsigned int relayQuality(const int64_t now)
 	{
 		const uint64_t tsr = now - _lastReceive;
-		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT)
+		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT) {
 			return (~(unsigned int)0);
+		}
 		unsigned int l = latency(now);
-		if (!l)
+		if (!l) {
 			l = 0xffff;
+		}
 		return (l * (((unsigned int)tsr / (ZT_PEER_PING_PERIOD + 1000)) + 1));
 	}
 
@@ -380,9 +388,11 @@ public:
 	 */
 	inline bool rateGatePushDirectPaths(const int64_t now)
 	{
-		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME)
+		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME) {
 			++_directPathPushCutoffCount;
-		else _directPathPushCutoffCount = 0;
+		} else {
+			_directPathPushCutoffCount = 0;
+		}
 		_lastDirectPathPushReceive = now;
 		return (_directPathPushCutoffCount < ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT);
 	}
@@ -444,13 +454,16 @@ public:
 			Mutex::Lock _l(_paths_m);
 			unsigned int pc = 0;
 			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if (_paths[i].p)
+				if (_paths[i].p) {
 					++pc;
-				else break;
+				} else {
+					break;
+				}
 			}
 			b.append((uint16_t)pc);
-			for(unsigned int i=0;i<pc;++i)
+			for(unsigned int i=0;i<pc;++i) {
 				_paths[i].p->address().serialize(b);
+			}
 		}
 	}
 
@@ -459,31 +472,39 @@ public:
 	{
 		try {
 			unsigned int ptr = 0;
-			if (b[ptr++] != 2)
+			if (b[ptr++] != 2) {
 				return SharedPtr<Peer>();
+			}
 
 			Identity id;
 			ptr += id.deserialize(b,ptr);
-			if (!id)
+			if (!id) {
 				return SharedPtr<Peer>();
+			}
 
 			SharedPtr<Peer> p(new Peer(renv,renv->identity,id));
 
-			p->_vProto = b.template at<uint16_t>(ptr); ptr += 2;
-			p->_vMajor = b.template at<uint16_t>(ptr); ptr += 2;
-			p->_vMinor = b.template at<uint16_t>(ptr); ptr += 2;
-			p->_vRevision = b.template at<uint16_t>(ptr); ptr += 2;
+			p->_vProto = b.template at<uint16_t>(ptr);
+			ptr += 2;
+			p->_vMajor = b.template at<uint16_t>(ptr);
+			ptr += 2;
+			p->_vMinor = b.template at<uint16_t>(ptr);
+			ptr += 2;
+			p->_vRevision = b.template at<uint16_t>(ptr);
+			ptr += 2;
 
 			// When we deserialize from the cache we don't actually restore paths. We
 			// just try them and then re-learn them if they happen to still be up.
 			// Paths are fairly ephemeral in the real world in most cases.
-			const unsigned int tryPathCount = b.template at<uint16_t>(ptr); ptr += 2;
+			const unsigned int tryPathCount = b.template at<uint16_t>(ptr);
+			ptr += 2;
 			for(unsigned int i=0;i<tryPathCount;++i) {
 				InetAddress inaddr;
 				try {
 					ptr += inaddr.deserialize(b,ptr);
-					if (inaddr)
+					if (inaddr) {
 						p->attemptToContactAt(tPtr,-1,inaddr,now,true);
+					}
 				} catch ( ... ) {
 					break;
 				}

@@ -241,8 +241,9 @@ private:
 		const unsigned int current = static_cast<unsigned int>(_rxQueuePtr.load());
 		for(unsigned int k=1;k<=ZT_RX_QUEUE_SIZE;++k) {
 			RXQueueEntry *rq = &(_rxQueue[(current - k) % ZT_RX_QUEUE_SIZE]);
-			if ((rq->packetId == packetId)&&(rq->timestamp))
+			if ((rq->packetId == packetId)&&(rq->timestamp)) {
 				return rq;
+			}
 		}
 		++_rxQueuePtr;
 		return &(_rxQueue[static_cast<unsigned int>(current) % ZT_RX_QUEUE_SIZE]);
