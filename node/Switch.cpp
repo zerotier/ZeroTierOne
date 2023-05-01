@@ -98,6 +98,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 					_lastBeaconResponse = now;
 					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
 					outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+					Metrics::pkt_nop_out++;
 					path->send(RR,tPtr,outp.data(),outp.size(),now);
 				}
 			}

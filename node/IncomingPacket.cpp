@@ -366,6 +366,8 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 						outp.append((uint64_t)pid);
 						outp.append((uint8_t)Packet::ERROR_IDENTITY_COLLISION);
 						outp.armor(key,true,peer->aesKeysIfSupported());
+						Metrics::pkt_error_out++;
+						Metrics::pkt_error_identity_collision_out++;
 						_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 					} else {
 						RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops(),"invalid MAC");
@@ -517,6 +519,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 
 	outp.armor(peer->key(),true,peer->aesKeysIfSupported());
 	peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
+	Metrics::pkt_ok_out++;
 	_path->send(RR,tPtr,outp.data(),outp.size(),now);
 
 	peer->setRemoteVersion(protoVersion,vMajor,vMinor,vRevision); // important for this to go first so received() knows the version
@@ -668,7 +671,9 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const Shar
 	}
 
 	if (count > 0) {
+		Metrics::pkt_ok_out++;
 		outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+		Metrics::pkt_ok_out++;
 		_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 	}
 
@@ -896,6 +901,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 			const int64_t now = RR->node->now();
 			outp.armor(peer->key(),true,peer->aesKeysIfSupported());
 			peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
+			Metrics::pkt_ok_out++;
 			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 		}
 
@@ -923,6 +929,7 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const Share
 		outp.append(reinterpret_cast<const unsigned char *>(data()) + ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
 	outp.armor(peer->key(),true,peer->aesKeysIfSupported());
 	peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
+	Metrics::pkt_ok_out++;
 	_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 
 	peer->received(tPtr,_path,hops(),pid,payloadLength(),Packet::VERB_ECHO,0,Packet::VERB_NOP,false,0,ZT_QOS_NO_FLOW);
@@ -1100,6 +1107,8 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,void
 		outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 		outp.append(nwid);
 		outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+		Metrics::pkt_error_out++;
+		Metrics::pkt_error_unsupported_op_out++;
 		_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 	}
 
@@ -1123,6 +1132,7 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,c
 			const int64_t now = RR->node->now();
 			outp.armor(peer->key(),true,peer->aesKeysIfSupported());
 			peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
+			Metrics::pkt_ok_out++;
 			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 		}
 	}
@@ -1164,6 +1174,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 		if (gatheredLocally > 0) {
 			outp.armor(peer->key(),true,peer->aesKeysIfSupported());
 			peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
+			Metrics::pkt_ok_out++;
 			_path->send(RR,tPtr,outp.data(),outp.size(),now);
 		}
 	}
@@ -1264,6 +1275,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 				const int64_t now = RR->node->now();
 				outp.armor(peer->key(),true,peer->aesKeysIfSupported());
 				peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
+				Metrics::pkt_ok_out++;
 				_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 			}
 		}
@@ -1406,6 +1418,8 @@ void IncomingPacket::_sendErrorNeedCredentials(const RuntimeEnvironment *RR,void
 	outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 	outp.append(nwid);
 	outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+	Metrics::pkt_error_out++;
+	Metrics::pkt_error_need_membership_cert_out++;
 	_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 }
 

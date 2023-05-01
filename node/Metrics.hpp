@@ -13,6 +13,7 @@
 #define METRICS_H_
 
 #include <prometheus/simpleapi.h>
+#include <prometheus/histogram.h>
 
 namespace prometheus {
     namespace simpleapi {
@@ -93,7 +94,6 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast_out;
         extern prometheus::simpleapi::counter_metric_t pkt_error_authentication_required_out;
         extern prometheus::simpleapi::counter_metric_t pkt_error_internal_server_error_out;
-
 
         // Data Sent/Received Metrics
         extern prometheus::simpleapi::counter_metric_t udp_send;

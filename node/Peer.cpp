@@ -28,6 +28,11 @@ namespace ZeroTier {
 
 static unsigned char s_freeRandomByteCounter = 0;
 
+char * peerIDString(const Identity &id) {
+	char out[16];
+	return id.address().toString(out);
+}
+
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
 	RR(renv),
 	_lastReceive(0),
@@ -238,6 +243,7 @@ void Peer::received(
 						outp->setAt(ZT_PACKET_IDX_PAYLOAD,(uint16_t)count);
 						outp->compress();
 						outp->armor(_key,true,aesKeysIfSupported());
+						Metrics::pkt_push_direct_paths_out++;
 						path->send(RR,tPtr,outp->data(),outp->size(),now);
 					}
 					delete outp;
@@ -377,6 +383,7 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 					outp.append(other->_paths[theirs].p->address().rawIpData(),4);
 				}
 				outp.armor(_key,true,aesKeysIfSupported());
+				Metrics::pkt_rendezvous_out++;
 				_paths[mine].p->send(RR,tPtr,outp.data(),outp.size(),now);
 			} else {
 				Packet outp(other->_id.address(),RR->identity.address(),Packet::VERB_RENDEZVOUS);
@@ -391,6 +398,7 @@ void Peer::introduce(void *const tPtr,const int64_t now,const SharedPtr<Peer> &o
 					outp.append(_paths[mine].p->address().rawIpData(),4);
 				}
 				outp.armor(other->_key,true,other->aesKeysIfSupported());
+				Metrics::pkt_rendezvous_out++;
 				other->_paths[theirs].p->send(RR,tPtr,outp.data(),outp.size(),now);
 			}
 			++alt;
@@ -433,6 +441,7 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 
 	if (atAddress) {
 		outp.armor(_key,false,nullptr); // false == don't encrypt full payload, but add MAC
+		Metrics::pkt_hello_out++;
 		RR->node->expectReplyTo(outp.packetId());
 		RR->node->putPacket(tPtr,RR->node->lowBandwidthModeEnabled() ? localSocket : -1,atAddress,outp.data(),outp.size());
 	} else {
@@ -446,6 +455,7 @@ void Peer::attemptToContactAt(void *tPtr,const int64_t localSocket,const InetAdd
 	if ( (!sendFullHello) && (_vProto >= 5) && (!((_vMajor == 1)&&(_vMinor == 1)&&(_vRevision == 0))) ) {
 		Packet outp(_id.address(),RR->identity.address(),Packet::VERB_ECHO);
 		outp.armor(_key,true,aesKeysIfSupported());
+		Metrics::pkt_echo_out++;
 		RR->node->expectReplyTo(outp.packetId());
 		RR->node->putPacket(tPtr,localSocket,atAddress,outp.data(),outp.size());
 	} else {

@@ -97,6 +97,7 @@ void Membership::pushCredentials(const RuntimeEnvironment *RR,void *tPtr,const i
 
 		outp.compress();
 		RR->sw->send(tPtr,outp,true);
+		Metrics::pkt_network_credentials_out++;
 	}
 
 	_lastPushedCredentials = now;

@@ -857,6 +857,7 @@ void Bond::sendQOS_MEASUREMENT(void* tPtr, int pathIdx, int64_t localSocket, con
 		else {
 			RR->sw->send(tPtr, outp, false);
 		}
+		Metrics::pkt_qos_out++;
 		_paths[pathIdx].packetsReceivedSinceLastQoS = 0;
 		_paths[pathIdx].lastQoSMeasurement = now;
 		_overheadBytes += outp.size();
