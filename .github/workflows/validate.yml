@@ -26,7 +26,7 @@ jobs:
       continue-on-error: false
       with:
         key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
-        shared-key: {{ runner.os }}-cargo-
+        shared-key: ${{ runner.os }}-cargo-
         workspaces: |
           zeroidc/
 
