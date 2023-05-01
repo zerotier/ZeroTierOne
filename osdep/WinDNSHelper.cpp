@@ -335,6 +335,9 @@ void WinDNSHelper::setDNS(uint64_t nwid, const char* domain, const std::vector<I
 			RegSetKeyValueA(dnsKey, NULL, "GenericDNSServers", REG_SZ, serverValue.data(), serverValue.length());
 			RegSetKeyValueA(dnsKey, NULL, "IPSECCARestriction", REG_SZ, "", 0);
 			std::string d = "." + std::string(domain);
+			if (d == ".ALL") {
+				d = ".";
+			}
 			RegSetKeyValueA(dnsKey, NULL, "Name", REG_MULTI_SZ, d.data(), d.length());
 			DWORD version = 2;
 			RegSetKeyValueA(dnsKey, NULL, "Version", REG_DWORD, &version, sizeof(DWORD));
