@@ -27,7 +27,7 @@ namespace prometheus {
   /// The class is thread-safe. No concurrent call to any API of this type causes
   /// a data race.
   template <typename Value_ = uint64_t>
-  class Histogram : Metric {
+  class Histogram : public Metric {
 
       using BucketBoundaries = std::vector<Value_>;
 
@@ -105,7 +105,7 @@ namespace prometheus {
         auto cumulative_count = 0ULL;
         metric.histogram.bucket.reserve(bucket_counts_.size());
         for (std::size_t i{0}; i < bucket_counts_.size(); ++i) {
-          cumulative_count += static_cast<std::size_t>(bucket_counts_[i].Value());
+          cumulative_count += static_cast<std::size_t>(bucket_counts_[i].Get());
           auto bucket = ClientMetric::Bucket{};
           bucket.cumulative_count = cumulative_count;
           bucket.upper_bound = (i == bucket_boundaries_.size()

@@ -38,7 +38,8 @@ namespace prometheus {
     static const Metric::Type static_type = Metric::Type::Counter;
 
     Counter() : Metric (Metric::Type::Counter) {}  ///< \brief Create a counter that starts at 0.
-
+    Counter(const Counter<Value_> &rhs) : Metric(static_type), value{rhs.value.load()} {}
+    
     // original API
 
     void Increment() { ///< \brief Increment the counter by 1.
