@@ -66,23 +66,23 @@ sysctl -w net.ipv4.ip_forward=1
 
 echo -e "\nPing from host to namespaces"
 
-#ping -c 4 192.168.0.1
-#ping -c 4 192.168.1.1
+ping -c 4 192.168.0.1
+ping -c 4 192.168.1.1
 
 echo -e "\nPing from namespace to host"
 
-#$NS1 ping -c 4 192.168.0.1
-#$NS1 ping -c 4 192.168.0.1
-#$NS2 ping -c 4 192.168.0.2
-#$NS2 ping -c 4 192.168.0.2
+$NS1 ping -c 4 192.168.0.1
+$NS1 ping -c 4 192.168.0.1
+$NS2 ping -c 4 192.168.0.2
+$NS2 ping -c 4 192.168.0.2
 
 echo -e "\nPing from ns1 to ns2"
 
-#$NS1 ping -c 4 192.168.0.1
+$NS1 ping -c 4 192.168.0.1
 
 echo -e "\nPing from ns2 to ns1"
 
-#$NS2 ping -c 4 192.168.0.1
+$NS2 ping -c 4 192.168.0.1
 
 ################################################################################
 # Memory Leak Check                                                            #
