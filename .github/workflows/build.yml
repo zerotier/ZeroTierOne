@@ -24,12 +24,12 @@ jobs:
       with:
         workspaces: |
           zeroidc/
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          ./zeroidc/target/
+        # path: |
+        #   ~/.cargo/bin/
+        #   ~/.cargo/registry/index/
+        #   ~/.cargo/registry/cache/
+        #   ~/.cargo/git/db/
+        #   ./zeroidc/target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
         restore-keys: ${{ runner.os }}-cargo-
     - name: make
