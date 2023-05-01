@@ -25,10 +25,10 @@ jobs:
       uses: Swatinem/rust-cache@v2
       continue-on-error: false
       with:
-        workspaces: |
-          zeroidc/
         key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
         shared-key: {{ runner.os }}-cargo-
+        workspaces: |
+          zeroidc/
 
     - name: validate-1m-linux
       env:
