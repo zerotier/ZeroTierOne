@@ -27,6 +27,8 @@ jobs:
       with:
         workspaces: |
           zeroidc/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
+        shared-key: {{ runner.os }}-cargo-
 
     - name: validate-1m-linux
       env:
