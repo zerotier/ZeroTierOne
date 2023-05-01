@@ -119,7 +119,10 @@ time_zt_node2_start=`date +%s`
 
 for ((s=0; s<=MAX_WAIT_SECS; s++))
 do
+<<<<<<< HEAD
     echo "Checking for online status: $s"
+=======
+>>>>>>> dev
     node1_online="$($ZT1 -j info | jq '.online' 2>/dev/null)"
     node2_online="$($ZT2 -j info | jq '.online' 2>/dev/null)"
     if [[ "$node1_online" == "true" ]]
@@ -141,8 +144,11 @@ done
 if [[ "$both_instances_online" != "true" ]]
 then
     echo "One or more instances of ZeroTier failed to come online. Aborting test." >&2
+<<<<<<< HEAD
     $ZT1 -j info
     $ZT2 -j info
+=======
+>>>>>>> dev
     exit 1
 fi
 

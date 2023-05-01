@@ -58,6 +58,9 @@ mkdir -p /var/lib/zerotier-one
 pushd /var/lib/zerotier-one
 ln -s $ZT_IDENTITY_PATH/identity.public identity.public
 ln -s $ZT_IDENTITY_PATH/identity.secret identity.secret
+if [ -f  "$ZT_IDENTITY_PATH/authtoken.secret" ]; then
+    ln -s $ZT_IDENTITY_PATH/authtoken.secret authtoken.secret
+fi
 popd
 
 DEFAULT_PORT=9993
@@ -74,6 +77,7 @@ echo "{
             \"nat64\"
         ],
         \"ssoRedirectURL\": \"${ZT_SSO_REDIRECT_URL}\",
+        \"allowManagementFrom\": [\"127.0.0.1\", \"::1\", \"10.0.0.0/8\"],
         ${REDIS}
     }
 }    

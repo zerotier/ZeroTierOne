@@ -9,7 +9,7 @@ ifeq ($(origin CXX),default)
 	CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
 endif
 
-INCLUDES?=-Izeroidc/target -isystem ext
+INCLUDES?=-Izeroidc/target -isystem ext -Iext/prometheus-cpp-lite-1.0/core/include -Iext-prometheus-cpp-lite-1.0/3rdparty/http-client-lite/include -Iext/prometheus-cpp-lite-1.0/simpleapi/include
 DEFS?=
 LDLIBS?=
 DESTDIR?=
@@ -476,17 +476,19 @@ echo_flags:
 	@echo "echo_flags :: RUSTFLAGS=$(RUSTFLAGS)"
 	@echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~"
 
-# debian: echo_flags
-# 	@echo "building deb package"
-# 	debuild --no-lintian -b -uc -us
-
-debian:	FORCE
+debian: echo_flags
+	@echo "building deb package"
 	debuild --no-lintian -I -i -us -uc -nc -b
+	# debuild --no-lintian -b -uc -us
+
+# debian:	FORCE
+# 	debuild --no-lintian -I -i -us -uc -nc -b
 
 debian-clean: FORCE
 	rm -rf debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one debian/.debhelper debian/debhelper-build-stamp
 
-redhat:	FORCE
+redhat:
+	@echo "building rpm package"
 	rpmbuild --target `rpm -q bash --qf "%{arch}"` -ba zerotier-one.spec
 
 # This installs the packages needed to build ZT locally on CentOS 7 and

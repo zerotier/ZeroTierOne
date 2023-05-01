@@ -119,6 +119,7 @@ MemberNotificationReceiver::MemberNotificationReceiver(PostgreSQL *p, pqxx::conn
 
 void MemberNotificationReceiver::operator() (const std::string &payload, int packend_pid) {
 	fprintf(stderr, "Member Notification received: %s\n", payload.c_str());
+	Metrics::pgsql_mem_notification++;
 	json tmp(json::parse(payload));
 	json &ov = tmp["old_val"];
 	json &nv = tmp["new_val"];
@@ -141,6 +142,7 @@ NetworkNotificationReceiver::NetworkNotificationReceiver(PostgreSQL *p, pqxx::co
 
 void NetworkNotificationReceiver::operator() (const std::string &payload, int packend_pid) {
 	fprintf(stderr, "Network Notification received: %s\n", payload.c_str());
+	Metrics::pgsql_net_notification++;
 	json tmp(json::parse(payload));
 	json &ov = tmp["old_val"];
 	json &nv = tmp["new_val"];
@@ -705,6 +707,8 @@ void PostgreSQL::initializeNetworks()
 				}
 			}
 
+			Metrics::network_count++;
+
 		 	_networkChanged(empty, config, false);
 
 			auto end = std::chrono::high_resolution_clock::now();
@@ -925,6 +929,8 @@ void PostgreSQL::initializeMembers()
 				}
 			}
 
+			Metrics::member_count++;
+
 			_memberChanged(empty, config, false);
 
 			memberId = "";
@@ -1034,7 +1040,6 @@ void PostgreSQL::heartbeat()
 				w.commit();
 			} catch (std::exception &e) {
 				fprintf(stderr, "%s: Heartbeat update failed: %s\n", controllerId, e.what());
-				w.abort();
 				_pool->unborrow(c);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				continue;
@@ -1140,6 +1145,7 @@ void PostgreSQL::_membersWatcher_Redis() {
 							_redis->xdel(key, id);
 						}
 						lastID = id;
+						Metrics::redis_mem_notification++;
 					}
 				}
 			}
@@ -1230,6 +1236,7 @@ void PostgreSQL::_networksWatcher_Redis() {
 						}
 						lastID = id;
 					}
+					Metrics::redis_net_notification++;
 				}
 			}
 		} catch (sw::redis::Error &e) {
@@ -1681,6 +1688,7 @@ void PostgreSQL::onlineNotification_Postgres()
 					<< " ON CONFLICT (network_id, member_id) DO UPDATE SET address = EXCLUDED.address, last_updated = EXCLUDED.last_updated";
 
 				pipe.insert(memberUpdate.str());
+				Metrics::pgsql_node_checkin++;
 			}
 			while(!pipe.empty()) {
 				pipe.retrieve();
@@ -1788,6 +1796,7 @@ uint64_t PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &con
 			.sadd("network-nodes-all:{"+controllerId+"}:"+networkId, memberId)
 			.hmset("member:{"+controllerId+"}:"+networkId+":"+memberId, record.begin(), record.end());
 		++count;
+		Metrics::redis_node_checkin++;
 	}
 
 	// expire records from all-nodes and network-nodes member list

@@ -81,7 +81,7 @@ done
 if [ "x$ZEROTIER_JOIN_NETWORKS" != "x" ]
 then
   log_params "Joining networks from environment:" $ZEROTIER_JOIN_NETWORKS
-  for i in "$ZEROTIER_JOIN_NETWORKS"
+  for i in $ZEROTIER_JOIN_NETWORKS
   do
     log_detail_params "Configuring join:" "$i"
     touch "/var/lib/zerotier-one/networks.d/${i}.conf"

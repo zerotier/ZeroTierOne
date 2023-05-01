@@ -37,6 +37,8 @@
 
 #include <nlohmann/json.hpp>
 
+#include <cpp-httplib/httplib.h>
+
 #include "DB.hpp"
 #include "DBMirrorSet.hpp"
 
@@ -66,27 +68,9 @@ public:
 		const Identity &identity,
 		const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
 
-	unsigned int handleControlPlaneHttpGET(
-		const std::vector<std::string> &path,
-		const std::map<std::string,std::string> &urlArgs,
-		const std::map<std::string,std::string> &headers,
-		const std::string &body,
-		std::string &responseBody,
-		std::string &responseContentType);
-	unsigned int handleControlPlaneHttpPOST(
-		const std::vector<std::string> &path,
-		const std::map<std::string,std::string> &urlArgs,
-		const std::map<std::string,std::string> &headers,
-		const std::string &body,
-		std::string &responseBody,
-		std::string &responseContentType);
-	unsigned int handleControlPlaneHttpDELETE(
-		const std::vector<std::string> &path,
-		const std::map<std::string,std::string> &urlArgs,
-		const std::map<std::string,std::string> &headers,
-		const std::string &body,
-		std::string &responseBody,
-		std::string &responseContentType);
+	void configureHTTPControlPlane(
+		httplib::Server &s,
+		const std::function<void(const httplib::Request&, httplib::Response&, std::string)>);
 
 	void handleRemoteTrace(const ZT_RemoteTrace &rt);
 
@@ -97,6 +81,8 @@ public:
 private:
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
 	void _startThreads();
+
+	std::string networkUpdateFromPostData(uint64_t networkID, const std::string &body);
 
 	struct _RQEntry
 	{

@@ -504,7 +504,7 @@ public:
 	 * @return The bonding policy used to reach this peer
 	 */
 	inline int8_t bondingPolicy() {
-		Mutex::Lock _l(_paths_m);
+		Mutex::Lock _l(_bond_m);
 		if (_bond) {
 			return _bond->policy();
 		}

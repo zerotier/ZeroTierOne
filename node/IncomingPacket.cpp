@@ -37,6 +37,7 @@
 #include "Trace.hpp"
 #include "Path.hpp"
 #include "Bond.hpp"
+#include "Metrics.hpp"
 
 namespace ZeroTier {
 
@@ -85,6 +86,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr,int32_t f
 			switch(v) {
 				//case Packet::VERB_NOP:
 				default: // ignore unknown verbs, but if they pass auth check they are "received"
+					Metrics::pkt_nop_in++;
 					peer->received(tPtr,_path,hops(),packetId(),payloadLength(),v,0,Packet::VERB_NOP,false,0,ZT_QOS_NO_FLOW);
 					break;
 				case Packet::VERB_HELLO:                      r = _doHELLO(RR,tPtr,true); break;
@@ -130,6 +132,8 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 	const Packet::ErrorCode errorCode = (Packet::ErrorCode)(*this)[ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE];
 	uint64_t networkId = 0;
 
+	Metrics::pkt_error_in++;
+
 	/* Security note: we do not gate doERROR() with expectingReplyTo() to
 	 * avoid having to log every outgoing packet ID. Instead we put the
 	 * logic to determine whether we should consider an ERROR in each
@@ -145,6 +149,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 				if ((network)&&(network->controller() == peer->address()))
 					network->setNotFound(tPtr);
 			}
+			Metrics::pkt_error_obj_not_found_in++;
 			break;
 
 		case Packet::ERROR_UNSUPPORTED_OPERATION:
@@ -156,12 +161,15 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 				if ((network)&&(network->controller() == peer->address()))
 					network->setNotFound(tPtr);
 			}
+			Metrics::pkt_error_unsupported_op_in++;
 			break;
 
 		case Packet::ERROR_IDENTITY_COLLISION:
 			// FIXME: for federation this will need a payload with a signature or something.
-			if (RR->topology->isUpstream(peer->identity()))
+			if (RR->topology->isUpstream(peer->identity())) {
 				RR->node->postEvent(tPtr,ZT_EVENT_FATAL_ERROR_IDENTITY_COLLISION);
+			}
+			Metrics::pkt_error_identity_collision_in++;
 			break;
 
 		case Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE: {
@@ -169,15 +177,19 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 			networkId = at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD);
 			const SharedPtr<Network> network(RR->node->network(networkId));
 			const int64_t now = RR->node->now();
-			if ((network)&&(network->config().com))
+			if ((network)&&(network->config().com)) {
 				network->peerRequestedCredentials(tPtr,peer->address(),now);
+			}
+			Metrics::pkt_error_need_membership_cert_in++;
 		}	break;
 
 		case Packet::ERROR_NETWORK_ACCESS_DENIED_: {
 			// Network controller: network access denied.
 			const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD)));
-			if ((network)&&(network->controller() == peer->address()))
+			if ((network)&&(network->controller() == peer->address())) {
 				network->setAccessDenied(tPtr);
+			}
+			Metrics::pkt_error_network_access_denied_in++;
 		}	break;
 
 		case Packet::ERROR_UNWANTED_MULTICAST: {
@@ -189,6 +201,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 				const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 8,6),6),at<uint32_t>(ZT_PROTO_VERB_ERROR_IDX_PAYLOAD + 14));
 				RR->mc->remove(network->id(),mg,peer->address());
 			}
+			Metrics::pkt_error_unwanted_multicast_in++;
 		}	break;
 
 		case Packet::ERROR_NETWORK_AUTHENTICATION_REQUIRED: {
@@ -247,6 +260,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 					network->setAuthenticationRequired(tPtr, "");
 				}
 			}
+			Metrics::pkt_error_authentication_required_in++;
 		}	break;
 
 		default: break;
@@ -273,11 +287,13 @@ bool IncomingPacket::_doACK(const RuntimeEnvironment* RR, void* tPtr, const Shar
 		bond->receivedAck(_path, RR->node->now(), Utils::ntoh(ackedBytes));
 	}
 	*/
+	Metrics::pkt_ack_in++;
 	return true;
 }
 
 bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer)
 {
+	Metrics::pkt_qos_in++;
 	SharedPtr<Bond> bond = peer->bond();
 	if (! bond || ! bond->rateGateQoS(RR->node->now(), _path)) {
 		return true;
@@ -308,6 +324,7 @@ bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment* RR, void* tPtr
 
 bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool alreadyAuthenticated)
 {
+	Metrics::pkt_hello_in++;
 	const int64_t now = RR->node->now();
 
 	const uint64_t pid = packetId();
@@ -510,6 +527,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 
 bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_ok_in++;
 	const Packet::Verb inReVerb = (Packet::Verb)(*this)[ZT_PROTO_VERB_OK_IDX_IN_RE_VERB];
 	const uint64_t inRePacketId = at<uint64_t>(ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID);
 	uint64_t networkId = 0;
@@ -623,8 +641,11 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 
 bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
-	if ((!RR->topology->amUpstream())&&(!peer->rateGateInboundWhoisRequest(RR->node->now())))
+	if ((!RR->topology->amUpstream())&&(!peer->rateGateInboundWhoisRequest(RR->node->now()))) {
 		return true;
+	}
+
+	Metrics::pkt_whois_in++;
 
 	Packet outp(peer->address(),RR->identity.address(),Packet::VERB_OK);
 	outp.append((unsigned char)Packet::VERB_WHOIS);
@@ -658,6 +679,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const Shar
 
 bool IncomingPacket::_doRENDEZVOUS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_rendezvous_in++;
 	if (RR->topology->isUpstream(peer->identity())) {
 		const Address with(field(ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		const SharedPtr<Peer> rendezvousWith(RR->topology->getPeer(tPtr,with));
@@ -711,6 +733,7 @@ static bool _ipv6GetPayload(const uint8_t *frameData,unsigned int frameLen,unsig
 
 bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,int32_t flowId)
 {
+	Metrics::pkt_frame_in++;
 	int32_t _flowId = ZT_QOS_NO_FLOW;
 	SharedPtr<Bond> bond = peer->bond();
 	if (bond && bond->flowHashingSupported()) {
@@ -803,6 +826,7 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const Shar
 
 bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,int32_t flowId)
 {
+	Metrics::pkt_ext_frame_in++;
 	const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID);
 	const SharedPtr<Network> network(RR->node->network(nwid));
 	if (network) {
@@ -885,6 +909,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 
 bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_echo_in++;
 	uint64_t now = RR->node->now();
 	if (!_path->rateGateEchoRequest(now)) {
 		return true;
@@ -907,6 +932,7 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const Share
 
 bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_multicast_like_in++;
 	const int64_t now = RR->node->now();
 	bool authorized = false;
 	uint64_t lastNwid = 0;
@@ -932,8 +958,10 @@ bool IncomingPacket::_doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,c
 
 bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
-	if (!peer->rateGateCredentialsReceived(RR->node->now()))
+	Metrics::pkt_network_credentials_in++;
+	if (!peer->rateGateCredentialsReceived(RR->node->now())) {
 		return true;
+	}
 
 	CertificateOfMembership com;
 	Capability cap;
@@ -1055,6 +1083,7 @@ bool IncomingPacket::_doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *t
 
 bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_network_config_request_in++;
 	const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID);
 	const unsigned int hopCount = hops();
 	const uint64_t requestPacketId = packetId();
@@ -1081,6 +1110,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,void
 
 bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_network_config_in++;
 	const SharedPtr<Network> network(RR->node->network(at<uint64_t>(ZT_PACKET_IDX_PAYLOAD)));
 	if (network) {
 		const uint64_t configUpdateId = network->handleConfigChunk(tPtr,packetId(),source(),*this,ZT_PACKET_IDX_PAYLOAD);
@@ -1104,6 +1134,7 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,c
 
 bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_multicast_gather_in++;
 	const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID);
 	const unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS];
 	const MulticastGroup mg(MAC(field(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC,6),6),at<uint32_t>(ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI));
@@ -1144,6 +1175,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 
 bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_multicast_frame_in++;
 	const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID);
 	const unsigned int flags = (*this)[ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS];
 
@@ -1244,6 +1276,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 
 bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_push_direct_paths_in++;
 	const int64_t now = RR->node->now();
 
 	if (!peer->rateGatePushDirectPaths(now)) {
@@ -1306,6 +1339,7 @@ bool IncomingPacket::_doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPt
 
 bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_user_message_in++;
 	if (likely(size() >= (ZT_PACKET_IDX_PAYLOAD + 8))) {
 		ZT_UserMessage um;
 		um.origin = peer->address().toInt();
@@ -1322,6 +1356,7 @@ bool IncomingPacket::_doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,con
 
 bool IncomingPacket::_doREMOTE_TRACE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_remote_trace_in++;
 	ZT_RemoteTrace rt;
 	const char *ptr = reinterpret_cast<const char *>(data()) + ZT_PACKET_IDX_PAYLOAD;
 	const char *const eof = reinterpret_cast<const char *>(data()) + size();
@@ -1346,6 +1381,7 @@ bool IncomingPacket::_doREMOTE_TRACE(const RuntimeEnvironment *RR,void *tPtr,con
 
 bool IncomingPacket::_doPATH_NEGOTIATION_REQUEST(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer)
 {
+	Metrics::pkt_path_negotiation_request_in++;
 	uint64_t now = RR->node->now();
 	SharedPtr<Bond> bond = peer->bond();
 	if (!bond || !bond->rateGatePathNegotiation(now, _path)) {

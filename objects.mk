@@ -10,6 +10,7 @@ CORE_OBJS=\
 	node/IncomingPacket.o \
 	node/InetAddress.o \
 	node/Membership.o \
+	node/Metrics.o \
 	node/Multicaster.o \
 	node/Network.o \
 	node/NetworkConfig.o \
