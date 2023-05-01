@@ -19,16 +19,18 @@ jobs:
         components: rustfmt, clippy
 
     - name: Set up cargo cache
-      uses: actions/cache@v3
+      uses: actions/rust-cache@v2
       continue-on-error: false
       with:
+        workspaces: |
+          zeroidc/
         path: |
           ~/.cargo/bin/
           ~/.cargo/registry/index/
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          ./zeroidc/target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
         restore-keys: ${{ runner.os }}-cargo-
     - name: make
       run: make

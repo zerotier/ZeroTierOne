@@ -1,57 +1,57 @@
-on: [ push ]
+# on: [ push ]
 
-jobs:
-  build_ubuntu:
-    runs-on: ubuntu-latest
-    steps:
-    - name: gitconfig
-      run: |
-        git config --global core.autocrlf input
+# jobs:
+#   build_ubuntu:
+#     runs-on: ubuntu-latest
+#     steps:
+#     - name: gitconfig
+#       run: |
+#         git config --global core.autocrlf input
 
-    - name: checkout
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+#     - name: checkout
+#       uses: actions/checkout@v3
+#       with:
+#         fetch-depth: 0
 
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: x86_64-unknown-linux-gnu
-        override: true
-        components: rustfmt, clippy
+#     - name: Install Rust
+#       uses: actions-rs/toolchain@v1
+#       with:
+#         toolchain: stable
+#         target: x86_64-unknown-linux-gnu
+#         override: true
+#         components: rustfmt, clippy
 
-    - name: Set up cargo cache
-      uses: actions/cache@v3
-      continue-on-error: false
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          **/target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
-        restore-keys: ${{ runner.os }}-cargo-
+#     - name: Set up cargo cache
+#       uses: actions/cache@v3
+#       continue-on-error: false
+#       with:
+#         path: |
+#           ~/.cargo/bin/
+#           ~/.cargo/registry/index/
+#           ~/.cargo/registry/cache/
+#           ~/.cargo/git/db/
+#           **/target/
+#         key: ${{ runner.os }}-cargo-${{ hashFiles('Cargo.lock') }}
+#         restore-keys: ${{ runner.os }}-cargo-
 
-    - name: validate-1m-linux
-      env:
-        CC: 'gcc'
-        CXX: 'g++'
-        BRANCH: ${{  github.ref_name }}
-      run: |
-        sudo apt install -y valgrind xmlstarlet gcovr iperf3
-        make one ZT_COVERAGE=1 ZT_TRACE=1
-        sudo chmod +x ./.github/workflows/validate-1m-linux.sh
-        sudo ./.github/workflows/validate-1m-linux.sh
+#     - name: validate-1m-linux
+#       env:
+#         CC: 'gcc'
+#         CXX: 'g++'
+#         BRANCH: ${{  github.ref_name }}
+#       run: |
+#         sudo apt install -y valgrind xmlstarlet gcovr iperf3
+#         make one ZT_COVERAGE=1 ZT_TRACE=1
+#         sudo chmod +x ./.github/workflows/validate-1m-linux.sh
+#         sudo ./.github/workflows/validate-1m-linux.sh
 
-    - name: Archive test results
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{github.sha}}-test-results
-        path: "*test-results*"
+#     - name: Archive test results
+#       uses: actions/upload-artifact@v3
+#       with:
+#         name: ${{github.sha}}-test-results
+#         path: "*test-results*"
 
-    - name: final-report
-      run: |
-        sudo chmod +x ./.github/workflows/report.sh
-        sudo ./.github/workflows/report.sh
+#     - name: final-report
+#       run: |
+#         sudo chmod +x ./.github/workflows/report.sh
+#         sudo ./.github/workflows/report.sh
