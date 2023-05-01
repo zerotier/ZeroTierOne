@@ -295,7 +295,11 @@ static inline void LZ4_wildCopy(void* dstPtr, const void* srcPtr, void* dstEnd)
 	BYTE* d = (BYTE*)dstPtr;
 	const BYTE* s = (const BYTE*)srcPtr;
 	BYTE* const e = (BYTE*)dstEnd;
-	do { LZ4_copy8(d,s); d+=8; s+=8; } while (d<e);
+	do {
+		LZ4_copy8(d,s);
+		d+=8;
+		s+=8;
+	} while (d<e);
 }
 
 #define MINMATCH 4
@@ -355,8 +359,18 @@ static inline unsigned LZ4_NbCommonBytes (reg_t val)
 			return (__builtin_clzll((U64)val) >> 3);
 #	   else
 			unsigned r;
-			if (!(val>>32)) { r=4; } else { r=0; val>>=32; }
-			if (!(val>>16)) { r+=2; val>>=8; } else { val>>=24; }
+			if (!(val>>32)) {
+				r=4;
+			} else {
+				r=0;
+				val>>=32;
+			}
+			if (!(val>>16)) {
+				r+=2;
+				val>>=8;
+			} else {
+				val>>=24;
+			}
 			r += (!val);
 			return r;
 #	   endif
@@ -369,7 +383,13 @@ static inline unsigned LZ4_NbCommonBytes (reg_t val)
 			return (__builtin_clz((U32)val) >> 3);
 #	   else
 			unsigned r;
-			if (!(val>>16)) { r=2; val>>=8; } else { r=0; val>>=24; }
+			if (!(val>>16)) {
+				r=2;
+				val>>=8;
+			} else {
+				r=0;
+				val>>=24;
+			}
 			r += (!val);
 			return r;
 #	   endif
@@ -384,14 +404,23 @@ static inline unsigned LZ4_count(const BYTE* pIn, const BYTE* pMatch, const BYTE
 
 	while (likely(pIn<pInLimit-(STEPSIZE-1))) {
 		reg_t const diff = LZ4_read_ARCH(pMatch) ^ LZ4_read_ARCH(pIn);
-		if (!diff) { pIn+=STEPSIZE; pMatch+=STEPSIZE; continue; }
+		if (!diff) {
+			pIn+=STEPSIZE;
+			pMatch+=STEPSIZE; continue;
+		}
 		pIn += LZ4_NbCommonBytes(diff);
 		return (unsigned)(pIn - pStart);
 	}
 
-	if ((STEPSIZE==8) && (pIn<(pInLimit-3)) && (LZ4_read32(pMatch) == LZ4_read32(pIn))) { pIn+=4; pMatch+=4; }
-	if ((pIn<(pInLimit-1)) && (LZ4_read16(pMatch) == LZ4_read16(pIn))) { pIn+=2; pMatch+=2; }
-	if ((pIn<pInLimit) && (*pMatch == *pIn)) pIn++;
+	if ((STEPSIZE==8) && (pIn<(pInLimit-3)) && (LZ4_read32(pMatch) == LZ4_read32(pIn))) {
+		pIn+=4; pMatch+=4;
+	}
+	if ((pIn<(pInLimit-1)) && (LZ4_read16(pMatch) == LZ4_read16(pIn))) {
+		pIn+=2; pMatch+=2;
+	}
+	if ((pIn<pInLimit) && (*pMatch == *pIn)) {
+		pIn++;
+	}
 	return (unsigned)(pIn - pStart);
 }
 
@@ -411,10 +440,11 @@ static inline int LZ4_compressBound(int isize)  { return LZ4_COMPRESSBOUND(isize
 
 static inline U32 LZ4_hash4(U32 sequence, tableType_t const tableType)
 {
-	if (tableType == byU16)
+	if (tableType == byU16) {
 		return ((sequence * 2654435761U) >> ((MINMATCH*8)-(LZ4_HASHLOG+1)));
-	else
+	} else {
 		return ((sequence * 2654435761U) >> ((MINMATCH*8)-LZ4_HASHLOG));
+	}
 }
 
 static inline U32 LZ4_hash5(U64 sequence, tableType_t const tableType)
@@ -422,25 +452,36 @@ static inline U32 LZ4_hash5(U64 sequence, tableType_t const tableType)
 	static const U64 prime5bytes = 889523592379ULL;
 	static const U64 prime8bytes = 11400714785074694791ULL;
 	const U32 hashLog = (tableType == byU16) ? LZ4_HASHLOG+1 : LZ4_HASHLOG;
-	if (LZ4_isLittleEndian())
+	if (LZ4_isLittleEndian()) {
 		return (U32)(((sequence << 24) * prime5bytes) >> (64 - hashLog));
-	else
+	} else {
 		return (U32)(((sequence >> 24) * prime8bytes) >> (64 - hashLog));
+	}
 }
 
 FORCE_INLINE U32 LZ4_hashPosition(const void* const p, tableType_t const tableType)
 {
-	if ((sizeof(reg_t)==8) && (tableType != byU16)) return LZ4_hash5(LZ4_read_ARCH(p), tableType);
+	if ((sizeof(reg_t)==8) && (tableType != byU16)) {
+		return LZ4_hash5(LZ4_read_ARCH(p), tableType);
+	}
 	return LZ4_hash4(LZ4_read32(p), tableType);
 }
 
 static inline void LZ4_putPositionOnHash(const BYTE* p, U32 h, void* tableBase, tableType_t const tableType, const BYTE* srcBase)
 {
-	switch (tableType)
-	{
-	case byPtr: { const BYTE** hashTable = (const BYTE**)tableBase; hashTable[h] = p; return; }
-	case byU32: { U32* hashTable = (U32*) tableBase; hashTable[h] = (U32)(p-srcBase); return; }
-	case byU16: { U16* hashTable = (U16*) tableBase; hashTable[h] = (U16)(p-srcBase); return; }
+	switch (tableType) {
+	case byPtr: {
+		const BYTE** hashTable = (const BYTE**)tableBase; hashTable[h] = p;
+		return;
+	}
+	case byU32: {
+		U32* hashTable = (U32*) tableBase; hashTable[h] = (U32)(p-srcBase);
+		return;
+	}
+	case byU16: {
+		U16* hashTable = (U16*) tableBase; hashTable[h] = (U16)(p-srcBase);
+		return;
+	}
 	}
 }
 
@@ -452,9 +493,18 @@ FORCE_INLINE void LZ4_putPosition(const BYTE* p, void* tableBase, tableType_t ta
 
 static inline const BYTE* LZ4_getPositionOnHash(U32 h, void* tableBase, tableType_t tableType, const BYTE* srcBase)
 {
-	if (tableType == byPtr) { const BYTE** hashTable = (const BYTE**) tableBase; return hashTable[h]; }
-	if (tableType == byU32) { const U32* const hashTable = (U32*) tableBase; return hashTable[h] + srcBase; }
-	{ const U16* const hashTable = (U16*) tableBase; return hashTable[h] + srcBase; }   /* default, to ensure a return */
+	if (tableType == byPtr) {
+		const BYTE** hashTable = (const BYTE**) tableBase;
+		return hashTable[h];
+	}
+	if (tableType == byU32) {
+		const U32* const hashTable = (U32*) tableBase;
+		return hashTable[h] + srcBase;
+	}
+	{ /* default, to ensure a return */
+		const U16* const hashTable = (U16*) tableBase;
+		return hashTable[h] + srcBase;
+	}
 }
 
 FORCE_INLINE const BYTE* LZ4_getPosition(const BYTE* p, void* tableBase, tableType_t tableType, const BYTE* srcBase)
@@ -493,9 +543,10 @@ FORCE_INLINE int LZ4_compress_generic(
 	U32 forwardH;
 
 	/* Init conditions */
-	if ((U32)inputSize > (U32)LZ4_MAX_INPUT_SIZE) return 0;   /* Unsupported inputSize, too large (or negative) */
-	switch(dict)
-	{
+	if ((U32)inputSize > (U32)LZ4_MAX_INPUT_SIZE) {
+		return 0;   /* Unsupported inputSize, too large (or negative) */
+	}
+	switch(dict) {
 	case noDict:
 	default:
 		base = (const BYTE*)source;
@@ -510,12 +561,17 @@ FORCE_INLINE int LZ4_compress_generic(
 		lowLimit = (const BYTE*)source;
 		break;
 	}
-	if ((tableType == byU16) && (inputSize>=LZ4_64Klimit)) return 0;   /* Size too large (not within 64K limit) */
-	if (inputSize<LZ4_minLength) goto _last_literals;				  /* Input too small, no compression (all literals) */
+	if ((tableType == byU16) && (inputSize>=LZ4_64Klimit)) {
+		return 0;   /* Size too large (not within 64K limit) */
+	}
+	if (inputSize<LZ4_minLength) {
+		goto _last_literals;				  /* Input too small, no compression (all literals) */
+	}
 
 	/* First Byte */
 	LZ4_putPosition(ip, cctx->hashTable, tableType, base);
-	ip++; forwardH = LZ4_hashPosition(ip, tableType);
+	ip++;
+	forwardH = LZ4_hashPosition(ip, tableType);
 
 	/* Main Loop */
 	for ( ; ; ) {
@@ -524,7 +580,8 @@ FORCE_INLINE int LZ4_compress_generic(
 		BYTE* token;
 
 		/* Find a match */
-		{   const BYTE* forwardIp = ip;
+		{
+			const BYTE* forwardIp = ip;
 			unsigned step = 1;
 			unsigned searchMatchNb = acceleration << LZ4_skipTrigger;
 			do {
@@ -533,7 +590,9 @@ FORCE_INLINE int LZ4_compress_generic(
 				forwardIp += step;
 				step = (searchMatchNb++ >> LZ4_skipTrigger);
 
-				if (unlikely(forwardIp > mflimit)) goto _last_literals;
+				if (unlikely(forwardIp > mflimit)) {
+					goto _last_literals;
+				}
 
 				match = LZ4_getPositionOnHash(h, cctx->hashTable, tableType, base);
 				if (dict==usingExtDict) {
@@ -543,7 +602,8 @@ FORCE_INLINE int LZ4_compress_generic(
 					} else {
 						refDelta = 0;
 						lowLimit = (const BYTE*)source;
-				}   }
+					}
+				}
 				forwardH = LZ4_hashPosition(forwardIp, tableType);
 				LZ4_putPositionOnHash(ip, h, cctx->hashTable, tableType, base);
 
@@ -553,21 +613,29 @@ FORCE_INLINE int LZ4_compress_generic(
 		}
 
 		/* Catch up */
-		while (((ip>anchor) & (match+refDelta > lowLimit)) && (unlikely(ip[-1]==match[refDelta-1]))) { ip--; match--; }
+		while (((ip>anchor) & (match+refDelta > lowLimit)) && (unlikely(ip[-1]==match[refDelta-1]))) {
+			ip--;
+			match--;
+		}
 
 		/* Encode Literals */
-		{   unsigned const litLength = (unsigned)(ip - anchor);
+		{
+			unsigned const litLength = (unsigned)(ip - anchor);
 			token = op++;
 			if ((outputLimited) &&  /* Check output buffer overflow */
-				(unlikely(op + litLength + (2 + 1 + LASTLITERALS) + (litLength/255) > olimit)))
+				(unlikely(op + litLength + (2 + 1 + LASTLITERALS) + (litLength/255) > olimit))) {
 				return 0;
+			}
 			if (litLength >= RUN_MASK) {
 				int len = (int)litLength-RUN_MASK;
 				*token = (RUN_MASK<<ML_BITS);
-				for(; len >= 255 ; len-=255) *op++ = 255;
+				for(; len >= 255 ; len-=255) {
+					*op++ = 255;
+				}
 				*op++ = (BYTE)len;
+			} else {
+				*token = (BYTE)(litLength<<ML_BITS);
 			}
-			else *token = (BYTE)(litLength<<ML_BITS);
 
 			/* Copy Literals */
 			LZ4_wildCopy(op, anchor, op+litLength);
@@ -576,16 +644,20 @@ FORCE_INLINE int LZ4_compress_generic(
 
 _next_match:
 		/* Encode Offset */
-		LZ4_writeLE16(op, (U16)(ip-match)); op+=2;
+		LZ4_writeLE16(op, (U16)(ip-match));
+		op+=2;
 
 		/* Encode MatchLength */
-		{   unsigned matchCode;
+		{
+			unsigned matchCode;
 
 			if ((dict==usingExtDict) && (lowLimit==dictionary)) {
 				const BYTE* limit;
 				match += refDelta;
 				limit = ip + (dictEnd-match);
-				if (limit > matchlimit) limit = matchlimit;
+				if (limit > matchlimit) {
+					limit = matchlimit;
+				}
 				matchCode = LZ4_count(ip+MINMATCH, match+MINMATCH, limit);
 				ip += MINMATCH + matchCode;
 				if (ip==limit) {
@@ -599,8 +671,9 @@ _next_match:
 			}
 
 			if ( outputLimited &&	/* Check output buffer overflow */
-				(unlikely(op + (1 + LASTLITERALS) + (matchCode>>8) > olimit)) )
+				(unlikely(op + (1 + LASTLITERALS) + (matchCode>>8) > olimit)) ) {
 				return 0;
+			}
 			if (matchCode >= ML_MASK) {
 				*token += ML_MASK;
 				matchCode -= ML_MASK;
@@ -612,14 +685,17 @@ _next_match:
 				}
 				op += matchCode / 255;
 				*op++ = (BYTE)(matchCode % 255);
-			} else
+			} else {
 				*token += (BYTE)(matchCode);
+			}
 		}
 
 		anchor = ip;
 
 		/* Test end of chunk */
-		if (ip > mflimit) break;
+		if (ip > mflimit) {
+			break;
+		}
 
 		/* Fill table */
 		LZ4_putPosition(ip-2, cctx->hashTable, tableType, base);
@@ -633,12 +709,16 @@ _next_match:
 			} else {
 				refDelta = 0;
 				lowLimit = (const BYTE*)source;
-		}   }
+			}
+		}
 		LZ4_putPosition(ip, cctx->hashTable, tableType, base);
 		if ( ((dictIssue==dictSmall) ? (match>=lowRefLimit) : 1)
 			&& (match+MAX_DISTANCE>=ip)
-			&& (LZ4_read32(match+refDelta)==LZ4_read32(ip)) )
-		{ token=op++; *token=0; goto _next_match; }
+			&& (LZ4_read32(match+refDelta)==LZ4_read32(ip)) ) {
+			token=op++;
+			*token=0;
+			goto _next_match;
+		}
 
 		/* Prepare next loop */
 		forwardH = LZ4_hashPosition(++ip, tableType);
@@ -646,14 +726,18 @@ _next_match:
 
 _last_literals:
 	/* Encode Last Literals */
-	{   size_t const lastRun = (size_t)(iend - anchor);
+	{
+		size_t const lastRun = (size_t)(iend - anchor);
 		if ( (outputLimited) &&  /* Check output buffer overflow */
-			((op - (BYTE*)dest) + lastRun + 1 + ((lastRun+255-RUN_MASK)/255) > (U32)maxOutputSize) )
+			((op - (BYTE*)dest) + lastRun + 1 + ((lastRun+255-RUN_MASK)/255) > (U32)maxOutputSize) ) {
 			return 0;
+		}
 		if (lastRun >= RUN_MASK) {
 			size_t accumulator = lastRun - RUN_MASK;
 			*op++ = RUN_MASK << ML_BITS;
-			for(; accumulator >= 255 ; accumulator-=255) *op++ = 255;
+			for(; accumulator >= 255 ; accumulator-=255) {
+				*op++ = 255;
+			}
 			*op++ = (BYTE) accumulator;
 		} else {
 			*op++ = (BYTE)(lastRun<<ML_BITS);
@@ -673,15 +757,17 @@ static inline int LZ4_compress_fast_extState(void* state, const char* source, ch
 	//if (acceleration < 1) acceleration = ACCELERATION_DEFAULT;
 
 	if (maxOutputSize >= LZ4_compressBound(inputSize)) {
-		if (inputSize < LZ4_64Klimit)
+		if (inputSize < LZ4_64Klimit) {
 			return LZ4_compress_generic(ctx, source, dest, inputSize,			 0,	notLimited,						byU16, noDict, noDictIssue, acceleration);
-		else
+		} else {
 			return LZ4_compress_generic(ctx, source, dest, inputSize,			 0,	notLimited, (sizeof(void*)==8) ? byU32 : byPtr, noDict, noDictIssue, acceleration);
+		}
 	} else {
-		if (inputSize < LZ4_64Klimit)
+		if (inputSize < LZ4_64Klimit) {
 			return LZ4_compress_generic(ctx, source, dest, inputSize, maxOutputSize, limitedOutput,						byU16, noDict, noDictIssue, acceleration);
-		else
+		} else {
 			return LZ4_compress_generic(ctx, source, dest, inputSize, maxOutputSize, limitedOutput, (sizeof(void*)==8) ? byU32 : byPtr, noDict, noDictIssue, acceleration);
+		}
 	}
 }
 
@@ -741,9 +827,15 @@ FORCE_INLINE int LZ4_decompress_generic(
 
 
 	/* Special cases */
-	if ((partialDecoding) && (oexit > oend-MFLIMIT)) oexit = oend-MFLIMIT;						/* targetOutputSize too high => decode everything */
-	if ((endOnInput) && (unlikely(outputSize==0))) return ((inputSize==1) && (*ip==0)) ? 0 : -1;  /* Empty output buffer */
-	if ((!endOnInput) && (unlikely(outputSize==0))) return (*ip==0?1:-1);
+	if ((partialDecoding) && (oexit > oend-MFLIMIT)) {
+		oexit = oend-MFLIMIT;						/* targetOutputSize too high => decode everything */
+	}
+	if ((endOnInput) && (unlikely(outputSize==0))) {
+		return ((inputSize==1) && (*ip==0)) ? 0 : -1;  /* Empty output buffer */
+	}
+	if ((!endOnInput) && (unlikely(outputSize==0))) {
+		return (*ip==0?1:-1);
+	}
 
 	/* Main Loop : decode sequences */
 	while (1) {
@@ -759,21 +851,32 @@ FORCE_INLINE int LZ4_decompress_generic(
 				s = *ip++;
 				length += s;
 			} while ( likely(endOnInput ? ip<iend-RUN_MASK : 1) & (s==255) );
-			if ((safeDecode) && unlikely((uptrval)(op)+length<(uptrval)(op))) goto _output_error;   /* overflow detection */
-			if ((safeDecode) && unlikely((uptrval)(ip)+length<(uptrval)(ip))) goto _output_error;   /* overflow detection */
+			if ((safeDecode) && unlikely((uptrval)(op)+length<(uptrval)(op))) {
+				goto _output_error;   /* overflow detection */
+			}
+			if ((safeDecode) && unlikely((uptrval)(ip)+length<(uptrval)(ip))) {
+				goto _output_error;   /* overflow detection */
+			}
 		}
 
 		/* copy literals */
 		cpy = op+length;
 		if ( ((endOnInput) && ((cpy>(partialDecoding?oexit:oend-MFLIMIT)) || (ip+length>iend-(2+1+LASTLITERALS))) )
-			|| ((!endOnInput) && (cpy>oend-WILDCOPYLENGTH)) )
-		{
+			|| ((!endOnInput) && (cpy>oend-WILDCOPYLENGTH)) ) {
 			if (partialDecoding) {
-				if (cpy > oend) goto _output_error;						   /* Error : write attempt beyond end of output buffer */
-				if ((endOnInput) && (ip+length > iend)) goto _output_error;   /* Error : read attempt beyond end of input buffer */
+				if (cpy > oend) {
+					goto _output_error;   /* Error : write attempt beyond end of output buffer */
+				}
+				if ((endOnInput) && (ip+length > iend)) {
+					goto _output_error;   /* Error : read attempt beyond end of input buffer */
+				}
 			} else {
-				if ((!endOnInput) && (cpy != oend)) goto _output_error;	   /* Error : block decoding must stop exactly there */
-				if ((endOnInput) && ((ip+length != iend) || (cpy > oend))) goto _output_error;   /* Error : input must be consumed */
+				if ((!endOnInput) && (cpy != oend)) {
+					goto _output_error;   /* Error : block decoding must stop exactly there */
+				}
+				if ((endOnInput) && ((ip+length != iend) || (cpy > oend))) {
+					goto _output_error;   /* Error : input must be consumed */
+				}
 			}
 			memcpy(op, ip, length);
 			ip += length;
@@ -781,12 +884,16 @@ FORCE_INLINE int LZ4_decompress_generic(
 			break;	 /* Necessarily EOF, due to parsing restrictions */
 		}
 		LZ4_wildCopy(op, ip, cpy);
-		ip += length; op = cpy;
+		ip += length;
+		op = cpy;
 
 		/* get offset */
-		offset = LZ4_readLE16(ip); ip+=2;
+		offset = LZ4_readLE16(ip);
+		ip += 2;
 		match = op - offset;
-		if ((checkOffset) && (unlikely(match < lowLimit))) goto _output_error;   /* Error : offset outside buffers */
+		if ((checkOffset) && (unlikely(match < lowLimit))) {
+			goto _output_error;   /* Error : offset outside buffers */
+		}
 		LZ4_write32(op, (U32)offset);   /* costs ~1%; silence an msan warning when offset==0 */
 
 		/* get matchlength */
@@ -795,16 +902,22 @@ FORCE_INLINE int LZ4_decompress_generic(
 			unsigned s;
 			do {
 				s = *ip++;
-				if ((endOnInput) && (ip > iend-LASTLITERALS)) goto _output_error;
+				if ((endOnInput) && (ip > iend-LASTLITERALS)) {
+					goto _output_error;
+				}
 				length += s;
 			} while (s==255);
-			if ((safeDecode) && unlikely((uptrval)(op)+length<(uptrval)op)) goto _output_error;   /* overflow detection */
+			if ((safeDecode) && unlikely((uptrval)(op)+length<(uptrval)op)) {
+				goto _output_error;   /* overflow detection */
+			}
 		}
 		length += MINMATCH;
 
 		/* check external dictionary */
 		if ((dict==usingExtDict) && (match < lowPrefix)) {
-			if (unlikely(op+length > oend-LASTLITERALS)) goto _output_error;   /* doesn't respect parsing restriction */
+			if (unlikely(op+length > oend-LASTLITERALS)) {
+				goto _output_error;   /* doesn't respect parsing restriction */
+			}
 
 			if (length <= (size_t)(lowPrefix-match)) {
 				/* match can be copied as a single segment from external dictionary */
@@ -819,11 +932,14 @@ FORCE_INLINE int LZ4_decompress_generic(
 				if (restSize > (size_t)(op-lowPrefix)) {  /* overlap copy */
 					BYTE* const endOfMatch = op + restSize;
 					const BYTE* copyFrom = lowPrefix;
-					while (op < endOfMatch) *op++ = *copyFrom++;
+					while (op < endOfMatch) {
+						*op++ = *copyFrom++;
+					}
 				} else {
 					memcpy(op, lowPrefix, restSize);
 					op += restSize;
-			}   }
+				}
+			}
 			continue;
 		}
 
@@ -838,31 +954,40 @@ FORCE_INLINE int LZ4_decompress_generic(
 			match += dec32table[offset];
 			memcpy(op+4, match, 4);
 			match -= dec64;
-		} else { LZ4_copy8(op, match); match+=8; }
+		} else {
+			LZ4_copy8(op, match);
+			match+=8;
+		}
 		op += 8;
 
 		if (unlikely(cpy>oend-12)) {
 			BYTE* const oCopyLimit = oend-(WILDCOPYLENGTH-1);
-			if (cpy > oend-LASTLITERALS) goto _output_error;	/* Error : last LASTLITERALS bytes must be literals (uncompressed) */
+			if (cpy > oend-LASTLITERALS) {
+				goto _output_error;   /* Error : last LASTLITERALS bytes must be literals (uncompressed) */
+			}
 			if (op < oCopyLimit) {
 				LZ4_wildCopy(op, match, oCopyLimit);
 				match += oCopyLimit - op;
 				op = oCopyLimit;
 			}
-			while (op<cpy) *op++ = *match++;
+			while (op<cpy) {
+				*op++ = *match++;
+			}
 		} else {
 			LZ4_copy8(op, match);
-			if (length>16) LZ4_wildCopy(op+8, match+8, cpy);
+			if (length>16) {
+				LZ4_wildCopy(op+8, match+8, cpy);
+			}
 		}
 		op=cpy;   /* correction */
 	}
 
 	/* end of decoding */
-	if (endOnInput)
+	if (endOnInput) {
 	   return (int) (((char*)op)-dest);	 /* Nb of output bytes decoded */
-	else
+	} else {
 	   return (int) (((const char*)ip)-source);   /* Nb of input bytes read */
-
+	}
 	/* Overflow error detected */
 _output_error:
 	return (int) (-(((const char*)ip)-source))-1;
@@ -931,8 +1056,9 @@ void Packet::armor(const void *key,bool encryptPayload,const AES aesKeys[2])
 
 			uint8_t *const payload = data + ZT_PACKET_IDX_VERB;
 			const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
-			if (encryptPayload)
+			if (encryptPayload) {
 				s20.crypt12(payload,payload,payloadLen);
+			}
 			uint64_t mac[2];
 
 			Poly1305::compute(mac,payload,payloadLen,macKey);
@@ -977,14 +1103,17 @@ bool Packet::dearmor(const void *key,const AES aesKeys[2])
 			uint64_t mac[2];
 			Poly1305::compute(mac,payload,payloadLen,keyStream);
 #ifdef ZT_NO_TYPE_PUNNING
-			if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
+			if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8)) {
 				return false;
+			}
 #else
-			if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) // also secure, constant time
+			if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) { // also secure, constant time
 				return false;
+			}
 #endif
-			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
+			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) {
 				Salsa20::memxor(data + ZT_PACKET_IDX_VERB,reinterpret_cast<const uint8_t *>(keyStream + 8),payloadLen);
+			}
 		} else {
 			Salsa20 s20(mangledKey,data + ZT_PACKET_IDX_IV);
 			uint64_t macKey[4];
@@ -992,14 +1121,17 @@ bool Packet::dearmor(const void *key,const AES aesKeys[2])
 			uint64_t mac[2];
 			Poly1305::compute(mac,payload,payloadLen,macKey);
 #ifdef ZT_NO_TYPE_PUNNING
-			if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8))
+			if (!Utils::secureEq(mac,data + ZT_PACKET_IDX_MAC,8)) {
 				return false;
+			}
 #else
-			if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) // also secure, constant time
+			if ((*reinterpret_cast<const uint64_t *>(data + ZT_PACKET_IDX_MAC)) != mac[0]) { // also secure, constant time
 				return false;
+			}
 #endif
-			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012)
+			if (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) {
 				s20.crypt12(payload,payload,payloadLen);
+			}
 		}
 		return true;
 	}
@@ -1011,7 +1143,9 @@ void Packet::cryptField(const void *key,unsigned int start,unsigned int len)
 {
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 	uint8_t iv[8];
-	for(int i=0;i<8;++i) iv[i] = data[i];
+	for(int i=0;i<8;++i) {
+		iv[i] = data[i];
+	}
 	iv[7] &= 0xf8; // mask off least significant 3 bits of packet ID / IV since this is unset when this function gets called
 	Salsa20 s20(key,iv);
 	s20.crypt12(data + start,data + start,len);
