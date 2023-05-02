@@ -102,10 +102,12 @@ $NS1 sudo valgrind --demangle=yes --exit-on-first-error=yes \
       --leak-check=full \
       ./zerotier-one node1 -U -p9994 >>node_1.log 2>&1 &
 
+sleep 10
+
 # Second instance, not run in memory profiler
 $NS2 sudo ./zerotier-one node2 -U -p9995 >>node_2.log 2>&1 &
 
-sleep 5
+sleep 10
 
 ls -lga node1
 tree node1
