@@ -105,6 +105,16 @@ $NS1 sudo valgrind --demangle=yes --exit-on-first-error=yes \
 # Second instance, not run in memory profiler
 $NS2 sudo ./zerotier-one node2 -p9995 >>node_2.log 2>&1 &
 
+sleep 5
+
+ls -lga node1
+tree node1
+
+ls -lga node2 
+tree node2
+
+ps aux | grep zerotier
+
 ################################################################################
 # Online Check                                                                 #
 ################################################################################

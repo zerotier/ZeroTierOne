@@ -36,7 +36,7 @@ jobs:
         CXX: 'g++'
         BRANCH: ${{  github.ref_name }}
       run: |
-        sudo apt install -y valgrind xmlstarlet gcovr iperf3
+        sudo apt install -y valgrind xmlstarlet gcovr iperf3 tree
         make one ZT_COVERAGE=1 ZT_TRACE=1
         sudo chmod +x ./.github/workflows/validate-1m-linux.sh
         sudo ./.github/workflows/validate-1m-linux.sh
