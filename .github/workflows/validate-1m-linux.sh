@@ -121,6 +121,30 @@ ps aux | grep zerotier
 # Online Check                                                                 #
 ################################################################################
 
+spam_cli()
+{
+      echo "Spamming CLI..."
+      # Rapidly spam the CLI with joins/leaves
+
+      SPAM_TRIES=128
+
+      for ((s=0; s<=SPAM_TRIES; s++))
+      do
+            $ZT1 join $TEST_NETWORK
+      done
+
+      for ((s=0; s<=SPAM_TRIES; s++))
+      do
+            $ZT1 leave $TEST_NETWORK
+      done
+
+      for ((s=0; s<=SPAM_TRIES; s++))
+      do
+            $ZT1 leave $TEST_NETWORK
+            $ZT1 join $TEST_NETWORK
+      done
+}
+
 echo "Waiting for ZeroTier to come online before attempting test..."
 MAX_WAIT_SECS="${MAX_WAIT_SECS:-120}"
 node1_online=false
@@ -210,25 +234,7 @@ ping_loss_percent_2_to_1=$(echo "scale=2; $ping_loss_percent_2_to_1/100.0" | bc)
 
 echo "Testing basic CLI functionality..."
 
-# Rapidly spam the CLI with joins/leaves
-
-SPAM_TRIES=128
-
-for ((s=0; s<=SPAM_TRIES; s++))
-do
-      $ZT1 join $TEST_NETWORK
-done
-
-for ((s=0; s<=SPAM_TRIES; s++))
-do
-      $ZT1 leave $TEST_NETWORK
-done
-
-for ((s=0; s<=SPAM_TRIES; s++))
-do
-      $ZT1 leave $TEST_NETWORK
-      $ZT1 join $TEST_NETWORK
-done
+spam_cli
 
 $ZT1 join $TEST_NETWORK
 
@@ -421,3 +427,4 @@ EOF
 echo $summary > $FILENAME_SUMMARY
 cat $FILENAME_SUMMARY
 
+"$@"
