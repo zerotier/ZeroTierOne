@@ -34,6 +34,7 @@
 #include "Mutex.hpp"
 #include "Bond.hpp"
 #include "AES.hpp"
+#include "Metrics.hpp"
 
 #define ZT_PEER_MAX_SERIALIZED_STATE_SIZE (sizeof(Peer) + 32 + (sizeof(Path) * 2))
 
@@ -50,7 +51,7 @@ class Peer
 	friend class Bond;
 
 private:
-	Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
+	Peer() = delete; // disabled to prevent bugs -- should not be constructed uninitialized
 
 public:
 	~Peer() {
@@ -320,7 +321,7 @@ public:
 		} else {
 			SharedPtr<Path> bp(getAppropriatePath(now,false));
 			if (bp) {
-				return bp->latency();
+				return (unsigned int)bp->latency();
 			}
 			return 0xffff;
 		}

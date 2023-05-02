@@ -11,6 +11,7 @@
  */
 
 #include <prometheus/simpleapi.h>
+#include <prometheus/histogram.h>
 
 namespace prometheus {
     namespace simpleapi {
