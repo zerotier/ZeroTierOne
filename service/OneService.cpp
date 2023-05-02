@@ -1994,14 +1994,21 @@ public:
 			fprintf(stderr, "%s", http_log(req, res).c_str());
 		});
 #endif
+		if (_primaryPort==0) {
+			fprintf(stderr, "unable to determine local control port");
+			exit(-1);
+		}
+
+		if(!_controlPlane.bind_to_port("0.0.0.0", _primaryPort)) {
+			fprintf(stderr, "Error binding control plane to port %d\n", _primaryPort);
+			exit(-1);
+		}
 
         _serverThread = std::thread([&] {
-			if (_primaryPort==0) {
-				fprintf(stderr, "unable to determine local control port");
-				exit(-1);
-			}
             fprintf(stderr, "Starting Control Plane...\n");
-            _controlPlane.listen("0.0.0.0", _primaryPort);
+            if(!_controlPlane.listen_after_bind()) {
+				fprintf(stderr, "Error on listen_after_bind()\n");
+			}
             fprintf(stderr, "Control Plane Stopped\n");
         });
 
