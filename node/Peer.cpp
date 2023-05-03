@@ -28,11 +28,6 @@ namespace ZeroTier {
 
 static unsigned char s_freeRandomByteCounter = 0;
 
-char * peerIDString(const Identity &id) {
-	char out[16];
-	return id.address().toString(out);
-}
-
 Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
 	RR(renv),
 	_lastReceive(0),
@@ -55,7 +50,9 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_directPathPushCutoffCount(0),
 	_echoRequestCutoffCount(0),
 	_localMultipathSupported(false),
-	_lastComputedAggregateMeanLatency(0)
+	_lastComputedAggregateMeanLatency(0),
+	_peer_latency{Metrics::peer_latency.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}}, std::vector<uint64_t>{1,3,6,10,30,60,100,300,600,1000})},
+	_path_count{Metrics::peer_path_count.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})}
 {
 	if (!myIdentity.agree(peerIdentity,_key)) {
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;

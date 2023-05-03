@@ -598,6 +598,9 @@ private:
 	int32_t _lastComputedAggregateMeanLatency;
 
 	SharedPtr<Bond> _bond;
+
+	prometheus::Histogram<uint64_t> _peer_latency;
+	prometheus::simpleapi::gauge_metric_t _path_count;
 };
 
 } // namespace ZeroTier
