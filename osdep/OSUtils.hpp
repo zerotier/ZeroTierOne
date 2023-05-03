@@ -68,6 +68,22 @@ public:
 	 */
 	static unsigned int ztsnprintf(char *buf,unsigned int len,const char *fmt,...);
 
+	/**
+	 * Converts a uint64_t network ID into a string
+	 * 
+	 * @param nwid network ID
+	 * @throws std::length_error buf[] too short (buf[] will still be left null-terminated)
+	 */
+	static std::string networkIDStr(const uint64_t nwid);
+
+	/**
+	 * Converts a uint64_t node ID into a string
+	 * 
+	 * @param nid node ID
+	 * @throws std::length_error buf[] too short (buf[] will still be left null-terminated)
+	 */
+	static std::string nodeIDStr(const uint64_t nid);
+
 #ifdef __UNIX_LIKE__
 	/**
 	 * Close STDOUT_FILENO and STDERR_FILENO and replace them with output to given path

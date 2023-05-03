@@ -37,6 +37,7 @@
 #include "Membership.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
+#include "Metrics.hpp"
 
 #define ZT_NETWORK_MAX_INCOMING_UPDATES 3
 #define ZT_NETWORK_MAX_UPDATE_CHUNKS ((ZT_NETWORKCONFIG_DICT_CAPACITY / 1024) + 1)
@@ -439,6 +440,7 @@ private:
 	const RuntimeEnvironment *const RR;
 	void *_uPtr;
 	const uint64_t _id;
+	std::string _nwidStr;
 	uint64_t _lastAnnouncedMulticastGroupsUpstream;
 	MAC _mac; // local MAC address
 	bool _portInitialized;
@@ -479,6 +481,12 @@ private:
 	Mutex _lock;
 
 	AtomicCounter __refCount;
+
+	prometheus::simpleapi::gauge_metric_t _num_multicast_groups;
+	prometheus::simpleapi::counter_metric_t _incoming_packets_accpeted;
+	prometheus::simpleapi::counter_metric_t _incoming_packets_dropped;
+	prometheus::simpleapi::counter_metric_t _outgoing_packets_accepted;
+	prometheus::simpleapi::counter_metric_t _outgoing_packets_dropped;
 };
 
 }	// namespace ZeroTier
