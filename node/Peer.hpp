@@ -520,7 +520,9 @@ public:
 	/**
 	 * @return The bonding policy used to reach this peer
 	 */
-	SharedPtr<Bond> bond() { return _bond; }
+	SharedPtr<Bond> bond() {
+		return _bond;
+	}
 
 	/**
 	 * @return The bonding policy used to reach this peer
