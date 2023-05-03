@@ -568,6 +568,19 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 			deletionOccurred = false;
 		}
 	}
+	uint16_t alive_path_count_tmp = 0, dead_path_count_tmp = 0;
+	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+		if (_paths[i].p) {
+			if (_paths[i].p->alive(now)) {
+				alive_path_count_tmp++;
+			}
+			else {
+				dead_path_count_tmp++;
+			}
+		}
+	}
+	_alive_path_count = alive_path_count_tmp;
+	_dead_path_count = dead_path_count_tmp;
 	return sent;
 }
 
