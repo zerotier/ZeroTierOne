@@ -795,6 +795,7 @@ void Bond::sendPATH_NEGOTIATION_REQUEST(void* tPtr, int pathIdx)
 	Packet outp(_peer->_id.address(), RR->identity.address(), Packet::VERB_PATH_NEGOTIATION_REQUEST);
 	outp.append<int16_t>(_localUtility);
 	if (_paths[pathIdx].p->address()) {
+		Metrics::pkt_path_negotiation_request_out++;
 		outp.armor(_peer->key(), false, _peer->aesKeysIfSupported());
 		RR->node->putPacket(tPtr, _paths[pathIdx].p->localSocket(), _paths[pathIdx].p->address(), outp.data(), outp.size());
 		_overheadBytes += outp.size();
@@ -841,6 +842,7 @@ void Bond::sendQOS_MEASUREMENT(void* tPtr, int pathIdx, int64_t localSocket, con
 		} else {
 			RR->sw->send(tPtr, outp, false);
 		}
+		Metrics::pkt_qos_out++;
 		_paths[pathIdx].packetsReceivedSinceLastQoS = 0;
 		_paths[pathIdx].lastQoSMeasurement = now;
 		_overheadBytes += outp.size();

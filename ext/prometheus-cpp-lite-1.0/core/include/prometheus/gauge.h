@@ -38,6 +38,7 @@ namespace prometheus {
 
       Gauge()                   : Metric (static_type) {}                  ///< \brief Create a gauge that starts at 0.
       Gauge(const Value value_) : Metric(static_type), value{ value_ } {}  ///< \brief Create a gauge that starts at the given amount.
+      Gauge(const Gauge<Value_> &rhs) : Metric(rhs.static_type), value{rhs.value.load()} {}
 
       // original API
 
