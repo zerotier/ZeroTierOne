@@ -32,6 +32,7 @@
 #include "Node.hpp"
 #include "Peer.hpp"
 #include "Trace.hpp"
+#include "Metrics.hpp"
 
 #include <set>
 
@@ -559,13 +560,19 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 	RR(renv),
 	_uPtr(uptr),
 	_id(nwid),
+	_nwidStr(OSUtils::networkIDStr(nwid)),
 	_lastAnnouncedMulticastGroupsUpstream(0),
 	_mac(renv->identity.address(),nwid),
 	_portInitialized(false),
 	_lastConfigUpdate(0),
 	_destroyed(false),
 	_netconfFailure(NETCONF_FAILURE_NONE),
-	_portError(0)
+	_portError(0),
+	_num_multicast_groups{Metrics::network_num_multicast_groups.Add({{"network_id", _nwidStr}})},
+	_incoming_packets_accpeted{Metrics::network_incoming_packets.Add({{"network_id", _nwidStr},{"accepted","yes"}})},
+	_incoming_packets_dropped{Metrics::network_incoming_packets.Add({{"network_id", _nwidStr},{"accepted","no"}})},
+	_outgoing_packets_accepted{Metrics::network_outgoing_packets.Add({{"network_id", _nwidStr},{"accepted","yes"}})},
+	_outgoing_packets_dropped{Metrics::network_outgoing_packets.Add({{"network_id", _nwidStr},{"accepted","no"}})}
 {
 	for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
 		_incomingConfigChunks[i].ts = 0;
@@ -609,13 +616,15 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 		_portError = RR->node->configureVirtualNetworkPort(tPtr,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP,&ctmp);
 		_portInitialized = true;
 	}
+
+	Metrics::network_num_joined++;
 }
 
 Network::~Network()
 {
 	ZT_VirtualNetworkConfig ctmp;
 	_externalConfig(&ctmp);
-
+	Metrics::network_num_joined--;
 	if (_destroyed) {
 		// This is done in Node::leave() so we can pass tPtr properly
 		//RR->node->configureVirtualNetworkPort((void *)0,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
@@ -705,6 +714,7 @@ bool Network::filterOutgoingPacket(
 	}
 
 	if (accept) {
+		_outgoing_packets_accepted++;
 		if ((!noTee)&&(cc)) {
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -739,6 +749,7 @@ bool Network::filterOutgoingPacket(
 			return true;
 		}
 	} else {
+		_outgoing_packets_dropped++;
 		if (_config.remoteTraceTarget) {
 			RR->t->networkFilter(tPtr,*this,rrl,(localCapabilityIndex >= 0) ? &crrl : (Trace::RuleResultLog *)0,(localCapabilityIndex >= 0) ? &(_config.capabilities[localCapabilityIndex]) : (Capability *)0,ztSource,ztDest,macSource,macDest,frameData,frameLen,etherType,vlanId,noTee,false,0);
 		}
@@ -826,6 +837,7 @@ int Network::filterIncomingPacket(
 	}
 
 	if (accept) {
+		_incoming_packets_accpeted++;
 		if (cc) {
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
@@ -854,6 +866,8 @@ int Network::filterIncomingPacket(
 			}
 			return 0; // DROP locally, since we redirected
 		}
+	} else {
+		_incoming_packets_dropped++;
 	}
 
 	if (_config.remoteTraceTarget) {
@@ -879,6 +893,7 @@ void Network::multicastSubscribe(void *tPtr,const MulticastGroup &mg)
 	if (!std::binary_search(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg)) {
 		_myMulticastGroups.insert(std::upper_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg),mg);
 		_sendUpdatesToMembers(tPtr,&mg);
+		_num_multicast_groups++;
 	}
 }
 
@@ -888,6 +903,7 @@ void Network::multicastUnsubscribe(const MulticastGroup &mg)
 	std::vector<MulticastGroup>::iterator i(std::lower_bound(_myMulticastGroups.begin(),_myMulticastGroups.end(),mg));
 	if ( (i != _myMulticastGroups.end()) && (*i == mg) ) {
 		_myMulticastGroups.erase(i);
+		_num_multicast_groups--;
 	}
 }
 

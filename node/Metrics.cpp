@@ -166,6 +166,16 @@ namespace ZeroTier {
         prometheus::simpleapi::counter_metric_t tcp_recv
         { "zt_tcp_data_recv", "number of bytes ZeroTier has received via TCP" };
 
+        // Network Metrics
+        prometheus::simpleapi::gauge_metric_t network_num_joined
+        { "zt_num_networks", "number of networks this instance is joined to" };
+        prometheus::simpleapi::gauge_family_t network_num_multicast_groups
+        { "zt_network_multcast_groups_subscribed", "number of multicast groups networks are subscribed to" };
+        prometheus::simpleapi::counter_family_t network_incoming_packets
+        { "zt_network_incoming_packets", "number of incoming packets per network" };
+        prometheus::simpleapi::counter_family_t network_outgoing_packets
+        { "zt_network_outgoing_packets", "number of outgoing packets per network" };
+
         // General Controller Metrics
         prometheus::simpleapi::gauge_metric_t   network_count
         {"controller_network_count", "number of networks the controller is serving"};

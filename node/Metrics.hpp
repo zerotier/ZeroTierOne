@@ -101,6 +101,12 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t tcp_send;
         extern prometheus::simpleapi::counter_metric_t tcp_recv;
 
+        // Network Metrics
+        extern prometheus::simpleapi::gauge_metric_t network_num_joined;
+        extern prometheus::simpleapi::gauge_family_t network_num_multicast_groups;
+        extern prometheus::simpleapi::counter_family_t network_incoming_packets;
+        extern prometheus::simpleapi::counter_family_t network_outgoing_packets;
+
         // General Controller Metrics
         extern prometheus::simpleapi::gauge_metric_t   network_count;
         extern prometheus::simpleapi::gauge_metric_t   member_count;
