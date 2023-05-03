@@ -581,6 +581,7 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 	}
 	_alive_path_count = alive_path_count_tmp;
 	_dead_path_count = dead_path_count_tmp;
+	_peer_latency.Observe(latency(now));
 	return sent;
 }
 
