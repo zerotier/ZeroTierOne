@@ -879,6 +879,7 @@ void Bond::processBackgroundBondTasks(void* tPtr, int64_t now)
 						RR->node->putPacket(tPtr, _paths[i].p->localSocket(), _paths[i].p->address(), outp.data(), outp.size());
 						_paths[i].p->_lastOut = now;
 						_overheadBytes += outp.size();
+						Metrics::pkt_echo_out++;
 						// debug("tx: verb 0x%-2x of len %4d via %s (ECHO)", Packet::VERB_ECHO, outp.size(), pathToStr(_paths[i].p).c_str());
 					}
 				}

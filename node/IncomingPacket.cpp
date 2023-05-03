@@ -733,7 +733,6 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const Shar
 	if (count > 0) {
 		Metrics::pkt_ok_out++;
 		outp.armor(peer->key(),true,peer->aesKeysIfSupported());
-		Metrics::pkt_ok_out++;
 		_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 	}
 

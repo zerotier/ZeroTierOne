@@ -445,9 +445,10 @@ void Peer::sendHELLO(void *tPtr,const int64_t localSocket,const InetAddress &atA
 
 	outp.cryptField(_key,startCryptedPortionAt,outp.size() - startCryptedPortionAt);
 
+	Metrics::pkt_hello_out++;
+
 	if (atAddress) {
 		outp.armor(_key,false,nullptr); // false == don't encrypt full payload, but add MAC
-		Metrics::pkt_hello_out++;
 		RR->node->expectReplyTo(outp.packetId());
 		RR->node->putPacket(tPtr,RR->node->lowBandwidthModeEnabled() ? localSocket : -1,atAddress,outp.data(),outp.size());
 	} else {
