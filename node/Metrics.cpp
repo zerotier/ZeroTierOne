@@ -181,6 +181,12 @@ namespace ZeroTier {
         { "zt_peer_latency", "peer latency (ms)", {{}}};
         prometheus::simpleapi::gauge_family_t peer_path_count
         { "zt_peer_path_count", "number of paths to peer" };
+        prometheus::simpleapi::counter_family_t peer_incoming_packets
+        { "zt_peer_incoming_packets", "number of incoming packets from a peer" };
+        prometheus::simpleapi::counter_family_t peer_outgoing_packets
+        { "zt_peer_outgoing_packets", "number of outgoing packets to a peer" };
+        prometheus::simpleapi::counter_family_t peer_packet_errors
+        { "zt_peer_packet_errors" , "number of incoming packet errors from a peer" };
 
         // General Controller Metrics
         prometheus::simpleapi::gauge_metric_t   network_count

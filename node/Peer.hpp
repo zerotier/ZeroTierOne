@@ -144,6 +144,7 @@ public:
 	{
 		SharedPtr<Path> bp(getAppropriatePath(now,force));
 		if (bp) {
+			_outgoing_packet++;
 			return bp->send(RR,tPtr,data,len,now);
 		}
 		return false;
@@ -601,6 +602,9 @@ private:
 
 	prometheus::Histogram<uint64_t> _peer_latency;
 	prometheus::simpleapi::gauge_metric_t _path_count;
+	prometheus::simpleapi::counter_metric_t _incoming_packet;
+	prometheus::simpleapi::counter_metric_t _outgoing_packet;
+	prometheus::simpleapi::counter_metric_t _packet_errors;
 };
 
 } // namespace ZeroTier

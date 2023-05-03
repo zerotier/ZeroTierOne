@@ -52,7 +52,10 @@ Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Ident
 	_localMultipathSupported(false),
 	_lastComputedAggregateMeanLatency(0),
 	_peer_latency{Metrics::peer_latency.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}}, std::vector<uint64_t>{1,3,6,10,30,60,100,300,600,1000})},
-	_path_count{Metrics::peer_path_count.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})}
+	_path_count{Metrics::peer_path_count.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})},
+	_incoming_packet{Metrics::peer_incoming_packets.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})},
+	_outgoing_packet{Metrics::peer_outgoing_packets.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})},
+	_packet_errors{Metrics::peer_packet_errors.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})}
 {
 	if (!myIdentity.agree(peerIdentity,_key)) {
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
@@ -93,7 +96,7 @@ void Peer::received(
 		default:
 			break;
 	}
-
+	_incoming_packet++;
 	recordIncomingPacket(path, packetId, payloadLength, verb, flowId, now);
 
 	if (trustEstablished) {
@@ -645,6 +648,7 @@ void Peer::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t pack
 
 void Peer::recordIncomingInvalidPacket(const SharedPtr<Path>& path)
 {
+	_packet_errors++;
 	if (_localMultipathSupported && _bond) {
 		_bond->recordIncomingInvalidPacket(path);
 	}
