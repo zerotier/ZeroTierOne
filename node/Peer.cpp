@@ -520,67 +520,69 @@ void Peer::performMultipathStateCheck(void *tPtr, int64_t now)
 unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 {
 	unsigned int sent = 0;
-	Mutex::Lock _l(_paths_m);
+	{
+		Mutex::Lock _l(_paths_m);
 
-	performMultipathStateCheck(tPtr, now);
+		performMultipathStateCheck(tPtr, now);
 
-	const bool sendFullHello = ((now - _lastSentFullHello) >= ZT_PEER_PING_PERIOD);
-	if (sendFullHello) {
-		_lastSentFullHello = now;
-	}
-
-	// Right now we only keep pinging links that have the maximum priority. The
-	// priority is used to track cluster redirections, meaning that when a cluster
-	// redirects us its redirect target links override all other links and we
-	// let those old links expire.
-	long maxPriority = 0;
-	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
-			maxPriority = std::max(_paths[i].priority,maxPriority);
-		} else {
-			break;
+		const bool sendFullHello = ((now - _lastSentFullHello) >= ZT_PEER_PING_PERIOD);
+		if (sendFullHello) {
+			_lastSentFullHello = now;
 		}
-	}
 
-	bool deletionOccurred = false;
-	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
-			// Clean expired and reduced priority paths
-			if ( ((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION) && (_paths[i].priority == maxPriority) ) {
-				if ((sendFullHello)||(_paths[i].p->needsHeartbeat(now))) {
-					attemptToContactAt(tPtr,_paths[i].p->localSocket(),_paths[i].p->address(),now,sendFullHello);
-					_paths[i].p->sent(now);
-					sent |= (_paths[i].p->address().ss_family == AF_INET) ? 0x1 : 0x2;
-				}
+		// Right now we only keep pinging links that have the maximum priority. The
+		// priority is used to track cluster redirections, meaning that when a cluster
+		// redirects us its redirect target links override all other links and we
+		// let those old links expire.
+		long maxPriority = 0;
+		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+			if (_paths[i].p) {
+				maxPriority = std::max(_paths[i].priority,maxPriority);
 			} else {
-				_paths[i] = _PeerPath();
-				deletionOccurred = true;
+				break;
 			}
 		}
-		if (!_paths[i].p || deletionOccurred) {
-			for(unsigned int j=i;j<ZT_MAX_PEER_NETWORK_PATHS;++j) {
-				if (_paths[j].p && i != j) {
-					_paths[i] = _paths[j];
-					_paths[j] = _PeerPath();
-					break;
+
+		bool deletionOccurred = false;
+		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+			if (_paths[i].p) {
+				// Clean expired and reduced priority paths
+				if ( ((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION) && (_paths[i].priority == maxPriority) ) {
+					if ((sendFullHello)||(_paths[i].p->needsHeartbeat(now))) {
+						attemptToContactAt(tPtr,_paths[i].p->localSocket(),_paths[i].p->address(),now,sendFullHello);
+						_paths[i].p->sent(now);
+						sent |= (_paths[i].p->address().ss_family == AF_INET) ? 0x1 : 0x2;
+					}
+				} else {
+					_paths[i] = _PeerPath();
+					deletionOccurred = true;
 				}
 			}
-			deletionOccurred = false;
-		}
-	}
-	uint16_t alive_path_count_tmp = 0, dead_path_count_tmp = 0;
-	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p) {
-			if (_paths[i].p->alive(now)) {
-				alive_path_count_tmp++;
-			}
-			else {
-				dead_path_count_tmp++;
+			if (!_paths[i].p || deletionOccurred) {
+				for(unsigned int j=i;j<ZT_MAX_PEER_NETWORK_PATHS;++j) {
+					if (_paths[j].p && i != j) {
+						_paths[i] = _paths[j];
+						_paths[j] = _PeerPath();
+						break;
+					}
+				}
+				deletionOccurred = false;
 			}
 		}
+		uint16_t alive_path_count_tmp = 0, dead_path_count_tmp = 0;
+		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
+			if (_paths[i].p) {
+				if (_paths[i].p->alive(now)) {
+					alive_path_count_tmp++;
+				}
+				else {
+					dead_path_count_tmp++;
+				}
+			}
+		}
+		_alive_path_count = alive_path_count_tmp;
+		_dead_path_count = dead_path_count_tmp;
 	}
-	_alive_path_count = alive_path_count_tmp;
-	_dead_path_count = dead_path_count_tmp;
 	_peer_latency.Observe(latency(now));
 	return sent;
 }
