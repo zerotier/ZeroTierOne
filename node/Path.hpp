@@ -303,48 +303,48 @@ public:
 	/**
 	 * @return Mean latency as reported by the bonding layer
 	 */
-	inline unsigned int latencyMean() const { return _latencyMean; }
+	inline float latencyMean() const { return _latencyMean; }
 
 	/**
 	 * @return Latency variance as reported by the bonding layer
 	 */
-	inline unsigned int latencyVariance() const { return _latencyVariance; }
+	inline float latencyVariance() const { return _latencyVariance; }
 
 	/**
 	 * @return Packet Loss Ratio as reported by the bonding layer
 	 */
-	inline unsigned int packetLossRatio() const { return _packetLossRatio; }
+	inline float packetLossRatio() const { return _packetLossRatio; }
 
 	/**
 	 * @return Packet Error Ratio as reported by the bonding layer
 	 */
-	inline unsigned int packetErrorRatio() const { return _packetErrorRatio; }
+	inline float packetErrorRatio() const { return _packetErrorRatio; }
 
 	/**
 	 * @return Whether this path is valid as reported by the bonding layer. The bonding layer
 	 * actually checks with Phy to see if the interface is still up
 	 */
-	inline unsigned int valid() const { return _valid; }
+	inline bool valid() const { return _valid; }
 
 	/**
 	 * @return Whether this path is eligible for use in a bond as reported by the bonding layer
 	 */
-	inline unsigned int eligible() const { return _eligible; }
+	inline bool eligible() const { return _eligible; }
 
 	/**
 	 * @return Whether this path is bonded as reported by the bonding layer
 	 */
-	inline unsigned int bonded() const { return _bonded; }
+	inline bool bonded() const { return _bonded; }
 
 	/**
 	 * @return Whether the user-specified MTU for this path (determined by MTU for parent link)
 	 */
-	inline unsigned int mtu() const { return _mtu; }
+	inline uint16_t mtu() const { return _mtu; }
 
 	/**
 	 * @return Given link capacity as reported by the bonding layer
 	 */
-	inline unsigned int givenLinkSpeed() const { return _givenLinkSpeed; }
+	inline uint32_t givenLinkSpeed() const { return _givenLinkSpeed; }
 
 	/**
 	 * @return Path's quality as reported by the bonding layer
