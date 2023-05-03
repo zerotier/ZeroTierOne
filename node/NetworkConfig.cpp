@@ -30,42 +30,55 @@ bool NetworkConfig::toDictionary(Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> &d,b
 		// Try to put the more human-readable fields first
 
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_VERSION,(uint64_t)ZT_NETWORKCONFIG_VERSION)) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NETWORK_ID,this->networkId)) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TIMESTAMP,this->timestamp)) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_CREDENTIAL_TIME_MAX_DELTA,this->credentialTimeMaxDelta)) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REVISION,this->revision)) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_ISSUED_TO,this->issuedTo.toString(tmp2))) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_TARGET,this->remoteTraceTarget.toString(tmp2))) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_REMOTE_TRACE_LEVEL,(uint64_t)this->remoteTraceLevel)) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_FLAGS,this->flags)) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MULTICAST_LIMIT,(uint64_t)this->multicastLimit)) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_TYPE,(uint64_t)this->type)) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_NAME,this->name)) {
+			delete tmp;
 			return false;
 		}
 		if (!d.add(ZT_NETWORKCONFIG_DICT_KEY_MTU,(uint64_t)this->mtu)) {
+			delete tmp;
 			return false;
 		}
 
