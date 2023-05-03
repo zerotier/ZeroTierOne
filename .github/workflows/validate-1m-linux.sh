@@ -21,7 +21,8 @@ NS1="ip netns exec ns1"
 NS2="ip netns exec ns2"
 
 ZT1="$NS1 ./zerotier-cli -D$(pwd)/node1"
-ZT2="$NS2 ./zerotier-cli -D$(pwd)/node2"
+# Specify custom port on one node to ensure that feature works
+ZT2="$NS2 ./zerotier-cli -p9997 -D$(pwd)/node2"
 
 echo -e "Setting up network namespaces..."
 echo "Setting up ns1"
@@ -66,23 +67,23 @@ sysctl -w net.ipv4.ip_forward=1
 
 echo -e "\nPing from host to namespaces"
 
-#ping -c 4 192.168.0.1
-#ping -c 4 192.168.1.1
+ping -c 3 192.168.0.1
+ping -c 3 192.168.1.1
 
 echo -e "\nPing from namespace to host"
 
-#$NS1 ping -c 4 192.168.0.1
-#$NS1 ping -c 4 192.168.0.1
-#$NS2 ping -c 4 192.168.0.2
-#$NS2 ping -c 4 192.168.0.2
+$NS1 ping -c 3 192.168.0.1
+$NS1 ping -c 3 192.168.0.1
+$NS2 ping -c 3 192.168.0.2
+$NS2 ping -c 3 192.168.0.2
 
 echo -e "\nPing from ns1 to ns2"
 
-#$NS1 ping -c 4 192.168.0.1
+$NS1 ping -c 3 192.168.0.1
 
 echo -e "\nPing from ns2 to ns1"
 
-#$NS2 ping -c 4 192.168.0.1
+$NS2 ping -c 3 192.168.0.1
 
 ################################################################################
 # Memory Leak Check                                                            #
@@ -94,20 +95,56 @@ echo -e "\nStarting a ZeroTier instance in each namespace..."
 
 time_test_start=`date +%s`
 
+# Spam the CLI as ZeroTier is starting
+spam_cli 100
+
 echo "Starting memory leak check"
 $NS1 sudo valgrind --demangle=yes --exit-on-first-error=yes \
       --error-exitcode=1 \
       --xml=yes \
       --xml-file=$FILENAME_MEMORY_LOG \
       --leak-check=full \
-      ./zerotier-one node1 >>node_1.log 2>&1 &
+      ./zerotier-one node1 -U >>node_1.log 2>&1 &
 
 # Second instance, not run in memory profiler
-$NS2 ./zerotier-one node2 >>node_2.log 2>&1 &
+$NS2 sudo ./zerotier-one node2 -U -p9997 >>node_2.log 2>&1 &
 
 ################################################################################
 # Online Check                                                                 #
 ################################################################################
+
+spam_cli()
+{
+      echo "Spamming CLI..."
+      # Rapidly spam the CLI with joins/leaves
+
+      MAX_TRIES="${$1:-10}"
+
+      for ((s=0; s<=MAX_TRIES; s++))
+      do
+            $ZT1 status
+            $ZT2 status
+            sleep 0.1
+      done
+
+      SPAM_TRIES=128
+
+      for ((s=0; s<=SPAM_TRIES; s++))
+      do
+            $ZT1 join $TEST_NETWORK
+      done
+
+      for ((s=0; s<=SPAM_TRIES; s++))
+      do
+            $ZT1 leave $TEST_NETWORK
+      done
+
+      for ((s=0; s<=SPAM_TRIES; s++))
+      do
+            $ZT1 leave $TEST_NETWORK
+            $ZT1 join $TEST_NETWORK
+      done
+}
 
 echo "Waiting for ZeroTier to come online before attempting test..."
 MAX_WAIT_SECS="${MAX_WAIT_SECS:-120}"
@@ -121,6 +158,7 @@ for ((s=0; s<=MAX_WAIT_SECS; s++))
 do
     node1_online="$($ZT1 -j info | jq '.online' 2>/dev/null)"
     node2_online="$($ZT2 -j info | jq '.online' 2>/dev/null)"
+    echo "Checking for online status: try #$s, node1:$node1_online, node2:$node2_online"
     if [[ "$node1_online" == "true" ]]
     then
         time_zt_node1_online=`date +%s`
@@ -137,16 +175,31 @@ do
     sleep 1
 done
 
+echo -e "\n\nContents of ZeroTier home paths:"
+
+ls -lga node1
+tree node1
+ls -lga node2
+tree node2
+
+echo -e "\n\nRunning ZeroTier processes:"
+echo -e "\nNode 1:"
+$NS1 ps aux | grep zerotier-one
+echo -e "\nNode 2:"
+$NS2 ps aux | grep zerotier-one
+
+echo -e "\n\nStatus of each instance:"
+
+echo -e "\n\nNode 1:"
+$ZT1 status
+echo -e "\n\nNode 2:"
+$ZT2 status
+
 if [[ "$both_instances_online" != "true" ]]
 then
-    echo "One or more instances of ZeroTier failed to come online. Aborting test." >&2
+    echo "One or more instances of ZeroTier failed to come online. Aborting test."
     exit 1
 fi
-
-echo -e "\nChecking status of each instance:"
-
-$ZT1 status
-$ZT2 status
 
 echo -e "\nJoining networks"
 
@@ -188,25 +241,7 @@ ping_loss_percent_2_to_1=$(echo "scale=2; $ping_loss_percent_2_to_1/100.0" | bc)
 
 echo "Testing basic CLI functionality..."
 
-# Rapidly spam the CLI with joins/leaves
-
-SPAM_TRIES=128
-
-for ((s=0; s<=SPAM_TRIES; s++))
-do
-      $ZT1 join $TEST_NETWORK
-done
-
-for ((s=0; s<=SPAM_TRIES; s++))
-do
-      $ZT1 leave $TEST_NETWORK
-done
-
-for ((s=0; s<=SPAM_TRIES; s++))
-do
-      $ZT1 leave $TEST_NETWORK
-      $ZT1 join $TEST_NETWORK
-done
+spam_cli 10
 
 $ZT1 join $TEST_NETWORK
 
@@ -399,3 +434,4 @@ EOF
 echo $summary > $FILENAME_SUMMARY
 cat $FILENAME_SUMMARY
 
+"$@"
