@@ -28,35 +28,37 @@ namespace ZeroTier {
 
 static unsigned char s_freeRandomByteCounter = 0;
 
-Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) :
-	RR(renv),
-	_lastReceive(0),
-	_lastNontrivialReceive(0),
-	_lastTriedMemorizedPath(0),
-	_lastDirectPathPushSent(0),
-	_lastDirectPathPushReceive(0),
-	_lastCredentialRequestSent(0),
-	_lastWhoisRequestReceived(0),
-	_lastCredentialsReceived(0),
-	_lastTrustEstablishedPacketReceived(0),
-	_lastSentFullHello(0),
-	_lastEchoCheck(0),
-	_freeRandomByte((unsigned char)((uintptr_t)this >> 4) ^ ++s_freeRandomByteCounter),
-	_vProto(0),
-	_vMajor(0),
-	_vMinor(0),
-	_vRevision(0),
-	_id(peerIdentity),
-	_directPathPushCutoffCount(0),
-	_echoRequestCutoffCount(0),
-	_localMultipathSupported(false),
-	_lastComputedAggregateMeanLatency(0),
-	_peer_latency{Metrics::peer_latency.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}}, std::vector<uint64_t>{1,3,6,10,30,60,100,300,600,1000})},
-	_alive_path_count{Metrics::peer_path_count.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())},{"status","alive"}})},
-	_dead_path_count{Metrics::peer_path_count.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())},{"status","dead"}})},
-	_incoming_packet{Metrics::peer_packets.Add({{"direction", "rx"},{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})},
-	_outgoing_packet{Metrics::peer_packets.Add({{"direction", "tx"},{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})},
-	_packet_errors{Metrics::peer_packet_errors.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})}
+Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) 
+	: RR(renv)
+	, _lastReceive(0)
+	, _lastNontrivialReceive(0)
+	, _lastTriedMemorizedPath(0)
+	, _lastDirectPathPushSent(0)
+	, _lastDirectPathPushReceive(0)
+	, _lastCredentialRequestSent(0)
+	, _lastWhoisRequestReceived(0)
+	, _lastCredentialsReceived(0)
+	, _lastTrustEstablishedPacketReceived(0)
+	, _lastSentFullHello(0)
+	, _lastEchoCheck(0)
+	, _freeRandomByte((unsigned char)((uintptr_t)this >> 4) ^ ++s_freeRandomByteCounter)
+	, _vProto(0)
+	, _vMajor(0)
+	, _vMinor(0)
+	, _vRevision(0)
+	, _id(peerIdentity)
+	, _directPathPushCutoffCount(0)
+	, _echoRequestCutoffCount(0)
+	, _localMultipathSupported(false)
+	, _lastComputedAggregateMeanLatency(0)
+#ifndef ZT_NO_PEER_METRICS
+	, _peer_latency{Metrics::peer_latency.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}}, std::vector<uint64_t>{1,3,6,10,30,60,100,300,600,1000})}
+	, _alive_path_count{Metrics::peer_path_count.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())},{"status","alive"}})}
+	, _dead_path_count{Metrics::peer_path_count.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())},{"status","dead"}})}
+	, _incoming_packet{Metrics::peer_packets.Add({{"direction", "rx"},{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})}
+	, _outgoing_packet{Metrics::peer_packets.Add({{"direction", "tx"},{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})}
+	, _packet_errors{Metrics::peer_packet_errors.Add({{"node_id", OSUtils::nodeIDStr(peerIdentity.address().toInt())}})}
+#endif
 {
 	if (!myIdentity.agree(peerIdentity,_key)) {
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
@@ -97,7 +99,9 @@ void Peer::received(
 		default:
 			break;
 	}
+#ifndef ZT_NO_PEER_METRICS
 	_incoming_packet++;
+#endif
 	recordIncomingPacket(path, packetId, payloadLength, verb, flowId, now);
 
 	if (trustEstablished) {
@@ -569,6 +573,7 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 				deletionOccurred = false;
 			}
 		}
+#ifndef ZT_NO_PEER_METRICS
 		uint16_t alive_path_count_tmp = 0, dead_path_count_tmp = 0;
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 			if (_paths[i].p) {
@@ -582,8 +587,11 @@ unsigned int Peer::doPingAndKeepalive(void *tPtr,int64_t now)
 		}
 		_alive_path_count = alive_path_count_tmp;
 		_dead_path_count = dead_path_count_tmp;
+#endif
 	}
+#ifndef ZT_NO_PEER_METRICS
 	_peer_latency.Observe(latency(now));
+#endif
 	return sent;
 }
 
@@ -658,7 +666,9 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 void Peer::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now)
 {
+#ifndef ZT_NO_PEER_METRICS
 	_outgoing_packet++;
+#endif
 	if (_localMultipathSupported && _bond) {
 		_bond->recordOutgoingPacket(path, packetId, payloadLength, verb, flowId, now);
 	}
@@ -666,7 +676,9 @@ void Peer::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t pack
 
 void Peer::recordIncomingInvalidPacket(const SharedPtr<Path>& path)
 {
+#ifndef ZT_NO_PEER_METRICS
 	_packet_errors++;
+#endif
 	if (_localMultipathSupported && _bond) {
 		_bond->recordIncomingInvalidPacket(path);
 	}
