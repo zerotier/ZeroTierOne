@@ -96,23 +96,24 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t pkt_error_internal_server_error_out;
 
         // Data Sent/Received Metrics
+        extern prometheus::simpleapi::counter_family_t data;
         extern prometheus::simpleapi::counter_metric_t udp_send;
         extern prometheus::simpleapi::counter_metric_t udp_recv;
         extern prometheus::simpleapi::counter_metric_t tcp_send;
         extern prometheus::simpleapi::counter_metric_t tcp_recv;
 
         // Network Metrics
-        extern prometheus::simpleapi::gauge_metric_t network_num_joined;
-        extern prometheus::simpleapi::gauge_family_t network_num_multicast_groups;
-        extern prometheus::simpleapi::counter_family_t network_incoming_packets;
-        extern prometheus::simpleapi::counter_family_t network_outgoing_packets;
+        extern prometheus::simpleapi::gauge_metric_t   network_num_joined;
+        extern prometheus::simpleapi::gauge_family_t   network_num_multicast_groups;
+        extern prometheus::simpleapi::counter_family_t network_packets;
 
+#ifndef ZT_NO_PEER_METRICS
         // Peer Metrics
         extern prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &peer_latency;
-        extern prometheus::simpleapi::gauge_family_t peer_path_count;
-        extern prometheus::simpleapi::counter_family_t peer_incoming_packets;
-        extern prometheus::simpleapi::counter_family_t peer_outgoing_packets;
+        extern prometheus::simpleapi::gauge_family_t   peer_path_count;
+        extern prometheus::simpleapi::counter_family_t peer_packets;
         extern prometheus::simpleapi::counter_family_t peer_packet_errors;
+#endif
 
         // General Controller Metrics
         extern prometheus::simpleapi::gauge_metric_t   network_count;

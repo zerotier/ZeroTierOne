@@ -25,7 +25,7 @@ namespace ZeroTier {
     namespace Metrics {
         // Packet Type Counts
         prometheus::simpleapi::counter_family_t packets
-        { "zt_packet_incoming", "incoming packet type counts"};
+        { "zt_packet", "incoming packet type counts"};
 
         // Incoming packets
         prometheus::simpleapi::counter_metric_t pkt_nop_in
@@ -118,7 +118,7 @@ namespace ZeroTier {
 
         // Packet Error Counts
         prometheus::simpleapi::counter_family_t packet_errors
-        { "zt_packet_incoming_error", "incoming packet errors"};
+        { "zt_packet_error", "incoming packet errors"};
 
         // Incoming Error Counts
         prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found_in
@@ -157,25 +157,26 @@ namespace ZeroTier {
         { packet_errors.Add({{"error_type", "internal_server_error"}, {"direction", "tx"}}) };
 
         // Data Sent/Received Metrics
-        prometheus::simpleapi::counter_metric_t udp_send
-        { "zt_udp_data_sent", "number of bytes ZeroTier has sent via UDP" };
+        prometheus::simpleapi::counter_family_t data
+        { "zt_data", "number of bytes ZeroTier has transmitted or received" };
         prometheus::simpleapi::counter_metric_t udp_recv
-        { "zt_udp_data_recv", "number of bytes ZeroTier has received via UDP" };
+        { data.Add({{"protocol","udp"},{"direction","rx"}}) };
+        prometheus::simpleapi::counter_metric_t udp_send
+        { data.Add({{"protocol","udp"},{"direction","tx"}}) };
         prometheus::simpleapi::counter_metric_t tcp_send
-        { "zt_tcp_data_sent", "number of bytes ZeroTier has sent via TCP" };
+        { data.Add({{"protocol","tcp"},{"direction", "tx"}}) };
         prometheus::simpleapi::counter_metric_t tcp_recv
-        { "zt_tcp_data_recv", "number of bytes ZeroTier has received via TCP" };
+        { data.Add({{"protocol","tcp"},{"direction", "rx"}}) };
 
         // Network Metrics
         prometheus::simpleapi::gauge_metric_t network_num_joined
         { "zt_num_networks", "number of networks this instance is joined to" };
         prometheus::simpleapi::gauge_family_t network_num_multicast_groups
-        { "zt_network_multcast_groups_subscribed", "number of multicast groups networks are subscribed to" };
-        prometheus::simpleapi::counter_family_t network_incoming_packets
-        { "zt_network_incoming_packets", "number of incoming packets per network" };
-        prometheus::simpleapi::counter_family_t network_outgoing_packets
-        { "zt_network_outgoing_packets", "number of outgoing packets per network" };
-
+        { "zt_network_multicast_groups_subscribed", "number of multicast groups networks are subscribed to" };
+        prometheus::simpleapi::counter_family_t network_packets
+        { "zt_network_packets", "number of incoming/outgoing packets per network" };
+        
+#ifndef ZT_NO_PEER_METRICS
         // PeerMetrics
         prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &peer_latency = 
         prometheus::Builder<prometheus::Histogram<uint64_t>>()
@@ -185,12 +186,11 @@ namespace ZeroTier {
     
         prometheus::simpleapi::gauge_family_t peer_path_count
         { "zt_peer_path_count", "number of paths to peer" };
-        prometheus::simpleapi::counter_family_t peer_incoming_packets
-        { "zt_peer_incoming_packets", "number of incoming packets from a peer" };
-        prometheus::simpleapi::counter_family_t peer_outgoing_packets
-        { "zt_peer_outgoing_packets", "number of outgoing packets to a peer" };
+        prometheus::simpleapi::counter_family_t peer_packets
+        { "zt_peer_packets", "number of packets to/from a peer" };
         prometheus::simpleapi::counter_family_t peer_packet_errors
         { "zt_peer_packet_errors" , "number of incoming packet errors from a peer" };
+#endif
 
         // General Controller Metrics
         prometheus::simpleapi::gauge_metric_t   network_count
