@@ -172,12 +172,10 @@ namespace ZeroTier {
         prometheus::simpleapi::gauge_metric_t network_num_joined
         { "zt_num_networks", "number of networks this instance is joined to" };
         prometheus::simpleapi::gauge_family_t network_num_multicast_groups
-        { "zt_network_multcast_groups_subscribed", "number of multicast groups networks are subscribed to" };
-        prometheus::simpleapi::counter_family_t network_incoming_packets
-        { "zt_network_incoming_packets", "number of incoming packets per network" };
-        prometheus::simpleapi::counter_family_t network_outgoing_packets
-        { "zt_network_outgoing_packets", "number of outgoing packets per network" };
-
+        { "zt_network_multicast_groups_subscribed", "number of multicast groups networks are subscribed to" };
+        prometheus::simpleapi::counter_family_t network_packets
+        { "zt_network_packets", "number of incoming/outgoing packets per network" };
+        
         // PeerMetrics
         prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &peer_latency = 
         prometheus::Builder<prometheus::Histogram<uint64_t>>()

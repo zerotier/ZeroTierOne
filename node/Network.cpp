@@ -569,10 +569,10 @@ Network::Network(const RuntimeEnvironment *renv,void *tPtr,uint64_t nwid,void *u
 	_netconfFailure(NETCONF_FAILURE_NONE),
 	_portError(0),
 	_num_multicast_groups{Metrics::network_num_multicast_groups.Add({{"network_id", _nwidStr}})},
-	_incoming_packets_accpeted{Metrics::network_incoming_packets.Add({{"network_id", _nwidStr},{"accepted","yes"}})},
-	_incoming_packets_dropped{Metrics::network_incoming_packets.Add({{"network_id", _nwidStr},{"accepted","no"}})},
-	_outgoing_packets_accepted{Metrics::network_outgoing_packets.Add({{"network_id", _nwidStr},{"accepted","yes"}})},
-	_outgoing_packets_dropped{Metrics::network_outgoing_packets.Add({{"network_id", _nwidStr},{"accepted","no"}})}
+	_incoming_packets_accepted{Metrics::network_packets.Add({{"direction","rx"},{"network_id", _nwidStr},{"accepted","yes"}})},
+	_incoming_packets_dropped{Metrics::network_packets.Add({{"direction","rx"},{"network_id", _nwidStr},{"accepted","no"}})},
+	_outgoing_packets_accepted{Metrics::network_packets.Add({{"direction","tx"},{"network_id", _nwidStr},{"accepted","yes"}})},
+	_outgoing_packets_dropped{Metrics::network_packets.Add({{"direction","tx"},{"network_id", _nwidStr},{"accepted","no"}})}
 {
 	for(int i=0;i<ZT_NETWORK_MAX_INCOMING_UPDATES;++i) {
 		_incomingConfigChunks[i].ts = 0;
@@ -837,7 +837,7 @@ int Network::filterIncomingPacket(
 	}
 
 	if (accept) {
-		_incoming_packets_accpeted++;
+		_incoming_packets_accepted++;
 		if (cc) {
 			Packet outp(cc,RR->identity.address(),Packet::VERB_EXT_FRAME);
 			outp.append(_id);
