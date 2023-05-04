@@ -176,6 +176,7 @@ namespace ZeroTier {
         prometheus::simpleapi::counter_family_t network_packets
         { "zt_network_packets", "number of incoming/outgoing packets per network" };
         
+#ifndef ZT_NO_PEER_METRICS
         // PeerMetrics
         prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &peer_latency = 
         prometheus::Builder<prometheus::Histogram<uint64_t>>()
@@ -189,6 +190,7 @@ namespace ZeroTier {
         { "zt_peer_packets", "number of packets to/from a peer" };
         prometheus::simpleapi::counter_family_t peer_packet_errors
         { "zt_peer_packet_errors" , "number of incoming packet errors from a peer" };
+#endif
 
         // General Controller Metrics
         prometheus::simpleapi::gauge_metric_t   network_count
