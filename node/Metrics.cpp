@@ -188,7 +188,7 @@ namespace ZeroTier {
         prometheus::simpleapi::gauge_family_t peer_path_count
         { "zt_peer_path_count", "number of paths to peer" };
         prometheus::simpleapi::counter_family_t peer_packets
-        { "zt_peer_packets", "number of incoming packets from a peer" };
+        { "zt_peer_packets", "number of packets to/from a peer" };
         prometheus::simpleapi::counter_family_t peer_packet_errors
         { "zt_peer_packet_errors" , "number of incoming packet errors from a peer" };
 
