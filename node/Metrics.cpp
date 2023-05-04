@@ -182,13 +182,6 @@ namespace ZeroTier {
             .Name("zt_peer_latency")
             .Help("peer latency (ms)")
             .Register(prometheus::simpleapi::registry);
-/*         prometheus::CustomFamily<prometheus::Histogram<uint64_t>>::Build(
-            prometheus::simpleapi::registry,
-            "zt_peer_latency",
-            "peer latency (ms)",
-            {}
-        );
- */        //{ prometheus::Metric::Type::Histogram, "zt_peer_latency", "peer latency (ms)", {}};
     
         prometheus::simpleapi::gauge_family_t peer_path_count
         { "zt_peer_path_count", "number of paths to peer" };
