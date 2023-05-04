@@ -600,7 +600,7 @@ private:
 
 	SharedPtr<Bond> _bond;
 
-	prometheus::Histogram<uint64_t> _peer_latency;
+	prometheus::Histogram<uint64_t> &_peer_latency;
 	prometheus::simpleapi::gauge_metric_t _alive_path_count;
 	prometheus::simpleapi::gauge_metric_t _dead_path_count;
 	prometheus::simpleapi::counter_metric_t _incoming_packet;

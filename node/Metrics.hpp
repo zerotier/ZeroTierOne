@@ -108,7 +108,7 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_family_t network_outgoing_packets;
 
         // Peer Metrics
-        extern prometheus::CustomFamily<prometheus::Histogram<uint64_t>> peer_latency;
+        extern prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &peer_latency;
         extern prometheus::simpleapi::gauge_family_t peer_path_count;
         extern prometheus::simpleapi::counter_family_t peer_incoming_packets;
         extern prometheus::simpleapi::counter_family_t peer_outgoing_packets;

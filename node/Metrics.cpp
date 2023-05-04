@@ -177,8 +177,19 @@ namespace ZeroTier {
         { "zt_network_outgoing_packets", "number of outgoing packets per network" };
 
         // PeerMetrics
-        prometheus::CustomFamily<prometheus::Histogram<uint64_t>> peer_latency 
-        { "zt_peer_latency", "peer latency (ms)", {}};
+        prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &peer_latency = 
+        prometheus::Builder<prometheus::Histogram<uint64_t>>()
+            .Name("zt_peer_latency")
+            .Help("peer latency (ms)")
+            .Register(prometheus::simpleapi::registry);
+/*         prometheus::CustomFamily<prometheus::Histogram<uint64_t>>::Build(
+            prometheus::simpleapi::registry,
+            "zt_peer_latency",
+            "peer latency (ms)",
+            {}
+        );
+ */        //{ prometheus::Metric::Type::Histogram, "zt_peer_latency", "peer latency (ms)", {}};
+    
         prometheus::simpleapi::gauge_family_t peer_path_count
         { "zt_peer_path_count", "number of paths to peer" };
         prometheus::simpleapi::counter_family_t peer_incoming_packets
