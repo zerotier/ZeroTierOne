@@ -118,7 +118,7 @@ namespace ZeroTier {
 
         // Packet Error Counts
         prometheus::simpleapi::counter_family_t packet_errors
-        { "zt_packet_incoming_error", "incoming packet errors"};
+        { "zt_packet_error", "incoming packet errors"};
 
         // Incoming Error Counts
         prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found_in
