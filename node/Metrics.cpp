@@ -157,18 +157,16 @@ namespace ZeroTier {
         { packet_errors.Add({{"error_type", "internal_server_error"}, {"direction", "tx"}}) };
 
         // Data Sent/Received Metrics
-        prometheus::simpleapi::counter_family_t udp
-        { "zt_udp_data", "number of bytes ZeroTier has transmitted or received via UDP" };
+        prometheus::simpleapi::counter_family_t data
+        { "zt_data", "number of bytes ZeroTier has transmitted or received via UDP" };
         prometheus::simpleapi::counter_metric_t udp_recv
-        { udp.Add({{"direction","rx"}}) };
+        { data.Add({{"protocol","udp"},{"direction","rx"}}) };
         prometheus::simpleapi::counter_metric_t udp_send
-        { udp.Add({{"direction","tx"}}) };
-        prometheus::simpleapi::counter_family_t tcp
-        { "zt_tcp_data", "number of bytes ZeroTier has transmitted or received via TCP" };
+        { data.Add({{"protocol","udp"},{"direction","tx"}}) };
         prometheus::simpleapi::counter_metric_t tcp_send
-        { tcp.Add({{"direction", "tx"}}) };
+        { data.Add({{"protocol","tcp"},{"direction", "tx"}}) };
         prometheus::simpleapi::counter_metric_t tcp_recv
-        { tcp.Add({{"direction", "rx"}}) };
+        { data.Add({{"protocol","tcp"},{"direction", "rx"}}) };
 
         // Network Metrics
         prometheus::simpleapi::gauge_metric_t network_num_joined
