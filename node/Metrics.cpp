@@ -176,6 +176,22 @@ namespace ZeroTier {
         prometheus::simpleapi::counter_family_t network_outgoing_packets
         { "zt_network_outgoing_packets", "number of outgoing packets per network" };
 
+        // PeerMetrics
+        prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &peer_latency = 
+        prometheus::Builder<prometheus::Histogram<uint64_t>>()
+            .Name("zt_peer_latency")
+            .Help("peer latency (ms)")
+            .Register(prometheus::simpleapi::registry);
+    
+        prometheus::simpleapi::gauge_family_t peer_path_count
+        { "zt_peer_path_count", "number of paths to peer" };
+        prometheus::simpleapi::counter_family_t peer_incoming_packets
+        { "zt_peer_incoming_packets", "number of incoming packets from a peer" };
+        prometheus::simpleapi::counter_family_t peer_outgoing_packets
+        { "zt_peer_outgoing_packets", "number of outgoing packets to a peer" };
+        prometheus::simpleapi::counter_family_t peer_packet_errors
+        { "zt_peer_packet_errors" , "number of incoming packet errors from a peer" };
+
         // General Controller Metrics
         prometheus::simpleapi::gauge_metric_t   network_count
         {"controller_network_count", "number of networks the controller is serving"};
