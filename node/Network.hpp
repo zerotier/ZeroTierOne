@@ -483,7 +483,7 @@ private:
 	AtomicCounter __refCount;
 
 	prometheus::simpleapi::gauge_metric_t _num_multicast_groups;
-	prometheus::simpleapi::counter_metric_t _incoming_packets_accpeted;
+	prometheus::simpleapi::counter_metric_t _incoming_packets_accepted;
 	prometheus::simpleapi::counter_metric_t _incoming_packets_dropped;
 	prometheus::simpleapi::counter_metric_t _outgoing_packets_accepted;
 	prometheus::simpleapi::counter_metric_t _outgoing_packets_dropped;
