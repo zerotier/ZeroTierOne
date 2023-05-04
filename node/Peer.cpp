@@ -658,6 +658,7 @@ void Peer::resetWithinScope(void *tPtr,InetAddress::IpScope scope,int inetAddres
 void Peer::recordOutgoingPacket(const SharedPtr<Path> &path, const uint64_t packetId,
 	uint16_t payloadLength, const Packet::Verb verb, const int32_t flowId, int64_t now)
 {
+	_outgoing_packet++;
 	if (_localMultipathSupported && _bond) {
 		_bond->recordOutgoingPacket(path, packetId, payloadLength, verb, flowId, now);
 	}

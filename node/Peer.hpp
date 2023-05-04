@@ -144,7 +144,6 @@ public:
 	{
 		SharedPtr<Path> bp(getAppropriatePath(now,force));
 		if (bp) {
-			_outgoing_packet++;
 			return bp->send(RR,tPtr,data,len,now);
 		}
 		return false;
