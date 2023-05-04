@@ -96,10 +96,9 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t pkt_error_internal_server_error_out;
 
         // Data Sent/Received Metrics
-        extern prometheus::simpleapi::counter_family_t udp;
+        extern prometheus::simpleapi::counter_family_t data;
         extern prometheus::simpleapi::counter_metric_t udp_send;
         extern prometheus::simpleapi::counter_metric_t udp_recv;
-        extern prometheus::simpleapi::counter_family_t tcp;
         extern prometheus::simpleapi::counter_metric_t tcp_send;
         extern prometheus::simpleapi::counter_metric_t tcp_recv;
 
