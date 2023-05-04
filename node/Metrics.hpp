@@ -113,6 +113,13 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_family_t peer_packets;
         extern prometheus::simpleapi::counter_family_t peer_packet_errors;
 
+        // Peer Metrics
+        extern prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &peer_latency;
+        extern prometheus::simpleapi::gauge_family_t peer_path_count;
+        extern prometheus::simpleapi::counter_family_t peer_incoming_packets;
+        extern prometheus::simpleapi::counter_family_t peer_outgoing_packets;
+        extern prometheus::simpleapi::counter_family_t peer_packet_errors;
+
         // General Controller Metrics
         extern prometheus::simpleapi::gauge_metric_t   network_count;
         extern prometheus::simpleapi::gauge_metric_t   member_count;
