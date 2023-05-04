@@ -158,7 +158,7 @@ namespace ZeroTier {
 
         // Data Sent/Received Metrics
         prometheus::simpleapi::counter_family_t data
-        { "zt_data", "number of bytes ZeroTier has transmitted or received via UDP" };
+        { "zt_data", "number of bytes ZeroTier has transmitted or received" };
         prometheus::simpleapi::counter_metric_t udp_recv
         { data.Add({{"protocol","udp"},{"direction","rx"}}) };
         prometheus::simpleapi::counter_metric_t udp_send
