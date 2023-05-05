@@ -25,7 +25,7 @@ namespace ZeroTier {
     namespace Metrics {
         // Packet Type Counts
         prometheus::simpleapi::counter_family_t packets
-        { "zt_packet", "incoming packet type counts"};
+        { "zt_packet", "ZeroTier packet type counts"};
 
         // Incoming packets
         prometheus::simpleapi::counter_metric_t pkt_nop_in
@@ -118,7 +118,7 @@ namespace ZeroTier {
 
         // Packet Error Counts
         prometheus::simpleapi::counter_family_t packet_errors
-        { "zt_packet_error", "incoming packet errors"};
+        { "zt_packet_error", "ZeroTier packet errors"};
 
         // Incoming Error Counts
         prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found_in
