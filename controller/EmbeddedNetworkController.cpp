@@ -1781,10 +1781,32 @@ void EmbeddedNetworkController::_startThreads()
 					if (qe) {
 						try {
 							_request(qe->nwid,qe->fromAddr,qe->requestPacketId,qe->identity,qe->metaData);
-							if (!_db.get(qe->nwid, network, qe->identity.address().toInt(), member)) {
-								delete qe;
-								qe = nullptr;
-								continue;
+							if (_db.get(qe->nwid, network, qe->identity.address().toInt(), member)) {
+								bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
+								if (networkSSOEnabled) {
+									int64_t now = OSUtils::now();
+									{
+										std::lock_guard<std::mutex> l(_expiringSoon_l);
+										for(auto s=_expiringSoon.begin();s!=_expiringSoon.end();) {
+											Metrics::sso_expiration_checks++;
+											const int64_t when = s->first;
+											if (when <= now) {
+												int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
+												if (authenticationExpiryTime <= now) {
+													expired.push_back(s->second);
+												}
+												s = _expiringSoon.erase(s);
+											} else {
+												// Don't bother going further into the future than necessary.
+												break;
+											}
+										}
+									}
+									for(auto e=expired.begin();e!=expired.end();++e) {
+										Metrics::sso_member_deauth++;
+										onNetworkMemberDeauthorize(nullptr, e->networkId, e->nodeId);
+									}
+								}
 							}
 						} catch (std::exception &e) {
 							fprintf(stderr,"ERROR: exception in controller request handling thread: %s" ZT_EOL_S,e.what());
@@ -1793,32 +1815,6 @@ void EmbeddedNetworkController::_startThreads()
 						}
 						delete qe;
 						qe = nullptr;
-					}
-				}
-				
-				bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
-				if (networkSSOEnabled) {
-					int64_t now = OSUtils::now();
-					{
-						std::lock_guard<std::mutex> l(_expiringSoon_l);
-						for(auto s=_expiringSoon.begin();s!=_expiringSoon.end();) {
-							Metrics::sso_expiration_checks++;
-							const int64_t when = s->first;
-							if (when <= now) {
-								int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
-								if (authenticationExpiryTime <= now) {
-									expired.push_back(s->second);
-								}
-								s = _expiringSoon.erase(s);
-							} else {
-								// Don't bother going further into the future than necessary.
-								break;
-							}
-						}
-					}
-					for(auto e=expired.begin();e!=expired.end();++e) {
-						Metrics::sso_member_deauth++;
-						onNetworkMemberDeauthorize(nullptr, e->networkId, e->nodeId);
 					}
 				}
 			}
