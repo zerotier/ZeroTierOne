@@ -776,7 +776,7 @@ void PostgreSQL::initializeMembers()
 
 		if (_redisMemberStatus) {
 			fprintf(stderr, "Initialize Redis for members...\n");
-			std::lock_guard<std::mutex> l(_networks_l);
+			std::unique_lock<std::shared_mutex> l(_networks_l);
 			std::unordered_set<std::string> deletes;
 			for ( auto it : _networks) {
 				uint64_t nwid_i = it.first;
@@ -1812,7 +1812,7 @@ uint64_t PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &con
 						sw::redis::RightBoundedInterval<double>(expireOld,
 																sw::redis::BoundType::LEFT_OPEN));
 	{
-		std::lock_guard<std::mutex> l(_networks_l);
+		std::shared_lock<std::shared_mutex> l(_networks_l);
 		for (const auto &it : _networks) {
 			uint64_t nwid_i = it.first;
 			char nwidTmp[64];

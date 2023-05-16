@@ -29,7 +29,7 @@
 #include <unordered_set>
 #include <vector>
 #include <atomic>
-#include <mutex>
+#include <shared_mutex>
 #include <set>
 #include <map>
 
@@ -109,7 +109,7 @@ public:
 
 	inline bool hasNetwork(const uint64_t networkId) const
 	{
-		std::lock_guard<std::mutex> l(_networks_l);
+		std::shared_lock<std::shared_mutex> l(_networks_l);
 		return (_networks.find(networkId) != _networks.end());
 	}
 
@@ -124,7 +124,7 @@ public:
 	inline void each(F f)
 	{
 		nlohmann::json nullJson;
-		std::lock_guard<std::mutex> lck(_networks_l);
+		std::unique_lock<std::shared_mutex> lck(_networks_l);
 		for(auto nw=_networks.begin();nw!=_networks.end();++nw) {
 			f(nw->first,nw->second->config,0,nullJson); // first provide network with 0 for member ID
 			for(auto m=nw->second->members.begin();m!=nw->second->members.end();++m) {
@@ -142,7 +142,7 @@ public:
 
 	inline void addListener(DB::ChangeListener *const listener)
 	{
-		std::lock_guard<std::mutex> l(_changeListeners_l);
+		std::unique_lock<std::shared_mutex> l(_changeListeners_l);
 		_changeListeners.push_back(listener);
 	}
 
@@ -178,7 +178,7 @@ protected:
 		std::unordered_set<uint64_t> authorizedMembers;
 		std::unordered_set<InetAddress,InetAddress::Hasher> allocatedIps;
 		int64_t mostRecentDeauthTime;
-		std::mutex lock;
+		std::shared_mutex lock;
 	};
 
 	virtual void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners);
@@ -188,8 +188,8 @@ protected:
 	std::vector<DB::ChangeListener *> _changeListeners;
 	std::unordered_map< uint64_t,std::shared_ptr<_Network> > _networks;
 	std::unordered_multimap< uint64_t,uint64_t > _networkByMember;
-	mutable std::mutex _changeListeners_l;
-	mutable std::mutex _networks_l;
+	mutable std::shared_mutex _changeListeners_l;
+	mutable std::shared_mutex _networks_l;
 };
 
 } // namespace ZeroTier

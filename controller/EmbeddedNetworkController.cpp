@@ -1176,6 +1176,8 @@ void EmbeddedNetworkController::_request(
 	const Identity &identity,
 	const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData)
 {
+	Metrics::network_config_request++;
+	
 	char nwids[24];
 	DB::NetworkSummaryInfo ns;
 	json network,member;
@@ -1770,6 +1772,7 @@ void EmbeddedNetworkController::_startThreads()
 	const long hwc = std::max((long)std::thread::hardware_concurrency(),(long)1);
 	for(long t=0;t<hwc;++t) {
 		_threads.emplace_back([this]() {
+			Metrics::network_config_request_threads++;
 			for(;;) {
 				_RQEntry *qe = (_RQEntry *)0;
 				Metrics::network_config_request_queue_size = _queue.size();
@@ -1790,6 +1793,7 @@ void EmbeddedNetworkController::_startThreads()
 					}
 				}
 			}
+			Metrics::network_config_request_threads--;
 		});
 	}
 }
