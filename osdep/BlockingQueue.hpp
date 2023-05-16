@@ -117,7 +117,6 @@ public:
 	}
 
 	inline size_t size() const {
-		std::unique_lock<std::mutex> lock(m);
 		return q.size();
 	}
 
