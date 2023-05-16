@@ -90,7 +90,8 @@ MacEthernetTap::MacEthernetTap(
 	_agentStdout2(-1),
 	_agentStderr2(-1),
 	_agentPid(-1),
-	_enabled(true)
+	_enabled(true),
+	_lastIfAddrsUpdate(0)
 {
 	char ethaddr[64],mtustr[16],devnostr[16],devstr[16],metricstr[16];
 	OSUtils::ztsnprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
@@ -341,8 +342,16 @@ bool MacEthernetTap::removeIp(const InetAddress &ip)
 
 std::vector<InetAddress> MacEthernetTap::ips() const
 {
+	uint64_t now = OSUtils::now();
+
+	if ((now - _lastIfAddrsUpdate) <= GETIFADDRS_CACHE_TIME) {
+		return _ifaddrs;
+	}
+	_lastIfAddrsUpdate = now;
+
 	struct ifaddrs *ifa = (struct ifaddrs *)0;
 	std::vector<InetAddress> r;
+
 	if (!getifaddrs(&ifa)) {
 		struct ifaddrs *p = ifa;
 		while (p) {
@@ -368,6 +377,9 @@ std::vector<InetAddress> MacEthernetTap::ips() const
 	}
 	std::sort(r.begin(),r.end());
 	r.erase(std::unique(r.begin(),r.end()),r.end());
+
+	_ifaddrs = r;
+
 	return r;
 }
 
