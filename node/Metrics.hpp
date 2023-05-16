@@ -126,6 +126,16 @@ namespace ZeroTier {
         extern prometheus::simpleapi::gauge_metric_t network_config_request_queue_size;
         extern prometheus::simpleapi::counter_metric_t sso_expiration_checks;
         extern prometheus::simpleapi::counter_metric_t sso_member_deauth;
+        extern prometheus::simpleapi::counter_metric_t network_config_request;
+        extern prometheus::simpleapi::gauge_metric_t network_config_request_threads;
+
+        extern prometheus::simpleapi::counter_metric_t db_get_network;
+        extern prometheus::simpleapi::counter_metric_t db_get_network_and_member;
+        extern prometheus::simpleapi::counter_metric_t db_get_network_and_member_and_summary;
+        extern prometheus::simpleapi::counter_metric_t db_get_member_list;
+        extern prometheus::simpleapi::counter_metric_t db_get_network_list;
+        extern prometheus::simpleapi::counter_metric_t db_member_change;
+        extern prometheus::simpleapi::counter_metric_t db_network_change;
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
         // Central Controller Metrics

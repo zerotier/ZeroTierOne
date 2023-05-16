@@ -108,6 +108,7 @@ DB::~DB() {}
 bool DB::get(const uint64_t networkId,nlohmann::json &network)
 {
 	waitForReady();
+	Metrics::db_get_network++;
 	std::shared_ptr<_Network> nw;
 	{
 		std::lock_guard<std::mutex> l(_networks_l);
@@ -126,6 +127,7 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network)
 bool DB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member)
 {
 	waitForReady();
+	Metrics::db_get_network_and_member++;
 	std::shared_ptr<_Network> nw;
 	{
 		std::lock_guard<std::mutex> l(_networks_l);
@@ -148,6 +150,7 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t mem
 bool DB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t memberId,nlohmann::json &member,NetworkSummaryInfo &info)
 {
 	waitForReady();
+	Metrics::db_get_network_and_member_and_summary++;
 	std::shared_ptr<_Network> nw;
 	{
 		std::lock_guard<std::mutex> l(_networks_l);
@@ -171,6 +174,7 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,const uint64_t mem
 bool DB::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohmann::json> &members)
 {
 	waitForReady();
+	Metrics::db_get_member_list++;
 	std::shared_ptr<_Network> nw;
 	{
 		std::lock_guard<std::mutex> l(_networks_l);
@@ -192,13 +196,14 @@ bool DB::get(const uint64_t networkId,nlohmann::json &network,std::vector<nlohma
 void DB::networks(std::set<uint64_t> &networks)
 {
 	waitForReady();
-	std::lock_guard<std::mutex> l(_networks_l);
+	Metrics::db_get_member_list++;
 	for(auto n=_networks.begin();n!=_networks.end();++n)
 		networks.insert(n->first);
 }
 
 void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners)
 {
+	Metrics::db_member_change++;
 	uint64_t memberId = 0;
 	uint64_t networkId = 0;
 	bool isAuth = false;
@@ -338,6 +343,7 @@ void DB::_memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool no
 
 void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool notifyListeners)
 {
+	Metrics::db_network_change++;
 	if (notifyListeners) {
 		if (old.is_object() && old.contains("id") && networkConfig.is_object() && networkConfig.contains("id")) {
 			Metrics::network_changes++;

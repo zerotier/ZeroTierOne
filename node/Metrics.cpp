@@ -215,6 +215,25 @@ namespace ZeroTier {
         prometheus::simpleapi::counter_metric_t sso_member_deauth
         { "controller_sso_timeouts", "number of sso timeouts" };
 
+        prometheus::simpleapi::counter_metric_t network_config_request
+        { "controller_network_config_request", "count of config requests handled" };
+        prometheus::simpleapi::gauge_metric_t network_config_request_threads
+        { "controller_network_config_request_threads", "number of active network config handling threads" };
+        prometheus::simpleapi::counter_metric_t db_get_network
+        { "controller_db_get_network", "counter" };
+        prometheus::simpleapi::counter_metric_t db_get_network_and_member
+        { "controller_db_get_network_and_member", "counter" };
+        prometheus::simpleapi::counter_metric_t db_get_network_and_member_and_summary
+        { "controller_db_get_networK_and_member_summary", "counter" };
+        prometheus::simpleapi::counter_metric_t db_get_member_list
+        { "controller_db_get_member_list", "counter" };
+        prometheus::simpleapi::counter_metric_t db_get_network_list
+        { "controller_db_get_network_list", "counter" };
+        prometheus::simpleapi::counter_metric_t db_member_change
+        { "controller_db_member_change", "counter" };
+        prometheus::simpleapi::counter_metric_t db_network_change
+        { "controller_db_network_change", "counter" };
+
 #ifdef ZT_CONTROLLER_USE_LIBPQ
         // Central Controller Metrics
         prometheus::simpleapi::counter_metric_t pgsql_mem_notification
