@@ -81,6 +81,7 @@ public:
 private:
 	void _request(uint64_t nwid,const InetAddress &fromAddr,uint64_t requestPacketId,const Identity &identity,const Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> &metaData);
 	void _startThreads();
+	void _ssoExpiryThread();
 
 	std::string networkUpdateFromPostData(uint64_t networkID, const std::string &body);
 
@@ -137,6 +138,9 @@ private:
 
 	std::vector<std::thread> _threads;
 	std::mutex _threads_l;
+
+	bool _ssoExpiryRunning;
+	std::thread _ssoExpiry;
 
 	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;
 	std::mutex _memberStatus_l;
