@@ -23,6 +23,8 @@
 #include <memory>
 #include <vector>
 
+#define GETIFADDRS_CACHE_TIME 1000
+
 namespace ZeroTier {
 
 class EthernetTap
