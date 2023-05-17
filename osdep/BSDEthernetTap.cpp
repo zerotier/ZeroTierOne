@@ -74,7 +74,8 @@ BSDEthernetTap::BSDEthernetTap(
 	_mtu(mtu),
 	_metric(metric),
 	_fd(0),
-	_enabled(true)
+	_enabled(true),
+	_lastIfAddrsUpdate(0)
 {
 	static Mutex globalTapCreateLock;
 	char devpath[64],ethaddr[64],mtustr[32],metstr[32],tmpdevname[32];
@@ -287,6 +288,13 @@ bool BSDEthernetTap::removeIp(const InetAddress &ip)
 
 std::vector<InetAddress> BSDEthernetTap::ips() const
 {
+	uint64_t now = OSUtils::now();
+
+	if ((now - _lastIfAddrsUpdate) <= GETIFADDRS_CACHE_TIME) {
+		return _ifaddrs;
+	}
+	_lastIfAddrsUpdate = now;
+
 	struct ifaddrs *ifa = (struct ifaddrs *)0;
 	if (getifaddrs(&ifa))
 		return std::vector<InetAddress>();
@@ -319,6 +327,8 @@ std::vector<InetAddress> BSDEthernetTap::ips() const
 
 	std::sort(r.begin(),r.end());
 	std::unique(r.begin(),r.end());
+
+	_ifaddrs = r;
 
 	return r;
 }
