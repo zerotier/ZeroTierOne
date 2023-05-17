@@ -123,6 +123,10 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t member_auths;
         extern prometheus::simpleapi::counter_metric_t member_deauths;
 
+        extern prometheus::simpleapi::gauge_metric_t network_config_request_queue_size;
+        extern prometheus::simpleapi::counter_metric_t sso_expiration_checks;
+        extern prometheus::simpleapi::counter_metric_t sso_member_deauth;
+
 #ifdef ZT_CONTROLLER_USE_LIBPQ
         // Central Controller Metrics
         extern prometheus::simpleapi::counter_metric_t pgsql_mem_notification;
@@ -131,6 +135,8 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t redis_mem_notification;
         extern prometheus::simpleapi::counter_metric_t redis_net_notification;
         extern prometheus::simpleapi::counter_metric_t redis_node_checkin;
+
+        
 
         // Central DB Pool Metrics
         extern prometheus::simpleapi::counter_metric_t conn_counter;

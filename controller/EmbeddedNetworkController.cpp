@@ -468,6 +468,8 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPa
 	_path(dbPath),
 	_sender((NetworkController::Sender *)0),
 	_db(this),
+	_ssoExpiryRunning(true),
+	_ssoExpiry(std::thread(&EmbeddedNetworkController::_ssoExpiryThread, this)),
 	_rc(rc)
 {
 }
@@ -476,8 +478,11 @@ EmbeddedNetworkController::~EmbeddedNetworkController()
 {
 	std::lock_guard<std::mutex> l(_threads_l);
 	_queue.stop();
-	for(auto t=_threads.begin();t!=_threads.end();++t)
+	for(auto t=_threads.begin();t!=_threads.end();++t) {
 		t->join();
+	}
+	_ssoExpiryRunning = false;
+	_ssoExpiry.join();
 }
 
 void EmbeddedNetworkController::setSSORedirectURL(const std::string &url) {
@@ -1543,7 +1548,7 @@ void EmbeddedNetworkController::_request(
 					*(reinterpret_cast<InetAddress *>(&(r->target))) = t;
 					if (v.ss_family == t.ss_family)
 						*(reinterpret_cast<InetAddress *>(&(r->via))) = v;
-					++nc->routeCount;
+		 			++nc->routeCount;
 				}
 			}
 		}
@@ -1765,10 +1770,9 @@ void EmbeddedNetworkController::_startThreads()
 	const long hwc = std::max((long)std::thread::hardware_concurrency(),(long)1);
 	for(long t=0;t<hwc;++t) {
 		_threads.emplace_back([this]() {
-			std::vector<_MemberStatusKey> expired;
-			nlohmann::json network, member;
 			for(;;) {
 				_RQEntry *qe = (_RQEntry *)0;
+				Metrics::network_config_request_queue_size = _queue.size();
 				auto timedWaitResult = _queue.get(qe, 1000);
 				if (timedWaitResult == BlockingQueue<_RQEntry *>::STOP) {
 					break;
@@ -1782,37 +1786,46 @@ void EmbeddedNetworkController::_startThreads()
 							fprintf(stderr,"ERROR: exception in controller request handling thread: unknown exception" ZT_EOL_S);
 						}
 						delete qe;
+						qe = nullptr;
 					}
-				}
-
-				expired.clear();
-				int64_t now = OSUtils::now();
-				{
-					std::lock_guard<std::mutex> l(_expiringSoon_l);
-					for(auto s=_expiringSoon.begin();s!=_expiringSoon.end();) {
-						const int64_t when = s->first;
-						if (when <= now) {
-							// The user may have re-authorized, so we must actually look it up and check.
-							network.clear();
-							member.clear();
-							if (_db.get(s->second.networkId, network, s->second.nodeId, member)) {
-								int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
-								if (authenticationExpiryTime <= now) {
-									expired.push_back(s->second);
-								}
-							}
-							_expiringSoon.erase(s++);
-						} else {
-							// Don't bother going further into the future than necessary.
-							break;
-						}
-					}
-				}
-				for(auto e=expired.begin();e!=expired.end();++e) {
-					onNetworkMemberDeauthorize(nullptr, e->networkId, e->nodeId);
 				}
 			}
 		});
+	}
+}
+
+void EmbeddedNetworkController::_ssoExpiryThread() {
+	while(_ssoExpiryRunning) {
+		std::vector<_MemberStatusKey> expired;
+		nlohmann::json network, member;
+		int64_t now = OSUtils::now();
+		{
+			std::lock_guard<std::mutex> l(_expiringSoon_l);
+			for(auto s=_expiringSoon.begin();s!=_expiringSoon.end();) {
+				Metrics::sso_expiration_checks++;
+				const int64_t when = s->first;
+				if (when <= now) {
+					// The user may have re-authorized, so we must actually look it up and check.
+					network.clear();
+					member.clear();
+					if (_db.get(s->second.networkId, network, s->second.nodeId, member)) {
+						int64_t authenticationExpiryTime = (int64_t)OSUtils::jsonInt(member["authenticationExpiryTime"], 0);
+						if (authenticationExpiryTime <= now) {
+							expired.push_back(s->second);
+						}
+					}
+					s = _expiringSoon.erase(s);
+				} else {
+					// Don't bother going further into the future than necessary.
+					break;
+				}
+			}
+		}
+		for(auto e=expired.begin();e!=expired.end();++e) {
+			Metrics::sso_member_deauth++;
+			onNetworkMemberDeauthorize(nullptr, e->networkId, e->nodeId);
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(500));
 	}
 }
 

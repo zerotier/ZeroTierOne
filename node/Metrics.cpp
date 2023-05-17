@@ -206,6 +206,15 @@ namespace ZeroTier {
         prometheus::simpleapi::counter_metric_t member_deauths
         {"controller_member_deauth_count", "number of network member deauths"};
 
+        prometheus::simpleapi::gauge_metric_t network_config_request_queue_size
+        { "controller_network_config_request_queue", "number of entries in the request queue for network configurations" };
+        
+        prometheus::simpleapi::counter_metric_t sso_expiration_checks
+        { "controller_sso_expiration_checks", "number of sso expiration checks done" };
+
+        prometheus::simpleapi::counter_metric_t sso_member_deauth
+        { "controller_sso_timeouts", "number of sso timeouts" };
+
 #ifdef ZT_CONTROLLER_USE_LIBPQ
         // Central Controller Metrics
         prometheus::simpleapi::counter_metric_t pgsql_mem_notification

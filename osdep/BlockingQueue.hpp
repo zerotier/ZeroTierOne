@@ -116,6 +116,11 @@ public:
 		return OK;
 	}
 
+	inline size_t size() const {
+		std::unique_lock<std::mutex> lock(m);
+		return q.size();
+	}
+
 private:
 	std::queue<T> q;
 	mutable std::mutex m;

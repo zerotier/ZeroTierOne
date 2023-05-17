@@ -509,13 +509,13 @@ bool ManagedRoute::sync()
 		}
 	}
 
-	//if (!_applied.count(leftt)) {
+	if (leftt && !_applied.count(leftt)) {
 		_applied[leftt] = !_via;
 		//_routeCmd("delete",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		//_routeCmd("change",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
-	//}
-	if (rightt) {
+	}
+	if (rightt && !_applied.count(rightt)) {
 		_applied[rightt] = !_via;
 		//_routeCmd("delete",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		_routeCmd("add",rightt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
