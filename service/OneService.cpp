@@ -1519,7 +1519,7 @@ public:
 
 
 
-		_controlPlane.Get("/bond/show/([0-9a-fA-F]{10})", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/bond/show/([0-9a-fA-F]{10})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			if (!_node->bondController()->inUse()) {
 				setContent(req, res, "");
 				res.status = 400;
@@ -1547,7 +1547,7 @@ public:
 			_node->freeQueryResult((void *)pl);
 		});
 
-		auto bondRotate = [&](const httplib::Request &req, httplib::Response &res) {
+		auto bondRotate = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			if (!_node->bondController()->inUse()) {
 				setContent(req, res, "");
 				res.status = 400;
@@ -1574,7 +1574,7 @@ public:
 		_controlPlane.Post("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
 		_controlPlane.Put("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
 
-		_controlPlane.Get("/config", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/config", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			std::string config;
 			{
 				Mutex::Lock lc(_localConfig_m);
@@ -1586,7 +1586,7 @@ public:
 			setContent(req, res, config);
 		});
 
-		auto configPost = [&](const httplib::Request &req, httplib::Response &res) {
+		auto configPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			json j(OSUtils::jsonParse(req.body));
 			if (j.is_object()) {
 				Mutex::Lock lcl(_localConfig_m);
@@ -1604,7 +1604,7 @@ public:
 		_controlPlane.Post("/config/settings", configPost);
 		_controlPlane.Put("/config/settings", configPost);
 
-		_controlPlane.Get("/health", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/health", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			json out = json::object();
 
 			char tmp[256];
@@ -1624,7 +1624,7 @@ public:
 			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/moon", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/moon", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			std::vector<World> moons(_node->moons());
 
 			auto out = json::array();
@@ -1636,7 +1636,7 @@ public:
 			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/moon/([0-9a-fA-F]{10})", [&](const httplib::Request &req, httplib::Response &res){
+		_controlPlane.Get("/moon/([0-9a-fA-F]{10})", [&, setContent](const httplib::Request &req, httplib::Response &res){
 			std::vector<World> moons(_node->moons());
 			auto input = req.matches[1];
 			auto out = json::object();
@@ -1650,7 +1650,7 @@ public:
 			setContent(req, res, out.dump());
 		});
 
-		auto moonPost = [&](const httplib::Request &req, httplib::Response &res) {
+		auto moonPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			uint64_t seed = 0;
 			try {
@@ -1690,7 +1690,7 @@ public:
 		_controlPlane.Post("/moon/([0-9a-fA-F]{10})", moonPost);
 		_controlPlane.Put("/moon/([0-9a-fA-F]{10})", moonPost);
 
-		_controlPlane.Delete("/moon/([0-9a-fA-F]{10})", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Delete("/moon/([0-9a-fA-F]{10})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			uint64_t id = Utils::hexStrToU64(input.str().c_str());
 			auto out = json::object();
@@ -1699,7 +1699,7 @@ public:
 			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/network", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/network", [&, setContent](const httplib::Request &req, httplib::Response &res) {
             Mutex::Lock _l(_nets_m);
             auto out = json::array();
 
@@ -1712,7 +1712,7 @@ public:
 			setContent(req, res, out.dump());
         });
 
-        _controlPlane.Get("/network/([0-9a-fA-F]{16})", [&](const httplib::Request &req, httplib::Response &res) {
+        _controlPlane.Get("/network/([0-9a-fA-F]{16})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			Mutex::Lock _l(_nets_m);
 
             auto input = req.matches[1];
@@ -1728,7 +1728,7 @@ public:
 			res.status = 404;
         });
 
-		auto networkPost = [&](const httplib::Request &req, httplib::Response &res) {
+		auto networkPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			uint64_t wantnw = Utils::hexStrToU64(input.str().c_str());
 			_node->join(wantnw, (void*)0, (void*)0);
@@ -1770,7 +1770,7 @@ public:
 		_controlPlane.Post("/network/([0-9a-fA-F]{16})", networkPost);
 		_controlPlane.Put("/network/([0-9a-fA-F]){16}", networkPost);
 
-		_controlPlane.Delete("/network/([0-9a-fA-F]{16})", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Delete("/network/([0-9a-fA-F]{16})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			auto out = json::object();
 			ZT_VirtualNetworkList *nws = _node->networks();
@@ -1785,7 +1785,7 @@ public:
 			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/peer", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/peer", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			ZT_PeerList *pl = _node->peers();
 			auto out = nlohmann::json::array();
 
@@ -1803,7 +1803,7 @@ public:
 			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/peer/([0-9a-fA-F]{10})", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/peer/([0-9a-fA-F]{10})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			ZT_PeerList *pl = _node->peers();
 
 			auto input = req.matches[1];
@@ -1823,7 +1823,7 @@ public:
 			setContent(req, res, out.dump());
 		});
 
-		_controlPlane.Get("/status", [&](const httplib::Request &req, httplib::Response &res) {
+		_controlPlane.Get("/status", [&, setContent](const httplib::Request &req, httplib::Response &res) {
             ZT_NodeStatus status;
             _node->status(&status);
 
@@ -1969,7 +1969,7 @@ public:
             }
         });
 
-		_controlPlane.set_exception_handler([&](const httplib::Request &req, httplib::Response &res, std::exception_ptr ep) {
+		_controlPlane.set_exception_handler([&, setContent](const httplib::Request &req, httplib::Response &res, std::exception_ptr ep) {
 			char buf[1024];
 			auto fmt = "{\"error\": %d, \"description\": \"%s\"}";
 			try {
