@@ -71,7 +71,7 @@ else
 	CXXFLAGS?=-O3 -fstack-protector
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
-	RUSTFLAGS=--release
+	RUSTFLAGS=
 endif
 
 ifeq ($(ZT_QNAP), 1)
