@@ -62,7 +62,6 @@ ifeq ($(ZT_DEBUG),1)
 	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++17 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
 	RUSTFLAGS=
-	CARGOFLAGS=
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
@@ -72,8 +71,7 @@ else
 	CXXFLAGS?=-O3 -fstack-protector
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS=-pie -Wl,-z,relro,-z,now
-	RUSTFLAGS=
-	CARGOFLAGS=--release
+	RUSTFLAGS=--release
 endif
 
 ifeq ($(ZT_QNAP), 1)
@@ -412,8 +410,8 @@ debug:	FORCE
 ifeq ($(ZT_SSO_SUPPORTED), 1)
 ifeq ($(ZT_EMBEDDED),)
 zeroidc:	FORCE
-#	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build -j1 $(CARGOFLAGS)
-	export PATH=/${HOME}/.cargo/bin:$$PATH; cd zeroidc && cargo build $(CARGOFLAGS)
+#	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo rustc  -j1 $(RUSTFLAGS)
+	export PATH=/${HOME}/.cargo/bin:$$PATH; cd zeroidc && cargo rustc $(RUSTFLAGS)
 endif
 else
 zeroidc:
@@ -476,7 +474,6 @@ echo_flags:
 	@echo "echo_flags :: CXXFLAGS=$(CXXFLAGS)"
 	@echo "echo_flags :: LDFLAGS=$(LDFLAGS)"
 	@echo "echo_flags :: RUSTFLAGS=$(RUSTFLAGS)"
-	@echo "echo_flags :: CARGOFLAGS=$(CARGOFLAGS)"
 	@echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~"
 
 debian: echo_flags
