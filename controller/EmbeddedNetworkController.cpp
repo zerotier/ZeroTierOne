@@ -925,7 +925,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		std::vector<json> memTmp;
 		if (_db.get(nwid, network, memTmp)) {
 			for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
-				int revision = OSUtils::jsonInt((*m)["revsision"], 0);
+				int revision = OSUtils::jsonInt((*m)["revision"], 0);
 				std::string id = OSUtils::jsonString((*m)["id"], "");
 				if (id.length() == 10) {
 					json tmp = json::object();
