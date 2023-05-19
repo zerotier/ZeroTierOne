@@ -136,6 +136,10 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t db_get_network_list;
         extern prometheus::simpleapi::counter_metric_t db_member_change;
         extern prometheus::simpleapi::counter_metric_t db_network_change;
+        extern prometheus::simpleapi::counter_metric_t db_get_sso_info;
+
+        extern prometheus::simpleapi::counter_metric_t nc_unauthed_request;
+        extern prometheus::simpleapi::counter_metric_t nc_authed_request;
 
 #ifdef ZT_CONTROLLER_USE_LIBPQ
         // Central Controller Metrics

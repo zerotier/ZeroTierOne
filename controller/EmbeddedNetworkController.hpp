@@ -150,6 +150,29 @@ private:
 
 	RedisConfig *_rc;
 	std::string _ssoRedirectURL;
+
+	prometheus::simpleapi::benchmark_family_t _member_status_lookup;
+	prometheus::simpleapi::counter_family_t   _member_status_lookup_count;
+	prometheus::simpleapi::benchmark_family_t _node_is_online;
+	prometheus::simpleapi::counter_family_t   _node_is_online_count;
+	prometheus::simpleapi::benchmark_family_t _get_and_init_member;
+	prometheus::simpleapi::counter_family_t   _get_and_init_member_count;
+	prometheus::simpleapi::benchmark_family_t _have_identity;
+	prometheus::simpleapi::counter_family_t   _have_identity_count;
+	prometheus::simpleapi::benchmark_family_t _determine_auth;
+	prometheus::simpleapi::counter_family_t   _determine_auth_count;
+	prometheus::simpleapi::benchmark_family_t _sso_check;
+	prometheus::simpleapi::counter_family_t   _sso_check_count;
+	prometheus::simpleapi::benchmark_family_t _auth_check;
+	prometheus::simpleapi::counter_family_t   _auth_check_count;
+	prometheus::simpleapi::benchmark_family_t _json_schlep;
+	prometheus::simpleapi::counter_family_t   _json_schlep_count;
+	prometheus::simpleapi::benchmark_family_t _issue_certificate;
+	prometheus::simpleapi::counter_family_t   _issue_certificate_count;
+	prometheus::simpleapi::benchmark_family_t _save_member;
+	prometheus::simpleapi::counter_family_t   _save_member_count;
+	prometheus::simpleapi::benchmark_family_t _send_netconf;
+	prometheus::simpleapi::counter_family_t   _send_netconf_count;
 };
 
 } // namespace ZeroTier

@@ -374,6 +374,7 @@ void PostgreSQL::nodeIsOnline(const uint64_t networkId, const uint64_t memberId,
 
 AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::string &redirectURL)
 {
+	Metrics::db_get_sso_info++;
 	// NONCE is just a random character string.  no semantic meaning
 	// state = HMAC SHA384 of Nonce based on shared sso key
 	// 
@@ -462,11 +463,11 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 			uint64_t sso_version = 0;
 
 			if (r.size() == 1) {
-				client_id = r.at(0)[0].as<std::string>();
-				authorization_endpoint = r.at(0)[1].as<std::string>();
-				issuer = r.at(0)[2].as<std::string>();
-				provider = r.at(0)[3].as<std::string>();
-				sso_version = r.at(0)[4].as<uint64_t>();
+				client_id = r.at(0)[0].as<std::optional<std::string>>().value_or("");
+				authorization_endpoint = r.at(0)[1].as<std::optional<std::string>>().value_or("");
+				issuer = r.at(0)[2].as<std::optional<std::string>>().value_or("");
+				provider = r.at(0)[3].as<std::optional<std::string>>().value_or("");
+				sso_version = r.at(0)[4].as<std::optional<uint64_t>>().value_or(1);
 			} else if (r.size() > 1) {
 				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
 			} else {
@@ -1596,7 +1597,6 @@ void PostgreSQL::commitThread()
 		}
 		_pool->unborrow(c);
 		c.reset();
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
 	fprintf(stderr, "%s commitThread finished\n", _myAddressStr.c_str());

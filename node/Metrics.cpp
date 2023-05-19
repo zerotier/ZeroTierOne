@@ -233,7 +233,13 @@ namespace ZeroTier {
         { "controller_db_member_change", "counter" };
         prometheus::simpleapi::counter_metric_t db_network_change
         { "controller_db_network_change", "counter" };
+        prometheus::simpleapi::counter_metric_t db_get_sso_info
+        { "controller_db_get_sso_info", "counter" };
 
+        prometheus::simpleapi::counter_metric_t nc_unauthed_request 
+        { "controller_authorized_requests", "counter" };
+        prometheus::simpleapi::counter_metric_t nc_authed_request
+        { "controller_unauthorized_requests", "counter"};
 #ifdef ZT_CONTROLLER_USE_LIBPQ
         // Central Controller Metrics
         prometheus::simpleapi::counter_metric_t pgsql_mem_notification
