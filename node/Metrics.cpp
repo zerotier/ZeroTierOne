@@ -233,13 +233,7 @@ namespace ZeroTier {
         { "controller_db_member_change", "counter" };
         prometheus::simpleapi::counter_metric_t db_network_change
         { "controller_db_network_change", "counter" };
-        prometheus::simpleapi::counter_metric_t db_get_sso_info
-        { "controller_db_get_sso_info", "counter" };
 
-        prometheus::simpleapi::counter_metric_t nc_unauthed_request 
-        { "controller_authorized_requests", "counter" };
-        prometheus::simpleapi::counter_metric_t nc_authed_request
-        { "controller_unauthorized_requests", "counter"};
 #ifdef ZT_CONTROLLER_USE_LIBPQ
         // Central Controller Metrics
         prometheus::simpleapi::counter_metric_t pgsql_mem_notification
@@ -248,6 +242,11 @@ namespace ZeroTier {
         { "controller_pgsql_network_notifications_received", "number of network change notifications received via pgsql NOTIFY" };
         prometheus::simpleapi::counter_metric_t pgsql_node_checkin
         { "controller_pgsql_node_checkin_count", "number of node check-ins (pgsql)" };
+        prometheus::simpleapi::counter_metric_t pgsql_commit_ticks
+        { "controller_pgsql_commit_ticks", "number of commit ticks run (pgsql)" };
+        prometheus::simpleapi::counter_metric_t db_get_sso_info
+        { "controller_db_get_sso_info", "counter" };
+
         prometheus::simpleapi::counter_metric_t redis_mem_notification
         { "controller_redis_member_notifications_received", "number of member change notifications received via redis" };
         prometheus::simpleapi::counter_metric_t redis_net_notification

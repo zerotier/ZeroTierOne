@@ -151,6 +151,7 @@ private:
 	RedisConfig *_rc;
 	std::string _ssoRedirectURL;
 
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	prometheus::simpleapi::benchmark_family_t _member_status_lookup;
 	prometheus::simpleapi::counter_family_t   _member_status_lookup_count;
 	prometheus::simpleapi::benchmark_family_t _node_is_online;
@@ -173,6 +174,7 @@ private:
 	prometheus::simpleapi::counter_family_t   _save_member_count;
 	prometheus::simpleapi::benchmark_family_t _send_netconf;
 	prometheus::simpleapi::counter_family_t   _send_netconf_count;
+#endif
 };
 
 } // namespace ZeroTier

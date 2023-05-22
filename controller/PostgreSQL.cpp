@@ -389,9 +389,16 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 	char authenticationURL[4096] = {0};
 	AuthInfo info;
 	info.enabled = true;
+
+	//if (memberId == "a10dccea52" && networkId == "8056c2e21c24673d") {
+	//	fprintf(stderr, "invalid authinfo for grant's machine\n");
+	//	info.version=1;
+	//	return info;
+	//}
 	// fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
+	std::shared_ptr<PostgresConnection> c;
 	try {
-		auto c = _pool->borrow();
+		c = _pool->borrow();
 		pqxx::work w(*c->c);
 
 		char nonceBytes[16] = {0};
@@ -520,6 +527,9 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 
 		_pool->unborrow(c);
 	} catch (std::exception &e) {
+		if (c) {
+			_pool->unborrow(c);
+		}
 		fprintf(stderr, "ERROR: Error updating member on load for network %s: %s\n", networkId.c_str(), e.what());
 	}
 
@@ -1271,6 +1281,7 @@ void PostgreSQL::commitThread()
 			continue;
 		}
 		
+		Metrics::pgsql_commit_ticks++;
 		try {
 			nlohmann::json &config = (qitem.first);
 			const std::string objtype = config["objtype"];

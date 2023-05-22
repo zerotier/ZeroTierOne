@@ -471,6 +471,7 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPa
 	, _ssoExpiryRunning(true)
 	, _ssoExpiry(std::thread(&EmbeddedNetworkController::_ssoExpiryThread, this))
 	, _rc(rc)
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK	
 	, _member_status_lookup{"nc_member_status_lookup",""}
 	, _member_status_lookup_count{"nc_member_status_lookup_count",""}
 	, _node_is_online{"nc_node_is_online",""}
@@ -493,6 +494,7 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPa
 	, _save_member_count{"nc_save_member_count",""}
 	, _send_netconf{"nc_send_netconf2",""}
 	, _send_netconf_count{"nc_send_netconf2_count",""}
+#endif
 {
 }
 
@@ -571,6 +573,18 @@ void EmbeddedNetworkController::request(
 	if (((!_signingId)||(!_signingId.hasPrivate()))||(_signingId.address().toInt() != (nwid >> 24))||(!_sender))
 		return;
 	_startThreads();
+
+	const int64_t now = OSUtils::now();
+
+	if (requestPacketId) {
+		std::lock_guard<std::mutex> l(_memberStatus_l);
+		_MemberStatus &ms = _memberStatus[_MemberStatusKey(nwid,identity.address().toInt())];
+		if ((now - ms.lastRequestTime) <= ZT_NETCONF_MIN_REQUEST_PERIOD) {
+			return;
+		}
+		ms.lastRequestTime = now;
+	}
+
 	_RQEntry *qe = new _RQEntry;
 	qe->nwid = nwid;
 	qe->requestPacketId = requestPacketId;
@@ -1202,10 +1216,12 @@ void EmbeddedNetworkController::_request(
 	auto tid = std::this_thread::get_id();
 	std::stringstream ss; ss << tid;
 	std::string threadID = ss.str();
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	auto b1 = _member_status_lookup.Add({{"thread", threadID}});
 	auto c1 = _member_status_lookup_count.Add({{"thread", threadID}});
 	c1++;
 	b1.start();
+#endif
 
 	char nwids[24];
 	DB::NetworkSummaryInfo ns;
@@ -1217,44 +1233,45 @@ void EmbeddedNetworkController::_request(
 
 	const int64_t now = OSUtils::now();
 
-	if (requestPacketId) {
-		std::lock_guard<std::mutex> l(_memberStatus_l);
-		_MemberStatus &ms = _memberStatus[_MemberStatusKey(nwid,identity.address().toInt())];
-		if ((now - ms.lastRequestTime) <= ZT_NETCONF_MIN_REQUEST_PERIOD) {
-			return;
-		}
-		ms.lastRequestTime = now;
-	}
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b1.stop();
-
 	auto b2 = _node_is_online.Add({{"thread",threadID}});
 	auto c2 = _node_is_online_count.Add({{"thread",threadID}});
 	c2++;
 	b2.start();
+#endif
 	_db.nodeIsOnline(nwid,identity.address().toInt(),fromAddr);
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b2.stop();
 
 	auto b3 = _get_and_init_member.Add({{"thread", threadID}});
 	auto c3 = _get_and_init_member_count.Add({{"thread",threadID}});
 	c3++;
 	b3.start();
+#endif
 	Utils::hex(nwid,nwids);
 	_db.get(nwid,network,identity.address().toInt(),member,ns);
 	if ((!network.is_object())||(network.empty())) {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_OBJECT_NOT_FOUND, nullptr, 0);
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 		b3.stop();
+#endif
 		return;
 	}
 	const bool newMember = ((!member.is_object())||(member.empty()));
 	DB::initMember(member);
 	_MemberStatusKey msk(nwid,identity.address().toInt());
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b3.stop();
+#endif
 
 	{
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 		auto b4 = _have_identity.Add({{"thread",threadID}});
 		auto c4 = _have_identity_count.Add({{"thread",threadID}});
 		c4++;
 		b4.start();
+#endif
 		const std::string haveIdStr(OSUtils::jsonString(member["identity"],""));
 		if (haveIdStr.length() > 0) {
 			// If we already know this member's identity perform a full compare. This prevents
@@ -1263,12 +1280,16 @@ void EmbeddedNetworkController::_request(
 			try {
 				if (Identity(haveIdStr.c_str()) != identity) {
 					_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED, nullptr, 0);
+					#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 					b4.stop();
+					#endif
 					return;
 				}
 			} catch ( ... ) {
 				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED, nullptr, 0);
+				#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 				b4.stop();
+				#endif
 				return;
 			}
 		} else {
@@ -1276,7 +1297,9 @@ void EmbeddedNetworkController::_request(
 			char idtmp[1024];
 			member["identity"] = identity.toString(false,idtmp);
 		}
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 		b4.stop();
+#endif
 	}
 
 	// These are always the same, but make sure they are set
@@ -1289,10 +1312,12 @@ void EmbeddedNetworkController::_request(
 	}
 
 	// Determine whether and how member is authorized
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	auto b5 = _determine_auth.Add({{"thread",threadID}});
 	auto c5 = _determine_auth_count.Add({{"thread",threadID}});
 	c5++;
 	b5.start();
+#endif
 	bool authorized = false;
 	bool autoAuthorized = false;
 	json autoAuthCredentialType,autoAuthCredential;
@@ -1329,15 +1354,19 @@ void EmbeddedNetworkController::_request(
 		member["lastAuthorizedCredentialType"] = autoAuthCredentialType;
 		member["lastAuthorizedCredential"] = autoAuthCredential;
 	}
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b5.stop();
+#endif
 
 	// Should we check SSO Stuff?
 	// If network is configured with SSO, and the member is not marked exempt: yes
 	// Otherwise no, we use standard auth logic.
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	auto b6 = _sso_check.Add({{"thread",threadID}});
 	auto c6 = _sso_check_count.Add({{"thread",threadID}});
 	c6++;
 	b6.start();
+#endif
 	AuthInfo info;
 	int64_t authenticationExpiryTime = -1;
 	bool networkSSOEnabled = OSUtils::jsonBool(network["ssoEnabled"], false);
@@ -1364,18 +1393,21 @@ void EmbeddedNetworkController::_request(
 			}
 			DB::cleanMember(member);
 			_db.save(member,true);
+			#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 			b6.stop();
+			#endif
 			return;
 		}
 	}
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b6.stop();
 
 	auto b7 = _auth_check.Add({{"thread",threadID}});
 	auto c7 = _auth_check_count.Add({{"thread",threadID}});
 	c7++;
 	b7.start();
+#endif
 	if (authorized) {
-		Metrics::nc_authed_request++;
 		// Update version info and meta-data if authorized and if this is a genuine request
 		if (requestPacketId) {
 			const uint64_t vMajor = metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_NODE_MAJOR_VERSION,0);
@@ -1406,15 +1438,18 @@ void EmbeddedNetworkController::_request(
 			}
 		}
 	} else {
-		Metrics::nc_unauthed_request++;
 		// If they are not authorized, STOP!
 		DB::cleanMember(member);
 		_db.save(member,true);
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_ACCESS_DENIED, nullptr, 0);
+		#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 		b7.stop();
+		#endif
 		return;
 	}
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b7.stop();
+#endif
 
 	// -------------------------------------------------------------------------
 	// If we made it this far, they are authorized (and authenticated).
@@ -1422,10 +1457,12 @@ void EmbeddedNetworkController::_request(
 
 	// Default timeout: 15 minutes. Maximum: two hours. Can be specified by an optional field in the network config
 	// if something longer than 15 minutes is desired. Minimum is 5 minutes since shorter than that would be flaky.
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	auto b8 = _json_schlep.Add({{"thread",threadID}});
 	auto c8 = _json_schlep_count.Add({{"thread", threadID}});
 	c8++;
 	b8.start();
+#endif
 	int64_t credentialtmd = ZT_NETWORKCONFIG_DEFAULT_CREDENTIAL_TIME_DFL_MAX_DELTA;
 	if (network.contains("certificateTimeoutWindowSize")) {
 		credentialtmd = (int64_t)network["certificateTimeoutWindowSize"];
@@ -1815,13 +1852,17 @@ void EmbeddedNetworkController::_request(
 	} else {
 		dns = json::object();
 	}
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b8.stop();
+#endif
 
 	// Issue a certificate of ownership for all static IPs
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	auto b9 = _issue_certificate.Add({{"thread",threadID}});
 	auto c9 = _issue_certificate_count.Add({{"thread",threadID}});
 	c9++;
 	b9.start();
+#endif
 	if (nc->staticIpCount) {
 		nc->certificatesOfOwnership[0] = CertificateOfOwnership(nwid,now,identity.address(),1);
 		for(unsigned int i=0;i<nc->staticIpCount;++i) {
@@ -1836,25 +1877,33 @@ void EmbeddedNetworkController::_request(
 		nc->com = com;
 	} else {
 		_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_INTERNAL_SERVER_ERROR, nullptr, 0);
+		#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 		b9.stop();
+		#endif
 		return;
 	}
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b9.stop();
 
 	auto b10 = _save_member.Add({{"thread",threadID}});
 	auto c10 = _save_member_count.Add({{"thread",threadID}});
 	c10++;
 	b10.start();
+#endif
 	DB::cleanMember(member);
 	_db.save(member,true);
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b10.stop();
 
 	auto b11 = _send_netconf.Add({{"thread",threadID}});
 	auto c11 = _send_netconf_count.Add({{"thread",threadID}});
 	c11++;
 	b11.start();
+#endif
 	_sender->ncSendConfig(nwid,requestPacketId,identity.address(),*(nc.get()),metaData.getUI(ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION,0) < 6);
+#ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b11.stop();
+#endif
 }
 
 void EmbeddedNetworkController::_startThreads()
