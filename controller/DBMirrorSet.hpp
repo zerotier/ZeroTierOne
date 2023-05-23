@@ -18,7 +18,7 @@
 
 #include <vector>
 #include <memory>
-#include <mutex>
+#include <shared_mutex>
 #include <set>
 #include <thread>
 
@@ -56,7 +56,7 @@ public:
 	inline void addDB(const std::shared_ptr<DB> &db)
 	{
 		db->addListener(this);
-		std::lock_guard<std::mutex> l(_dbs_l);
+		std::unique_lock<std::shared_mutex> l(_dbs_l);
 		_dbs.push_back(db);
 	}
 
@@ -65,7 +65,7 @@ private:
 	std::atomic_bool _running;
 	std::thread _syncCheckerThread;
 	std::vector< std::shared_ptr< DB > > _dbs;
-	mutable std::mutex _dbs_l;
+	mutable std::shared_mutex _dbs_l;
 };
 
 } // namespace ZeroTier
