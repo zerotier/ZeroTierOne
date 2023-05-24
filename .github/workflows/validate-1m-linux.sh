@@ -17,6 +17,7 @@ mkdir $TEST_DIR_PREFIX
 # Multi-node connectivity and performance test                                 #
 ################################################################################
 main() {
+	echo -e "\nRunning test for $RUN_LENGTH seconds"
 	NS1="ip netns exec ns1"
 	NS2="ip netns exec ns2"
 
@@ -24,7 +25,7 @@ main() {
 	# Specify custom port on one node to ensure that feature works
 	ZT2="$NS2 ./zerotier-cli -p9997 -D$(pwd)/node2"
 
-	echo -e "Setting up network namespaces..."
+	echo -e "\nSetting up network namespaces..."
 	echo "Setting up ns1"
 
 	ip netns add ns1
@@ -123,7 +124,7 @@ main() {
 
 	for ((s = 0; s <= MAX_WAIT_SECS; s++)); do
 		node1_online="$($ZT1 -j info | jq '.online' 2>/dev/null)"
-		sleep 1
+		sleep 2
 		node2_online="$($ZT2 -j info | jq '.online' 2>/dev/null)"
 		echo "Checking for online status: try #$s, node1:$node1_online, node2:$node2_online"
 		if [[ "$node1_online" == "true" ]]; then
