@@ -466,11 +466,21 @@ EmbeddedNetworkController::EmbeddedNetworkController(Node *node,const char *ztPa
 	, _node(node)
 	, _ztPath(ztPath)
 	, _path(dbPath)
+	, _signingId()
+	, _signingIdAddressString()
 	, _sender((NetworkController::Sender *)0)
 	, _db(this)
+	, _queue()
+	, _threads()
+	, _threads_l()
+	, _memberStatus()
+	, _memberStatus_l()
+	, _expiringSoon()
+	, _expiringSoon_l()
+	, _rc(rc)
 	, _ssoExpiryRunning(true)
 	, _ssoExpiry(std::thread(&EmbeddedNetworkController::_ssoExpiryThread, this))
-	, _rc(rc)
+
 #ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK	
 	, _member_status_lookup{"nc_member_status_lookup",""}
 	, _member_status_lookup_count{"nc_member_status_lookup_count",""}

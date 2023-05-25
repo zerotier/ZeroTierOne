@@ -139,9 +139,6 @@ private:
 	std::vector<std::thread> _threads;
 	std::mutex _threads_l;
 
-	bool _ssoExpiryRunning;
-	std::thread _ssoExpiry;
-
 	std::unordered_map< _MemberStatusKey,_MemberStatus,_MemberStatusHash > _memberStatus;
 	std::mutex _memberStatus_l;
 
@@ -150,6 +147,9 @@ private:
 
 	RedisConfig *_rc;
 	std::string _ssoRedirectURL;
+
+	bool _ssoExpiryRunning;
+	std::thread _ssoExpiry;
 
 #ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	prometheus::simpleapi::benchmark_family_t _member_status_lookup;
