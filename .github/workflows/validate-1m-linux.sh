@@ -124,7 +124,7 @@ main() {
 
 	for ((s = 0; s <= MAX_WAIT_SECS; s++)); do
 		node1_online="$($ZT1 -j info | jq '.online' 2>/dev/null)"
-		sleep 2
+		sleep 10
 		node2_online="$($ZT2 -j info | jq '.online' 2>/dev/null)"
 		echo "Checking for online status: try #$s, node1:$node1_online, node2:$node2_online"
 		if [[ "$node1_online" == "true" ]]; then
