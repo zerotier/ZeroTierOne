@@ -460,7 +460,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 			    "LEFT OUTER JOIN ztc_network_oidc_config noc "
 				"  ON noc.network_id = n.id "
 				"LEFT OUTER JOIN ztc_oidc_config oc "
-				"  ON noc.client_id = oc.client_id AND noc.org_id = o.org_id "
+				"  ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
 				"WHERE n.id = $1 AND n.sso_enabled = true", networkId);
 		
 			std::string client_id = "";
