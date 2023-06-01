@@ -64,6 +64,7 @@ fi
 popd
 
 DEFAULT_PORT=9993
+DEFAULT_LB_MODE=false
 
 APP_NAME="controller-$(cat /var/lib/zerotier-one/identity.public | cut -d ':' -f 1)"
 
@@ -76,6 +77,7 @@ echo "{
             \"inot\",
             \"nat64\"
         ],
+        \"lowBandwidthMode\": ${ZT_LB_MODE:-$DEFAULT_LB_MODE},
         \"ssoRedirectURL\": \"${ZT_SSO_REDIRECT_URL}\",
         \"allowManagementFrom\": [\"127.0.0.1\", \"::1\", \"10.0.0.0/8\"],
         ${REDIS}

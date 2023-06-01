@@ -210,10 +210,8 @@ void Peer::received(
 		if (sinceLastPush >= ((hops == 0) ? ZT_DIRECT_PATH_PUSH_INTERVAL_HAVEPATH * timerScale : ZT_DIRECT_PATH_PUSH_INTERVAL)) {
 			_lastDirectPathPushSent = now;
 			std::vector<InetAddress> pathsToPush(RR->node->directPaths());
-			if (! lowBandwidth) {
-				std::vector<InetAddress> ma = RR->sa->whoami();
-				pathsToPush.insert(pathsToPush.end(), ma.begin(), ma.end());
-			}
+			std::vector<InetAddress> ma = RR->sa->whoami();
+			pathsToPush.insert(pathsToPush.end(), ma.begin(), ma.end());
 			if (!pathsToPush.empty()) {
 				std::vector<InetAddress>::const_iterator p(pathsToPush.begin());
 				while (p != pathsToPush.end()) {
