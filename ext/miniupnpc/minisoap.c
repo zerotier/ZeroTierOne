@@ -21,12 +21,14 @@
 #include "minisoap.h"
 
 #ifdef _WIN32
+#undef OS_STRING
 #define OS_STRING "Win32"
 #define MINIUPNPC_VERSION_STRING "2.0"
 #define UPNP_VERSION_STRING "UPnP/1.1"
 #endif
 
 #ifdef __ANDROID__
+#undef OS_STRING
 #define OS_STRING "Android"
 #define MINIUPNPC_VERSION_STRING "2.0"
 #define UPNP_VERSION_STRING "UPnP/1.1"
