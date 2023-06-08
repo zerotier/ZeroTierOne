@@ -527,9 +527,6 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 
 		_pool->unborrow(c);
 	} catch (std::exception &e) {
-		if (c) {
-			_pool->unborrow(c);
-		}
 		fprintf(stderr, "ERROR: Error updating member on load for network %s: %s\n", networkId.c_str(), e.what());
 	}
 
@@ -1051,7 +1048,6 @@ void PostgreSQL::heartbeat()
 				w.commit();
 			} catch (std::exception &e) {
 				fprintf(stderr, "%s: Heartbeat update failed: %s\n", controllerId, e.what());
-				_pool->unborrow(c);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				continue;
 			}
