@@ -59,7 +59,6 @@ pub struct ZeroIDC {
 ))]
 struct Inner {
     running: bool,
-    issuer: String,
     auth_endpoint: String,
     provider: String,
     oidc_thread: Option<JoinHandle<()>>,
@@ -123,7 +122,6 @@ impl ZeroIDC {
         let idc = ZeroIDC {
             inner: Arc::new(Mutex::new(Inner {
                 running: false,
-                issuer: issuer.to_string(),
                 provider: provider.to_string(),
                 auth_endpoint: auth_ep.to_string(),
                 oidc_thread: None,
