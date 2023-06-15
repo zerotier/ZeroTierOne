@@ -35,6 +35,7 @@ use std::str::from_utf8;
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn, JoinHandle};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+#[cfg(debug_assertions)]
 use time::{format_description, OffsetDateTime};
 
 use url::Url;
