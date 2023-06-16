@@ -406,15 +406,6 @@ public:
 		return _managedRoutes;
 	}
 
-	const char* getAuthURL() {
-#if ZT_SSO_ENABLED
-		if (_idc != nullptr) {
-			return zeroidc::zeroidc_get_auth_url(_idc);
-		}
-		fprintf(stderr, "_idc is null\n");
-#endif
-		return "";
-	}
 
 	char* doTokenExchange(const char *code) {
 		char *ret = nullptr;
@@ -572,7 +563,7 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 	}
 	nj["dns"] = m;
 	if (ns.config().ssoEnabled) {
-		const char* authURL = ns.getAuthURL();
+		const char* authURL = ns.config().authenticationURL;
 		//fprintf(stderr, "Auth URL: %s\n", authURL);
 		nj["authenticationURL"] = authURL;
 		nj["authenticationExpiryTime"] = (ns.getExpiryTime()*1000);
