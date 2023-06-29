@@ -1,8 +1,0 @@
-/** pqxx::dbtransaction abstract base class.
- *
- * pqxx::dbransaction defines a real transaction on the database.
- */
-// Actual definitions in .hxx file so editors and such recognize file type.
-#include "pqxx/internal/header-pre.hxx"
-#include "pqxx/dbtransaction.hxx"
-#include "pqxx/internal/header-post.hxx"

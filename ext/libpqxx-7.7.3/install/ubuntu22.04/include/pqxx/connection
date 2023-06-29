@@ -1,8 +1,0 @@
-/** pqxx::connection class.
- *
- * pqxx::connection encapsulates a connection to a database.
- */
-// Actual definitions in .hxx file so editors and such recognize file type.
-#include "pqxx/internal/header-pre.hxx"
-#include "pqxx/connection.hxx"
-#include "pqxx/internal/header-post.hxx"
