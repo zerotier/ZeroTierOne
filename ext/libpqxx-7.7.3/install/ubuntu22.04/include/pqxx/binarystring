@@ -1,6 +1,0 @@
-/** BYTEA (binary string) conversions.
- */
-// Actual definitions in .hxx file so editors and such recognize file type.
-#include "pqxx/internal/header-pre.hxx"
-#include "pqxx/binarystring.hxx"
-#include "pqxx/internal/header-post.hxx"
