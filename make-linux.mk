@@ -229,11 +229,13 @@ endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
 	ZT_SSO_SUPPORTED=1
+	ZT_USE_X64_ASM_ED25519=0
 	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_ARCH_ARM_HAS_NEON -march=armv8-a+crypto -mtune=generic -mstrict-align
 endif
 ifeq ($(CC_MACH),aarch64)
 	ZT_ARCHITECTURE=4
 	ZT_SSO_SUPPORTED=1
+	ZT_USE_X64_ASM_ED25519=0
 	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_ARCH_ARM_HAS_NEON -march=armv8-a+crypto -mtune=generic -mstrict-align
 endif
 ifeq ($(CC_MACH),mipsel)
@@ -398,7 +400,7 @@ docker:	FORCE
 	docker build --no-cache -f ext/installfiles/linux/zerotier-containerized/Dockerfile -t zerotier-containerized .
 
 central-controller:	FORCE
-	make -j4 ZT_CONTROLLER=1 ZT_USE_X64_ASM_ED25519=1 one
+	make -j4 ZT_CONTROLLER=1 one
 
 central-controller-docker: FORCE
 	docker build --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` .
