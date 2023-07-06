@@ -201,6 +201,26 @@ std::string ssoResponseTemplate = R"""(
 </html>
 )""";
 
+bool bearerTokenValid(const std::string authHeader, const std::string &checkToken) {
+	std::vector<std::string> tokens = OSUtils::split(authHeader.c_str(), " ", NULL, NULL);
+	if (tokens.size() != 2) {
+		return false;
+	}
+
+	std::string bearer = tokens[0];
+	std::string token = tokens[1];
+	std::transform(bearer.begin(), bearer.end(), bearer.begin(), [](unsigned char c){return std::tolower(c);});
+	if (bearer != "bearer") {
+		return false;
+	}
+
+	if (token != checkToken) {
+		return false;
+	}
+
+	return true;
+}
+
 #if ZT_DEBUG==1
 std::string dump_headers(const httplib::Headers &headers) {
   std::string s;
@@ -753,6 +773,7 @@ public:
 
 	const std::string _homePath;
 	std::string _authToken;
+	std::string _metricsToken;
 	std::string _controllerDbPath;
 	const std::string _networksPath;
 	const std::string _moonsPath;
@@ -948,6 +969,26 @@ public:
 					}
 				}
 				_authToken = _trimString(_authToken);
+			}
+
+			{
+				const std::string metricsTokenPath(_homePath + ZT_PATH_SEPARATOR_S "metricstoken.secret");
+				if (!OSUtils::readFile(metricsTokenPath.c_str(),_metricsToken)) {
+					unsigned char foo[24];
+					Utils::getSecureRandom(foo,sizeof(foo));
+					_metricsToken = "";
+					for(unsigned int i=0;i<sizeof(foo);++i)
+						_authToken.push_back("abcdefghijklmnopqrstuvwxyz0123456789"[(unsigned long)foo[i] % 36]);
+					if (!OSUtils::writeFile(metricsTokenPath.c_str(),_authToken)) {
+						Mutex::Lock _l(_termReason_m);
+						_termReason = ONE_UNRECOVERABLE_ERROR;
+						_fatalErrorMessage = "metricstoken.secret could not be written";
+						return _termReason;
+					} else {
+						OSUtils::lockDownFile(metricsTokenPath.c_str(),false);
+					}
+				}
+				_metricsToken = _trimString(_metricsToken);
 			}
 
 			{
@@ -1458,54 +1499,81 @@ public:
 
 
         auto authCheck = [=] (const httplib::Request &req, httplib::Response &res) {
-            std::string r = req.remote_addr;
-            InetAddress remoteAddr(r.c_str());
+			if (req.path == "/metrics") {
 
-            bool ipAllowed = false;
-            bool isAuth = false;
-            // If localhost, allow
-            if (remoteAddr.ipScope() == InetAddress::IP_SCOPE_LOOPBACK) {
-                ipAllowed = true;
-            }
+				if (req.has_header("x-zt1-auth")) {
+					std::string token = req.get_header_value("x-zt1-auth");
+					if (token == _metricsToken || token == _authToken) {
+						return httplib::Server::HandlerResponse::Unhandled;
+					}
+				} else if (req.has_param("auth")) {
+					std::string token = req.get_param_value("auth");
+					if (token == _metricsToken || token == _authToken) {
+						return httplib::Server::HandlerResponse::Unhandled;
+					}
+				} else if (req.has_header("authorization")) {
+					std::string auth = req.get_header_value("authorization");
+					if (bearerTokenValid(auth, _metricsToken) || bearerTokenValid(auth, _authToken)) {
+						return httplib::Server::HandlerResponse::Unhandled;
+					}
+				}
 
-            if (!ipAllowed) {
-                for (auto i = _allowManagementFrom.begin(); i != _allowManagementFrom.end(); ++i) {
-                    if (i->containsAddress(remoteAddr)) {
-                        ipAllowed  = true;
-                        break;
-                    }
-                }
-            }
+				setContent(req, res, "{}");
+				res.status = 401;
+				return httplib::Server::HandlerResponse::Handled;
+			} else {
+				std::string r = req.remote_addr;
+				InetAddress remoteAddr(r.c_str());
+
+				bool ipAllowed = false;
+				bool isAuth = false;
+				// If localhost, allow
+				if (remoteAddr.ipScope() == InetAddress::IP_SCOPE_LOOPBACK) {
+					ipAllowed = true;
+				}
+
+				if (!ipAllowed) {
+					for (auto i = _allowManagementFrom.begin(); i != _allowManagementFrom.end(); ++i) {
+						if (i->containsAddress(remoteAddr)) {
+							ipAllowed  = true;
+							break;
+						}
+					}
+				}
 
 
-            if (ipAllowed) {
-                // auto-pass endpoints in `noAuthEndpoints`.  No auth token required
-                if (std::find(noAuthEndpoints.begin(), noAuthEndpoints.end(), req.path) != noAuthEndpoints.end()) {
-                    isAuth = true;
-                }
+				if (ipAllowed) {
+					// auto-pass endpoints in `noAuthEndpoints`.  No auth token required
+					if (std::find(noAuthEndpoints.begin(), noAuthEndpoints.end(), req.path) != noAuthEndpoints.end()) {
+						isAuth = true;
+					}
 
-                if (!isAuth) {
-                    // check auth token
-                    if (req.has_header("x-zt1-auth")) {
-                        std::string token = req.get_header_value("x-zt1-auth");
-                        if (token == _authToken) {
-                            isAuth = true;
-                        }
-                    } else if (req.has_param("auth")) {
-                        std::string token = req.get_param_value("auth");
-                        if (token == _authToken) {
-                            isAuth = true;
-                        }
-                    }
-                }
-            }
+					if (!isAuth) {
+						// check auth token
+						if (req.has_header("x-zt1-auth")) {
+							std::string token = req.get_header_value("x-zt1-auth");
+							if (token == _authToken) {
+								isAuth = true;
+							}
+						} else if (req.has_param("auth")) {
+							std::string token = req.get_param_value("auth");
+							if (token == _authToken) {
+								isAuth = true;
+							}
+						} else if (req.has_header("authorization")) {
+							std::string auth = req.get_header_value("authorization");
+							isAuth = bearerTokenValid(auth, _authToken);
+						}
+					}
+				}
 
-            if (ipAllowed && isAuth) {
-                return httplib::Server::HandlerResponse::Unhandled;
-            }
-			setContent(req, res, "{}");
-            res.status = 401;
-            return httplib::Server::HandlerResponse::Handled;
+				if (ipAllowed && isAuth) {
+					return httplib::Server::HandlerResponse::Unhandled;
+				}
+				setContent(req, res, "{}");
+				res.status = 401;
+				return httplib::Server::HandlerResponse::Handled;
+			}
         };
 
 
