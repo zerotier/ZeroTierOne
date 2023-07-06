@@ -37,7 +37,6 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
  - `ext/`: third party libraries, binaries that we ship for convenience on some platforms (Mac and Windows), and installation support files.
  - `include/`: include files for the ZeroTier core.
  - `java/`: a JNI wrapper used with our Android mobile app. (The whole Android app is not open source but may be made so in the future.)
- - `macui/`: a Macintosh menu-bar app for controlling ZeroTier One, written in Objective C.
  - `node/`: the ZeroTier virtual Ethernet switch core, which is designed to be entirely separate from the rest of the code and able to be built as a stand-alone OS-independent library. Note to developers: do not use C++11 features in here, since we want this to build on old embedded platforms that lack C++11 support. C++11 can be used elsewhere.
  - `osdep/`: code to support and integrate with OSes, including platform-specific stuff only built for certain targets.
  - `rule-compiler/`: JavaScript rules language compiler for defining network-level rules.
