@@ -1,4 +1,4 @@
-registry = us-central1-docker.pkg.dev/zerotier-central/zerotier
+registry = registry.zerotier.com/zerotier
 
 all:	controller-builder controller-runbase
 

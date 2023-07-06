@@ -419,8 +419,8 @@ central-controller:	FORCE
 	make -j4 ZT_CONTROLLER=1 one
 
 central-controller-docker: _buildx FORCE
-	docker buildx build --platform linux/amd64,linux/arm64 --no-cache -t us-central1-docker.pkg.dev/zerotier-central/zerotier/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` . --push
-	@echo Image: us-central1-docker.pkg.dev/zerotier-central/zerotier/ztcentral-controller:${TIMESTAMP}
+	docker buildx build --platform linux/amd64,linux/arm64 --no-cache -t registry.zerotier.com/zerotier/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` . --push
+	@echo Image: registry.zerotier.com/zerotier/ztcentral-controller:${TIMESTAMP}
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
