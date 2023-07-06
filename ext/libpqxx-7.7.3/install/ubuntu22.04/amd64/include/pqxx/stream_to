@@ -1,0 +1,8 @@
+/** pqxx::stream_to class.
+ *
+ * pqxx::stream_to enables optimized batch updates to a database table.
+ */
+// Actual definitions in .hxx file so editors and such recognize file type.
+#include "pqxx/internal/header-pre.hxx"
+#include "pqxx/stream_to.hxx"
+#include "pqxx/internal/header-post.hxx"

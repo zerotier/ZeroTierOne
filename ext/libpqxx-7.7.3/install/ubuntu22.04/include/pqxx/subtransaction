@@ -1,8 +1,0 @@
-/** pqxx::subtransaction class.
- *
- * pqxx::subtransaction is a nested transaction, i.e. one inside a transaction.
- */
-// Actual definitions in .hxx file so editors and such recognize file type.
-#include "pqxx/internal/header-pre.hxx"
-#include "pqxx/subtransaction.hxx"
-#include "pqxx/internal/header-post.hxx"
