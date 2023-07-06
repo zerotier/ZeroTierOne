@@ -89,8 +89,9 @@ public:
 	{
 		Mutex::Lock _l(_peers_m);
 		const SharedPtr<Peer> *const ap = _peers.get(zta);
-		if (ap)
+		if (ap) {
 			return *ap;
+		}
 		return SharedPtr<Peer>();
 	}
 
@@ -105,8 +106,9 @@ public:
 	{
 		Mutex::Lock _l(_paths_m);
 		SharedPtr<Path> &p = _paths[Path::HashKey(l,r)];
-		if (!p)
+		if (!p) {
 			p.set(new Path(l,r));
+		}
 		return p;
 	}
 
@@ -163,8 +165,9 @@ public:
 			if (i->identity != RR->identity) {
 				std::vector<InetAddress> &ips = eps[i->identity.address()];
 				for(std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin());j!=i->stableEndpoints.end();++j) {
-					if (std::find(ips.begin(),ips.end(),*j) == ips.end())
+					if (std::find(ips.begin(),ips.end(),*j) == ips.end()) {
 						ips.push_back(*j);
+					}
 				}
 			}
 		}
@@ -173,14 +176,16 @@ public:
 				if (i->identity != RR->identity) {
 					std::vector<InetAddress> &ips = eps[i->identity.address()];
 					for(std::vector<InetAddress>::const_iterator j(i->stableEndpoints.begin());j!=i->stableEndpoints.end();++j) {
-						if (std::find(ips.begin(),ips.end(),*j) == ips.end())
+						if (std::find(ips.begin(),ips.end(),*j) == ips.end()) {
 							ips.push_back(*j);
+						}
 					}
 				}
 			}
 		}
-		for(std::vector< std::pair<uint64_t,Address> >::const_iterator m(_moonSeeds.begin());m!=_moonSeeds.end();++m)
+		for(std::vector< std::pair<uint64_t,Address> >::const_iterator m(_moonSeeds.begin());m!=_moonSeeds.end();++m) {
 			eps[m->second];
+		}
 	}
 
 	/**
@@ -209,8 +214,9 @@ public:
 		Mutex::Lock _l(_upstreams_m);
 		std::vector<uint64_t> mw;
 		for(std::vector< std::pair<uint64_t,Address> >::const_iterator s(_moonSeeds.begin());s!=_moonSeeds.end();++s) {
-			if (std::find(mw.begin(),mw.end(),s->first) == mw.end())
+			if (std::find(mw.begin(),mw.end(),s->first) == mw.end()) {
 				mw.push_back(s->first);
+			}
 		}
 		return mw;
 	}
@@ -287,8 +293,9 @@ public:
 		SharedPtr<Peer> *p = (SharedPtr<Peer> *)0;
 		while (i.next(a,p)) {
 			const SharedPtr<Path> pp((*p)->getAppropriatePath(now,false));
-			if (pp)
+			if (pp) {
 				++cnt;
+			}
 		}
 		return cnt;
 	}
@@ -354,8 +361,9 @@ public:
 	inline unsigned int getOutboundPathMtu(const InetAddress &physicalAddress)
 	{
 		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
-			if (_physicalPathConfig[i].first.containsAddress(physicalAddress))
+			if (_physicalPathConfig[i].first.containsAddress(physicalAddress)) {
 				return _physicalPathConfig[i].second.mtu;
+			}
 		}
 		return ZT_DEFAULT_PHYSMTU;
 	}
@@ -369,8 +377,9 @@ public:
 	inline uint64_t getOutboundPathTrust(const InetAddress &physicalAddress)
 	{
 		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
-			if (_physicalPathConfig[i].first.containsAddress(physicalAddress))
+			if (_physicalPathConfig[i].first.containsAddress(physicalAddress)) {
 				return _physicalPathConfig[i].second.trustedPathId;
+			}
 		}
 		return 0;
 	}
@@ -384,8 +393,9 @@ public:
 	inline bool shouldInboundPathBeTrusted(const InetAddress &physicalAddress,const uint64_t trustedPathId)
 	{
 		for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
-			if ((_physicalPathConfig[i].second.trustedPathId == trustedPathId)&&(_physicalPathConfig[i].first.containsAddress(physicalAddress)))
+			if ((_physicalPathConfig[i].second.trustedPathId == trustedPathId)&&(_physicalPathConfig[i].first.containsAddress(physicalAddress))) {
 				return true;
+			}
 		}
 		return false;
 	}
@@ -399,18 +409,20 @@ public:
 			_numConfiguredPhysicalPaths = 0;
 		} else {
 			std::map<InetAddress,ZT_PhysicalPathConfiguration> cpaths;
-			for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i)
+			for(unsigned int i=0,j=_numConfiguredPhysicalPaths;i<j;++i) {
 				cpaths[_physicalPathConfig[i].first] = _physicalPathConfig[i].second;
+			}
 
 			if (pathConfig) {
 				ZT_PhysicalPathConfiguration pc(*pathConfig);
 
-				if (pc.mtu <= 0)
+				if (pc.mtu <= 0) {
 					pc.mtu = ZT_DEFAULT_PHYSMTU;
-				else if (pc.mtu < ZT_MIN_PHYSMTU)
+				} else if (pc.mtu < ZT_MIN_PHYSMTU) {
 					pc.mtu = ZT_MIN_PHYSMTU;
-				else if (pc.mtu > ZT_MAX_PHYSMTU)
+				} else if (pc.mtu > ZT_MAX_PHYSMTU) {
 					pc.mtu = ZT_MAX_PHYSMTU;
+				}
 
 				cpaths[*(reinterpret_cast<const InetAddress *>(pathNetwork))] = pc;
 			} else {

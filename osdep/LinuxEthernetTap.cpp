@@ -126,11 +126,13 @@ LinuxEthernetTap::LinuxEthernetTap(
 	_mtu(mtu),
 	_fd(0),
 	_enabled(true),
-	_run(true)
+	_run(true),
+	_lastIfAddrsUpdate(0)
 {
 	static std::mutex s_tapCreateLock;
 	char procpath[128],nwids[32];
 	struct stat sbuf;
+
 
 	// Create only one tap at a time globally.
 	std::lock_guard<std::mutex> tapCreateLock(s_tapCreateLock);
@@ -438,6 +440,14 @@ bool LinuxEthernetTap::removeIp(const InetAddress &ip)
 
 std::vector<InetAddress> LinuxEthernetTap::ips() const
 {
+
+	uint64_t now = OSUtils::now();
+
+	if ((now - _lastIfAddrsUpdate) <= GETIFADDRS_CACHE_TIME) {
+		return _ifaddrs;
+	}
+	_lastIfAddrsUpdate = now;
+
 	struct ifaddrs *ifa = (struct ifaddrs *)0;
 	if (getifaddrs(&ifa))
 		return std::vector<InetAddress>();
@@ -470,6 +480,8 @@ std::vector<InetAddress> LinuxEthernetTap::ips() const
 
 	std::sort(r.begin(),r.end());
 	r.erase(std::unique(r.begin(),r.end()),r.end());
+
+	_ifaddrs = r;
 
 	return r;
 }

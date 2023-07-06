@@ -138,8 +138,9 @@ public:
 	{
 		Mutex::Lock _l(_networks_m);
 		const SharedPtr<Network> *n = _networks.get(nwid);
-		if (n)
+		if (n) {
 			return *n;
+		}
 		return SharedPtr<Network>();
 	}
 
@@ -156,8 +157,9 @@ public:
 		Hashtable< uint64_t,SharedPtr<Network> >::Iterator i(*const_cast< Hashtable< uint64_t,SharedPtr<Network> > * >(&_networks));
 		uint64_t *k = (uint64_t *)0;
 		SharedPtr<Network> *v = (SharedPtr<Network> *)0;
-		while (i.next(k,v))
+		while (i.next(k,v)) {
 			nw.push_back(*v);
+		}
 		return nw;
 	}
 
@@ -223,8 +225,9 @@ public:
 		const uint32_t pid2 = (uint32_t)(packetId >> 32);
 		const unsigned long bucket = (unsigned long)(pid2 & ZT_EXPECTING_REPLIES_BUCKET_MASK1);
 		for(unsigned long i=0;i<=ZT_EXPECTING_REPLIES_BUCKET_MASK2;++i) {
-			if (_expectingRepliesTo[bucket][i] == pid2)
+			if (_expectingRepliesTo[bucket][i] == pid2) {
 				return true;
+			}
 		}
 		return false;
 	}
@@ -258,8 +261,9 @@ public:
 		_localControllerAuthorizations_m.lock();
 		const int64_t *const at = _localControllerAuthorizations.get(_LocalControllerAuth(nwid,addr));
 		_localControllerAuthorizations_m.unlock();
-		if (at)
+		if (at) {
 			return ((now - *at) < (ZT_NETWORK_AUTOCONF_DELAY * 3));
+		}
 		return false;
 	}
 

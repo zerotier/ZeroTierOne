@@ -1,0 +1,9 @@
+/** Base for the transaction classes.
+ *
+ * pqxx::transaction_base defines the interface for any abstract class that
+ * represents a database transaction.
+ */
+// Actual definitions in .hxx file so editors and such recognize file type.
+#include "pqxx/internal/header-pre.hxx"
+#include "pqxx/transaction_base.hxx"
+#include "pqxx/internal/header-post.hxx"

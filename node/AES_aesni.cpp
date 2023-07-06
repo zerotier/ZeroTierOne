@@ -228,8 +228,9 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
 	// Handle anything left over from a previous run that wasn't a multiple of 16 bytes.
 	if (_rp) {
 		for (;;) {
-			if (!len)
+			if (!len) {
 				return;
+			}
 			--len;
 			_r[_rp++] = *(in++);
 			if (_rp == 16) {
@@ -281,8 +282,9 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
 	_mm_storeu_si128(reinterpret_cast<__m128i *>(_y), y);
 
 	// Any overflow is cached for a later run or finish().
-	for (unsigned int i = 0; i < len; ++i)
+	for (unsigned int i = 0; i < len; ++i) {
 		_r[i] = in[i];
+	}
 	_rp = len; // len is always less than 16 here
 }
 
@@ -295,8 +297,9 @@ void AES::GMAC::p_aesNIFinish(uint8_t tag[16]) noexcept
 
 	// Handle any remaining bytes, padding the last block with zeroes.
 	if (_rp) {
-		while (_rp < 16)
+		while (_rp < 16) {
 			_r[_rp++] = 0;
+		}
 		y = p_gmacPCLMUL128(_aes.p_k.ni.h[0], _mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<__m128i *>(_r))));
 	}
 
@@ -438,9 +441,9 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 
 #if !defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
 		if (Utils::CPUID.vaes && (len >= 256)) {
-				p_aesCtrInnerVAES256(len, _ctr[0], c1, in, out, k);
-				goto skip_conventional_aesni_64;
-			}
+			p_aesCtrInnerVAES256(len, _ctr[0], c1, in, out, k);
+			goto skip_conventional_aesni_64;
+		}
 #endif
 
 		const uint8_t *const eof64 = in + (len & ~((unsigned int)63));
@@ -552,8 +555,9 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 	// Any remaining input is placed in _out. This will be picked up and crypted
 	// on subsequent calls to crypt() or finish() as it'll mean _len will not be
 	// an even multiple of 16.
-	for (unsigned int i = 0; i < len; ++i)
+	for (unsigned int i = 0; i < len; ++i) {
 		out[i] = in[i];
+	}
 
 	_ctr[1] = Utils::hton(c1);
 }

@@ -122,21 +122,16 @@ bool MacDNSHelper::addIps(uint64_t nwid, const MAC mac, const char *dev, const s
 
 
     CFStringRef key = CFStringCreateWithCString(NULL, buf, kCFStringEncodingUTF8);
-    CFStringRef* cfaddrs = new CFStringRef[1];
-    CFStringRef* cfprefixes = new CFStringRef[1];
-    CFStringRef* cfdestaddrs = new CFStringRef[1];
-    CFStringRef* cfflags = new CFStringRef[1];
 
+    CFStringRef cfaddr = CFStringCreateWithCString(NULL, llStr, kCFStringEncodingUTF8);
+    CFStringRef cfprefixes = CFStringCreateWithCString(NULL, "64", kCFStringEncodingUTF8);
+    CFStringRef cfdestaddrs = CFStringCreateWithCString(NULL, "::ffff:ffff:ffff:ffff:0:0", kCFStringEncodingUTF8);
+    CFStringRef cfflags = CFStringCreateWithCString(NULL, "0", kCFStringEncodingUTF8);
 
-    cfaddrs[0] = CFStringCreateWithCString(NULL, llStr, kCFStringEncodingUTF8);
-    cfprefixes[0] = CFStringCreateWithCString(NULL, "64", kCFStringEncodingUTF8);
-    cfdestaddrs[0] = CFStringCreateWithCString(NULL, "::ffff:ffff:ffff:ffff:0:0", kCFStringEncodingUTF8);
-    cfflags[0] = CFStringCreateWithCString(NULL, "0", kCFStringEncodingUTF8);
-
-    CFArrayRef addrArray = CFArrayCreate(NULL, (const void**)cfaddrs, 1, &kCFTypeArrayCallBacks);
-    CFArrayRef prefixArray = CFArrayCreate(NULL, (const void**)cfprefixes, 1, &kCFTypeArrayCallBacks);
-    CFArrayRef destArray = CFArrayCreate(NULL, (const void**)cfdestaddrs, 1, &kCFTypeArrayCallBacks);
-    CFArrayRef flagsArray = CFArrayCreate(NULL, (const void**)cfflags, 1, &kCFTypeArrayCallBacks);
+    CFArrayRef addrArray = CFArrayCreate(NULL, (const void**)&cfaddr, 1, &kCFTypeArrayCallBacks);
+    CFArrayRef prefixArray = CFArrayCreate(NULL, (const void**)&cfprefixes, 1, &kCFTypeArrayCallBacks);
+    CFArrayRef destArray = CFArrayCreate(NULL, (const void**)&cfdestaddrs, 1, &kCFTypeArrayCallBacks);
+    CFArrayRef flagsArray = CFArrayCreate(NULL, (const void**)&cfflags, 1, &kCFTypeArrayCallBacks);
     CFStringRef cfdev = CFStringCreateWithCString(NULL, dev, kCFStringEncodingUTF8);
 
     const int SIZE = 5;
@@ -182,6 +177,14 @@ bool MacDNSHelper::addIps(uint64_t nwid, const MAC mac, const char *dev, const s
             fprintf(stderr, "Error writing IPv6 configuration\n");
         }
     }
+    if (oldAddrs != NULL) {
+        CFRelease(oldAddrs);
+    }
+
+    CFRelease(cfaddr);
+    CFRelease(cfprefixes);
+    CFRelease(cfdestaddrs);
+    CFRelease(cfflags);
 
     CFRelease(addrArray);
     CFRelease(prefixArray);
@@ -189,16 +192,15 @@ bool MacDNSHelper::addIps(uint64_t nwid, const MAC mac, const char *dev, const s
     CFRelease(flagsArray);
     CFRelease(cfdev);
 
-    CFRelease(list);
-    CFRelease(dict);
-
     CFRelease(ds);
     CFRelease(key);
 
-    delete[] cfaddrs;
-    delete[] cfprefixes;
-    delete[] cfdestaddrs;
-    delete[] cfflags;
+    // for (unsigned int i = 0; i < SIZE; ++i) {
+    //     values[i] = NULL;
+    // }
+
+    CFRelease(list);
+    CFRelease(dict);
 
     return ret;
 }

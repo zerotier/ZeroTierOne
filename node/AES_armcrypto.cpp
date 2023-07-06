@@ -56,8 +56,9 @@ void AES::GMAC::p_armUpdate(const uint8_t *in, unsigned int len) noexcept
 
 	if (_rp) {
 		for(;;) {
-			if (!len)
+			if (!len) {
 				return;
+			}
 			--len;
 			_r[_rp++] = *(in++);
 			if (_rp == 16) {
@@ -75,8 +76,9 @@ void AES::GMAC::p_armUpdate(const uint8_t *in, unsigned int len) noexcept
 
 	vst1q_u8(reinterpret_cast<uint8_t *>(_y), y);
 
-	for (unsigned int i = 0; i < len; ++i)
+	for (unsigned int i = 0; i < len; ++i) {
 		_r[i] = in[i];
+	}
 	_rp = len; // len is always less than 16 here
 }
 
@@ -87,8 +89,9 @@ void AES::GMAC::p_armFinish(uint8_t tag[16]) noexcept
 	const uint8x16_t h = _aes.p_k.neon.h;
 
 	if (_rp) {
-		while (_rp < 16)
+		while (_rp < 16) {
 			_r[_rp++] = 0;
+		}
 		y = s_clmul_armneon_crypto(h, y, _r);
 	}
 
@@ -255,8 +258,9 @@ void AES::CTR::p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noe
 			in += 64;
 
 			dd = (uint8x16_t)vaddq_u32((uint32x4_t)dd, four);
-			if (unlikely(len < 64))
+			if (unlikely(len < 64)) {
 				break;
+			}
 			dd1 = (uint8x16_t)vaddq_u32((uint32x4_t)dd1, four);
 			dd2 = (uint8x16_t)vaddq_u32((uint32x4_t)dd2, four);
 			dd3 = (uint8x16_t)vaddq_u32((uint32x4_t)dd3, four);
@@ -290,8 +294,9 @@ void AES::CTR::p_armCrypt(const uint8_t *in, uint8_t *out, unsigned int len) noe
 	// Any remaining input is placed in _out. This will be picked up and crypted
 	// on subsequent calls to crypt() or finish() as it'll mean _len will not be
 	// an even multiple of 16.
-	for (unsigned int i = 0; i < len; ++i)
+	for (unsigned int i = 0; i < len; ++i) {
 		out[i] = in[i];
+	}
 
 	vst1q_u8(reinterpret_cast<uint8_t *>(_ctr), vrev32q_u8(dd));
 }
@@ -327,12 +332,14 @@ void AES::p_init_armneon_crypto(const uint8_t *key) noexcept
 		w[i] = w[i - ZT_INIT_ARMNEON_CRYPTO_NK] ^ t;
 	}
 
-	for (unsigned int i=0;i<(ZT_INIT_ARMNEON_CRYPTO_NB * (ZT_INIT_ARMNEON_CRYPTO_NR + 1));++i)
+	for (unsigned int i=0;i<(ZT_INIT_ARMNEON_CRYPTO_NB * (ZT_INIT_ARMNEON_CRYPTO_NR + 1));++i) {
 		w[i] = Utils::hton(w[i]);
+	}
 
 	p_k.neon.dk[0] = p_k.neon.ek[14];
-	for (int i=1;i<14;++i)
+	for (int i=1;i<14;++i) {
 		p_k.neon.dk[i] = vaesimcq_u8(p_k.neon.ek[14 - i]);
+	}
 	p_k.neon.dk[14] = p_k.neon.ek[0];
 
 	p_encrypt_armneon_crypto(Utils::ZERO256, h);

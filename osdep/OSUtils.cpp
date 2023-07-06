@@ -17,6 +17,7 @@
 #include <stdarg.h>
 #include <sys/stat.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include "../node/Constants.hpp"
 #include "../node/Utils.hpp"
@@ -64,6 +65,18 @@ unsigned int OSUtils::ztsnprintf(char *buf,unsigned int len,const char *fmt,...)
 	}
 
 	return (unsigned int)n;
+}
+
+std::string OSUtils::networkIDStr(const uint64_t nwid) {
+	char tmp[32] = {};
+	ztsnprintf(tmp, sizeof(tmp), "%.16" PRIx64, nwid);
+	return std::string(tmp);
+}
+
+std::string OSUtils::nodeIDStr(const uint64_t nid) {
+	char tmp[32] = {};
+	ztsnprintf(tmp, sizeof(tmp), "%.10" PRIx64, nid);
+	return std::string(tmp);
 }
 
 #ifdef __UNIX_LIKE__

@@ -116,6 +116,10 @@ public:
 		return OK;
 	}
 
+	inline size_t size() const {
+		return q.size();
+	}
+
 private:
 	std::queue<T> q;
 	mutable std::mutex m;

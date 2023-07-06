@@ -13,6 +13,7 @@
 #define METRICS_H_
 
 #include <prometheus/simpleapi.h>
+#include <prometheus/histogram.h>
 
 namespace prometheus {
     namespace simpleapi {
@@ -24,43 +25,95 @@ namespace ZeroTier {
     namespace Metrics {
         // Packet Type Counts
         extern prometheus::simpleapi::counter_family_t packets;
-        extern prometheus::simpleapi::counter_metric_t pkt_error;
-        extern prometheus::simpleapi::counter_metric_t pkt_ack;
-        extern prometheus::simpleapi::counter_metric_t pkt_qos;
-        extern prometheus::simpleapi::counter_metric_t pkt_hello;
-        extern prometheus::simpleapi::counter_metric_t pkt_ok;
-        extern prometheus::simpleapi::counter_metric_t pkt_whois;
-        extern prometheus::simpleapi::counter_metric_t pkt_rendezvous;
-        extern prometheus::simpleapi::counter_metric_t pkt_frame;
-        extern prometheus::simpleapi::counter_metric_t pkt_ext_frame;
-        extern prometheus::simpleapi::counter_metric_t pkt_echo;
-        extern prometheus::simpleapi::counter_metric_t pkt_multicast_like;
-        extern prometheus::simpleapi::counter_metric_t pkt_network_credentials;
-        extern prometheus::simpleapi::counter_metric_t pkt_network_config_request;
-        extern prometheus::simpleapi::counter_metric_t pkt_network_config;
-        extern prometheus::simpleapi::counter_metric_t pkt_multicast_gather;
-        extern prometheus::simpleapi::counter_metric_t pkt_multicast_frame;
-        extern prometheus::simpleapi::counter_metric_t pkt_push_direct_paths;
-        extern prometheus::simpleapi::counter_metric_t pkt_user_message;
-        extern prometheus::simpleapi::counter_metric_t pkt_remote_trace;
-        extern prometheus::simpleapi::counter_metric_t pkt_path_negotiation_request;
+
+        // incoming packets
+        extern prometheus::simpleapi::counter_metric_t pkt_nop_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_ack_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_qos_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_hello_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_ok_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_whois_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_rendezvous_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_frame_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_ext_frame_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_echo_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_multicast_like_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_network_credentials_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_network_config_request_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_network_config_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_multicast_gather_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_multicast_frame_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_push_direct_paths_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_user_message_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_remote_trace_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_path_negotiation_request_in;
+
+        // outgoing packets
+        extern prometheus::simpleapi::counter_metric_t pkt_nop_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_ack_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_qos_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_hello_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_ok_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_whois_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_rendezvous_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_frame_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_ext_frame_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_echo_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_multicast_like_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_network_credentials_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_network_config_request_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_network_config_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_multicast_gather_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_multicast_frame_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_push_direct_paths_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_user_message_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_remote_trace_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_path_negotiation_request_out;
 
         // Packet Error Counts
         extern prometheus::simpleapi::counter_family_t packet_errors;
-        extern prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found;
-        extern prometheus::simpleapi::counter_metric_t pkt_error_unsupported_op;
-        extern prometheus::simpleapi::counter_metric_t pkt_error_identity_collision;
-        extern prometheus::simpleapi::counter_metric_t pkt_error_need_membership_cert;
-        extern prometheus::simpleapi::counter_metric_t pkt_error_network_access_denied;
-        extern prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast;
-        extern prometheus::simpleapi::counter_metric_t pkt_error_authentication_required;
 
+        // incoming errors
+        extern prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_unsupported_op_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_identity_collision_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_need_membership_cert_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_network_access_denied_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_authentication_required_in;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_internal_server_error_in;
+
+        // outgoing errors
+        extern prometheus::simpleapi::counter_metric_t pkt_error_obj_not_found_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_unsupported_op_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_identity_collision_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_need_membership_cert_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_network_access_denied_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_unwanted_multicast_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_authentication_required_out;
+        extern prometheus::simpleapi::counter_metric_t pkt_error_internal_server_error_out;
 
         // Data Sent/Received Metrics
+        extern prometheus::simpleapi::counter_family_t data;
         extern prometheus::simpleapi::counter_metric_t udp_send;
         extern prometheus::simpleapi::counter_metric_t udp_recv;
         extern prometheus::simpleapi::counter_metric_t tcp_send;
         extern prometheus::simpleapi::counter_metric_t tcp_recv;
+
+        // Network Metrics
+        extern prometheus::simpleapi::gauge_metric_t   network_num_joined;
+        extern prometheus::simpleapi::gauge_family_t   network_num_multicast_groups;
+        extern prometheus::simpleapi::counter_family_t network_packets;
+
+#ifndef ZT_NO_PEER_METRICS
+        // Peer Metrics
+        extern prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &peer_latency;
+        extern prometheus::simpleapi::gauge_family_t   peer_path_count;
+        extern prometheus::simpleapi::counter_family_t peer_packets;
+        extern prometheus::simpleapi::counter_family_t peer_packet_errors;
+#endif
 
         // General Controller Metrics
         extern prometheus::simpleapi::gauge_metric_t   network_count;
@@ -70,14 +123,34 @@ namespace ZeroTier {
         extern prometheus::simpleapi::counter_metric_t member_auths;
         extern prometheus::simpleapi::counter_metric_t member_deauths;
 
+        extern prometheus::simpleapi::gauge_metric_t network_config_request_queue_size;
+        extern prometheus::simpleapi::counter_metric_t sso_expiration_checks;
+        extern prometheus::simpleapi::counter_metric_t sso_member_deauth;
+        extern prometheus::simpleapi::counter_metric_t network_config_request;
+        extern prometheus::simpleapi::gauge_metric_t network_config_request_threads;
+
+        extern prometheus::simpleapi::counter_metric_t db_get_network;
+        extern prometheus::simpleapi::counter_metric_t db_get_network_and_member;
+        extern prometheus::simpleapi::counter_metric_t db_get_network_and_member_and_summary;
+        extern prometheus::simpleapi::counter_metric_t db_get_member_list;
+        extern prometheus::simpleapi::counter_metric_t db_get_network_list;
+        extern prometheus::simpleapi::counter_metric_t db_member_change;
+        extern prometheus::simpleapi::counter_metric_t db_network_change;
+
+
 #ifdef ZT_CONTROLLER_USE_LIBPQ
         // Central Controller Metrics
         extern prometheus::simpleapi::counter_metric_t pgsql_mem_notification;
         extern prometheus::simpleapi::counter_metric_t pgsql_net_notification;
         extern prometheus::simpleapi::counter_metric_t pgsql_node_checkin;
+        extern prometheus::simpleapi::counter_metric_t pgsql_commit_ticks;
+        extern prometheus::simpleapi::counter_metric_t db_get_sso_info;
+        
         extern prometheus::simpleapi::counter_metric_t redis_mem_notification;
         extern prometheus::simpleapi::counter_metric_t redis_net_notification;
         extern prometheus::simpleapi::counter_metric_t redis_node_checkin;
+
+        
 
         // Central DB Pool Metrics
         extern prometheus::simpleapi::counter_metric_t conn_counter;

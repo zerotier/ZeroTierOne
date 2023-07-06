@@ -35,6 +35,7 @@ use std::str::from_utf8;
 use std::sync::{Arc, Mutex};
 use std::thread::{sleep, spawn, JoinHandle};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+#[cfg(debug_assertions)]
 use time::{format_description, OffsetDateTime};
 
 use url::Url;
@@ -59,7 +60,6 @@ pub struct ZeroIDC {
 ))]
 struct Inner {
     running: bool,
-    issuer: String,
     auth_endpoint: String,
     provider: String,
     oidc_thread: Option<JoinHandle<()>>,
@@ -123,7 +123,6 @@ impl ZeroIDC {
         let idc = ZeroIDC {
             inner: Arc::new(Mutex::new(Inner {
                 running: false,
-                issuer: issuer.to_string(),
                 provider: provider.to_string(),
                 auth_endpoint: auth_ep.to_string(),
                 oidc_thread: None,

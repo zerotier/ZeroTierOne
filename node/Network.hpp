@@ -37,6 +37,7 @@
 #include "Membership.hpp"
 #include "NetworkConfig.hpp"
 #include "CertificateOfMembership.hpp"
+#include "Metrics.hpp"
 
 #define ZT_NETWORK_MAX_INCOMING_UPDATES 3
 #define ZT_NETWORK_MAX_UPDATE_CHUNKS ((ZT_NETWORKCONFIG_DICT_CAPACITY / 1024) + 1)
@@ -332,8 +333,9 @@ public:
 	 */
 	inline Membership::AddCredentialResult addCredential(void *tPtr,const Capability &cap)
 	{
-		if (cap.networkId() != _id)
+		if (cap.networkId() != _id) {
 			return Membership::ADD_REJECTED;
+		}
 		Mutex::Lock _l(_lock);
 		return _membership(cap.issuedTo()).addCredential(RR,tPtr,_config,cap);
 	}
@@ -343,8 +345,9 @@ public:
 	 */
 	inline Membership::AddCredentialResult addCredential(void *tPtr,const Tag &tag)
 	{
-		if (tag.networkId() != _id)
+		if (tag.networkId() != _id) {
 			return Membership::ADD_REJECTED;
+		}
 		Mutex::Lock _l(_lock);
 		return _membership(tag.issuedTo()).addCredential(RR,tPtr,_config,tag);
 	}
@@ -359,8 +362,9 @@ public:
 	 */
 	inline Membership::AddCredentialResult addCredential(void *tPtr,const CertificateOfOwnership &coo)
 	{
-		if (coo.networkId() != _id)
+		if (coo.networkId() != _id) {
 			return Membership::ADD_REJECTED;
+		}
 		Mutex::Lock _l(_lock);
 		return _membership(coo.issuedTo()).addCredential(RR,tPtr,_config,coo);
 	}
@@ -377,8 +381,9 @@ public:
 		Mutex::Lock _l(_lock);
 		Membership &m = _membership(to);
 		const int64_t lastPushed = m.lastPushedCredentials();
-		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_CREDENTIALS_REQUEST_RATE_LIMIT))
+		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_CREDENTIALS_REQUEST_RATE_LIMIT)) {
 			m.pushCredentials(RR,tPtr,now,to,_config);
+		}
 	}
 
 	/**
@@ -393,8 +398,9 @@ public:
 		Mutex::Lock _l(_lock);
 		Membership &m = _membership(to);
 		const int64_t lastPushed = m.lastPushedCredentials();
-		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_ACTIVITY_TIMEOUT))
+		if ((lastPushed < _lastConfigUpdate)||((now - lastPushed) > ZT_PEER_ACTIVITY_TIMEOUT)) {
 			m.pushCredentials(RR,tPtr,now,to,_config);
+		}
 	}
 
 	/**
@@ -434,6 +440,7 @@ private:
 	const RuntimeEnvironment *const RR;
 	void *_uPtr;
 	const uint64_t _id;
+	std::string _nwidStr;
 	uint64_t _lastAnnouncedMulticastGroupsUpstream;
 	MAC _mac; // local MAC address
 	bool _portInitialized;
@@ -474,6 +481,12 @@ private:
 	Mutex _lock;
 
 	AtomicCounter __refCount;
+
+	prometheus::simpleapi::gauge_metric_t _num_multicast_groups;
+	prometheus::simpleapi::counter_metric_t _incoming_packets_accepted;
+	prometheus::simpleapi::counter_metric_t _incoming_packets_dropped;
+	prometheus::simpleapi::counter_metric_t _outgoing_packets_accepted;
+	prometheus::simpleapi::counter_metric_t _outgoing_packets_dropped;
 };
 
 }	// namespace ZeroTier

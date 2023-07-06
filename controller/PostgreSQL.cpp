@@ -374,6 +374,7 @@ void PostgreSQL::nodeIsOnline(const uint64_t networkId, const uint64_t memberId,
 
 AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::string &redirectURL)
 {
+	Metrics::db_get_sso_info++;
 	// NONCE is just a random character string.  no semantic meaning
 	// state = HMAC SHA384 of Nonce based on shared sso key
 	// 
@@ -388,9 +389,16 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 	char authenticationURL[4096] = {0};
 	AuthInfo info;
 	info.enabled = true;
+
+	//if (memberId == "a10dccea52" && networkId == "8056c2e21c24673d") {
+	//	fprintf(stderr, "invalid authinfo for grant's machine\n");
+	//	info.version=1;
+	//	return info;
+	//}
 	// fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
+	std::shared_ptr<PostgresConnection> c;
 	try {
-		auto c = _pool->borrow();
+		c = _pool->borrow();
 		pqxx::work w(*c->c);
 
 		char nonceBytes[16] = {0};
@@ -452,7 +460,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 			    "LEFT OUTER JOIN ztc_network_oidc_config noc "
 				"  ON noc.network_id = n.id "
 				"LEFT OUTER JOIN ztc_oidc_config oc "
-				"  ON noc.client_id = oc.client_id AND noc.org_id = o.org_id "
+				"  ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
 				"WHERE n.id = $1 AND n.sso_enabled = true", networkId);
 		
 			std::string client_id = "";
@@ -462,11 +470,11 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 			uint64_t sso_version = 0;
 
 			if (r.size() == 1) {
-				client_id = r.at(0)[0].as<std::string>();
-				authorization_endpoint = r.at(0)[1].as<std::string>();
-				issuer = r.at(0)[2].as<std::string>();
-				provider = r.at(0)[3].as<std::string>();
-				sso_version = r.at(0)[4].as<uint64_t>();
+				client_id = r.at(0)[0].as<std::optional<std::string>>().value_or("");
+				authorization_endpoint = r.at(0)[1].as<std::optional<std::string>>().value_or("");
+				issuer = r.at(0)[2].as<std::optional<std::string>>().value_or("");
+				provider = r.at(0)[3].as<std::optional<std::string>>().value_or("");
+				sso_version = r.at(0)[4].as<std::optional<uint64_t>>().value_or(1);
 			} else if (r.size() > 1) {
 				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
 			} else {
@@ -776,7 +784,7 @@ void PostgreSQL::initializeMembers()
 
 		if (_redisMemberStatus) {
 			fprintf(stderr, "Initialize Redis for members...\n");
-			std::lock_guard<std::mutex> l(_networks_l);
+			std::unique_lock<std::shared_mutex> l(_networks_l);
 			std::unordered_set<std::string> deletes;
 			for ( auto it : _networks) {
 				uint64_t nwid_i = it.first;
@@ -1040,7 +1048,6 @@ void PostgreSQL::heartbeat()
 				w.commit();
 			} catch (std::exception &e) {
 				fprintf(stderr, "%s: Heartbeat update failed: %s\n", controllerId, e.what());
-				_pool->unborrow(c);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				continue;
 			}
@@ -1270,6 +1277,7 @@ void PostgreSQL::commitThread()
 			continue;
 		}
 		
+		Metrics::pgsql_commit_ticks++;
 		try {
 			nlohmann::json &config = (qitem.first);
 			const std::string objtype = config["objtype"];
@@ -1596,7 +1604,6 @@ void PostgreSQL::commitThread()
 		}
 		_pool->unborrow(c);
 		c.reset();
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
 	fprintf(stderr, "%s commitThread finished\n", _myAddressStr.c_str());
@@ -1812,7 +1819,7 @@ uint64_t PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &con
 						sw::redis::RightBoundedInterval<double>(expireOld,
 																sw::redis::BoundType::LEFT_OPEN));
 	{
-		std::lock_guard<std::mutex> l(_networks_l);
+		std::shared_lock<std::shared_mutex> l(_networks_l);
 		for (const auto &it : _networks) {
 			uint64_t nwid_i = it.first;
 			char nwidTmp[64];
