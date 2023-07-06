@@ -978,8 +978,8 @@ public:
 					Utils::getSecureRandom(foo,sizeof(foo));
 					_metricsToken = "";
 					for(unsigned int i=0;i<sizeof(foo);++i)
-						_authToken.push_back("abcdefghijklmnopqrstuvwxyz0123456789"[(unsigned long)foo[i] % 36]);
-					if (!OSUtils::writeFile(metricsTokenPath.c_str(),_authToken)) {
+						_metricsToken.push_back("abcdefghijklmnopqrstuvwxyz0123456789"[(unsigned long)foo[i] % 36]);
+					if (!OSUtils::writeFile(metricsTokenPath.c_str(),_metricsToken)) {
 						Mutex::Lock _l(_termReason_m);
 						_termReason = ONE_UNRECOVERABLE_ERROR;
 						_fatalErrorMessage = "metricstoken.secret could not be written";
