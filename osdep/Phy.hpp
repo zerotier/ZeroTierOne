@@ -1032,19 +1032,22 @@ template <typename HANDLER_PTR_TYPE> class Phy {
 						memset(addrs, 0, sizeof(addrs));
 						mmsghdr mm[RECVMMSG_WINDOW_SIZE];
 						memset(mm, 0, sizeof(mm));
+						for (int i = 0; i < RECVMMSG_WINDOW_SIZE; ++i) {
+							iovs[i].iov_base = (void*)bufs[i];
+							iovs[i].iov_len = RECVMMSG_BUF_SIZE;
+							mm[i].msg_hdr.msg_name = (void*)&(addrs[i]);
+							mm[i].msg_hdr.msg_iov = &(iovs[i]);
+							mm[i].msg_hdr.msg_iovlen = 1;
+						}
 						for (int k = 0; k < 1024; ++k) {
 							for (int i = 0; i < RECVMMSG_WINDOW_SIZE; ++i) {
-								iovs[i].iov_base = (void*)bufs[i];
-								iovs[i].iov_len = RECVMMSG_BUF_SIZE;
-								mm[i].msg_hdr.msg_name = (void*)&(addrs[i]);
 								mm[i].msg_hdr.msg_namelen = sizeof(sockaddr_storage);
-								mm[i].msg_hdr.msg_iov = &(iovs[i]);
-								mm[i].msg_hdr.msg_iovlen = 1;
+								mm[i].msg_len = 0;
 							}
 							int received_count = recvmmsg(s->sock, mm, RECVMMSG_WINDOW_SIZE, MSG_WAITFORONE, nullptr);
 							if (received_count > 0) {
 								for (int i = 0; i < received_count; ++i) {
-									long n = (long)mm[i].msg_hdr.msg_iov->iov_len;
+									long n = (long)mm[i].msg_len;
 									if (n > 0) {
 										try {
 											_handler->phyOnDatagram((PhySocket*)&(*s), &(s->uptr), (const struct sockaddr*)&(s->saddr), (const struct sockaddr*)&(addrs[i]), bufs[i], (unsigned long)n);
