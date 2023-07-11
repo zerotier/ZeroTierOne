@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <vector>
 
+#define ZT_NO_METRICS 1
 #include "../osdep/Phy.hpp"
 
 #define ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS 300
