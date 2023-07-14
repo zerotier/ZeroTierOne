@@ -2617,8 +2617,9 @@ public:
 					r->second->sync();
 			}
 			for(std::map< InetAddress, SharedPtr<ManagedRoute> >::iterator r(n.managedRoutes().begin());r!=n.managedRoutes().end();++r) {
-				if (r->second->via())
+				if (r->second->via() && (!r->second->target().isDefaultRoute() || _node->online())) {
 					r->second->sync();
+				}
 			}
 		}
 
