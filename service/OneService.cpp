@@ -1793,6 +1793,8 @@ public:
 			_node->join(wantnw, (void*)0, (void*)0);
 			auto out = json::object();
 			Mutex::Lock l(_nets_m);
+			bool allowDefault = false;
+
 			if (!_nets.empty()) {
 				NetworkState &ns = _nets[wantnw];
 				try {
@@ -1806,8 +1808,9 @@ public:
 					if (allowGlobal.is_boolean()) {
 						ns.setAllowGlobal((bool)allowGlobal);
 					}
-					json& allowDefault = j["allowDefault"];
-					if (allowDefault.is_boolean()) {
+					json& _allowDefault = j["allowDefault"];
+					if (_allowDefault.is_boolean()) {
+						allowDefault = _allowDefault;
 						ns.setAllowDefault((bool)allowDefault);
 					}
 					json& allowDNS = j["allowDNS"];
@@ -1824,7 +1827,17 @@ public:
 
 				_networkToJson(out, ns);
 			}
+#ifdef __FreeBSD__
+			if(!!allowDefault){
+				res.status = 400;
+				setContent(req, res, "Allow Default does not work properly on FreeBSD. See #580");
+			} else {
+				setContent(req, res, out.dump());
+
+			}
+#else
 			setContent(req, res, out.dump());
+#endif
 		};
 		_controlPlane.Post("/network/([0-9a-fA-F]{16})", networkPost);
 		_controlPlane.Put("/network/([0-9a-fA-F]){16}", networkPost);
