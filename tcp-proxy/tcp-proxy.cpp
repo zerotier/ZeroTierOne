@@ -42,7 +42,12 @@
 #include <vector>
 
 #define ZT_NO_METRICS 1
+
 #include "../osdep/Phy.hpp"
+
+#ifndef ZT_NO_METRICS
+#include "../node/Metrics.hpp"
+#endif
 
 #define ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS 300
 #define ZT_TCP_PROXY_TCP_PORT 443
