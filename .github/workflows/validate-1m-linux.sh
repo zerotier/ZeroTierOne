@@ -440,7 +440,7 @@ spam_cli() {
 check_exit_on_invalid_identity() {
 	echo "Checking ZeroTier exits on invalid identity..."
 	mkdir -p $(pwd)/exit_test
-	ZT1="sudo ./zerotier-cli -p9999 -D$(pwd)/exit_test"
+	ZT1="sudo ./zerotier-one -p9999 $(pwd)/exit_test"
 	echo "asdfasdfasdfasdf" > $(pwd)/exit_test/identity.secret
 	echo "asdfasdfasdfasdf" > $(pwd)/exit_test/authtoken.secret
 
