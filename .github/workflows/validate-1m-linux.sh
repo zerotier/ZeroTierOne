@@ -439,8 +439,10 @@ spam_cli() {
 
 check_exit_on_invalid_identity() {
 	echo "Checking ZeroTier exits on invalid identity..."
+	mkdir -p $(pwd)/exit_test
 	ZT1="./zerotier-cli -p9999 -D$(pwd)/exit_test"
 	echo "asdfasdfasdfasdf" > $(pwd)/exit_test/identity.secret
+	echo "asdfasdfasdfasdf" > $(pwd)/exit_test/authtoken.secret
 
 	echo "Launch ZeroTier with an invalid identity"
 	$ZT1 &
@@ -454,8 +456,9 @@ check_exit_on_invalid_identity() {
 	if [ $? -eq 0 ]; then
 		EXIT_TEST_FAILED=1
 		echo "Exit test FAILED: Process still running after being fed an invalid identity"
+	else
+		echo "Exit test PASSED"
 	fi
-	echo "Exit test PASSED"
 }
 
 main "$@"
