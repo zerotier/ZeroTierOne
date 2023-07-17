@@ -239,13 +239,13 @@ std.flattenArrays([
     [
       Index(p)
     ]
-    for p in targets
+    for p in less_targets
  ]) +
  std.flattenArrays([
      [
         Test(p.os, p.distro, p.name, isa, p.events)
          for isa in p.isas
      ]
-     for p in targets
+     for p in less_targets
  ])
  
