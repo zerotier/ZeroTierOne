@@ -38,6 +38,11 @@ local less_targets = [
       { "os": "linux", distro: "ubuntu", "name": "focal",    "isas": [        "armv7", "amd64", "arm64" ],             "events": [ "push", "tag", "custom" ] },
 ];
 
+
+local native_targets = [
+      { "os": "linux", distro: "debian", "name": "bullseye", "isas": [ "386", "armv7", "amd64", "arm64" ],            "events": [ "push", "tag", "custom" ] },
+];    
+
 local master_targets = [
       //
       // copypasta from here
@@ -239,13 +244,13 @@ std.flattenArrays([
     [
       Index(p)
     ]
-    for p in less_targets
+    for p in native_targets
  ]) +
  std.flattenArrays([
      [
         Test(p.os, p.distro, p.name, isa, p.events)
          for isa in p.isas
      ]
-     for p in less_targets
+     for p in native_targets
  ])
  
