@@ -786,6 +786,7 @@ public:
 
     httplib::Server _controlPlane;
     std::thread _serverThread;
+	bool _serverThreadRunning;
 
     bool _allowTcpFallbackRelay;
 	bool _forceTcpRelay;
@@ -887,6 +888,7 @@ public:
 		,_updateAutoApply(false)
         ,_controlPlane()
         ,_serverThread()
+		,_serverThreadRunning(false)
 		,_forceTcpRelay(false)
 		,_primaryPort(port)
 		,_udpPortPickerCounter(0)
@@ -938,8 +940,9 @@ public:
 #endif
 
         _controlPlane.stop();
-        _serverThread.join();
-
+		if (_serverThreadRunning) {
+	        _serverThread.join();
+		}
 
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
@@ -1004,7 +1007,6 @@ public:
 				cb.pathLookupFunction = SnodePathLookupFunction;
 				_node = new Node(this,(void *)0,&cb,OSUtils::now());
 			}
-
 
 			// local.conf
 			readLocalSettings();
@@ -1260,6 +1262,51 @@ public:
 			Mutex::Lock _l(_termReason_m);
 			_termReason = ONE_UNRECOVERABLE_ERROR;
 			_fatalErrorMessage = std::string("unexpected exception in main thread: ")+e.what();
+		} catch (int e) {
+			Mutex::Lock _l(_termReason_m);
+			_termReason = ONE_UNRECOVERABLE_ERROR;
+			switch (e) {
+				case ZT_EXCEPTION_OUT_OF_BOUNDS: {
+					_fatalErrorMessage = "out of bounds exception";
+					break;
+				}
+				case ZT_EXCEPTION_OUT_OF_MEMORY: {
+					_fatalErrorMessage = "out of memory";
+					break;
+				}
+				case ZT_EXCEPTION_PRIVATE_KEY_REQUIRED: {
+					_fatalErrorMessage = "private key required";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_ARGUMENT: {
+					_fatalErrorMessage = "invalid argument";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_IDENTITY: {
+					_fatalErrorMessage = "invalid identity loaded from disk. Please remove identity.public and identity.secret from " + _homePath + " and try again";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE: {
+					_fatalErrorMessage = "invalid serialized data: invalid type";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW: {
+					_fatalErrorMessage = "invalid serialized data: overflow";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN: {
+					_fatalErrorMessage = "invalid serialized data: invalid cryptographic token";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_SERIALIZED_DATA_BAD_ENCODING: {
+					_fatalErrorMessage = "invalid serialized data: bad encoding";
+					break;
+				}
+				default: {
+					_fatalErrorMessage = "unexpected exception code: " + std::to_string(e);
+					break;
+				}
+			}
 		} catch ( ... ) {
 			Mutex::Lock _l(_termReason_m);
 			_termReason = ONE_UNRECOVERABLE_ERROR;
@@ -2077,11 +2124,13 @@ public:
 		}
 
         _serverThread = std::thread([&] {
+			_serverThreadRunning = true;
             fprintf(stderr, "Starting Control Plane...\n");
             if(!_controlPlane.listen_after_bind()) {
 				fprintf(stderr, "Error on listen_after_bind()\n");
 			}
             fprintf(stderr, "Control Plane Stopped\n");
+			_serverThreadRunning = false;
         });
 
     }
