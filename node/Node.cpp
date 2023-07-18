@@ -80,7 +80,11 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 			RR->identity.toString(false,RR->publicIdentityStr);
 			RR->identity.toString(true,RR->secretIdentityStr);
 		} else {
-			n = -1;
+			throw ZT_EXCEPTION_INVALID_IDENTITY;
+		}
+
+		if (!RR->identity.locallyValidate()) {
+			throw ZT_EXCEPTION_INVALID_IDENTITY;
 		}
 	}
 

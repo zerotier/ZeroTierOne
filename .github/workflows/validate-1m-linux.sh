@@ -9,6 +9,8 @@ ZTO_VER=$(git describe --tags $(git rev-list --tags --max-count=1))
 ZTO_COMMIT=$(git rev-parse HEAD)
 ZTO_COMMIT_SHORT=$(git rev-parse --short HEAD)
 TEST_DIR_PREFIX="$ZTO_VER-$ZTO_COMMIT_SHORT-test-results"
+EXIT_TEST_FAILED=0
+
 echo "Performing test on: $ZTO_VER-$ZTO_COMMIT_SHORT"
 TEST_FILEPATH_PREFIX="$TEST_DIR_PREFIX/$ZTO_COMMIT_SHORT"
 mkdir $TEST_DIR_PREFIX
@@ -18,6 +20,9 @@ mkdir $TEST_DIR_PREFIX
 ################################################################################
 main() {
 	echo -e "\nRunning test for $RUN_LENGTH seconds"
+
+	check_exit_on_invalid_identity
+
 	NS1="ip netns exec ns1"
 	NS2="ip netns exec ns2"
 
@@ -390,7 +395,8 @@ main() {
   "mean_latency_ping_netns": $POSSIBLY_LOST,
   "mean_pdv_random": $POSSIBLY_LOST,
   "mean_pdv_netns": $POSSIBLY_LOST,
-  "mean_perf_netns": $POSSIBLY_LOST
+  "mean_perf_netns": $POSSIBLY_LOST,
+  "exit_test_failed": $EXIT_TEST_FAILED
 }
 EOF
 	)
@@ -429,6 +435,30 @@ spam_cli() {
 		$ZT1 leave $TEST_NETWORK
 		$ZT1 join $TEST_NETWORK
 	done
+}
+
+check_exit_on_invalid_identity() {
+	echo "Checking ZeroTier exits on invalid identity..."
+	mkdir -p $(pwd)/exit_test
+	ZT1="sudo ./zerotier-one -p9999 $(pwd)/exit_test"
+	echo "asdfasdfasdfasdf" > $(pwd)/exit_test/identity.secret
+	echo "asdfasdfasdfasdf" > $(pwd)/exit_test/authtoken.secret
+
+	echo "Launch ZeroTier with an invalid identity"
+	$ZT1 &
+	my_pid=$!
+
+	echo "Waiting 5 secons"
+	sleep 5
+
+	# check if process is running
+	kill -0 $my_pid
+	if [ $? -eq 0 ]; then
+		EXIT_TEST_FAILED=1
+		echo "Exit test FAILED: Process still running after being fed an invalid identity"
+	else
+		echo "Exit test PASSED"
+	fi
 }
 
 main "$@"
