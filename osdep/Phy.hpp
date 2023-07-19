@@ -50,9 +50,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 
-#ifndef ZT_NO_METRICS
 #include "../node/Metrics.hpp"
-#endif
 
 #if defined(__linux__) || defined(linux) || defined(__LINUX__) || defined(__linux)
 #ifndef IPV6_DONTFRAG
@@ -478,9 +476,7 @@ public:
 				 	sizeof(struct sockaddr_in)) == (long)len);
 #endif
 		if (sent) {
-#ifndef ZT_NO_METRICS
 			Metrics::udp_send += len;
-#endif
 		}
 
 		return sent;
