@@ -20,6 +20,11 @@
 #include <string>
 #include <cinttypes> // for PRId64, etc. macros
 
+// FIXME: remove this suppression and actually fix warnings
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#endif
+
 namespace ZeroTier {
 
 static unsigned char s_freeRandomByteCounter = 0;
