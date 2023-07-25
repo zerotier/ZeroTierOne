@@ -12,8 +12,10 @@ class MacDNSHelper
 public:
     static void setDNS(uint64_t nwid, const char *domain, const std::vector<InetAddress> &servers);
     static void removeDNS(uint64_t nwid);
-    static bool addIps(uint64_t nwid, const MAC mac, const char *dev, const std::vector<InetAddress> &addrs);
-    static bool removeIps(uint64_t nwid);
+    static bool addIps4(uint64_t nwid, const MAC mac, const char *dev, const std::vector<InetAddress> &addrs);
+    static bool addIps6(uint64_t nwid, const MAC mac, const char *dev, const std::vector<InetAddress> &addrs);
+    static bool removeIps4(uint64_t nwid);
+    static bool removeIps6(uint64_t nwid);
 };
 
 }

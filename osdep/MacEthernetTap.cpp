@@ -245,7 +245,8 @@ MacEthernetTap::~MacEthernetTap()
 	pid_t pid0,pid1;
 
 	MacDNSHelper::removeDNS(_nwid);
-	MacDNSHelper::removeIps(_nwid);
+	MacDNSHelper::removeIps4(_nwid);
+	MacDNSHelper::removeIps6(_nwid);
 
 	Mutex::Lock _gl(globalTapCreateLock);
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
