@@ -357,6 +357,9 @@ endif
 override CFLAGS+=-fPIC -fPIE
 override CXXFLAGS+=-fPIC -fPIE
 
+# Non-executable stack
+override ASFLAGS+=--noexecstack
+
 .PHONY: all
 all:	one
 
