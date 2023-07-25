@@ -25,19 +25,23 @@ void MacDNSHelper::setDNS(uint64_t nwid, const char *domain, const std::vector<I
 
     CFArrayRef serverArray = CFArrayCreate(NULL, (const void**)s, servers.size(), &kCFTypeArrayCallBacks);
 
-    CFStringRef keys[2];
+    CFStringRef keys[3];
     keys[0] = CFSTR("SupplementalMatchDomains");
     keys[1] = CFSTR("ServerAddresses");
+    keys[2] = CFSTR("SearchDomains");
 
     CFStringRef cfdomain = CFStringCreateWithCString(NULL, domain, kCFStringEncodingUTF8);
+    CFStringRef cfdomain2 = CFStringCreateWithCString(NULL, domain, kCFStringEncodingUTF8);
     CFArrayRef domainArray = CFArrayCreate(NULL, (const void**)&cfdomain, 1, &kCFTypeArrayCallBacks);
+    CFArrayRef domainArray2 = CFArrayCreate(NULL, (const void**)&cfdomain2, 1, &kCFTypeArrayCallBacks);
 
-    CFTypeRef values[2];
+    CFTypeRef values[3];
     values[0] = domainArray;
     values[1] = serverArray;
+    values[2] = domainArray2;
 
     CFDictionaryRef dict = CFDictionaryCreate(NULL,
-        (const void**)keys, (const void**)values, 2, &kCFCopyStringDictionaryKeyCallBacks,
+        (const void**)keys, (const void**)values, 3, &kCFCopyStringDictionaryKeyCallBacks,
         &kCFTypeDictionaryValueCallBacks);
 
     char buf[256] = {0};
@@ -69,7 +73,9 @@ void MacDNSHelper::setDNS(uint64_t nwid, const char *domain, const std::vector<I
     CFRelease(key);
     CFRelease(dict);
     CFRelease(domainArray);
+    CFRelease(domainArray2);
     CFRelease(cfdomain);
+    CFRelease(cfdomain2);
     CFRelease(serverArray);
     for (int i = 0; i < servers.size(); ++i) {
         CFRelease(s[i]);
