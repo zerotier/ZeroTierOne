@@ -1056,7 +1056,7 @@ public:
 				if (_secondaryPort) {
 					_ports[1] = _secondaryPort;
 				} else {
-					_ports[1] = _getRandomPort();
+					_ports[1] = _secondaryPort = _getRandomPort();
 				}
 			}
 #ifdef ZT_USE_MINIUPNPC
@@ -1067,7 +1067,7 @@ public:
 				if (_tertiaryPort) {
 					_ports[2] = _tertiaryPort;
 				} else {
-					_ports[2] = _getRandomPort();
+					_ports[2] = _tertiaryPort = _getRandomPort();
 				}
 
 				if (_ports[2]) {
