@@ -299,7 +299,7 @@
 /**
  * Delay between checks of peer pings, etc., and also related housekeeping tasks
  */
-#define ZT_PING_CHECK_INVERVAL 5000
+#define ZT_PING_CHECK_INTERVAL 5000
 
 /**
  * How often the local.conf file is checked for changes (service, should be moved there)

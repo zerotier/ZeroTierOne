@@ -3393,7 +3393,7 @@ public:
 								void *tmpptr = (void *)_tcpFallbackTunnel;
 								phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
 							}
-						} else if (_forceTcpRelay || (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2)))) {
+						} else if (_forceTcpRelay || (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INTERVAL / 2)))) {
 							const InetAddress addr(_fallbackRelayAddress);
 							TcpConnection *tc = new TcpConnection();
 							{
