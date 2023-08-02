@@ -453,15 +453,33 @@ public:
 	inline bool udpSend(PhySocket *sock,const struct sockaddr *remoteAddress,const void *data,unsigned long len)
 	{
 		PhySocketImpl &sws = *(reinterpret_cast<PhySocketImpl *>(sock));
+		bool sent = false;
 #if defined(_WIN32) || defined(_WIN64)
-		int sent = ((long)::sendto(sws.sock,reinterpret_cast<const char *>(data),len,0,remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
-		Metrics::udp_send += sent;
-		return sent;
+		sent = ((long)::sendto(
+				sws.sock,
+				reinterpret_cast<const char *>(data),
+				len,
+				0,
+				remoteAddress,
+				(remoteAddress->sa_family == AF_INET6) ? 
+					sizeof(struct sockaddr_in6) : 
+					sizeof(struct sockaddr_in)) == (long)len);
 #else
-		ssize_t sent = ((long)::sendto(sws.sock,data,len,0,remoteAddress,(remoteAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in)) == (long)len);
-		Metrics::udp_send += sent;
-		return sent;
+		sent = ((long)::sendto(
+				sws.sock,
+				data,
+				len,
+				0,
+				remoteAddress,
+				(remoteAddress->sa_family == AF_INET6) ? 
+					sizeof(struct sockaddr_in6) : 
+				 	sizeof(struct sockaddr_in)) == (long)len);
 #endif
+		if (sent) {
+			Metrics::udp_send += len;
+		}
+
+		return sent;
 	}
 
 #ifdef __UNIX_LIKE__
@@ -970,18 +988,61 @@ public:
 					break;
 
 				case ZT_PHY_SOCKET_UDP:
-					if (FD_ISSET(s->sock,&rfds)) {
-						for(int k=0;k<1024;++k) {
-							memset(&ss,0,sizeof(ss));
+					if (FD_ISSET(s->sock, &rfds)) {
+#if (defined(__linux__) || defined(linux) || defined(__linux)) && defined(MSG_WAITFORONE)
+#define RECVMMSG_WINDOW_SIZE 128
+#define RECVMMSG_BUF_SIZE	 1500
+						iovec iovs[RECVMMSG_WINDOW_SIZE];
+						uint8_t bufs[RECVMMSG_WINDOW_SIZE][RECVMMSG_BUF_SIZE];
+						sockaddr_storage addrs[RECVMMSG_WINDOW_SIZE];
+						memset(addrs, 0, sizeof(addrs));
+						mmsghdr mm[RECVMMSG_WINDOW_SIZE];
+						memset(mm, 0, sizeof(mm));
+						for (int i = 0; i < RECVMMSG_WINDOW_SIZE; ++i) {
+							iovs[i].iov_base = (void*)bufs[i];
+							iovs[i].iov_len = RECVMMSG_BUF_SIZE;
+							mm[i].msg_hdr.msg_name = (void*)&(addrs[i]);
+							mm[i].msg_hdr.msg_iov = &(iovs[i]);
+							mm[i].msg_hdr.msg_iovlen = 1;
+						}
+						for (int k = 0; k < 1024; ++k) {
+							for (int i = 0; i < RECVMMSG_WINDOW_SIZE; ++i) {
+								mm[i].msg_hdr.msg_namelen = sizeof(sockaddr_storage);
+								mm[i].msg_len = 0;
+							}
+							int received_count = recvmmsg(s->sock, mm, RECVMMSG_WINDOW_SIZE, MSG_WAITFORONE, nullptr);
+							if (received_count > 0) {
+								for (int i = 0; i < received_count; ++i) {
+									long n = (long)mm[i].msg_len;
+									if (n > 0) {
+										try {
+											_handler->phyOnDatagram((PhySocket*)&(*s), &(s->uptr), (const struct sockaddr*)&(s->saddr), (const struct sockaddr*)&(addrs[i]), bufs[i], (unsigned long)n);
+										}
+										catch (...) {
+										}
+									}
+								}
+							}
+							else {
+								break;
+							}
+						}
+#else
+						for (int k = 0; k < 1024; ++k) {
+							memset(&ss, 0, sizeof(ss));
 							socklen_t slen = sizeof(ss);
-							long n = (long)::recvfrom(s->sock,buf,sizeof(buf),0,(struct sockaddr *)&ss,&slen);
+							long n = (long)::recvfrom(s->sock, buf, sizeof(buf), 0, (struct sockaddr*)&ss, &slen);
 							if (n > 0) {
 								try {
-									_handler->phyOnDatagram((PhySocket *)&(*s),&(s->uptr),(const struct sockaddr *)&(s->saddr),(const struct sockaddr *)&ss,(void *)buf,(unsigned long)n);
-								} catch ( ... ) {}
-							} else if (n < 0)
+									_handler->phyOnDatagram((PhySocket*)&(*s), &(s->uptr), (const struct sockaddr*)&(s->saddr), (const struct sockaddr*)&ss, (void*)buf, (unsigned long)n);
+								}
+								catch (...) {
+								}
+							}
+							else if (n < 0)
 								break;
 						}
+#endif
 					}
 					break;
 

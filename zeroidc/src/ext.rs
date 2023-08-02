@@ -89,7 +89,7 @@ pub extern "C" fn zeroidc_delete(ptr: *mut ZeroIDC) {
     idc.stop();
 
     unsafe {
-        Box::from_raw(ptr);
+        let _ = Box::from_raw(ptr);
     }
 }
 

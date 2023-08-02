@@ -37,7 +37,6 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
  - `ext/`: third party libraries, binaries that we ship for convenience on some platforms (Mac and Windows), and installation support files.
  - `include/`: include files for the ZeroTier core.
  - `java/`: a JNI wrapper used with our Android mobile app. (The whole Android app is not open source but may be made so in the future.)
- - `macui/`: a Macintosh menu-bar app for controlling ZeroTier One, written in Objective C.
  - `node/`: the ZeroTier virtual Ethernet switch core, which is designed to be entirely separate from the rest of the code and able to be built as a stand-alone OS-independent library. Note to developers: do not use C++11 features in here, since we want this to build on old embedded platforms that lack C++11 support. C++11 can be used elsewhere.
  - `osdep/`: code to support and integrate with OSes, including platform-specific stuff only built for certain targets.
  - `rule-compiler/`: JavaScript rules language compiler for defining network-level rules.
@@ -113,18 +112,18 @@ Additional help can be found in our [knowledge base](https://zerotier.atlassian.
 
 ### Prometheus Metrics
 
-Prometheus Metrics are available at the `/metrics` API endpoint.  This endpoint is protected by an API key stored in `authtoken.secret` because of the possibility of information leakage.  Information that could be gleaned from the metrics include joined networks and peers your instance is talking to. 
+Prometheus Metrics are available at the `/metrics` API endpoint.  This endpoint is protected by an API key stored in `metricstoken.secret` to prevent unwanted information leakage.  Information that could be gleaned from the metrics include joined networks and peers your instance is talking to. 
 
-Access control is via the ZeroTier control interface itself and `authtoken.secret`. This can be sent as the `X-ZT1-Auth` HTTP header field or appended to the URL as `?auth=<token>`. You can see the current metrics via `cURL` with the following command:
+Access control is via the ZeroTier control interface itself and `metricstoken.secret`. This can be sent as a bearer auth token, via the `X-ZT1-Auth` HTTP header field, or appended to the URL as `?auth=<token>`. You can see the current metrics via `cURL` with the following command:
 
     // Linux
-    curl -H "X-ZT1-Auth: $(sudo cat /var/lib/zerotier-one/authtoken.secret)" http://localhost:9993/metrics
+    curl -H "X-ZT1-Auth: $(sudo cat /var/lib/zerotier-one/metricstoken.secret)" http://localhost:9993/metrics
 
     // macOS
-    curl -H "X-XT1-Auth: $(sudo cat /Library/Application\ Support/ZeroTier/One/authtoken.secret)" http://localhost:9993/metrics
+    curl -H "X-XT1-Auth: $(sudo cat /Library/Application\ Support/ZeroTier/One/metricstoken.secret)" http://localhost:9993/metrics
 
     // Windows PowerShell (Admin)
-    Invoke-RestMethod -Headers @{'X-ZT1-Auth' = "$(Get-Content C:\ProgramData\ZeroTier\One\authtoken.secret)"; } -Uri http://localhost:9993/metrics
+    Invoke-RestMethod -Headers @{'X-ZT1-Auth' = "$(Get-Content C:\ProgramData\ZeroTier\One\metricstoken.secret)"; } -Uri http://localhost:9993/metrics
 
 To configure a scrape job in Prometheus on the machine ZeroTier is running on, add this to your Prometheus `scrape_config`:
 
@@ -137,23 +136,22 @@ To configure a scrape job in Prometheus on the machine ZeroTier is running on, a
         - 127.0.0.1:9993
         labels:
           group: zerotier-one
-      params:
-        auth:
-        - $YOUR_AUTHTOKEN_SECRET
-
-If your Prometheus instance is remote from the machine ZeroTier instance, you'll have to edit your `local.conf` file to allow remote access to the API control port.  If your local lan is `10.0.0.0/24`, edit your `local.conf` as follows:
-
-    {
-      "settings": {
-        "allowManagementFrom:" ["10.0.0.0/24"]
-      }
-    }
-
-Substitute your actual network IP ranges as necessary.
-
-It's also possible to access the metrics & control port over the ZeroTier network itself via the same method shown above.  Just add the address range of your ZeroTier network to the list. NOTE: Using this method means that anyone with your auth token can control your ZeroTier instance, including leaving & joining other networks.
+          node_id: $YOUR_10_CHARACTER_NODE_ID
+      authorization:
+        credentials: $YOUR_METRICS_TOKEN_SECRET
 
 If neither of these methods are desirable, it is probably possible to distribute metrics via [Prometheus Proxy](https://github.com/pambrose/prometheus-proxy) or some other tool.  Note: We have not tested this internally, but will probably work with the correct configuration.
+
+Metrics are also available on disk in ZeroTier's working directory:
+
+   // Linux
+   /var/lib/zerotier-one/metrics.prom
+
+   // macOS
+   /Library/Application\ Support/ZeroTier/One/metrics.prom
+
+   //Windows
+   C:\ProgramData\ZeroTier\One\metrics.prom
 
 #### Available Metrics
 

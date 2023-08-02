@@ -36,6 +36,11 @@
 #include "Trace.hpp"
 #include "Metrics.hpp"
 
+// FIXME: remove this suppression and actually fix warnings
+#ifdef __GNUC__
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#endif
+
 namespace ZeroTier {
 
 /****************************************************************************/
@@ -80,7 +85,11 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 			RR->identity.toString(false,RR->publicIdentityStr);
 			RR->identity.toString(true,RR->secretIdentityStr);
 		} else {
-			n = -1;
+			throw ZT_EXCEPTION_INVALID_IDENTITY;
+		}
+
+		if (!RR->identity.locallyValidate()) {
+			throw ZT_EXCEPTION_INVALID_IDENTITY;
 		}
 	}
 
@@ -298,7 +307,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 	Mutex::Lock bl(_backgroundTasksLock);
 
 	// Process background bond tasks
-	unsigned long bondCheckInterval = ZT_PING_CHECK_INVERVAL;
+	unsigned long bondCheckInterval = ZT_PING_CHECK_INTERVAL;
 	if (RR->bc->inUse()) {
 		bondCheckInterval = std::max(RR->bc->minReqMonitorInterval(), ZT_CORE_TIMER_TASK_GRANULARITY);
 		if ((now - _lastGratuitousPingCheck) >= ZT_CORE_TIMER_TASK_GRANULARITY) {
@@ -307,7 +316,7 @@ ZT_ResultCode Node::processBackgroundTasks(void *tptr,int64_t now,volatile int64
 		}
 	}
 
-	unsigned long timeUntilNextPingCheck = _lowBandwidthMode ? (ZT_PING_CHECK_INVERVAL * 5) : ZT_PING_CHECK_INVERVAL;
+	unsigned long timeUntilNextPingCheck = _lowBandwidthMode ? (ZT_PING_CHECK_INTERVAL * 5) : ZT_PING_CHECK_INTERVAL;
 	const int64_t timeSinceLastPingCheck = now - _lastPingCheck;
 	if (timeSinceLastPingCheck >= timeUntilNextPingCheck) {
 		try {

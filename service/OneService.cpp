@@ -201,6 +201,26 @@ std::string ssoResponseTemplate = R"""(
 </html>
 )""";
 
+bool bearerTokenValid(const std::string authHeader, const std::string &checkToken) {
+	std::vector<std::string> tokens = OSUtils::split(authHeader.c_str(), " ", NULL, NULL);
+	if (tokens.size() != 2) {
+		return false;
+	}
+
+	std::string bearer = tokens[0];
+	std::string token = tokens[1];
+	std::transform(bearer.begin(), bearer.end(), bearer.begin(), [](unsigned char c){return std::tolower(c);});
+	if (bearer != "bearer") {
+		return false;
+	}
+
+	if (token != checkToken) {
+		return false;
+	}
+
+	return true;
+}
+
 #if ZT_DEBUG==1
 std::string dump_headers(const httplib::Headers &headers) {
   std::string s;
@@ -406,15 +426,6 @@ public:
 		return _managedRoutes;
 	}
 
-	const char* getAuthURL() {
-#if ZT_SSO_ENABLED
-		if (_idc != nullptr) {
-			return zeroidc::zeroidc_get_auth_url(_idc);
-		}
-		fprintf(stderr, "_idc is null\n");
-#endif
-		return "";
-	}
 
 	char* doTokenExchange(const char *code) {
 		char *ret = nullptr;
@@ -572,7 +583,7 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 	}
 	nj["dns"] = m;
 	if (ns.config().ssoEnabled) {
-		const char* authURL = ns.getAuthURL();
+		const char* authURL = ns.config().authenticationURL;
 		//fprintf(stderr, "Auth URL: %s\n", authURL);
 		nj["authenticationURL"] = authURL;
 		nj["authenticationExpiryTime"] = (ns.getExpiryTime()*1000);
@@ -762,6 +773,7 @@ public:
 
 	const std::string _homePath;
 	std::string _authToken;
+	std::string _metricsToken;
 	std::string _controllerDbPath;
 	const std::string _networksPath;
 	const std::string _moonsPath;
@@ -774,6 +786,7 @@ public:
 
     httplib::Server _controlPlane;
     std::thread _serverThread;
+	bool _serverThreadRunning;
 
     bool _allowTcpFallbackRelay;
 	bool _forceTcpRelay;
@@ -875,6 +888,7 @@ public:
 		,_updateAutoApply(false)
         ,_controlPlane()
         ,_serverThread()
+		,_serverThreadRunning(false)
 		,_forceTcpRelay(false)
 		,_primaryPort(port)
 		,_udpPortPickerCounter(0)
@@ -926,8 +940,9 @@ public:
 #endif
 
         _controlPlane.stop();
-        _serverThread.join();
-
+		if (_serverThreadRunning) {
+	        _serverThread.join();
+		}
 
 #ifdef ZT_USE_MINIUPNPC
 		delete _portMapper;
@@ -960,6 +975,26 @@ public:
 			}
 
 			{
+				const std::string metricsTokenPath(_homePath + ZT_PATH_SEPARATOR_S "metricstoken.secret");
+				if (!OSUtils::readFile(metricsTokenPath.c_str(),_metricsToken)) {
+					unsigned char foo[24];
+					Utils::getSecureRandom(foo,sizeof(foo));
+					_metricsToken = "";
+					for(unsigned int i=0;i<sizeof(foo);++i)
+						_metricsToken.push_back("abcdefghijklmnopqrstuvwxyz0123456789"[(unsigned long)foo[i] % 36]);
+					if (!OSUtils::writeFile(metricsTokenPath.c_str(),_metricsToken)) {
+						Mutex::Lock _l(_termReason_m);
+						_termReason = ONE_UNRECOVERABLE_ERROR;
+						_fatalErrorMessage = "metricstoken.secret could not be written";
+						return _termReason;
+					} else {
+						OSUtils::lockDownFile(metricsTokenPath.c_str(),false);
+					}
+				}
+				_metricsToken = _trimString(_metricsToken);
+			}
+
+			{
 				struct ZT_Node_Callbacks cb;
 				cb.version = 0;
 				cb.stateGetFunction = SnodeStateGetFunction;
@@ -972,7 +1007,6 @@ public:
 				cb.pathLookupFunction = SnodePathLookupFunction;
 				_node = new Node(this,(void *)0,&cb,OSUtils::now());
 			}
-
 
 			// local.conf
 			readLocalSettings();
@@ -1022,7 +1056,7 @@ public:
 				if (_secondaryPort) {
 					_ports[1] = _secondaryPort;
 				} else {
-					_ports[1] = _getRandomPort();
+					_ports[1] = _secondaryPort = _getRandomPort();
 				}
 			}
 #ifdef ZT_USE_MINIUPNPC
@@ -1033,7 +1067,7 @@ public:
 				if (_tertiaryPort) {
 					_ports[2] = _tertiaryPort;
 				} else {
-					_ports[2] = _getRandomPort();
+					_ports[2] = _tertiaryPort = _getRandomPort();
 				}
 
 				if (_ports[2]) {
@@ -1228,6 +1262,51 @@ public:
 			Mutex::Lock _l(_termReason_m);
 			_termReason = ONE_UNRECOVERABLE_ERROR;
 			_fatalErrorMessage = std::string("unexpected exception in main thread: ")+e.what();
+		} catch (int e) {
+			Mutex::Lock _l(_termReason_m);
+			_termReason = ONE_UNRECOVERABLE_ERROR;
+			switch (e) {
+				case ZT_EXCEPTION_OUT_OF_BOUNDS: {
+					_fatalErrorMessage = "out of bounds exception";
+					break;
+				}
+				case ZT_EXCEPTION_OUT_OF_MEMORY: {
+					_fatalErrorMessage = "out of memory";
+					break;
+				}
+				case ZT_EXCEPTION_PRIVATE_KEY_REQUIRED: {
+					_fatalErrorMessage = "private key required";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_ARGUMENT: {
+					_fatalErrorMessage = "invalid argument";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_IDENTITY: {
+					_fatalErrorMessage = "invalid identity loaded from disk. Please remove identity.public and identity.secret from " + _homePath + " and try again";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE: {
+					_fatalErrorMessage = "invalid serialized data: invalid type";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW: {
+					_fatalErrorMessage = "invalid serialized data: overflow";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN: {
+					_fatalErrorMessage = "invalid serialized data: invalid cryptographic token";
+					break;
+				}
+				case ZT_EXCEPTION_INVALID_SERIALIZED_DATA_BAD_ENCODING: {
+					_fatalErrorMessage = "invalid serialized data: bad encoding";
+					break;
+				}
+				default: {
+					_fatalErrorMessage = "unexpected exception code: " + std::to_string(e);
+					break;
+				}
+			}
 		} catch ( ... ) {
 			Mutex::Lock _l(_termReason_m);
 			_termReason = ONE_UNRECOVERABLE_ERROR;
@@ -1467,54 +1546,81 @@ public:
 
 
         auto authCheck = [=] (const httplib::Request &req, httplib::Response &res) {
-            std::string r = req.remote_addr;
-            InetAddress remoteAddr(r.c_str());
+			if (req.path == "/metrics") {
 
-            bool ipAllowed = false;
-            bool isAuth = false;
-            // If localhost, allow
-            if (remoteAddr.ipScope() == InetAddress::IP_SCOPE_LOOPBACK) {
-                ipAllowed = true;
-            }
+				if (req.has_header("x-zt1-auth")) {
+					std::string token = req.get_header_value("x-zt1-auth");
+					if (token == _metricsToken || token == _authToken) {
+						return httplib::Server::HandlerResponse::Unhandled;
+					}
+				} else if (req.has_param("auth")) {
+					std::string token = req.get_param_value("auth");
+					if (token == _metricsToken || token == _authToken) {
+						return httplib::Server::HandlerResponse::Unhandled;
+					}
+				} else if (req.has_header("authorization")) {
+					std::string auth = req.get_header_value("authorization");
+					if (bearerTokenValid(auth, _metricsToken) || bearerTokenValid(auth, _authToken)) {
+						return httplib::Server::HandlerResponse::Unhandled;
+					}
+				}
 
-            if (!ipAllowed) {
-                for (auto i = _allowManagementFrom.begin(); i != _allowManagementFrom.end(); ++i) {
-                    if (i->containsAddress(remoteAddr)) {
-                        ipAllowed  = true;
-                        break;
-                    }
-                }
-            }
+				setContent(req, res, "{}");
+				res.status = 401;
+				return httplib::Server::HandlerResponse::Handled;
+			} else {
+				std::string r = req.remote_addr;
+				InetAddress remoteAddr(r.c_str());
+
+				bool ipAllowed = false;
+				bool isAuth = false;
+				// If localhost, allow
+				if (remoteAddr.ipScope() == InetAddress::IP_SCOPE_LOOPBACK) {
+					ipAllowed = true;
+				}
+
+				if (!ipAllowed) {
+					for (auto i = _allowManagementFrom.begin(); i != _allowManagementFrom.end(); ++i) {
+						if (i->containsAddress(remoteAddr)) {
+							ipAllowed  = true;
+							break;
+						}
+					}
+				}
 
 
-            if (ipAllowed) {
-                // auto-pass endpoints in `noAuthEndpoints`.  No auth token required
-                if (std::find(noAuthEndpoints.begin(), noAuthEndpoints.end(), req.path) != noAuthEndpoints.end()) {
-                    isAuth = true;
-                }
+				if (ipAllowed) {
+					// auto-pass endpoints in `noAuthEndpoints`.  No auth token required
+					if (std::find(noAuthEndpoints.begin(), noAuthEndpoints.end(), req.path) != noAuthEndpoints.end()) {
+						isAuth = true;
+					}
 
-                if (!isAuth) {
-                    // check auth token
-                    if (req.has_header("x-zt1-auth")) {
-                        std::string token = req.get_header_value("x-zt1-auth");
-                        if (token == _authToken) {
-                            isAuth = true;
-                        }
-                    } else if (req.has_param("auth")) {
-                        std::string token = req.get_param_value("auth");
-                        if (token == _authToken) {
-                            isAuth = true;
-                        }
-                    }
-                }
-            }
+					if (!isAuth) {
+						// check auth token
+						if (req.has_header("x-zt1-auth")) {
+							std::string token = req.get_header_value("x-zt1-auth");
+							if (token == _authToken) {
+								isAuth = true;
+							}
+						} else if (req.has_param("auth")) {
+							std::string token = req.get_param_value("auth");
+							if (token == _authToken) {
+								isAuth = true;
+							}
+						} else if (req.has_header("authorization")) {
+							std::string auth = req.get_header_value("authorization");
+							isAuth = bearerTokenValid(auth, _authToken);
+						}
+					}
+				}
 
-            if (ipAllowed && isAuth) {
-                return httplib::Server::HandlerResponse::Unhandled;
-            }
-			setContent(req, res, "{}");
-            res.status = 401;
-            return httplib::Server::HandlerResponse::Handled;
+				if (ipAllowed && isAuth) {
+					return httplib::Server::HandlerResponse::Unhandled;
+				}
+				setContent(req, res, "{}");
+				res.status = 401;
+				return httplib::Server::HandlerResponse::Handled;
+			}
         };
 
 
@@ -1734,6 +1840,8 @@ public:
 			_node->join(wantnw, (void*)0, (void*)0);
 			auto out = json::object();
 			Mutex::Lock l(_nets_m);
+			bool allowDefault = false;
+
 			if (!_nets.empty()) {
 				NetworkState &ns = _nets[wantnw];
 				try {
@@ -1747,8 +1855,9 @@ public:
 					if (allowGlobal.is_boolean()) {
 						ns.setAllowGlobal((bool)allowGlobal);
 					}
-					json& allowDefault = j["allowDefault"];
-					if (allowDefault.is_boolean()) {
+					json& _allowDefault = j["allowDefault"];
+					if (_allowDefault.is_boolean()) {
+						allowDefault = _allowDefault;
 						ns.setAllowDefault((bool)allowDefault);
 					}
 					json& allowDNS = j["allowDNS"];
@@ -1765,7 +1874,17 @@ public:
 
 				_networkToJson(out, ns);
 			}
+#ifdef __FreeBSD__
+			if(!!allowDefault){
+				res.status = 400;
+				setContent(req, res, "Allow Default does not work properly on FreeBSD. See #580");
+			} else {
+				setContent(req, res, out.dump());
+
+			}
+#else
 			setContent(req, res, out.dump());
+#endif
 		};
 		_controlPlane.Post("/network/([0-9a-fA-F]{16})", networkPost);
 		_controlPlane.Put("/network/([0-9a-fA-F]){16}", networkPost);
@@ -2005,11 +2124,13 @@ public:
 		}
 
         _serverThread = std::thread([&] {
+			_serverThreadRunning = true;
             fprintf(stderr, "Starting Control Plane...\n");
             if(!_controlPlane.listen_after_bind()) {
 				fprintf(stderr, "Error on listen_after_bind()\n");
 			}
             fprintf(stderr, "Control Plane Stopped\n");
+			_serverThreadRunning = false;
         });
 
     }
@@ -2410,8 +2531,13 @@ public:
 			}
 
 #ifdef __APPLE__
-			if (!MacDNSHelper::addIps(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps))
+			if (!MacDNSHelper::addIps6(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps)) {
 				fprintf(stderr, "ERROR: unable to add v6 addresses to system configuration" ZT_EOL_S);
+			}
+
+			if (!MacDNSHelper::addIps4(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps)) {
+				fprintf(stderr, "ERROR: unable to add v4 addresses to system configuration" ZT_EOL_S);
+			}
 #endif
 			n.setManagedIps(newManagedIps);
 		}
@@ -3267,7 +3393,7 @@ public:
 								void *tmpptr = (void *)_tcpFallbackTunnel;
 								phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
 							}
-						} else if (_forceTcpRelay || (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2)))) {
+						} else if (_forceTcpRelay || (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INTERVAL / 2)))) {
 							const InetAddress addr(_fallbackRelayAddress);
 							TcpConnection *tc = new TcpConnection();
 							{

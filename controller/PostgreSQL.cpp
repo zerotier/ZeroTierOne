@@ -460,7 +460,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 			    "LEFT OUTER JOIN ztc_network_oidc_config noc "
 				"  ON noc.network_id = n.id "
 				"LEFT OUTER JOIN ztc_oidc_config oc "
-				"  ON noc.client_id = oc.client_id AND noc.org_id = o.org_id "
+				"  ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
 				"WHERE n.id = $1 AND n.sso_enabled = true", networkId);
 		
 			std::string client_id = "";
@@ -527,9 +527,6 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 
 		_pool->unborrow(c);
 	} catch (std::exception &e) {
-		if (c) {
-			_pool->unborrow(c);
-		}
 		fprintf(stderr, "ERROR: Error updating member on load for network %s: %s\n", networkId.c_str(), e.what());
 	}
 
@@ -1051,7 +1048,6 @@ void PostgreSQL::heartbeat()
 				w.commit();
 			} catch (std::exception &e) {
 				fprintf(stderr, "%s: Heartbeat update failed: %s\n", controllerId, e.what());
-				_pool->unborrow(c);
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				continue;
 			}

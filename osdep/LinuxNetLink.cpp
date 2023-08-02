@@ -546,7 +546,7 @@ void LinuxNetLink::_requestIPv4Routes()
 	la.nl_pid = 0; //getpid();
 	la.nl_groups = RTMGRP_IPV4_ROUTE;
 	if(bind(fd, (struct sockaddr*)&la, sizeof(la))) {
-		fprintf(stderr, "Error binding RTNETLINK (_requiestIPv4Routes #1): %s\n", strerror(errno));
+		fprintf(stderr, "Error binding RTNETLINK (_requestIPv4Routes #1): %s\n", strerror(errno));
 		close(fd);
 		return;
 	}

@@ -1,6 +1,0 @@
-/** Handling of SQL arrays.
- */
-// Actual definitions in .hxx file so editors and such recognize file type.
-#include "pqxx/internal/header-pre.hxx"
-#include "pqxx/array.hxx"
-#include "pqxx/internal/header-post.hxx"
