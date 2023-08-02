@@ -1056,7 +1056,7 @@ public:
 				if (_secondaryPort) {
 					_ports[1] = _secondaryPort;
 				} else {
-					_ports[1] = _getRandomPort();
+					_ports[1] = _secondaryPort = _getRandomPort();
 				}
 			}
 #ifdef ZT_USE_MINIUPNPC
@@ -1067,7 +1067,7 @@ public:
 				if (_tertiaryPort) {
 					_ports[2] = _tertiaryPort;
 				} else {
-					_ports[2] = _getRandomPort();
+					_ports[2] = _tertiaryPort = _getRandomPort();
 				}
 
 				if (_ports[2]) {
@@ -2531,8 +2531,13 @@ public:
 			}
 
 #ifdef __APPLE__
-			if (!MacDNSHelper::addIps(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps))
+			if (!MacDNSHelper::addIps6(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps)) {
 				fprintf(stderr, "ERROR: unable to add v6 addresses to system configuration" ZT_EOL_S);
+			}
+
+			if (!MacDNSHelper::addIps4(n.config().nwid, n.config().mac, n.tap()->deviceName().c_str(), newManagedIps)) {
+				fprintf(stderr, "ERROR: unable to add v4 addresses to system configuration" ZT_EOL_S);
+			}
 #endif
 			n.setManagedIps(newManagedIps);
 		}
@@ -3388,7 +3393,7 @@ public:
 								void *tmpptr = (void *)_tcpFallbackTunnel;
 								phyOnTcpWritable(_tcpFallbackTunnel->sock,&tmpptr);
 							}
-						} else if (_forceTcpRelay || (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INVERVAL / 2)))) {
+						} else if (_forceTcpRelay || (((now - _lastSendToGlobalV4) < ZT_TCP_FALLBACK_AFTER)&&((now - _lastSendToGlobalV4) > (ZT_PING_CHECK_INTERVAL / 2)))) {
 							const InetAddress addr(_fallbackRelayAddress);
 							TcpConnection *tc = new TcpConnection();
 							{
