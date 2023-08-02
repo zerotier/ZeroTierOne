@@ -79,6 +79,7 @@ public:
 		throw()
 	{
 		int mode = 0; // 0 == NAT-PMP, 1 == UPnP
+		int retrytime = 500;
 
 #ifdef ZT_PORTMAPPER_TRACE
 		fprintf(stderr,"PortMapper: started for UDP port %d" ZT_EOL_S,localPort);
@@ -86,6 +87,24 @@ public:
 
 		while (run) {
 
+			// use initnatpmp to check if we can bind a port at all
+			natpmp_t _natpmp;
+			int result = initnatpmp(&_natpmp,0,0);
+			if (result !=0 ) {
+				closenatpmp(&_natpmp);
+#ifdef ZT_PORTMAPPER_TRACE
+				PM_TRACE("PortMapper: init failed %d. You might not have any IP addresses yet. Trying again in %d" ZT_EOL_S, retrytime);
+#endif
+				Thread::sleep(retrytime);
+				retrytime = retrytime * 2;
+				if (retrytime > ZT_PORTMAPPER_REFRESH_DELAY / 10) {
+					retrytime = ZT_PORTMAPPER_REFRESH_DELAY / 10;
+				}
+				continue;
+			} else {
+				closenatpmp(&_natpmp);
+				retrytime = 500;
+			}
 			// ---------------------------------------------------------------------
 			// NAT-PMP mode (preferred)
 			// ---------------------------------------------------------------------
@@ -172,6 +191,7 @@ public:
 #ifdef ZT_PORTMAPPER_TRACE
                     PM_TRACE("PortMapper: NAT-PMP: request failed, switching to UPnP mode" ZT_EOL_S);
 #endif
+					continue;
 				}
 			}
 			// ---------------------------------------------------------------------
@@ -293,6 +313,7 @@ public:
 #ifdef ZT_PORTMAPPER_TRACE
                     PM_TRACE("PortMapper: upnpDiscover failed, returning to NAT-PMP mode: %d" ZT_EOL_S,upnpError);
 #endif
+					break;
 				}
 			}
 			// ---------------------------------------------------------------------
