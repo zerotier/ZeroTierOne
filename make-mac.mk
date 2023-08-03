@@ -114,7 +114,7 @@ osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm
 	$(CXX) $(CXXFLAGS) -c osdep/MacDNSHelper.mm -o osdep/MacDNSHelper.o 
 
 one:	zeroidc $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
-	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS) zeroidc/target/libzeroidc.a
+	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS) rustybits/target/libzeroidc.a
 	# $(STRIP) zerotier-one
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
@@ -122,12 +122,12 @@ one:	zeroidc $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
 
 zerotier-one: one
 
-zeroidc: zeroidc/target/libzeroidc.a
+zeroidc: rustybits/target/libzeroidc.a
 
-zeroidc/target/libzeroidc.a:	FORCE
-	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=x86_64-apple-darwin $(EXTRA_CARGO_FLAGS)
-	cd zeroidc && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build --target=aarch64-apple-darwin $(EXTRA_CARGO_FLAGS)
-	cd zeroidc && lipo -create target/x86_64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a target/aarch64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a -output target/libzeroidc.a
+rustybits/target/libzeroidc.a:	FORCE
+	cd rustybits && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build -p zeroidc --target=x86_64-apple-darwin $(EXTRA_CARGO_FLAGS)
+	cd rustybits && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build -p zeroidc --target=aarch64-apple-darwin $(EXTRA_CARGO_FLAGS)
+	cd rustybits && lipo -create target/x86_64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a target/aarch64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a -output target/libzeroidc.a
 
 central-controller:
 	make ARCH_FLAGS="-arch x86_64" ZT_CONTROLLER=1 one
@@ -188,7 +188,7 @@ central-controller-docker: _buildx FORCE
 	@echo Image: registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP}
 	
 clean:
-	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_* zeroidc/target/
+	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_* rustybits/target/
 
 distclean:	clean
 
