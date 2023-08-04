@@ -60,7 +60,7 @@ pub extern "C" fn smee_client_delete(ptr: *mut SmeeClient) {
 }
 
 #[no_mangle]
-pub extern "C" fn smee_client_notify_netowrk_joined(
+pub extern "C" fn smee_client_notify_network_joined(
     smee_instance: *mut SmeeClient,
     network_id: *const c_char,
     member_id: *const c_char,
