@@ -149,7 +149,7 @@ core: libzerotiercore.a
 #	$(STRIP) zerotier
 
 selftest: $(CORE_OBJS) $(ONE_OBJS) selftest.o
-	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS) $(LIBS) zeroidc/target/libzeroidc.a
+	$(CXX) $(CXXFLAGS) -o zerotier-selftest selftest.o $(CORE_OBJS) $(ONE_OBJS) $(LIBS) rustybits/target/libzeroidc.a
 	$(STRIP) zerotier-selftest
 
 zerotier-selftest: selftest
