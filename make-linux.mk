@@ -326,9 +326,9 @@ ifeq ($(ZT_CONTROLLER),1)
 	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_NO_PEER_METRICS
 	override INCLUDES+=-I/usr/include/postgresql -Iext/libpqxx-7.7.3/install/ubuntu22.04/$(EXT_ARCH)/include -Iext/hiredis-1.0.2/include/ -Iext/redis-plus-plus-1.3.3/install/ubuntu22.04/$(EXT_ARCH)/include/sw/
 	ifeq ($(ZT_DEBUG),1)
-		LDLIBS+=rustybits/target/debug/libsmeeclient.a -ldl -lssl -lcrypto
+		override LDLIBS+=rustybits/target/debug/libsmeeclient.a
 	else
-		LDLIBS+=rustybits/target/release/libsmeeclient.a -ldl -lssl -lcrypto
+		override LDLIBS+=rustybits/target/release/libsmeeclient.a
 	endif
 endif
 

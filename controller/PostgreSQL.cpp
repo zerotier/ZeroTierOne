@@ -21,6 +21,8 @@
 #include "../version.h"
 #include "Redis.hpp"
 
+#include <smeeclient.h>
+
 #include <libpq-fe.h>
 #include <sstream>
 #include <iomanip>
@@ -159,6 +161,8 @@ using Attrs = std::vector<std::pair<std::string, std::string>>;
 using Item = std::pair<std::string, Attrs>;
 using ItemStream = std::vector<Item>;
 
+
+
 PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, RedisConfig *rc)
 	: DB()
 	, _pool()
@@ -173,6 +177,7 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 	, _redis(NULL)
 	, _cluster(NULL)
 	, _redisMemberStatus(false)
+	, _smee(NULL)
 {
 	char myAddress[64];
 	_myAddressStr = myId.address().toString(myAddress);
@@ -248,10 +253,17 @@ PostgreSQL::PostgreSQL(const Identity &myId, const char *path, int listenPort, R
 		_commitThread[i] = std::thread(&PostgreSQL::commitThread, this);
 	}
 	_onlineNotificationThread = std::thread(&PostgreSQL::onlineNotificationThread, this);
+
+	configureSmee();
 }
 
 PostgreSQL::~PostgreSQL()
 {
+	if (_smee != NULL) {
+		smeeclient::smee_client_delete(_smee);
+		_smee = NULL;
+	}
+
 	_run = 0;
 	std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
@@ -265,6 +277,20 @@ PostgreSQL::~PostgreSQL()
 	_onlineNotificationThread.join();
 }
 
+void PostgreSQL::configureSmee() 
+{
+	const char *TEMPORAL_HOST = "ZT_TEMPORAL_HOST";
+	const char *TEMPORAL_NAMESPACE = "ZT_TEMPORAL_NAMESPACE";
+	const char *SMEE_TASK_QUEUE = "ZT_SMEE_TASK_QUEUE";
+
+	const char *host = getenv(TEMPORAL_HOST);
+	const char *ns = getenv(TEMPORAL_NAMESPACE);
+	const char *task_queue = getenv(SMEE_TASK_QUEUE);
+
+	if (host != NULL && ns != NULL && task_queue != NULL) {
+		this->_smee = smeeclient::smee_client_new(host, ns, task_queue);
+	}
+}
 
 bool PostgreSQL::waitForReady()
 {
