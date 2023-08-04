@@ -1332,40 +1332,72 @@ void PostgreSQL::commitThread()
 						continue;
 					}
 
-					pqxx::result res = w.exec_params0(
-						"INSERT INTO ztc_member (id, network_id, active_bridge, authorized, capabilities, "
-						"identity, last_authorized_time, last_deauthorized_time, no_auto_assign_ips, "
-						"remote_trace_level, remote_trace_target, revision, tags, v_major, v_minor, v_rev, v_proto) "
-						"VALUES ($1, $2, $3, $4, $5, $6, "
-						"TO_TIMESTAMP($7::double precision/1000), TO_TIMESTAMP($8::double precision/1000), "
-						"$9, $10, $11, $12, $13, $14, $15, $16, $17) ON CONFLICT (network_id, id) DO UPDATE SET "
-						"active_bridge = EXCLUDED.active_bridge, authorized = EXCLUDED.authorized, capabilities = EXCLUDED.capabilities, "
-						"identity = EXCLUDED.identity, last_authorized_time = EXCLUDED.last_authorized_time, "
-						"last_deauthorized_time = EXCLUDED.last_deauthorized_time, no_auto_assign_ips = EXCLUDED.no_auto_assign_ips, "
-						"remote_trace_level = EXCLUDED.remote_trace_level, remote_trace_target = EXCLUDED.remote_trace_target, "
-						"revision = EXCLUDED.revision+1, tags = EXCLUDED.tags, v_major = EXCLUDED.v_major, "
-						"v_minor = EXCLUDED.v_minor, v_rev = EXCLUDED.v_rev, v_proto = EXCLUDED.v_proto",
-						memberId,
-						networkId,
-						(bool)config["activeBridge"],
-						(bool)config["authorized"],
-						OSUtils::jsonDump(config["capabilities"], -1),
-						OSUtils::jsonString(config["identity"], ""),
-						(uint64_t)config["lastAuthorizedTime"],
-						(uint64_t)config["lastDeauthorizedTime"],
-						(bool)config["noAutoAssignIps"],
-						(int)config["remoteTraceLevel"],
-						target,
-						(uint64_t)config["revision"],
-						OSUtils::jsonDump(config["tags"], -1),
-						(int)config["vMajor"],
-						(int)config["vMinor"],
-						(int)config["vRev"],
-						(int)config["vProto"]);
 
+					pqxx::row mrow = w.exec_params1("SELECT COUNT(id) FROM ztc_member WHERE id = $1 AND network_id = $2", memberId, networkId);
+					int membercount = mrow[0].as<int>();
 
-					res = w.exec_params0("DELETE FROM ztc_member_ip_assignment WHERE member_id = $1 AND network_id = $2",
-						memberId, networkId);
+					bool isNewMember = false;
+					if (membercount == 0) {
+						// new member
+						isNewMember = true;
+						pqxx::result res = w.exec_params0(
+							"INSERT INTO ztc_member (id, network_id, active_bridge, authorized, capabilities, "
+							"identity, last_authorized_time, last_deauthorized_time, no_auto_assign_ips, "
+							"remote_trace_level, remote_trace_target, revision, tags, v_major, v_minor, v_rev, v_proto) "
+							"VALUES ($1, $2, $3, $4, $5, $6, "
+							"TO_TIMESTAMP($7::double precision/1000), TO_TIMESTAMP($8::double precision/1000), "
+							"$9, $10, $11, $12, $13, $14, $15, $16, $17)",
+							memberId,
+							networkId,
+							(bool)config["activeBridge"],
+							(bool)config["authorized"],
+							OSUtils::jsonDump(config["capabilities"], -1),
+							OSUtils::jsonString(config["identity"], ""),
+							(uint64_t)config["lastAuthorizedTime"],
+							(uint64_t)config["lastDeauthorizedTime"],
+							(bool)config["noAutoAssignIps"],
+							(int)config["remoteTraceLevel"],
+							target,
+							(uint64_t)config["revision"],
+							OSUtils::jsonDump(config["tags"], -1),
+							(int)config["vMajor"],
+							(int)config["vMinor"],
+							(int)config["vRev"],
+							(int)config["vProto"]);
+					} else {
+						// existing member
+						pqxx::result res = w.exec_params0(
+							"UPDATE ztc_member "
+							"SET active_bridge = $3, authorized = $4, capabilities = $5, identity = $6, "
+							"last_authorized_time = TO_TIMESTAMP($7::double precision/1000), "
+							"last_deauthorized_time = TO_TIMESTAMP($8::double precision/1000), "
+							"no_auto_assign_ips = $9, remote_trace_level = $10, remote_trace_target= $11, "
+							"revision = $12, tags = $13, v_major = $14, v_minor = $15, v_rev = $16, v_proto = $17 "
+							"WHERE id = $1 AND network_id = $2",
+							memberId,
+							networkId,
+							(bool)config["activeBridge"],
+							(bool)config["authorized"],
+							OSUtils::jsonDump(config["capabilities"], -1),
+							OSUtils::jsonString(config["identity"], ""),
+							(uint64_t)config["lastAuthorizedTime"],
+							(uint64_t)config["lastDeauthorizedTime"],
+							(bool)config["noAutoAssignIps"],
+							(int)config["remoteTraceLevel"],
+							target,
+							(uint64_t)config["revision"],
+							OSUtils::jsonDump(config["tags"], -1),
+							(int)config["vMajor"],
+							(int)config["vMinor"],
+							(int)config["vRev"],
+							(int)config["vProto"]
+						);
+					}
+
+					if (!isNewMember) {
+						pqxx::result res = w.exec_params0("DELETE FROM ztc_member_ip_assignment WHERE member_id = $1 AND network_id = $2",
+							memberId, networkId);
+					}
 
 					std::vector<std::string> assignments;
 					bool ipAssignError = false;
@@ -1376,7 +1408,7 @@ void PostgreSQL::commitThread()
 							continue;
 						}
 
-						res = w.exec_params0(
+						pqxx::result res = w.exec_params0(
 							"INSERT INTO ztc_member_ip_assignment (member_id, network_id, address) VALUES ($1, $2, $3) ON CONFLICT (network_id, member_id, address) DO NOTHING",
 							memberId, networkId, addr);
 
@@ -1391,6 +1423,17 @@ void PostgreSQL::commitThread()
 					}
 
 					w.commit();
+
+					if (isNewMember) {
+						// TODO:  Look up hook URL for network owner organization
+						smeeclient::smee_client_notify_network_joined(
+							_smee,
+							networkId.c_str(),
+							memberId.c_str(),
+							"http://hookcatcher:9999/hook",
+							NULL
+						);
+					}
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
 					const uint64_t memberidInt = OSUtils::jsonIntHex(config["id"], 0ULL);
