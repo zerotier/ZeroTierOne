@@ -9,10 +9,11 @@ ifeq ($(origin CXX),default)
 	CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
 endif
 
-INCLUDES?=-Izeroidc/target -isystem ext -Iext/prometheus-cpp-lite-1.0/core/include -Iext-prometheus-cpp-lite-1.0/3rdparty/http-client-lite/include -Iext/prometheus-cpp-lite-1.0/simpleapi/include
+INCLUDES?=-Irustybits/target -isystem ext -Iext/prometheus-cpp-lite-1.0/core/include -Iext-prometheus-cpp-lite-1.0/3rdparty/http-client-lite/include -Iext/prometheus-cpp-lite-1.0/simpleapi/include
 DEFS?=
 LDLIBS?=
 DESTDIR?=
+EXTRA_DEPS?=
 
 include objects.mk
 ONE_OBJS+=osdep/LinuxEthernetTap.o
@@ -295,9 +296,9 @@ ifeq ($(ZT_SSO_SUPPORTED), 1)
 	ifeq ($(ZT_EMBEDDED),)
 		override DEFS+=-DZT_SSO_SUPPORTED=1
 		ifeq ($(ZT_DEBUG),1)
-			LDLIBS+=zeroidc/target/debug/libzeroidc.a -ldl -lssl -lcrypto
+			LDLIBS+=rustybits/target/debug/libzeroidc.a -ldl -lssl -lcrypto
 		else
-			LDLIBS+=zeroidc/target/release/libzeroidc.a -ldl -lssl -lcrypto
+			LDLIBS+=rustybits/target/release/libzeroidc.a -ldl -lssl -lcrypto
 		endif
 	endif
 endif
@@ -324,6 +325,11 @@ ifeq ($(ZT_CONTROLLER),1)
 	override LDLIBS+=-Lext/libpqxx-7.7.3/install/ubuntu22.04/$(EXT_ARCH)/lib -lpqxx -lpq ext/hiredis-1.0.2/lib/ubuntu22.04/$(EXT_ARCH)/libhiredis.a ext/redis-plus-plus-1.3.3/install/ubuntu22.04/$(EXT_ARCH)/lib/libredis++.a -lssl -lcrypto
 	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_NO_PEER_METRICS
 	override INCLUDES+=-I/usr/include/postgresql -Iext/libpqxx-7.7.3/install/ubuntu22.04/$(EXT_ARCH)/include -Iext/hiredis-1.0.2/include/ -Iext/redis-plus-plus-1.3.3/install/ubuntu22.04/$(EXT_ARCH)/include/sw/
+	ifeq ($(ZT_DEBUG),1)
+		LDLIBS+=rustybits/target/debug/libsmeeclient.a -ldl -lssl -lcrypto
+	else
+		LDLIBS+=rustybits/target/release/libsmeeclient.a -ldl -lssl -lcrypto
+	endif
 endif
 
 # ARM32 hell -- use conservative CFLAGS
@@ -370,7 +376,7 @@ from_builder:	FORCE
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 
-zerotier-one:	$(CORE_OBJS) $(ONE_OBJS) one.o
+zerotier-one: $(CORE_OBJS) $(ONE_OBJS) one.o
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
 
 zerotier-idtool: zerotier-one
@@ -379,7 +385,7 @@ zerotier-idtool: zerotier-one
 zerotier-cli: zerotier-one
 	ln -sf zerotier-one zerotier-cli
 
-$(ONE_OBJS): zeroidc
+$(ONE_OBJS): zeroidc smeeclient
 
 libzerotiercore.a:	FORCE
 	make CFLAGS="-O3 -fstack-protector -fPIC" CXXFLAGS="-O3 -std=c++17 -fstack-protector -fPIC" $(CORE_OBJS)
@@ -433,10 +439,17 @@ ifeq ($(ZT_SSO_SUPPORTED), 1)
 ifeq ($(ZT_EMBEDDED),)
 zeroidc:	FORCE
 #	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build -j1 $(RUSTFLAGS)
-	export PATH=/${HOME}/.cargo/bin:$$PATH; cd rustybits/zeroidc && cargo build $(RUSTFLAGS)
+	export PATH=/${HOME}/.cargo/bin:$$PATH; cd rustybits && cargo build $(RUSTFLAGS) -p zeroidc
 endif
 else
 zeroidc:
+endif
+
+ifeq ($(ZT_CONTROLLER), 1)
+smeeclient:	FORCE
+	export PATH=/${HOME}/.cargo/bin:$$PATH; cd rustybits && cargo build $(RUSTFLAGS) -p smeeclient
+else
+smeeclient:
 endif
 
 # Note: keep the symlinks in /var/lib/zerotier-one to the binaries since these

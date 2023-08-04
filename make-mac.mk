@@ -183,6 +183,9 @@ _buildx:
 	@echo docker buildx create --name multiarch --driver docker-container --use
 	@echo docker buildx inspect --bootstrap
 
+controller-builder: _buildx FORCE
+	docker buildx build --platform linux/arm64,linux/amd64 --no-cache -t registry.zerotier.com/zerotier/ctlbuild:latest -f ext/central-controller-docker/Dockerfile.builder . --push
+
 central-controller-docker: _buildx FORCE
 	docker buildx build --platform linux/arm64,linux/amd64 --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) . --push
 	@echo Image: registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP}
