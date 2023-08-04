@@ -248,9 +248,15 @@ public:
 		const std::vector<InetAddress> *const alwaysContactEndpoints = _alwaysContact.get(p->address());
 		if (alwaysContactEndpoints) {
 
-			// Contact upstream peers as infrequently as possible
 			ZT_PeerRole role = RR->topology->role(p->address());
+
+			// Contact upstream peers as infrequently as possible
 			int roleBasedTimerScale = (role == ZT_PEER_ROLE_LEAF) ? 2 : 16;
+
+			// Unless we don't any have paths to the roots, then we shouldn't wait a long time to contact them
+			bool hasPaths = p->paths(RR->node->now()).size() > 0;
+			roleBasedTimerScale = (role != ZT_PEER_ROLE_LEAF && !hasPaths) ? 0 : roleBasedTimerScale;
+
 			if ((RR->node->now() - p->lastSentFullHello()) <= (ZT_PATH_HEARTBEAT_PERIOD * roleBasedTimerScale)) {
 				return;
 			}
