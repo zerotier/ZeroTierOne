@@ -1424,7 +1424,7 @@ void PostgreSQL::commitThread()
 
 					w.commit();
 
-					if (isNewMember) {
+					if (_smee != NULL && isNewMember) {
 						// TODO:  Look up hook URL for network owner organization
 						smeeclient::smee_client_notify_network_joined(
 							_smee,
