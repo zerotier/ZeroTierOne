@@ -160,11 +160,7 @@ pub extern "C" fn zeroidc_get_exp_time(ptr: *mut ZeroIDC) -> u64 {
     target_os = "macos",
 ))]
 #[no_mangle]
-pub extern "C" fn zeroidc_set_nonce_and_csrf(
-    ptr: *mut ZeroIDC,
-    csrf_token: *const c_char,
-    nonce: *const c_char,
-) {
+pub extern "C" fn zeroidc_set_nonce_and_csrf(ptr: *mut ZeroIDC, csrf_token: *const c_char, nonce: *const c_char) {
     let idc = unsafe {
         assert!(!ptr.is_null());
         &mut *ptr
@@ -180,14 +176,8 @@ pub extern "C" fn zeroidc_set_nonce_and_csrf(
         return;
     }
 
-    let csrf_token = unsafe { CStr::from_ptr(csrf_token) }
-        .to_str()
-        .unwrap()
-        .to_string();
-    let nonce = unsafe { CStr::from_ptr(nonce) }
-        .to_str()
-        .unwrap()
-        .to_string();
+    let csrf_token = unsafe { CStr::from_ptr(csrf_token) }.to_str().unwrap().to_string();
+    let nonce = unsafe { CStr::from_ptr(nonce) }.to_str().unwrap().to_string();
 
     idc.set_nonce_and_csrf(csrf_token, nonce);
 }
@@ -275,10 +265,7 @@ pub extern "C" fn zeroidc_token_exchange(idc: *mut ZeroIDC, code: *const c_char)
 }
 
 #[no_mangle]
-pub extern "C" fn zeroidc_get_url_param_value(
-    param: *const c_char,
-    path: *const c_char,
-) -> *mut c_char {
+pub extern "C" fn zeroidc_get_url_param_value(param: *const c_char, path: *const c_char) -> *mut c_char {
     if param.is_null() {
         println!("param is null");
         return std::ptr::null_mut();

@@ -15,9 +15,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum ZeroIDCError {
     #[error(transparent)]
-    DiscoveryError(
-        #[from] openidconnect::DiscoveryError<openidconnect::reqwest::Error<reqwest::Error>>,
-    ),
+    DiscoveryError(#[from] openidconnect::DiscoveryError<openidconnect::reqwest::Error<reqwest::Error>>),
 
     #[error(transparent)]
     ParseError(#[from] url::ParseError),
