@@ -6,14 +6,18 @@ build = "build.rs"
 publish = false
 
 [lib]
-crate-type = ["staticlib","rlib"]
+crate-type = ["staticlib", "rlib"]
 
 [dependencies]
-openidconnect = { version = "2.5", default-features = false, features = ["reqwest", "native-tls", "accept-rfc3339-timestamps"] }
+openidconnect = { version = "3.3", default-features = false, features = [
+    "reqwest",
+    "native-tls",
+    "accept-rfc3339-timestamps",
+] }
 base64 = "0.21"
 url = "2.3"
 reqwest = "0.11"
-jwt = {version = "0.16", git = "https://github.com/glimberg/rust-jwt"}
+jwt = { version = "0.16", git = "https://github.com/glimberg/rust-jwt" }
 serde = "1.0"
 time = { version = "~0.3", features = ["formatting"] }
 bytes = "1.3"
