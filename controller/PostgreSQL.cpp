@@ -1425,14 +1425,7 @@ void PostgreSQL::commitThread()
 					w.commit();
 
 					if (_smee != NULL && isNewMember) {
-						// TODO:  Look up hook URL for network owner organization
-						smeeclient::smee_client_notify_network_joined(
-							_smee,
-							networkId.c_str(),
-							memberId.c_str(),
-							"http://hookcatcher:9999/hook",
-							NULL
-						);
+						notifyNewMember(networkId, memberId);
 					}
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
@@ -1676,6 +1669,50 @@ void PostgreSQL::commitThread()
 	}
 
 	fprintf(stderr, "%s commitThread finished\n", _myAddressStr.c_str());
+}
+
+void PostgreSQL::notifyNewMember(const std::string &networkID, const std::string &memberID) {
+	// TODO:  Look up hook URL for network owner organization
+
+	std::shared_ptr<PostgresConnection> c;
+	try {	
+		c = _pool->borrow();
+	} catch (std::exception &e) {
+		fprintf(stderr, "ERROR: %s\n", e.what());
+		return;
+	}
+
+	try {
+		pqxx::work w(*c->c);
+		
+		// TODO: Add check for active subscription
+
+		auto res = w.exec_params("SELECT h.hook_url "
+			"FROM ztc_hook h "
+			"INNER JOIN ztc_org o "
+				"ON o.org_id = h.org_id "
+			"INNER JOIN ztc_user u "
+				"ON u.id = o.owner_id "
+			"INNER JOIN ztc_network n "
+				"ON n.owner_id = u.id "
+			"WHERE n.id = $1", networkID);
+
+		for (auto const &row: res) {
+			std::string hookURL = row[0].as<std::string>();
+			smeeclient::smee_client_notify_network_joined(
+			_smee,
+				networkID.c_str(),
+				memberID.c_str(),
+				hookURL.c_str(),
+				NULL
+			);
+		}
+
+		_pool->unborrow(c);
+	} catch (std::exception &e) {
+		fprintf(stderr, "ERROR: %s\n", e.what());
+		return;
+	}
 }
 
 void PostgreSQL::onlineNotificationThread()

@@ -149,6 +149,7 @@ private:
 		std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > &lastOnline);
 
 	void configureSmee();
+	void notifyNewMember(const std::string &networkID, const std::string &memberID);
 
 	enum OverrideMode {
 		ALLOW_PGBOUNCER_OVERRIDE = 0,
