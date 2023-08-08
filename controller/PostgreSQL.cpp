@@ -1689,13 +1689,16 @@ void PostgreSQL::notifyNewMember(const std::string &networkID, const std::string
 
 		auto res = w.exec_params("SELECT h.hook_url "
 			"FROM ztc_hook h "
+			"INNER JOIN ztc_hook_hook_types ht "
+				"ON ht.hook_id = h.hook_id "
 			"INNER JOIN ztc_org o "
 				"ON o.org_id = h.org_id "
 			"INNER JOIN ztc_user u "
 				"ON u.id = o.owner_id "
 			"INNER JOIN ztc_network n "
 				"ON n.owner_id = u.id "
-			"WHERE n.id = $1", networkID);
+			"WHERE n.id = $1 "
+			"AND ht.hook_type = 'NETWORK_JOIN'", networkID);
 
 		for (auto const &row: res) {
 			std::string hookURL = row[0].as<std::string>();
