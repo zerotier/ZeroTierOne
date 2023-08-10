@@ -40,8 +40,8 @@ jobs:
       run: |
         sudo apt install -y valgrind xmlstarlet gcovr iperf3 tree
         make one ZT_COVERAGE=1 ZT_TRACE=1
-        sudo chmod +x ./.github/workflows/validate-1m-linux.sh
-        sudo ./.github/workflows/validate-1m-linux.sh
+        sudo chmod +x ./.github/workflows/validate-linux.sh
+        sudo ./.github/workflows/validate-linux.sh
 
     - name: Archive test results
       uses: actions/upload-artifact@v3
@@ -51,6 +51,6 @@ jobs:
 
     - name: final-report
       run: |
-        sudo chmod +x ./.github/workflows/report.sh
-        sudo ./.github/workflows/report.sh
+        sudo chmod +x ./.github/workflows/validate-report.sh
+        sudo ./.github/workflows/validate-report.sh
 
