@@ -174,7 +174,8 @@ main() {
 	if [[ "$both_instances_online" != "true" ]]; then
 		echo "One or more instances of ZeroTier failed to come online. Aborting test."
   		collect_zt_dump_files
-		exit 1
+		collect_zt_log_files
+		exit 0
 	fi
 
 	echo -e "\nJoining networks"
@@ -311,11 +312,10 @@ main() {
 	time_test_end=$(date +%s)
 
 	################################################################################
-	# Rename ZeroTier stdout/stderr logs                                           #
+	# Copy ZeroTier stdout/stderr logs                                             #
 	################################################################################
 
-	mv node_1.log "$TEST_FILEPATH_PREFIX-node-log-$node1_id.txt"
-	mv node_2.log "$TEST_FILEPATH_PREFIX-node-log-$node2_id.txt"
+	collect_zt_log_files
 
 	################################################################################
 	# Generate report                                                              #
@@ -471,6 +471,11 @@ collect_zt_dump_files() {
 
 	$ZT2 dump
 	mv zerotier_dump.txt "$TEST_FILEPATH_PREFIX-node-dump-$node2_id.txt"
- }
+}
+
+collect_zt_log_files() {
+	cp node_1.log "$TEST_FILEPATH_PREFIX-node-log-$node1_id.txt"
+	cp node_2.log "$TEST_FILEPATH_PREFIX-node-log-$node2_id.txt"
+}
 
 main "$@"
