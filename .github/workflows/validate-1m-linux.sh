@@ -173,6 +173,7 @@ main() {
 
 	if [[ "$both_instances_online" != "true" ]]; then
 		echo "One or more instances of ZeroTier failed to come online. Aborting test."
+  		collect_zt_dump_files
 		exit 1
 	fi
 
@@ -283,16 +284,7 @@ main() {
 	# Collect ZeroTier dump files                                                  #
 	################################################################################
 
-	echo -e "\nCollecting ZeroTier dump files"
-
-	node1_id=$($ZT1 -j status | jq -r .address)
-	node2_id=$($ZT2 -j status | jq -r .address)
-
-	$ZT1 dump
-	mv zerotier_dump.txt "$TEST_FILEPATH_PREFIX-node-dump-$node1_id.txt"
-
-	$ZT2 dump
-	mv zerotier_dump.txt "$TEST_FILEPATH_PREFIX-node-dump-$node2_id.txt"
+ 	collect_zt_dump_files
 
 	################################################################################
 	# Let ZeroTier idle long enough for various timers                             #
@@ -467,5 +459,18 @@ check_exit_on_invalid_identity() {
 		echo "Exit test PASSED"
 	fi
 }
+
+collect_zt_dump_files() {
+	echo -e "\nCollecting ZeroTier dump files"
+
+	node1_id=$($ZT1 -j status | jq -r .address)
+	node2_id=$($ZT2 -j status | jq -r .address)
+
+	$ZT1 dump
+	mv zerotier_dump.txt "$TEST_FILEPATH_PREFIX-node-dump-$node1_id.txt"
+
+	$ZT2 dump
+	mv zerotier_dump.txt "$TEST_FILEPATH_PREFIX-node-dump-$node2_id.txt"
+ }
 
 main "$@"
