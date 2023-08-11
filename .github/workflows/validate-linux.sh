@@ -32,12 +32,12 @@ test() {
 
 	echo -e "\nRunning test for $RUN_LENGTH seconds"
 
-	NS1="ip netns exec ns1"
-	NS2="ip netns exec ns2"
+	export NS1="ip netns exec ns1"
+	export NS2="ip netns exec ns2"
 
-	ZT1="$NS1 ./zerotier-cli -p9996 -D$(pwd)/node1"
+	export ZT1="$NS1 ./zerotier-cli -p9996 -D$(pwd)/node1"
 	# Specify custom port on one node to ensure that feature works
-	ZT2="$NS2 ./zerotier-cli -p9997 -D$(pwd)/node2"
+	export ZT2="$NS2 ./zerotier-cli -p9997 -D$(pwd)/node2"
 
 	echo -e "\nSetting up network namespaces..."
 	echo "Setting up ns1"
