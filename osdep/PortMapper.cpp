@@ -14,7 +14,7 @@
 #ifdef ZT_USE_MINIUPNPC
 
 // Uncomment to dump debug messages
-//#define ZT_PORTMAPPER_TRACE 1
+#define ZT_PORTMAPPER_TRACE 1
 
 #ifdef __ANDROID__
 #include <android/log.h>
@@ -87,23 +87,25 @@ public:
 
 		while (run) {
 
-			// use initnatpmp to check if we can bind a port at all
-			natpmp_t _natpmp;
-			int result = initnatpmp(&_natpmp,0,0);
-			if (result !=0 ) {
-				closenatpmp(&_natpmp);
+			{
+				// use initnatpmp to check if we can bind a port at all
+				natpmp_t _natpmp;
+				int result = initnatpmp(&_natpmp,0,0);
+				if (result == NATPMP_ERR_CANNOTGETGATEWAY || result == NATPMP_ERR_SOCKETERROR) {
+					closenatpmp(&_natpmp);
 #ifdef ZT_PORTMAPPER_TRACE
-				PM_TRACE("PortMapper: init failed %d. You might not have any IP addresses yet. Trying again in %d" ZT_EOL_S, retrytime);
+					PM_TRACE("PortMapper: init failed %d. You might not have an internet connection yet. Trying again in %d" ZT_EOL_S, result, retrytime);
 #endif
-				Thread::sleep(retrytime);
-				retrytime = retrytime * 2;
-				if (retrytime > ZT_PORTMAPPER_REFRESH_DELAY / 10) {
-					retrytime = ZT_PORTMAPPER_REFRESH_DELAY / 10;
+					Thread::sleep(retrytime);
+					retrytime = retrytime * 2;
+					if (retrytime > ZT_PORTMAPPER_REFRESH_DELAY / 10) {
+						retrytime = ZT_PORTMAPPER_REFRESH_DELAY / 10;
+					}
+					continue;
+				} else {
+					closenatpmp(&_natpmp);
+					retrytime = 500;
 				}
-				continue;
-			} else {
-				closenatpmp(&_natpmp);
-				retrytime = 500;
 			}
 			// ---------------------------------------------------------------------
 			// NAT-PMP mode (preferred)
@@ -313,7 +315,6 @@ public:
 #ifdef ZT_PORTMAPPER_TRACE
                     PM_TRACE("PortMapper: upnpDiscover failed, returning to NAT-PMP mode: %d" ZT_EOL_S,upnpError);
 #endif
-					break;
 				}
 			}
 			// ---------------------------------------------------------------------
