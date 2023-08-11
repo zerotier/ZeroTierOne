@@ -14,7 +14,7 @@
 #ifdef ZT_USE_MINIUPNPC
 
 // Uncomment to dump debug messages
-#define ZT_PORTMAPPER_TRACE 1
+//#define ZT_PORTMAPPER_TRACE 1
 
 #ifdef __ANDROID__
 #include <android/log.h>
