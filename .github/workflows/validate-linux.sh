@@ -3,7 +3,7 @@
 # This test script joins Earth and pokes some stuff
 
 TEST_NETWORK=8056c2e21c000001
-RUN_LENGTH=20
+RUN_LENGTH=30
 TEST_FINISHED=false
 ZTO_VER=$(git describe --tags $(git rev-list --tags --max-count=1))
 ZTO_COMMIT=$(git rev-parse HEAD)
@@ -18,7 +18,7 @@ TEST_FILEPATH_PREFIX="$TEST_DIR_PREFIX/$ZTO_COMMIT_SHORT"
 mkdir $TEST_DIR_PREFIX
 
 # How long we will wait for ZT to come online before considering it a failure
-MAX_WAIT_SECS=60
+MAX_WAIT_SECS=30
 
 ################################################################################
 # Multi-node connectivity and performance test                                 #
@@ -110,7 +110,6 @@ test() {
 	$NS2 ip addr add 192.168.1.2/24 dev veth3
 	$NS2 ip route add default via 192.168.1.1
 
-
 	echo -e "\nPing from host to namespaces"
 
 	ping -c 3 192.168.0.1
@@ -142,18 +141,13 @@ test() {
 	time_zt_node1_start=$(date +%s)
 	time_zt_node2_start=$(date +%s)
 
-	for ((s = 0; s <= MAX_WAIT_SECS; s++)); do
+	for ((s = 0; s <= $MAX_WAIT_SECS; s++)); do
 		node1_online="$($ZT1 -j info | jq '.online' 2>/dev/null)"
 		node2_online="$($ZT2 -j info | jq '.online' 2>/dev/null)"
 		echo "Checking for online status: try #$s, node1:$node1_online, node2:$node2_online"
-		if [[ "$node1_online" == "true" ]]; then
-			export time_zt_node1_online=$(date +%s)
-		fi
-		if [[ "$node2_online" == "true" ]]; then
-			export time_zt_node2_online=$(date +%s)
-		fi
 		if [[ "$node2_online" == "true" && "$node1_online" == "true" ]]; then
 			export both_instances_online=true
+			export time_to_both_nodes_online=$(date +%s)
 			break
 		fi
 		sleep 1
@@ -167,16 +161,16 @@ test() {
 	tree node2
 
 	echo -e "\n\nRunning ZeroTier processes:"
-	echo -e "\nNode 1:"
+	echo -e "\nNode 1:\n"
 	$NS1 ps aux | grep zerotier-one
-	echo -e "\nNode 2:"
+	echo -e "\nNode 2:\n"
 	$NS2 ps aux | grep zerotier-one
 
 	echo -e "\n\nStatus of each instance:"
 
-	echo -e "\n\nNode 1:"
+	echo -e "\n\nNode 1:\n"
 	$ZT1 status
-	echo -e "\n\nNode 2:"
+	echo -e "\n\nNode 2:\n"
 	$ZT2 status
 
 	if [[ "$both_instances_online" != "true" ]]; then
@@ -292,14 +286,6 @@ test() {
 
 	sleep 5
 
-	# Stop test
-
-	echo -e "\nStopping memory check..."
-	sudo pkill -15 -f valgrind
-	sleep 10
-
-	export time_test_end=$(date +%s)
-
 	exit_test_and_generate_report $TEST_OK "completed test"
 }
 
@@ -308,6 +294,12 @@ test() {
 ################################################################################
 
 exit_test_and_generate_report() {
+
+	echo -e "\nStopping memory check..."
+	sudo pkill -15 -f valgrind
+	sleep 10
+
+	time_test_end=$(date +%s)
 
 	echo "Exiting test with reason: $2 ($1)"
 
@@ -364,14 +356,17 @@ exit_test_and_generate_report() {
 	POSSIBLY_LOST="${POSSIBLY_LOST:-0}"
 	ping_loss_percent_1_to_2="${ping_loss_percent_1_to_2:-100.0}"
 	ping_loss_percent_2_to_1="${ping_loss_percent_2_to_1:-100.0}"
+	time_to_both_nodes_online="${time_to_both_nodes_online:--1}"
 
 	# Summarize and emit json for trend reporting
 
 	FILENAME_SUMMARY="$TEST_FILEPATH_PREFIX-summary.json"
 
 	time_length_test=$((time_test_end - time_test_start))
-	time_to_node1_online=$((time_zt_node1_online - time_zt_start))
-	time_to_node2_online=$((time_zt_node2_online - time_zt_start))
+	if [[ $time_to_both_nodes_online != -1 ]];
+	then
+		time_to_both_nodes_online=$((time_to_both_nodes_online - time_test_start))
+	fi
 	#time_length_zt_join=$((time_zt_join_end-time_zt_join_start))
 	#time_length_zt_leave=$((time_zt_leave_end-time_zt_leave_start))
 	#time_length_zt_can_still_ping=$((time_zt_can_still_ping-time_zt_leave_start))
@@ -383,10 +378,9 @@ exit_test_and_generate_report() {
   "commit":"$ZTO_COMMIT",
   "arch_m":"$(uname -m)",
   "arch_a":"$(uname -a)",
-  "binary_size":"$(stat -c %s zerotier-one)"
+  "binary_size":"$(stat -c %s zerotier-one)",
   "time_length_test":$time_length_test,
-  "time_to_node1_online":$time_to_node1_online,
-  "time_to_node2_online":$time_to_node2_online,
+  "time_to_both_nodes_online":$time_to_both_nodes_online,
   "num_possible_bytes_lost": $POSSIBLY_LOST,
   "num_definite_bytes_lost": $DEFINITELY_LOST,
   "num_bad_formattings": $POSSIBLY_LOST,
@@ -403,6 +397,8 @@ EOF
 
 	echo $summary >$FILENAME_SUMMARY
 	cat $FILENAME_SUMMARY
+
+	exit 0
 }
 
 ################################################################################
