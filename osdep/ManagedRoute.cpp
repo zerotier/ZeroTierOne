@@ -252,7 +252,7 @@ static std::vector<_RTE> _getRTEs(const InetAddress &target,bool contains)
 
 static void _routeCmd(const char *op,const InetAddress &target,const InetAddress &via,const char *ifscope,const char *localInterface)
 {
-	//char f1[1024],f2[1024]; printf("%s %s %s %s %s\n",op,target.toString(f1),via.toString(f2),ifscope,localInterface);
+	// char f1[1024],f2[1024]; printf("cmd %s %s %s %s %s\n",op,target.toString(f1),via.toString(f2),ifscope,localInterface);
 	long p = (long)fork();
 	if (p > 0) {
 		int exitcode = -1;
@@ -479,6 +479,9 @@ bool ManagedRoute::sync()
 		if (hasRoute) { break; }
 	}
 
+	// char buf[255];
+	// fprintf(stderr, "hasRoute %d %s\n", !!hasRoute, _target.toString(buf));
+
 
 	if (!hasRoute) {
 		if (_target && _target.netmaskBits() == 0) {
@@ -486,46 +489,58 @@ bool ManagedRoute::sync()
 			char newSystemDevice[128];
 			newSystemDevice[0] = (char)0;
 
-			// Find system default route that this route should override
-			// We need to put it back when default route is turned off
-			for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
-				if (r->via) {
-					if ( !_systemVia && r->isDefault == 1 && (strcmp(r->device,_device) != 0) ) {
-
-						newSystemVia = r->via;
-						Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
-					}
-				}
-			}
-
-			if (!newSystemVia) { return false; }
-
-			// Get device corresponding to route if we don't have that already
-			if ((newSystemVia)&&(!newSystemDevice[0])) {
-				rtes = _getRTEs(newSystemVia,true);
+			// If macos has a network hiccup, it deletes what _systemVia we had set.
+			// Then we don't know how to set the default route again.
+			// So use the one we had set previously. Don't overwrite it.
+			if (!_systemVia) {
+				// Find system default route that this route should override
+				// We need to put it back when default route is turned off
 				for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
-					if ( (r->device[0]) && (strcmp(r->device,_device) != 0) && r->target.netmaskBits() != 0) {
-						Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
-						break;
+					if (r->via) {
+						if ( !_systemVia && r->isDefault == 1 && (strcmp(r->device,_device) != 0) ) {
+
+							newSystemVia = r->via;
+							Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
+						}
 					}
 				}
+				if (newSystemVia) { _systemVia = newSystemVia; }
 			}
-			if (!newSystemDevice[0]) { return false; }
 
 
-			// update the system via in case it changed out from under us
-			// while we were in default route mode
+			// char buf1[255], buf2[255];
+			// fprintf(stderr, "_systemVia %s new %s\n", _systemVia.toString(buf1), newSystemVia.toString(buf2));
+			if (!_systemVia) { return false; }
 
-			_systemVia = newSystemVia;
-			Utils::scopy(_systemDevice,sizeof(_systemDevice),newSystemDevice);
+			if (!_systemDevice[0]) {
+				// Get device corresponding to route if we don't have that already
+				if ((newSystemVia)&&(!newSystemDevice[0])) {
+					rtes = _getRTEs(newSystemVia,true);
+					for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
+						if ( (r->device[0]) && (strcmp(r->device,_device) != 0) && r->target.netmaskBits() != 0) {
+							Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
+							break;
+						}
+					}
+				}
 
-			// Do the actual default route commands
+				if (newSystemDevice[0]) {
+					Utils::scopy(_systemDevice,sizeof(_systemDevice),newSystemDevice);
+				}
+			}
+			// fprintf(stderr, "_systemDevice %s new %s\n", _systemDevice, newSystemDevice);
+			if (!_systemDevice[0]) { return false; }
+
+
+			// Do Default Route route commands
 			_routeCmd("delete",_target,_systemVia,(const char *)0,(const char *)0);
 			_routeCmd("add",_target,_via,(const char *)0,(const char *)0);
 			_routeCmd("add",_target,_systemVia,_systemDevice,(const char *)0);
+
 			_applied[_target] = true;
+
 		} else {
-			// Do the actual route commands
+			// Do Non-Default route commands
 			_applied[_target] = true;
 			_routeCmd("add",leftt,_via,(const char *)0,(_via) ? (const char *)0 : _device);
 		}

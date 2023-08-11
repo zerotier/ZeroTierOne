@@ -107,7 +107,6 @@ void MacDNSHelper::removeDNS(uint64_t nwid)
 bool MacDNSHelper::addIps4(uint64_t nwid, const MAC mac, const char *dev, const std::vector<InetAddress>& addrs)
 {
     const char* ipStr = {0};
-    const char* ipStr2 = {0};
     char buf2[256] = {0};
 
     bool hasV4 = false;
@@ -116,7 +115,6 @@ bool MacDNSHelper::addIps4(uint64_t nwid, const MAC mac, const char *dev, const 
             hasV4 = true;
 
             ipStr = addrs[i].toIpString(buf2);
-            ipStr2 = addrs[i].toIpString(buf2);
 
             break;
         }
@@ -141,7 +139,8 @@ bool MacDNSHelper::addIps4(uint64_t nwid, const MAC mac, const char *dev, const 
     CFStringRef cfdev = CFStringCreateWithCString(NULL, dev, kCFStringEncodingUTF8);
 
     CFStringRef cfserver = CFStringCreateWithCString(NULL, "127.0.0.1", kCFStringEncodingUTF8);
-    CFStringRef cfrouter = CFStringCreateWithCString(NULL, ipStr2, kCFStringEncodingUTF8);
+    // using the ip from the zerotier network breaks routing on the mac
+    CFStringRef cfrouter = CFStringCreateWithCString(NULL, "127.0.0.1", kCFStringEncodingUTF8);
 
     const int SIZE = 4;
     CFStringRef keys[SIZE];
