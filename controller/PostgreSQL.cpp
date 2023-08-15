@@ -1672,8 +1672,6 @@ void PostgreSQL::commitThread()
 }
 
 void PostgreSQL::notifyNewMember(const std::string &networkID, const std::string &memberID) {
-	// TODO:  Look up hook URL for network owner organization
-
 	std::shared_ptr<PostgresConnection> c;
 	try {	
 		c = _pool->borrow();
@@ -1687,7 +1685,7 @@ void PostgreSQL::notifyNewMember(const std::string &networkID, const std::string
 		
 		// TODO: Add check for active subscription
 
-		auto res = w.exec_params("SELECT h.hook_url "
+		auto res = w.exec_params("SELECT h.hook_id "
 			"FROM ztc_hook h "
 			"INNER JOIN ztc_hook_hook_types ht "
 				"ON ht.hook_id = h.hook_id "
