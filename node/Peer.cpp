@@ -28,7 +28,7 @@ namespace ZeroTier {
 
 static unsigned char s_freeRandomByteCounter = 0;
 
-Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity) 
+Peer::Peer(const RuntimeEnvironment *renv,const Identity &myIdentity,const Identity &peerIdentity)
 	: RR(renv)
 	, _lastReceive(0)
 	, _lastNontrivialReceive(0)
@@ -487,19 +487,28 @@ void Peer::tryMemorizedPath(void *tPtr,int64_t now)
 void Peer::performMultipathStateCheck(void *tPtr, int64_t now)
 {
 	Mutex::Lock _l(_bond_m);
-	if (_bond) {
-		// Once enabled the Bond object persists, no need to update state
-		return;
-	}
 	/**
 	 * Check for conditions required for multipath bonding and create a bond
 	 * if allowed.
 	 */
 	int numAlivePaths = 0;
+	bool atLeastOneNonExpired = false;
 	for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-		if (_paths[i].p && _paths[i].p->alive(now)) {
-			numAlivePaths++;
+		if (_paths[i].p) {
+			if(_paths[i].p->alive(now)) {
+				numAlivePaths++;
+			}
+			if ((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION) {
+				atLeastOneNonExpired = true;
+			}
 		}
+	}
+	if (_bond) {
+		if (numAlivePaths == 0 && !atLeastOneNonExpired) {
+			_bond = SharedPtr<Bond>();
+			RR->bc->destroyBond(_id.address().toInt());
+		}
+		return;
 	}
 	_localMultipathSupported = ((numAlivePaths >= 1) && (RR->bc->inUse()) && (ZT_PROTO_VERSION > 9));
 	if (_localMultipathSupported && !_bond) {

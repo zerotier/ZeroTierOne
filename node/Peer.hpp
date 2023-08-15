@@ -56,7 +56,6 @@ private:
 public:
 	~Peer() {
 		Utils::burn(_key,sizeof(_key));
-		RR->bc->destroyBond(_id.address().toInt());
 	}
 
 	/**
@@ -435,6 +434,64 @@ public:
 	}
 
 	/**
+	 * See definition in Bond
+	 */
+	inline bool rateGateQoS(int64_t now, SharedPtr<Path>& path)
+	{
+		Mutex::Lock _l(_bond_m);
+		if(_bond) {
+			return _bond->rateGateQoS(now, path);
+		}
+		return false; // Default behavior. If there is no bond, we drop these
+	}
+
+	/**
+	 * See definition in Bond
+	 */
+	void receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint64_t* rx_id, uint16_t* rx_ts)
+	{
+		Mutex::Lock _l(_bond_m);
+		if(_bond) {
+			_bond->receivedQoS(path, now, count, rx_id, rx_ts);
+		}
+	}
+
+	/**
+	 * See definition in Bond
+	 */
+	void processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path>& path, int16_t remoteUtility)
+	{
+		Mutex::Lock _l(_bond_m);
+		if(_bond) {
+			_bond->processIncomingPathNegotiationRequest(now, path, remoteUtility);
+		}
+	}
+
+	/**
+	 * See definition in Bond
+	 */
+	inline bool rateGatePathNegotiation(int64_t now, SharedPtr<Path>& path)
+	{
+		Mutex::Lock _l(_bond_m);
+		if(_bond) {
+			return _bond->rateGatePathNegotiation(now, path);
+		}
+		return false; // Default behavior. If there is no bond, we drop these
+	}
+
+	/**
+	 * See definition in Bond
+	 */
+	bool flowHashingSupported()
+	{
+		Mutex::Lock _l(_bond_m);
+		if(_bond) {
+			return _bond->flowHashingSupported();
+		}
+		return false;
+	}
+
+	/**
 	 * Serialize a peer for storage in local cache
 	 *
 	 * This does not serialize everything, just non-ephemeral information.
@@ -531,6 +588,28 @@ public:
 			return _bond->policy();
 		}
 		return ZT_BOND_POLICY_NONE;
+	}
+
+	/**
+	 * @return the number of links in this bond which are considered alive
+	 */
+	inline uint8_t getNumAliveLinks() {
+		Mutex::Lock _l(_paths_m);
+		if (_bond) {
+			return _bond->getNumAliveLinks();
+		}
+		return 0;
+	}
+
+	/**
+	 * @return the number of links in this bond
+	 */
+	inline uint8_t getNumTotalLinks() {
+		Mutex::Lock _l(_paths_m);
+		if (_bond) {
+			return _bond->getNumTotalLinks();
+		}
+		return 0;
 	}
 
 	//inline const AES *aesKeysIfSupported() const

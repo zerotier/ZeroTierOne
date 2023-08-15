@@ -171,7 +171,7 @@ static int cli(int argc,char **argv)
 #endif
 {
 	unsigned int port = 0;
-	std::string homeDir,command,arg1,arg2,authToken;
+	std::string homeDir,command,arg1,arg2,arg3,arg4,authToken;
 	std::string ip("127.0.0.1");
 	bool json = false;
 	for(int i=1;i<argc;++i) {
@@ -569,9 +569,35 @@ static int cli(int argc,char **argv)
 				return 1;
 			}
 		}
+		else if (arg1 == "setmtu") { /* zerotier-cli bond setmtu <mtu> <iface> <ip> */
+			requestHeaders["Content-Type"] = "application/json";
+			requestHeaders["Content-Length"] = "2";
+			if (argc == 8) {
+				arg2 = argv[5];
+				arg3 = argv[6];
+				arg4 = argv[7];
+			}
+			unsigned int scode = Http::POST(
+				1024 * 1024 * 16,
+				60000,
+				(const struct sockaddr *)&addr,
+				(std::string("/bond/") + arg1 + "/" + arg2 + "/" + arg3 + "/" + arg4).c_str(),
+				requestHeaders,
+				"{}",
+				2,
+				responseHeaders,
+				responseBody);
+			if (scode == 200) {
+				printf("200 setmtu OK" ZT_EOL_S);
+				return 0;
+			} else {
+				printf("no link match found, new MTU was not applied" ZT_EOL_S);
+				return 1;
+			}
+			return 0;
+		}
 		else if (arg1.length() == 10) {
 			if (arg2 == "rotate") { /* zerotier-cli bond <peerId> rotate */
-				fprintf(stderr, "zerotier-cli bond <peerId> rotate\n");
 				requestHeaders["Content-Type"] = "application/json";
 				requestHeaders["Content-Length"] = "2";
 				unsigned int scode = Http::POST(
@@ -588,7 +614,7 @@ static int cli(int argc,char **argv)
 					if (json) {
 						printf("%s",cliFixJsonCRs(responseBody).c_str());
 					} else {
-						printf("200 bond OK" ZT_EOL_S);
+						printf("200 rotate OK" ZT_EOL_S);
 					}
 					return 0;
 				} else {
