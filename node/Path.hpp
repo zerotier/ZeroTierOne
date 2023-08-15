@@ -89,6 +89,7 @@ public:
 		_latencyVariance(0.0),
 		_packetLossRatio(0.0),
 		_packetErrorRatio(0.0),
+		_assignedFlowCount(0),
 		_valid(true),
 		_eligible(false),
 		_bonded(false),
@@ -110,6 +111,7 @@ public:
 		_latencyVariance(0.0),
 		_packetLossRatio(0.0),
 		_packetErrorRatio(0.0),
+		_assignedFlowCount(0),
 		_valid(true),
 		_eligible(false),
 		_bonded(false),
@@ -321,6 +323,11 @@ public:
 	inline float packetErrorRatio() const { return _packetErrorRatio; }
 
 	/**
+	 * @return Number of flows assigned to this path
+	 */
+	inline unsigned int assignedFlowCount() const { return _assignedFlowCount; }
+
+	/**
 	 * @return Whether this path is valid as reported by the bonding layer. The bonding layer
 	 * actually checks with Phy to see if the interface is still up
 	 */
@@ -374,6 +381,7 @@ private:
 	volatile float _latencyVariance;
 	volatile float _packetLossRatio;
 	volatile float _packetErrorRatio;
+	volatile uint16_t _assignedFlowCount;
 	volatile bool _valid;
 	volatile bool _eligible;
 	volatile bool _bonded;

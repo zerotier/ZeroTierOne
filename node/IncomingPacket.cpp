@@ -317,8 +317,7 @@ bool IncomingPacket::_doERROR(const RuntimeEnvironment *RR,void *tPtr,const Shar
 bool IncomingPacket::_doACK(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer)
 {
 	/*
-	SharedPtr<Bond> bond = peer->bond();
-	if (! bond || ! bond->rateGateACK(RR->node->now())) {
+	if (! peer->rateGateACK(RR->node->now())) {
 		return true;
 	}
 	int32_t ackedBytes;
@@ -326,9 +325,7 @@ bool IncomingPacket::_doACK(const RuntimeEnvironment* RR, void* tPtr, const Shar
 		return true;   // ignore
 	}
 	memcpy(&ackedBytes, payload(), sizeof(ackedBytes));
-	if (bond) {
-		bond->receivedAck(_path, RR->node->now(), Utils::ntoh(ackedBytes));
-	}
+	peer->receivedAck(_path, RR->node->now(), Utils::ntoh(ackedBytes));
 	*/
 	Metrics::pkt_ack_in++;
 	return true;
@@ -338,7 +335,7 @@ bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment* RR, void* tPtr
 {
 	Metrics::pkt_qos_in++;
 	SharedPtr<Bond> bond = peer->bond();
-	if (! bond || ! bond->rateGateQoS(RR->node->now(), _path)) {
+	if (! peer->rateGateQoS(RR->node->now(), _path)) {
 		return true;
 	}
 	if (payloadLength() > ZT_QOS_MAX_PACKET_SIZE || payloadLength() < ZT_QOS_MIN_PACKET_SIZE) {
@@ -359,9 +356,7 @@ bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment* RR, void* tPtr
 		ptr += sizeof(uint16_t);
 		count++;
 	}
-	if (bond) {
-		bond->receivedQoS(_path, now, count, rx_id, rx_ts);
-	}
+	peer->receivedQoS(_path, now, count, rx_id, rx_ts);
 	return true;
 }
 
@@ -626,10 +621,7 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedP
 			}
 
 			if (!hops()) {
-				SharedPtr<Bond> bond = peer->bond();
-				if (!bond) {
-					_path->updateLatency((unsigned int)latency,RR->node->now());
-				}
+				_path->updateLatency((unsigned int)latency,RR->node->now());
 			}
 
 			peer->setRemoteVersion(vProto,vMajor,vMinor,vRevision);
@@ -801,8 +793,7 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const Shar
 {
 	Metrics::pkt_frame_in++;
 	int32_t _flowId = ZT_QOS_NO_FLOW;
-	SharedPtr<Bond> bond = peer->bond();
-	if (bond && bond->flowHashingSupported()) {
+	if (peer->flowHashingSupported()) {
 		if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
 			const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
 			const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
@@ -1481,8 +1472,7 @@ bool IncomingPacket::_doPATH_NEGOTIATION_REQUEST(const RuntimeEnvironment *RR,vo
 {
 	Metrics::pkt_path_negotiation_request_in++;
 	uint64_t now = RR->node->now();
-	SharedPtr<Bond> bond = peer->bond();
-	if (!bond || !bond->rateGatePathNegotiation(now, _path)) {
+	if (!peer->rateGatePathNegotiation(now, _path)) {
 		return true;
 	}
 	if (payloadLength() != sizeof(int16_t)) {
@@ -1490,9 +1480,7 @@ bool IncomingPacket::_doPATH_NEGOTIATION_REQUEST(const RuntimeEnvironment *RR,vo
 	}
 	int16_t remoteUtility = 0;
 	memcpy(&remoteUtility, payload(), sizeof(int16_t));
-	if (peer->bond()) {
-		peer->bond()->processIncomingPathNegotiationRequest(now, _path, Utils::ntoh(remoteUtility));
-	}
+	peer->processIncomingPathNegotiationRequest(now, _path, Utils::ntoh(remoteUtility));
 	return true;
 }
 

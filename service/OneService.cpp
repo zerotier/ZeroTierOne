@@ -644,6 +644,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer, SharedPtr<Bond> 
 			j["latencyVariance"] = peer->paths[i].latencyVariance;
 			j["packetLossRatio"] = peer->paths[i].packetLossRatio;
 			j["packetErrorRatio"] = peer->paths[i].packetErrorRatio;
+			j["assignedFlowCount"] = peer->paths[i].assignedFlowCount;
 			j["lastInAge"] = (now - lastReceive);
 			j["lastOutAge"] = (now - lastSend);
 			j["bonded"] = peer->paths[i].bonded;
@@ -1659,11 +1660,8 @@ public:
 				res.status = 400;
 				return;
 			}
-
 			auto bondID = req.matches[1];
 			uint64_t id = Utils::hexStrToU64(bondID.str().c_str());
-
-			exit(0);
 			SharedPtr<Bond> bond = _node->bondController()->getBondByPeerId(id);
 			if (bond) {
 				if (bond->abForciblyRotateLink()) {
@@ -1679,6 +1677,19 @@ public:
 		};
 		_controlPlane.Post("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
 		_controlPlane.Put("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
+
+		auto setMtu = [&, setContent](const httplib::Request &req, httplib::Response &res) {
+			if (!_node->bondController()->inUse()) {
+				setContent(req, res, "");
+				res.status = 400;
+				return;
+			}
+			uint16_t mtu = atoi(req.matches[1].str().c_str());
+			res.status = _node->bondController()->setAllMtuByTuple(mtu, req.matches[2].str().c_str(), req.matches[3].str().c_str()) ? 200 : 400;
+			setContent(req, res, "{}");
+		};
+		_controlPlane.Post("/bond/setmtu/([0-9]{3,5})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})", setMtu);
+		_controlPlane.Put("/bond/setmtu/([0-9]{3,5})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})", setMtu);
 
 		_controlPlane.Get("/config", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			std::string config;
