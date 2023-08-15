@@ -277,7 +277,7 @@ std::string http_log(const httplib::Request &req, const httplib::Response &res) 
 class NetworkState
 {
 public:
-	NetworkState() 
+	NetworkState()
 		: _webPort(9993)
 		, _tap((EthernetTap *)0)
 #if ZT_SSO_ENABLED
@@ -357,7 +357,7 @@ public:
 	bool allowDNS() const {
 		return _settings.allowDNS;
 	}
-	
+
 	std::vector<InetAddress> allowManagedWhitelist() const {
 		return _settings.allowManagedWhitelist;
 	}
@@ -838,7 +838,7 @@ public:
 	// Deadline for the next background task service function
 	volatile int64_t _nextBackgroundTaskDeadline;
 
-	
+
 
 	std::map<uint64_t,NetworkState> _nets;
 	Mutex _nets_m;
@@ -930,7 +930,7 @@ public:
 
 	virtual ~OneServiceImpl()
 	{
-#ifdef __WINDOWS__ 
+#ifdef __WINDOWS__
 		WinFWHelper::removeICMPRules();
 #endif
 		_binder.closeAll(_phy);
@@ -1047,10 +1047,10 @@ public:
 			// private address port number. Buggy NATs are a running theme.
 			//
 			// This used to pick the secondary port based on the node ID until we
-			// discovered another problem: buggy routers and malicious traffic 
+			// discovered another problem: buggy routers and malicious traffic
 			// "detection".  A lot of routers have such things built in these days
 			// and mis-detect ZeroTier traffic as malicious and block it resulting
-			// in a node that appears to be in a coma.  Secondary ports are now 
+			// in a node that appears to be in a coma.  Secondary ports are now
 			// randomized on startup.
 			if (_allowSecondaryPort) {
 				if (_secondaryPort) {
@@ -2750,46 +2750,8 @@ public:
 			TcpConnection *tc = reinterpret_cast<TcpConnection *>(*uptr);
 			tc->lastReceive = OSUtils::now();
 			switch(tc->type) {
-
-                // TODO: Remove Me
-				// case TcpConnection::TCP_UNCATEGORIZED_INCOMING:
-				// 	switch(reinterpret_cast<uint8_t *>(data)[0]) {
-				// 		// HTTP: GET, PUT, POST, HEAD, DELETE
-				// 		case 'G':
-				// 		case 'P':
-				// 		case 'D':
-				// 		case 'H': {
-				// 			// This is only allowed from IPs permitted to access the management
-				// 			// backplane, which is just 127.0.0.1/::1 unless otherwise configured.
-				// 			bool allow;
-				// 			{
-				// 				Mutex::Lock _l(_localConfig_m);
-				// 				if (_allowManagementFrom.empty()) {
-				// 					allow = (tc->remoteAddr.ipScope() == InetAddress::IP_SCOPE_LOOPBACK);
-				// 				} else {
-				// 					allow = false;
-				// 					for(std::vector<InetAddress>::const_iterator i(_allowManagementFrom.begin());i!=_allowManagementFrom.end();++i) {
-				// 						if (i->containsAddress(tc->remoteAddr)) {
-				// 							allow = true;
-				// 							break;
-				// 						}
-				// 					}
-				// 				}
-				// 			}
-				// 			if (allow) {
-				// 				tc->type = TcpConnection::TCP_HTTP_INCOMING;
-				// 				phyOnTcpData(sock,uptr,data,len);
-				// 			} else {
-				// 				_phy.close(sock);
-				// 			}
-				// 		}	break;
-
-				// 		// Drop unknown protocols
-				// 		default:
-				// 			_phy.close(sock);
-				// 			break;
-				// 	}
-				// 	return;
+				case TcpConnection::TCP_UNCATEGORIZED_INCOMING:
+					return;
 
 				case TcpConnection::TCP_HTTP_INCOMING:
 				case TcpConnection::TCP_HTTP_OUTGOING:
