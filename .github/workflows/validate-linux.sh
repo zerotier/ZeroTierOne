@@ -3,32 +3,41 @@
 # This test script joins Earth and pokes some stuff
 
 TEST_NETWORK=8056c2e21c000001
-RUN_LENGTH=60
+RUN_LENGTH=30
 TEST_FINISHED=false
 ZTO_VER=$(git describe --tags $(git rev-list --tags --max-count=1))
 ZTO_COMMIT=$(git rev-parse HEAD)
 ZTO_COMMIT_SHORT=$(git rev-parse --short HEAD)
 TEST_DIR_PREFIX="$ZTO_VER-$ZTO_COMMIT_SHORT-test-results"
-EXIT_TEST_FAILED=0
+
+TEST_OK=0
+TEST_FAIL=1
 
 echo "Performing test on: $ZTO_VER-$ZTO_COMMIT_SHORT"
 TEST_FILEPATH_PREFIX="$TEST_DIR_PREFIX/$ZTO_COMMIT_SHORT"
 mkdir $TEST_DIR_PREFIX
 
+# How long we will wait for ZT to come online before considering it a failure
+MAX_WAIT_SECS=30
+
 ################################################################################
 # Multi-node connectivity and performance test                                 #
 ################################################################################
-main() {
-	echo -e "\nRunning test for $RUN_LENGTH seconds"
+
+test() {
+
+	echo -e "\nPerforming pre-flight checks"
 
 	check_exit_on_invalid_identity
 
-	NS1="ip netns exec ns1"
-	NS2="ip netns exec ns2"
+	echo -e "\nRunning test for $RUN_LENGTH seconds"
 
-	ZT1="$NS1 ./zerotier-cli -p9996 -D$(pwd)/node1"
+	export NS1="ip netns exec ns1"
+	export NS2="ip netns exec ns2"
+
+	export ZT1="$NS1 ./zerotier-cli -p9996 -D$(pwd)/node1"
 	# Specify custom port on one node to ensure that feature works
-	ZT2="$NS2 ./zerotier-cli -p9997 -D$(pwd)/node2"
+	export ZT2="$NS2 ./zerotier-cli -p9997 -D$(pwd)/node2"
 
 	echo -e "\nSetting up network namespaces..."
 	echo "Setting up ns1"
@@ -71,6 +80,36 @@ main() {
 	# Allow forwarding
 	sysctl -w net.ipv4.ip_forward=1
 
+	################################################################################
+	# Memory Leak Check                                                            #
+	################################################################################
+
+	export FILENAME_MEMORY_LOG="$TEST_FILEPATH_PREFIX-memory.log"
+
+	echo -e "\nStarting a ZeroTier instance in each namespace..."
+
+	export time_test_start=$(date +%s)
+
+	# Spam the CLI as ZeroTier is starting
+	spam_cli 100
+
+	echo "Starting memory leak check"
+	$NS1 sudo valgrind --demangle=yes --exit-on-first-error=yes \
+		--error-exitcode=1 \
+		--xml=yes \
+		--xml-file=$FILENAME_MEMORY_LOG \
+		--leak-check=full \
+		./zerotier-one node1 -p9996 -U >>node_1.log 2>&1 &
+
+	# Second instance, not run in memory profiler
+	# Don't set up internet access until _after_ zerotier is running
+	# This has been a source of stuckness in the past.
+	$NS2 ip addr del 192.168.1.2/24 dev veth3
+	$NS2 sudo ./zerotier-one node2 -U -p9997 >>node_2.log 2>&1 &
+	sleep 1;
+	$NS2 ip addr add 192.168.1.2/24 dev veth3
+	$NS2 ip route add default via 192.168.1.1
+
 	echo -e "\nPing from host to namespaces"
 
 	ping -c 3 192.168.0.1
@@ -92,53 +131,23 @@ main() {
 	$NS2 ping -c 3 192.168.0.1
 
 	################################################################################
-	# Memory Leak Check                                                            #
-	################################################################################
-
-	FILENAME_MEMORY_LOG="$TEST_FILEPATH_PREFIX-memory.log"
-
-	echo -e "\nStarting a ZeroTier instance in each namespace..."
-
-	time_test_start=$(date +%s)
-
-	# Spam the CLI as ZeroTier is starting
-	spam_cli 100
-
-	echo "Starting memory leak check"
-	$NS1 sudo valgrind --demangle=yes --exit-on-first-error=yes \
-		--error-exitcode=1 \
-		--xml=yes \
-		--xml-file=$FILENAME_MEMORY_LOG \
-		--leak-check=full \
-		./zerotier-one node1 -p9996 -U >>node_1.log 2>&1 &
-
-	# Second instance, not run in memory profiler
-	$NS2 sudo ./zerotier-one node2 -U -p9997 >>node_2.log 2>&1 &
-
-	################################################################################
 	# Online Check                                                                 #
 	################################################################################
 
 	echo "Waiting for ZeroTier to come online before attempting test..."
-	MAX_WAIT_SECS="${MAX_WAIT_SECS:-120}"
 	node1_online=false
 	node2_online=false
 	both_instances_online=false
 	time_zt_node1_start=$(date +%s)
 	time_zt_node2_start=$(date +%s)
 
-	for ((s = 0; s <= MAX_WAIT_SECS; s++)); do
+	for ((s = 0; s <= $MAX_WAIT_SECS; s++)); do
 		node1_online="$($ZT1 -j info | jq '.online' 2>/dev/null)"
 		node2_online="$($ZT2 -j info | jq '.online' 2>/dev/null)"
 		echo "Checking for online status: try #$s, node1:$node1_online, node2:$node2_online"
-		if [[ "$node1_online" == "true" ]]; then
-			time_zt_node1_online=$(date +%s)
-		fi
-		if [[ "$node2_online" == "true" ]]; then
-			time_zt_node2_online=$(date +%s)
-		fi
 		if [[ "$node2_online" == "true" && "$node1_online" == "true" ]]; then
-			both_instances_online=true
+			export both_instances_online=true
+			export time_to_both_nodes_online=$(date +%s)
 			break
 		fi
 		sleep 1
@@ -152,21 +161,20 @@ main() {
 	tree node2
 
 	echo -e "\n\nRunning ZeroTier processes:"
-	echo -e "\nNode 1:"
+	echo -e "\nNode 1:\n"
 	$NS1 ps aux | grep zerotier-one
-	echo -e "\nNode 2:"
+	echo -e "\nNode 2:\n"
 	$NS2 ps aux | grep zerotier-one
 
 	echo -e "\n\nStatus of each instance:"
 
-	echo -e "\n\nNode 1:"
+	echo -e "\n\nNode 1:\n"
 	$ZT1 status
-	echo -e "\n\nNode 2:"
+	echo -e "\n\nNode 2:\n"
 	$ZT2 status
 
 	if [[ "$both_instances_online" != "true" ]]; then
-		echo "One or more instances of ZeroTier failed to come online. Aborting test."
-		exit 1
+		exit_test_and_generate_report $TEST_FAIL "one or more nodes failed to come online"
 	fi
 
 	echo -e "\nJoining networks"
@@ -190,18 +198,14 @@ main() {
 	$NS1 ping -c 16 $node2_ip4 >$PING12_FILENAME
 	$NS2 ping -c 16 $node1_ip4 >$PING21_FILENAME
 
-	# Parse ping statistics
-	ping_loss_percent_1_to_2="${ping_loss_percent_1_to_2:-100.0}"
-	ping_loss_percent_2_to_1="${ping_loss_percent_2_to_1:-100.0}"
-
 	ping_loss_percent_1_to_2=$(cat $PING12_FILENAME |
 		grep "packet loss" | awk '{print $6}' | sed 's/%//')
 	ping_loss_percent_2_to_1=$(cat $PING21_FILENAME |
 		grep "packet loss" | awk '{print $6}' | sed 's/%//')
 
 	# Normalize loss value
-	ping_loss_percent_1_to_2=$(echo "scale=2; $ping_loss_percent_1_to_2/100.0" | bc)
-	ping_loss_percent_2_to_1=$(echo "scale=2; $ping_loss_percent_2_to_1/100.0" | bc)
+	export ping_loss_percent_1_to_2=$(echo "scale=2; $ping_loss_percent_1_to_2/100.0" | bc)
+	export ping_loss_percent_2_to_1=$(echo "scale=2; $ping_loss_percent_2_to_1/100.0" | bc)
 
 	################################################################################
 	# CLI Check                                                                    #
@@ -252,11 +256,9 @@ main() {
 
 	# TODO: Validate JSON
 
-	################################################################################
-	# Performance Test                                                             #
-	################################################################################
+	# Performance Test
 
-	FILENAME_PERF_JSON="$TEST_FILEPATH_PREFIX-iperf.json"
+	export FILENAME_PERF_JSON="$TEST_FILEPATH_PREFIX-iperf.json"
 
 	echo -e "\nBeginning performance test:"
 
@@ -272,9 +274,36 @@ main() {
 
 	cat $FILENAME_PERF_JSON
 
-	################################################################################
-	# Collect ZeroTier dump files                                                  #
-	################################################################################
+	# Let ZeroTier idle long enough for various timers
+
+	echo -e "\nIdling ZeroTier for $RUN_LENGTH seconds..."
+	sleep $RUN_LENGTH
+
+	echo -e "\nLeaving networks"
+
+	$ZT1 leave $TEST_NETWORK
+	$ZT2 leave $TEST_NETWORK
+
+	sleep 5
+
+	exit_test_and_generate_report $TEST_OK "completed test"
+}
+
+################################################################################
+# Generate report                                                              #
+################################################################################
+
+exit_test_and_generate_report() {
+
+	echo -e "\nStopping memory check..."
+	sudo pkill -15 -f valgrind
+	sleep 10
+
+	time_test_end=$(date +%s)
+
+	echo "Exiting test with reason: $2 ($1)"
+
+	# Collect ZeroTier dump files
 
 	echo -e "\nCollecting ZeroTier dump files"
 
@@ -287,40 +316,12 @@ main() {
 	$ZT2 dump
 	mv zerotier_dump.txt "$TEST_FILEPATH_PREFIX-node-dump-$node2_id.txt"
 
-	################################################################################
-	# Let ZeroTier idle long enough for various timers                             #
-	################################################################################
+	# Copy ZeroTier stdout/stderr logs
 
-	echo -e "\nIdling ZeroTier for $RUN_LENGTH seconds..."
-	sleep $RUN_LENGTH
+	cp node_1.log "$TEST_FILEPATH_PREFIX-node-log-$node1_id.txt"
+	cp node_2.log "$TEST_FILEPATH_PREFIX-node-log-$node2_id.txt"
 
-	echo -e "\nLeaving networks"
-
-	$ZT1 leave $TEST_NETWORK
-	$ZT2 leave $TEST_NETWORK
-
-	sleep 5
-
-	################################################################################
-	# Stop test                                                                    #
-	################################################################################
-
-	echo -e "\nStopping memory check..."
-	sudo pkill -15 -f valgrind
-	sleep 10
-
-	time_test_end=$(date +%s)
-
-	################################################################################
-	# Rename ZeroTier stdout/stderr logs                                           #
-	################################################################################
-
-	mv node_1.log "$TEST_FILEPATH_PREFIX-node-log-$node1_id.txt"
-	mv node_2.log "$TEST_FILEPATH_PREFIX-node-log-$node2_id.txt"
-
-	################################################################################
-	# Generate report                                                              #
-	################################################################################
+	# Generate report
 
 	cat $FILENAME_MEMORY_LOG
 
@@ -329,9 +330,7 @@ main() {
 	POSSIBLY_LOST=$(xmlstarlet sel -t -v '/valgrindoutput/error/xwhat' \
 		$FILENAME_MEMORY_LOG | grep "possibly" | awk '{print $1;}')
 
-	################################################################################
-	# Generate coverage report artifact and summary                                #
-	################################################################################
+	# Generate coverage report artifact and summary
 
 	FILENAME_COVERAGE_JSON="$TEST_FILEPATH_PREFIX-coverage.json"
 	FILENAME_COVERAGE_HTML="$TEST_FILEPATH_PREFIX-coverage.html"
@@ -351,22 +350,23 @@ main() {
 	COVERAGE_LINE_TOTAL="${COVERAGE_LINE_TOTAL:-0}"
 	COVERAGE_LINE_PERCENT="${COVERAGE_LINE_PERCENT:-0}"
 
-	################################################################################
-	# Default values                                                               #
-	################################################################################
+	# Default values
 
 	DEFINITELY_LOST="${DEFINITELY_LOST:-0}"
 	POSSIBLY_LOST="${POSSIBLY_LOST:-0}"
+	ping_loss_percent_1_to_2="${ping_loss_percent_1_to_2:-100.0}"
+	ping_loss_percent_2_to_1="${ping_loss_percent_2_to_1:-100.0}"
+	time_to_both_nodes_online="${time_to_both_nodes_online:--1}"
 
-	################################################################################
-	# Summarize and emit json for trend reporting                                  #
-	################################################################################
+	# Summarize and emit json for trend reporting
 
 	FILENAME_SUMMARY="$TEST_FILEPATH_PREFIX-summary.json"
 
 	time_length_test=$((time_test_end - time_test_start))
-	time_length_zt_node1_online=$((time_zt_node1_online - time_zt_start))
-	time_length_zt_node2_online=$((time_zt_node2_online - time_zt_start))
+	if [[ $time_to_both_nodes_online != -1 ]];
+	then
+		time_to_both_nodes_online=$((time_to_both_nodes_online - time_test_start))
+	fi
 	#time_length_zt_join=$((time_zt_join_end-time_zt_join_start))
 	#time_length_zt_leave=$((time_zt_leave_end-time_zt_leave_start))
 	#time_length_zt_can_still_ping=$((time_zt_can_still_ping-time_zt_leave_start))
@@ -378,31 +378,27 @@ main() {
   "commit":"$ZTO_COMMIT",
   "arch_m":"$(uname -m)",
   "arch_a":"$(uname -a)",
+  "binary_size":"$(stat -c %s zerotier-one)",
   "time_length_test":$time_length_test,
-  "time_length_zt_node1_online":$time_length_zt_node1_online,
-  "time_length_zt_node2_online":$time_length_zt_node2_online,
+  "time_to_both_nodes_online":$time_to_both_nodes_online,
   "num_possible_bytes_lost": $POSSIBLY_LOST,
   "num_definite_bytes_lost": $DEFINITELY_LOST,
-  "num_incorrect_settings": $POSSIBLY_LOST,
   "num_bad_formattings": $POSSIBLY_LOST,
-  "percent_coverage_branches": $POSSIBLY_LOST,
   "coverage_lines_covered": $COVERAGE_LINE_COVERED,
   "coverage_lines_total": $COVERAGE_LINE_TOTAL,
   "coverage_lines_percent": $COVERAGE_LINE_PERCENT,
   "ping_loss_percent_1_to_2": $ping_loss_percent_1_to_2,
   "ping_loss_percent_2_to_1": $ping_loss_percent_2_to_1,
-  "mean_latency_ping_random": $POSSIBLY_LOST,
-  "mean_latency_ping_netns": $POSSIBLY_LOST,
-  "mean_pdv_random": $POSSIBLY_LOST,
-  "mean_pdv_netns": $POSSIBLY_LOST,
-  "mean_perf_netns": $POSSIBLY_LOST,
-  "exit_test_failed": $EXIT_TEST_FAILED
+  "test_exit_code": $1,
+  "test_exit_reason":"$2"
 }
 EOF
 	)
 
 	echo $summary >$FILENAME_SUMMARY
 	cat $FILENAME_SUMMARY
+
+	exit 0
 }
 
 ################################################################################
@@ -437,6 +433,10 @@ spam_cli() {
 	done
 }
 
+################################################################################
+# Check for proper exit on load of invalid identity                            #
+################################################################################
+
 check_exit_on_invalid_identity() {
 	echo "Checking ZeroTier exits on invalid identity..."
 	mkdir -p $(pwd)/exit_test
@@ -448,17 +448,14 @@ check_exit_on_invalid_identity() {
 	$ZT1 &
 	my_pid=$!
 
-	echo "Waiting 5 secons"
+	echo "Waiting 5 seconds"
 	sleep 5
 
 	# check if process is running
 	kill -0 $my_pid
 	if [ $? -eq 0 ]; then
-		EXIT_TEST_FAILED=1
-		echo "Exit test FAILED: Process still running after being fed an invalid identity"
-	else
-		echo "Exit test PASSED"
+		exit_test_and_generate_report $TEST_FAIL "Exit test FAILED: Process still running after being fed an invalid identity"
 	fi
 }
 
-main "$@"
+test "$@"

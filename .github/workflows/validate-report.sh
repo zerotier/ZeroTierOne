@@ -5,6 +5,8 @@
 ################################################################################
 
 DEFINITELY_LOST=$(cat *test-results/*summary.json | jq .num_definite_bytes_lost)
+EXIT_CODE=$(cat *test-results/*summary.json | jq .exit_code)
+EXIT_REASON=$(cat *test-results/*summary.json | jq .exit_reason)
 
 cat *test-results/*summary.json
 
@@ -14,8 +16,9 @@ if [[ "$DEFINITELY_LOST" -gt 0 ]]; then
       exit 1
 fi
 
-EXIT_TEST_FAILED=$(cat *test-results/*summary.json | jq .exit_test_failed)
+# Catch-all for other non-zero exit codes
 
-if [[ "$EXIT_TEST_FAILED" -gt 0 ]]; then
+if [[ "$EXIT_CODE" -gt 0 ]]; then
+      echo "Test failed: $EXIT_REASON"
       exit 1
 fi
