@@ -457,6 +457,26 @@ class Bond {
 	static SharedPtr<Bond> getBondByPeerId(int64_t identity);
 
 	/**
+	 * Set MTU for link by given interface name and IP address (across all bonds)
+	 *
+	 * @param mtu MTU to be used on this link
+	 * @param ifStr interface name to match
+	 * @param ipStr IP address to match
+	 * @return Whether the MTU was set
+	 */
+	static bool setAllMtuByTuple(uint16_t mtu, const std::string& ifStr, const std::string& ipStr);
+
+	/**
+	 * Set MTU for link by given interface name and IP address
+	 *
+	 * @param mtu MTU to be used on this link
+	 * @param ifStr interface name to match
+	 * @param ipStr IP address to match
+	 * @return Whether the MTU was set
+	 */
+	bool setMtuByTuple(uint16_t mtu, const std::string& ifStr, const std::string& ipStr);
+
+	/**
 	 * Add a new bond to the bond controller.
 	 *
 	 * @param renv Runtime environment

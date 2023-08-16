@@ -102,6 +102,43 @@ SharedPtr<Bond> Bond::getBondByPeerId(int64_t identity)
 	return _bonds.count(identity) ? _bonds[identity] : SharedPtr<Bond>();
 }
 
+bool Bond::setAllMtuByTuple(uint16_t mtu, const std::string& ifStr, const std::string& ipStr)
+{
+	Mutex::Lock _l(_bonds_m);
+	std::map<int64_t, SharedPtr<Bond> >::iterator bondItr = _bonds.begin();
+	bool found = false;
+	while (bondItr != _bonds.end()) {
+		if (bondItr->second->setMtuByTuple(mtu,ifStr,ipStr)) {
+			found = true;
+		}
+		++bondItr;
+	}
+	return found;
+}
+
+bool Bond::setMtuByTuple(uint16_t mtu, const std::string& ifStr, const std::string& ipStr)
+{
+	Mutex::Lock _lp(_paths_m);
+	bool found = false;
+	for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
+		if (_paths[i].p) {
+			SharedPtr<Link> sl = getLink(_paths[i].p);
+			if (sl) {
+				if (sl->ifname() == ifStr) {
+					char ipBuf[64] = { 0 };
+					_paths[i].p->address().toIpString(ipBuf);
+					std::string newString = std::string(ipBuf);
+					if (newString == ipStr) {
+						_paths[i].p->_mtu = mtu;
+						found = true;
+					}
+				}
+			}
+		}
+	}
+	return found;
+}
+
 SharedPtr<Bond> Bond::createBond(const RuntimeEnvironment* renv, const SharedPtr<Peer>& peer)
 {
 	Mutex::Lock _l(_bonds_m);
@@ -162,8 +199,8 @@ void Bond::destroyBond(uint64_t peerId)
 	auto iter = _bonds.find(peerId);
 	if (iter != _bonds.end()) {
 		iter->second->stopBond();
+		_bonds.erase(iter);
 	}
-	_bonds.erase(peerId);
 }
 
 void Bond::stopBond()
@@ -978,7 +1015,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 		// Whether we've waited long enough since the link last came online
 		bool satisfiedUpDelay = (now - _paths[i].lastAliveToggle) >= _upDelay;
 		// How long since the last QoS was received (Must be less than ZT_PEER_PATH_EXPIRATION since the remote peer's _qosSendInterval isn't known)
-		bool acceptableQoSAge = _paths[i].lastQoSReceived == 0 || ((now - _paths[i].lastQoSReceived) < ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD);
+		bool acceptableQoSAge = (_paths[i].lastQoSReceived == 0 && inTrial) || ((now - _paths[i].lastQoSReceived) < ZT_PEER_EXPIRED_PATH_TRIAL_PERIOD);
 		currEligibility = _paths[i].allowed() && ((acceptableAge && satisfiedUpDelay && acceptableQoSAge) || inTrial);
 
 		if (currEligibility) {
@@ -1070,7 +1107,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 
 				// Bond a spare link if required (no viable primary links left)
 				if (! foundUsablePrimaryPath) {
-					debug("no usable primary links remain, will attempt to use spare if available");
+					// debug("no usable primary links remain, will attempt to use spare if available");
 					for (int j = 0; j < it->second.size(); j++) {
 						int idx = it->second.at(j);
 						if (! _paths[idx].p || ! _paths[idx].eligible || ! _paths[idx].allowed() || ! _paths[idx].isSpare()) {
@@ -1244,7 +1281,8 @@ void Bond::estimatePathQuality(int64_t now)
 			if (link) {
 				int linkSpeed = link->capacity();
 				_paths[i].p->_givenLinkSpeed = linkSpeed;
-				_paths[i].p->_mtu = link->mtu();
+				_paths[i].p->_mtu = link->mtu() ? link->mtu() : _paths[i].p->_mtu;
+				_paths[i].p->_assignedFlowCount = _paths[i].assignedFlowCount;
 				maxObservedLinkCap = linkSpeed > maxObservedLinkCap ? linkSpeed : maxObservedLinkCap;
 			}
 		}

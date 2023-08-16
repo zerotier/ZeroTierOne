@@ -277,7 +277,7 @@ std::string http_log(const httplib::Request &req, const httplib::Response &res) 
 class NetworkState
 {
 public:
-	NetworkState() 
+	NetworkState()
 		: _webPort(9993)
 		, _tap((EthernetTap *)0)
 #if ZT_SSO_ENABLED
@@ -357,7 +357,7 @@ public:
 	bool allowDNS() const {
 		return _settings.allowDNS;
 	}
-	
+
 	std::vector<InetAddress> allowManagedWhitelist() const {
 		return _settings.allowManagedWhitelist;
 	}
@@ -644,6 +644,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer, SharedPtr<Bond> 
 			j["latencyVariance"] = peer->paths[i].latencyVariance;
 			j["packetLossRatio"] = peer->paths[i].packetLossRatio;
 			j["packetErrorRatio"] = peer->paths[i].packetErrorRatio;
+			j["assignedFlowCount"] = peer->paths[i].assignedFlowCount;
 			j["lastInAge"] = (now - lastReceive);
 			j["lastOutAge"] = (now - lastSend);
 			j["bonded"] = peer->paths[i].bonded;
@@ -838,7 +839,7 @@ public:
 	// Deadline for the next background task service function
 	volatile int64_t _nextBackgroundTaskDeadline;
 
-	
+
 
 	std::map<uint64_t,NetworkState> _nets;
 	Mutex _nets_m;
@@ -930,7 +931,7 @@ public:
 
 	virtual ~OneServiceImpl()
 	{
-#ifdef __WINDOWS__ 
+#ifdef __WINDOWS__
 		WinFWHelper::removeICMPRules();
 #endif
 		_binder.closeAll(_phy);
@@ -1047,10 +1048,10 @@ public:
 			// private address port number. Buggy NATs are a running theme.
 			//
 			// This used to pick the secondary port based on the node ID until we
-			// discovered another problem: buggy routers and malicious traffic 
+			// discovered another problem: buggy routers and malicious traffic
 			// "detection".  A lot of routers have such things built in these days
 			// and mis-detect ZeroTier traffic as malicious and block it resulting
-			// in a node that appears to be in a coma.  Secondary ports are now 
+			// in a node that appears to be in a coma.  Secondary ports are now
 			// randomized on startup.
 			if (_allowSecondaryPort) {
 				if (_secondaryPort) {
@@ -1659,11 +1660,8 @@ public:
 				res.status = 400;
 				return;
 			}
-
 			auto bondID = req.matches[1];
 			uint64_t id = Utils::hexStrToU64(bondID.str().c_str());
-
-			exit(0);
 			SharedPtr<Bond> bond = _node->bondController()->getBondByPeerId(id);
 			if (bond) {
 				if (bond->abForciblyRotateLink()) {
@@ -1679,6 +1677,19 @@ public:
 		};
 		_controlPlane.Post("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
 		_controlPlane.Put("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
+
+		auto setMtu = [&, setContent](const httplib::Request &req, httplib::Response &res) {
+			if (!_node->bondController()->inUse()) {
+				setContent(req, res, "");
+				res.status = 400;
+				return;
+			}
+			uint16_t mtu = atoi(req.matches[1].str().c_str());
+			res.status = _node->bondController()->setAllMtuByTuple(mtu, req.matches[2].str().c_str(), req.matches[3].str().c_str()) ? 200 : 400;
+			setContent(req, res, "{}");
+		};
+		_controlPlane.Post("/bond/setmtu/([0-9]{3,5})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})", setMtu);
+		_controlPlane.Put("/bond/setmtu/([0-9]{3,5})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})", setMtu);
 
 		_controlPlane.Get("/config", [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			std::string config;
@@ -2750,46 +2761,8 @@ public:
 			TcpConnection *tc = reinterpret_cast<TcpConnection *>(*uptr);
 			tc->lastReceive = OSUtils::now();
 			switch(tc->type) {
-
-                // TODO: Remove Me
-				// case TcpConnection::TCP_UNCATEGORIZED_INCOMING:
-				// 	switch(reinterpret_cast<uint8_t *>(data)[0]) {
-				// 		// HTTP: GET, PUT, POST, HEAD, DELETE
-				// 		case 'G':
-				// 		case 'P':
-				// 		case 'D':
-				// 		case 'H': {
-				// 			// This is only allowed from IPs permitted to access the management
-				// 			// backplane, which is just 127.0.0.1/::1 unless otherwise configured.
-				// 			bool allow;
-				// 			{
-				// 				Mutex::Lock _l(_localConfig_m);
-				// 				if (_allowManagementFrom.empty()) {
-				// 					allow = (tc->remoteAddr.ipScope() == InetAddress::IP_SCOPE_LOOPBACK);
-				// 				} else {
-				// 					allow = false;
-				// 					for(std::vector<InetAddress>::const_iterator i(_allowManagementFrom.begin());i!=_allowManagementFrom.end();++i) {
-				// 						if (i->containsAddress(tc->remoteAddr)) {
-				// 							allow = true;
-				// 							break;
-				// 						}
-				// 					}
-				// 				}
-				// 			}
-				// 			if (allow) {
-				// 				tc->type = TcpConnection::TCP_HTTP_INCOMING;
-				// 				phyOnTcpData(sock,uptr,data,len);
-				// 			} else {
-				// 				_phy.close(sock);
-				// 			}
-				// 		}	break;
-
-				// 		// Drop unknown protocols
-				// 		default:
-				// 			_phy.close(sock);
-				// 			break;
-				// 	}
-				// 	return;
+				case TcpConnection::TCP_UNCATEGORIZED_INCOMING:
+					return;
 
 				case TcpConnection::TCP_HTTP_INCOMING:
 				case TcpConnection::TCP_HTTP_OUTGOING:

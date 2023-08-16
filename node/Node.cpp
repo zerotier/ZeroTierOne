@@ -589,6 +589,7 @@ ZT_PeerList *Node::peers() const
 					p->paths[p->pathCount].latencyVariance = (*path)->latencyVariance();
 					p->paths[p->pathCount].packetLossRatio = (*path)->packetLossRatio();
 					p->paths[p->pathCount].packetErrorRatio = (*path)->packetErrorRatio();
+					p->paths[p->pathCount].assignedFlowCount = (*path)->assignedFlowCount();
 					p->paths[p->pathCount].relativeQuality = (*path)->relativeQuality();
 					p->paths[p->pathCount].linkSpeed = (*path)->givenLinkSpeed();
 					p->paths[p->pathCount].bonded = (*path)->bonded();
@@ -602,9 +603,9 @@ ZT_PeerList *Node::peers() const
 		}
 		if (pi->second->bond()) {
 			p->isBonded = pi->second->bond();
-			p->bondingPolicy = pi->second->bond()->policy();
-			p->numAliveLinks = pi->second->bond()->getNumAliveLinks();
-			p->numTotalLinks = pi->second->bond()->getNumTotalLinks();
+			p->bondingPolicy = pi->second->bondingPolicy();
+			p->numAliveLinks = pi->second->getNumAliveLinks();
+			p->numTotalLinks = pi->second->getNumTotalLinks();
 		}
 	}
 
@@ -851,7 +852,7 @@ void Node::ncSendError(uint64_t nwid,uint64_t requestPacketId,const Address &des
 			case NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED: {
 				//fprintf(stderr, "\n\nGot auth required\n\n");
 				break;
-			} 
+			}
 
 			default:
 				break;

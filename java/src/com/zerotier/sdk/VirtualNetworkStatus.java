@@ -29,7 +29,7 @@ package com.zerotier.sdk;
 
 /**
  * Virtual network status codes
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_VirtualNetworkStatus
  */
 public enum VirtualNetworkStatus {

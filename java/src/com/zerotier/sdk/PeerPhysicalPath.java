@@ -31,7 +31,7 @@ import java.net.InetSocketAddress;
 
 /**
  * Physical network path to a peer
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_PeerPhysicalPath
  */
 public class PeerPhysicalPath {
