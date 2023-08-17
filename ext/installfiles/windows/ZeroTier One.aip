@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="20.8" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
+<DOCUMENT Type="Advanced Installer" CreateVersion="10.9" version="20.9.1" Modules="enterprise" RootPath="." Language="en" Id="{DC564647-6BF0-4550-87F4-89C938D0159C}">
   <COMPONENT cid="caphyon.advinst.msicomp.ProjectOptionsComponent">
     <ROW Name="HiddenItems" Value="ActSyncAppComponent;CPLAppletComponent;AutorunComponent;GameUxComponent;SilverlightSlnComponent;SharePointSlnComponent;AppXAppDetailsComponent;FixupComponent;AppXCapabilitiesComponent;AppXDependenciesComponent;AppXProductDetailsComponent;AppXVisualAssetsComponent;AppXAppDeclarationsComponent;AppXUriRulesComponent;MsiXDiffComponent;MsixManifestEditorComponent"/>
   </COMPONENT>
@@ -24,7 +24,7 @@
     <ROW Property="AiFeatIcoZeroTierOne" Value="ZeroTierIcon.exe" Type="8"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{3B54857A-93E5-4647-B5BB-CD482E104B74} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{B07D0036-6C23-4CFD-9F2A-F2C990225591} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
     <ROW Property="ProductVersion" Value="1.12.0" Options="32"/>
