@@ -29,7 +29,7 @@ package com.zerotier.sdk;
 
 /**
  * Virtual network configuration update type
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_VirtualNetworkConfigOperation
  */
 public enum VirtualNetworkConfigOperation {
