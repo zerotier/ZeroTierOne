@@ -509,7 +509,17 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 					adv[42] = (checksum >> 8) & 0xff;
 					adv[43] = checksum & 0xff;
 
-					RR->node->putFrame(tPtr,network->id(),network->userPtr(),peerMac,from,ZT_ETHERTYPE_IPV6,0,adv,72);
+					//
+					// call on separate background thread
+					// this prevents problems related to trying to do rx while inside of doing tx, such as acquiring same lock recursively
+					//
+
+					std::thread([=]() {
+
+						RR->node->putFrame(tPtr, network->id(), network->userPtr(), peerMac, from, ZT_ETHERTYPE_IPV6, 0, adv, 72);
+
+					}).detach();
+					
 					return; // NDP emulation done. We have forged a "fake" reply, so no need to send actual NDP query.
 				} // else no NDP emulation
 			} // else no NDP emulation
@@ -546,8 +556,18 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 			data,
 			len);
 	} else if (to == network->mac()) {
+
 		// Destination is this node, so just reinject it
-		RR->node->putFrame(tPtr,network->id(),network->userPtr(),from,to,etherType,vlanId,data,len);
+
+		//
+		// same pattern as putFrame call above
+		//
+		std::thread([=]() {
+
+			RR->node->putFrame(tPtr, network->id(), network->userPtr(), from, to, etherType, vlanId, data, len);
+
+		}).detach();
+
 	} else if (to[0] == MAC::firstOctetForNetwork(network->id())) {
 		// Destination is another ZeroTier peer on the same network
 
