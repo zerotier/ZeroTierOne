@@ -2,7 +2,7 @@ CC=clang
 CXX=clang++
 TOPDIR=$(shell PWD)
 
-INCLUDES=-I$(shell PWD)/zeroidc/target -isystem $(TOPDIR)/ext
+INCLUDES=-I$(shell PWD)/zeroidc/target -isystem $(TOPDIR)/ext  -I$(TOPDIR)/ext/prometheus-cpp-lite-1.0/core/include -I$(TOPDIR)/ext-prometheus-cpp-lite-1.0/3rdparty/http-client-lite/include -I$(TOPDIR)/ext/prometheus-cpp-lite-1.0/simpleapi/include
 DEFS=
 LIBS=
 ARCH_FLAGS=-arch x86_64 -arch arm64 
@@ -176,9 +176,17 @@ official: FORCE
 	make ZT_OFFICIAL_RELEASE=1 -j 8 one
 	make ZT_OFFICIAL_RELEASE=1 mac-dist-pkg
 
-central-controller-docker: FORCE
-	docker build --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) .
+_buildx:
+	@echo "docker buildx create"
+	# docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+	docker run --privileged --rm tonistiigi/binfmt --install all
+	@echo docker buildx create --name multiarch --driver docker-container --use
+	@echo docker buildx inspect --bootstrap
 
+central-controller-docker: _buildx FORCE
+	docker buildx build --platform linux/arm64,linux/amd64 --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) . --push
+	@echo Image: registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP}
+	
 clean:
 	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_* zeroidc/target/
 

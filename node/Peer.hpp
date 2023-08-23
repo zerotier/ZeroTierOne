@@ -34,6 +34,7 @@
 #include "Mutex.hpp"
 #include "Bond.hpp"
 #include "AES.hpp"
+#include "Metrics.hpp"
 
 #define ZT_PEER_MAX_SERIALIZED_STATE_SIZE (sizeof(Peer) + 32 + (sizeof(Path) * 2))
 
@@ -50,12 +51,11 @@ class Peer
 	friend class Bond;
 
 private:
-	Peer() {} // disabled to prevent bugs -- should not be constructed uninitialized
+	Peer() = delete; // disabled to prevent bugs -- should not be constructed uninitialized
 
 public:
 	~Peer() {
 		Utils::burn(_key,sizeof(_key));
-		RR->bc->destroyBond(_id.address().toInt());
 	}
 
 	/**
@@ -119,9 +119,12 @@ public:
 		Mutex::Lock _l(_paths_m);
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
 			if (_paths[i].p) {
-				if (((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION)&&(_paths[i].p->address() == addr))
+				if (((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION)&&(_paths[i].p->address() == addr)) {
 					return true;
-			} else break;
+				}
+			} else {
+				break;
+			}
 		}
 		return false;
 	}
@@ -139,8 +142,9 @@ public:
 	inline bool sendDirect(void *tPtr,const void *data,unsigned int len,int64_t now,bool force)
 	{
 		SharedPtr<Path> bp(getAppropriatePath(now,force));
-		if (bp)
+		if (bp) {
 			return bp->send(RR,tPtr,data,len,now);
+		}
 		return false;
 	}
 
@@ -281,7 +285,9 @@ public:
 		std::vector< SharedPtr<Path> > pp;
 		Mutex::Lock _l(_paths_m);
 		for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-			if (!_paths[i].p) break;
+			if (!_paths[i].p) {
+				break;
+			}
 			pp.push_back(_paths[i].p);
 		}
 		return pp;
@@ -314,7 +320,7 @@ public:
 		} else {
 			SharedPtr<Path> bp(getAppropriatePath(now,false));
 			if (bp) {
-				return bp->latency();
+				return (unsigned int)bp->latency();
 			}
 			return 0xffff;
 		}
@@ -334,11 +340,13 @@ public:
 	inline unsigned int relayQuality(const int64_t now)
 	{
 		const uint64_t tsr = now - _lastReceive;
-		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT)
+		if (tsr >= ZT_PEER_ACTIVITY_TIMEOUT) {
 			return (~(unsigned int)0);
+		}
 		unsigned int l = latency(now);
-		if (!l)
+		if (!l) {
 			l = 0xffff;
+		}
 		return (l * (((unsigned int)tsr / (ZT_PEER_PING_PERIOD + 1000)) + 1));
 	}
 
@@ -380,9 +388,11 @@ public:
 	 */
 	inline bool rateGatePushDirectPaths(const int64_t now)
 	{
-		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME)
+		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME) {
 			++_directPathPushCutoffCount;
-		else _directPathPushCutoffCount = 0;
+		} else {
+			_directPathPushCutoffCount = 0;
+		}
 		_lastDirectPathPushReceive = now;
 		return (_directPathPushCutoffCount < ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT);
 	}
@@ -424,6 +434,64 @@ public:
 	}
 
 	/**
+	 * See definition in Bond
+	 */
+	inline bool rateGateQoS(int64_t now, SharedPtr<Path>& path)
+	{
+		Mutex::Lock _l(_bond_m);
+		if(_bond) {
+			return _bond->rateGateQoS(now, path);
+		}
+		return false; // Default behavior. If there is no bond, we drop these
+	}
+
+	/**
+	 * See definition in Bond
+	 */
+	void receivedQoS(const SharedPtr<Path>& path, int64_t now, int count, uint64_t* rx_id, uint16_t* rx_ts)
+	{
+		Mutex::Lock _l(_bond_m);
+		if(_bond) {
+			_bond->receivedQoS(path, now, count, rx_id, rx_ts);
+		}
+	}
+
+	/**
+	 * See definition in Bond
+	 */
+	void processIncomingPathNegotiationRequest(uint64_t now, SharedPtr<Path>& path, int16_t remoteUtility)
+	{
+		Mutex::Lock _l(_bond_m);
+		if(_bond) {
+			_bond->processIncomingPathNegotiationRequest(now, path, remoteUtility);
+		}
+	}
+
+	/**
+	 * See definition in Bond
+	 */
+	inline bool rateGatePathNegotiation(int64_t now, SharedPtr<Path>& path)
+	{
+		Mutex::Lock _l(_bond_m);
+		if(_bond) {
+			return _bond->rateGatePathNegotiation(now, path);
+		}
+		return false; // Default behavior. If there is no bond, we drop these
+	}
+
+	/**
+	 * See definition in Bond
+	 */
+	bool flowHashingSupported()
+	{
+		Mutex::Lock _l(_bond_m);
+		if(_bond) {
+			return _bond->flowHashingSupported();
+		}
+		return false;
+	}
+
+	/**
 	 * Serialize a peer for storage in local cache
 	 *
 	 * This does not serialize everything, just non-ephemeral information.
@@ -444,13 +512,16 @@ public:
 			Mutex::Lock _l(_paths_m);
 			unsigned int pc = 0;
 			for(unsigned int i=0;i<ZT_MAX_PEER_NETWORK_PATHS;++i) {
-				if (_paths[i].p)
+				if (_paths[i].p) {
 					++pc;
-				else break;
+				} else {
+					break;
+				}
 			}
 			b.append((uint16_t)pc);
-			for(unsigned int i=0;i<pc;++i)
+			for(unsigned int i=0;i<pc;++i) {
 				_paths[i].p->address().serialize(b);
+			}
 		}
 	}
 
@@ -459,31 +530,39 @@ public:
 	{
 		try {
 			unsigned int ptr = 0;
-			if (b[ptr++] != 2)
+			if (b[ptr++] != 2) {
 				return SharedPtr<Peer>();
+			}
 
 			Identity id;
 			ptr += id.deserialize(b,ptr);
-			if (!id)
+			if (!id) {
 				return SharedPtr<Peer>();
+			}
 
 			SharedPtr<Peer> p(new Peer(renv,renv->identity,id));
 
-			p->_vProto = b.template at<uint16_t>(ptr); ptr += 2;
-			p->_vMajor = b.template at<uint16_t>(ptr); ptr += 2;
-			p->_vMinor = b.template at<uint16_t>(ptr); ptr += 2;
-			p->_vRevision = b.template at<uint16_t>(ptr); ptr += 2;
+			p->_vProto = b.template at<uint16_t>(ptr);
+			ptr += 2;
+			p->_vMajor = b.template at<uint16_t>(ptr);
+			ptr += 2;
+			p->_vMinor = b.template at<uint16_t>(ptr);
+			ptr += 2;
+			p->_vRevision = b.template at<uint16_t>(ptr);
+			ptr += 2;
 
 			// When we deserialize from the cache we don't actually restore paths. We
 			// just try them and then re-learn them if they happen to still be up.
 			// Paths are fairly ephemeral in the real world in most cases.
-			const unsigned int tryPathCount = b.template at<uint16_t>(ptr); ptr += 2;
+			const unsigned int tryPathCount = b.template at<uint16_t>(ptr);
+			ptr += 2;
 			for(unsigned int i=0;i<tryPathCount;++i) {
 				InetAddress inaddr;
 				try {
 					ptr += inaddr.deserialize(b,ptr);
-					if (inaddr)
+					if (inaddr) {
 						p->attemptToContactAt(tPtr,-1,inaddr,now,true);
+					}
 				} catch ( ... ) {
 					break;
 				}
@@ -504,11 +583,33 @@ public:
 	 * @return The bonding policy used to reach this peer
 	 */
 	inline int8_t bondingPolicy() {
-		Mutex::Lock _l(_paths_m);
+		Mutex::Lock _l(_bond_m);
 		if (_bond) {
 			return _bond->policy();
 		}
 		return ZT_BOND_POLICY_NONE;
+	}
+
+	/**
+	 * @return the number of links in this bond which are considered alive
+	 */
+	inline uint8_t getNumAliveLinks() {
+		Mutex::Lock _l(_paths_m);
+		if (_bond) {
+			return _bond->getNumAliveLinks();
+		}
+		return 0;
+	}
+
+	/**
+	 * @return the number of links in this bond
+	 */
+	inline uint8_t getNumTotalLinks() {
+		Mutex::Lock _l(_paths_m);
+		if (_bond) {
+			return _bond->getNumTotalLinks();
+		}
+		return 0;
 	}
 
 	//inline const AES *aesKeysIfSupported() const
@@ -576,6 +677,15 @@ private:
 	int32_t _lastComputedAggregateMeanLatency;
 
 	SharedPtr<Bond> _bond;
+
+#ifndef ZT_NO_PEER_METRICS
+	prometheus::Histogram<uint64_t> &_peer_latency;
+	prometheus::simpleapi::gauge_metric_t _alive_path_count;
+	prometheus::simpleapi::gauge_metric_t _dead_path_count;
+	prometheus::simpleapi::counter_metric_t _incoming_packet;
+	prometheus::simpleapi::counter_metric_t _outgoing_packet;
+	prometheus::simpleapi::counter_metric_t _packet_errors;
+#endif
 };
 
 } // namespace ZeroTier

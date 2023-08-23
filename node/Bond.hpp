@@ -457,6 +457,26 @@ class Bond {
 	static SharedPtr<Bond> getBondByPeerId(int64_t identity);
 
 	/**
+	 * Set MTU for link by given interface name and IP address (across all bonds)
+	 *
+	 * @param mtu MTU to be used on this link
+	 * @param ifStr interface name to match
+	 * @param ipStr IP address to match
+	 * @return Whether the MTU was set
+	 */
+	static bool setAllMtuByTuple(uint16_t mtu, const std::string& ifStr, const std::string& ipStr);
+
+	/**
+	 * Set MTU for link by given interface name and IP address
+	 *
+	 * @param mtu MTU to be used on this link
+	 * @param ifStr interface name to match
+	 * @param ipStr IP address to match
+	 * @return Whether the MTU was set
+	 */
+	bool setMtuByTuple(uint16_t mtu, const std::string& ifStr, const std::string& ipStr);
+
+	/**
 	 * Add a new bond to the bond controller.
 	 *
 	 * @param renv Runtime environment
@@ -889,8 +909,7 @@ class Bond {
 		_lastAckRateCheck = now;
 		if (_ackCutoffCount > numToDrain) {
 			_ackCutoffCount -= numToDrain;
-		}
-		else {
+		} else {
 			_ackCutoffCount = 0;
 		}
 		return (_ackCutoffCount < ZT_ACK_CUTOFF_LIMIT);
@@ -909,8 +928,7 @@ class Bond {
 		uint64_t diff = now - _lastQoSRateCheck;
 		if ((diff) <= (_qosSendInterval / ZT_MAX_PEER_NETWORK_PATHS)) {
 			++_qosCutoffCount;
-		}
-		else {
+		} else {
 			_qosCutoffCount = 0;
 		}
 		_lastQoSRateCheck = now;
@@ -930,8 +948,7 @@ class Bond {
 		int diff = now - _lastPathNegotiationReceived;
 		if ((diff) <= (ZT_PATH_NEGOTIATION_CUTOFF_TIME / ZT_MAX_PEER_NETWORK_PATHS)) {
 			++_pathNegotiationCutoffCount;
-		}
-		else {
+		} else {
 			_pathNegotiationCutoffCount = 0;
 		}
 		_lastPathNegotiationReceived = now;
@@ -1228,20 +1245,17 @@ class Bond {
 				unsigned int suggestedRefractoryPeriod = refractoryPeriod ? punishment + (refractoryPeriod * 2) : punishment;
 				refractoryPeriod = std::min(suggestedRefractoryPeriod, (unsigned int)ZT_BOND_MAX_REFRACTORY_PERIOD);
 				lastRefractoryUpdate = 0;
-			}
-			else {
+			} else {
 				uint32_t drainRefractory = 0;
 				if (lastRefractoryUpdate) {
 					drainRefractory = (now - lastRefractoryUpdate);
-				}
-				else {
+				} else {
 					drainRefractory = (now - lastAliveToggle);
 				}
 				lastRefractoryUpdate = now;
 				if (refractoryPeriod > drainRefractory) {
 					refractoryPeriod -= drainRefractory;
-				}
-				else {
+				} else {
 					refractoryPeriod = 0;
 					lastRefractoryUpdate = 0;
 				}

@@ -37,7 +37,6 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
  - `ext/`: third party libraries, binaries that we ship for convenience on some platforms (Mac and Windows), and installation support files.
  - `include/`: include files for the ZeroTier core.
  - `java/`: a JNI wrapper used with our Android mobile app. (The whole Android app is not open source but may be made so in the future.)
- - `macui/`: a Macintosh menu-bar app for controlling ZeroTier One, written in Objective C.
  - `node/`: the ZeroTier virtual Ethernet switch core, which is designed to be entirely separate from the rest of the code and able to be built as a stand-alone OS-independent library. Note to developers: do not use C++11 features in here, since we want this to build on old embedded platforms that lack C++11 support. C++11 can be used elsewhere.
  - `osdep/`: code to support and integrate with OSes, including platform-specific stuff only built for certain targets.
  - `rule-compiler/`: JavaScript rules language compiler for defining network-level rules.
@@ -61,6 +60,7 @@ To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU 
    - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **FreeBSD**
    - GNU make is required. Type `gmake` to build.
+   - `binutils` is required.  Type `pkg install binutils` to install.
    - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **OpenBSD**
    - There is a limit of four network memberships on OpenBSD as there are only four tap devices (`/dev/tap0` through `/dev/tap3`).
@@ -104,8 +104,68 @@ On CentOS check `/etc/sysconfig/iptables` for IPTables rules. For other distribu
 
 ZeroTier One peers will automatically locate each other and communicate directly over a local wired LAN *if UDP port 9993 inbound is open*. If that port is filtered, they won't be able to see each others' LAN announcement packets. If you're experiencing poor performance between devices on the same physical network, check their firewall settings. Without LAN auto-location peers must attempt "loopback" NAT traversal, which sometimes fails and in any case requires that every packet traverse your external router twice.
 
-Users behind certain types of firewalls and "symmetric" NAT devices may not able able to connect to external peers directly at all. ZeroTier has limited support for port prediction and will *attempt* to traverse symmetric NATs, but this doesn't always work. If P2P connectivity fails you'll be bouncing UDP packets off our relay servers resulting in slower performance. Some NAT router(s) have a configurable NAT mode, and setting this to "full cone" will eliminate this problem. If you do this you may also see a magical improvement for things like VoIP phones, Skype, BitTorrent, WebRTC, certain games, etc., since all of these use NAT traversal techniques similar to ours.
+Users behind certain types of firewalls and "symmetric" NAT devices may not be able to connect to external peers directly at all. ZeroTier has limited support for port prediction and will *attempt* to traverse symmetric NATs, but this doesn't always work. If P2P connectivity fails you'll be bouncing UDP packets off our relay servers resulting in slower performance. Some NAT router(s) have a configurable NAT mode, and setting this to "full cone" will eliminate this problem. If you do this you may also see a magical improvement for things like VoIP phones, Skype, BitTorrent, WebRTC, certain games, etc., since all of these use NAT traversal techniques similar to ours.
 
 If a firewall between you and the Internet blocks ZeroTier's UDP traffic, you will fall back to last-resort TCP tunneling to rootservers over port 443 (https impersonation). This will work almost anywhere but is *very slow* compared to UDP or direct peer to peer connectivity.
 
 Additional help can be found in our [knowledge base](https://zerotier.atlassian.net/wiki/spaces/SD/overview).
+
+### Prometheus Metrics
+
+Prometheus Metrics are available at the `/metrics` API endpoint.  This endpoint is protected by an API key stored in `metricstoken.secret` to prevent unwanted information leakage.  Information that could be gleaned from the metrics include joined networks and peers your instance is talking to. 
+
+Access control is via the ZeroTier control interface itself and `metricstoken.secret`. This can be sent as a bearer auth token, via the `X-ZT1-Auth` HTTP header field, or appended to the URL as `?auth=<token>`. You can see the current metrics via `cURL` with the following command:
+
+    // Linux
+    curl -H "X-ZT1-Auth: $(sudo cat /var/lib/zerotier-one/metricstoken.secret)" http://localhost:9993/metrics
+
+    // macOS
+    curl -H "X-XT1-Auth: $(sudo cat /Library/Application\ Support/ZeroTier/One/metricstoken.secret)" http://localhost:9993/metrics
+
+    // Windows PowerShell (Admin)
+    Invoke-RestMethod -Headers @{'X-ZT1-Auth' = "$(Get-Content C:\ProgramData\ZeroTier\One\metricstoken.secret)"; } -Uri http://localhost:9993/metrics
+
+To configure a scrape job in Prometheus on the machine ZeroTier is running on, add this to your Prometheus `scrape_config`:
+
+    - job_name: zerotier-one
+      honor_labels: true
+      scrape_interval: 15s
+      metrics_path: /metrics
+      static_configs:
+      - targets:
+        - 127.0.0.1:9993
+        labels:
+          group: zerotier-one
+          node_id: $YOUR_10_CHARACTER_NODE_ID
+      authorization:
+        credentials: $YOUR_METRICS_TOKEN_SECRET
+
+If neither of these methods are desirable, it is probably possible to distribute metrics via [Prometheus Proxy](https://github.com/pambrose/prometheus-proxy) or some other tool.  Note: We have not tested this internally, but will probably work with the correct configuration.
+
+Metrics are also available on disk in ZeroTier's working directory:
+
+   // Linux
+   /var/lib/zerotier-one/metrics.prom
+
+   // macOS
+   /Library/Application\ Support/ZeroTier/One/metrics.prom
+
+   //Windows
+   C:\ProgramData\ZeroTier\One\metrics.prom
+
+#### Available Metrics
+
+| Metric Name | Labels | Metric Type | Description |
+| ---         | ---    | ---         | ---         |
+| zt_packet | packet_type, direction | Counter | ZeroTier packet type counts |
+| zt_packet_error | error_type, direction | Counter | ZeroTier packet errors|
+| zt_data | protocol, direction | Counter | number of bytes ZeroTier has transmitted or received |
+| zt_num_networks | | Gauge | number of networks this instance is joined to |
+| zt_network_multicast_groups_subscribed | network_id | Gauge | number of multicast groups networks are subscribed to |
+| zt_network_packets | network_id, direction | Counter | number of incoming/outgoing packets per network |
+| zt_peer_latency | node_id | Histogram | peer latency (ms) |
+| zt_peer_path_count | node_id, status | Gauge | number of paths to peer |
+| zt_peer_packets | node_id, direction | Counter | number of packets to/from a peer |
+| zt_peer_packet_errors | node_id | Counter | number of incoming packet errors from a peer |
+
+If there are other metrics you'd like to see tracked, ask us in an Issue or send us a Pull Request!

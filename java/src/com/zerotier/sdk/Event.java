@@ -29,14 +29,14 @@ package com.zerotier.sdk;
 
 /**
  * Status codes sent to status update callback when things happen
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_Event
  */
 public enum Event {
 
     /**
      * Node has been initialized
-     *
+     * <p>
      * This is the first event generated, and is always sent. It may occur
      * before Node's constructor returns.
      */
@@ -49,7 +49,7 @@ public enum Event {
 
     /**
      * Node is online -- at least one upstream node appears reachable
-     *
+     * <p>
      * Meta-data: none
      */
     EVENT_ONLINE(2),
@@ -104,7 +104,7 @@ public enum Event {
 
     /**
      * VERB_USER_MESSAGE received
-     *
+     * <p>
      * These are generated when a VERB_USER_MESSAGE packet is received via
      * ZeroTier VL1.
      */
@@ -112,7 +112,7 @@ public enum Event {
 
     /**
      * Remote trace received
-     *
+     * <p>
      * These are generated when a VERB_REMOTE_TRACE is received. Note
      * that any node can fling one of these at us. It is your responsibility
      * to filter and determine if it's worth paying attention to. If it's

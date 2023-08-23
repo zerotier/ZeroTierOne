@@ -42,7 +42,7 @@
 
 #if (defined(__unix__) || defined(__APPLE__)) && !defined(__LINUX__) && !defined(ZT_SDK)
 #include <net/if.h>
-#if defined(TARGET_OS_OSX)
+#if TARGET_OS_OSX
 #include <netinet6/in6_var.h>
 #endif
 #include <sys/ioctl.h>
@@ -320,7 +320,7 @@ class Binder {
 			//
 			(void)gotViaProc;
 
-#if ! (defined(ZT_SDK) || defined(__ANDROID__))	  // getifaddrs() freeifaddrs() not available on Android
+#if ! defined(__ANDROID__)	  // getifaddrs() freeifaddrs() not available on Android
 			if (! gotViaProc) {
 				struct ifaddrs* ifatbl = (struct ifaddrs*)0;
 				struct ifaddrs* ifa;
@@ -333,7 +333,7 @@ class Binder {
 					while (ifa) {
 						if ((ifa->ifa_name) && (ifa->ifa_addr)) {
 							InetAddress ip = *(ifa->ifa_addr);
-#if (defined(__unix__) || defined(__APPLE__)) && !defined(__LINUX__) && !defined(ZT_SDK) && defined(TARGET_OS_OSX)
+#if (defined(__unix__) || defined(__APPLE__)) && !defined(__LINUX__) && !defined(ZT_SDK) && TARGET_OS_OSX
 							// Check if the address is an IPv6 Temporary Address, macOS/BSD version
 							if (ifa->ifa_addr->sa_family == AF_INET6) {
 								struct sockaddr_in6* sa6 = (struct sockaddr_in6*)ifa->ifa_addr;

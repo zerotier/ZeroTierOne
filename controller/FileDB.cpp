@@ -13,6 +13,8 @@
 
 #include "FileDB.hpp"
 
+#include "../node/Metrics.hpp"
+
 namespace ZeroTier
 {
 
@@ -39,6 +41,7 @@ FileDB::FileDB(const char *path) :
 				if (nwids.length() == 16) {
 					nlohmann::json nullJson;
 					_networkChanged(nullJson,network,false);
+					Metrics::network_count++;
 					std::string membersPath(_networksPath + ZT_PATH_SEPARATOR_S + nwids + ZT_PATH_SEPARATOR_S "member");
 					std::vector<std::string> members(OSUtils::listDirectory(membersPath.c_str(),false));
 					for(auto m=members.begin();m!=members.end();++m) {
@@ -50,6 +53,7 @@ FileDB::FileDB(const char *path) :
 								if (addrs.length() == 10) {
 									nlohmann::json nullJson2;
 									_memberChanged(nullJson2,member,false);
+									Metrics::member_count++;
 								}
 							} catch ( ... ) {}
 						}
@@ -88,8 +92,9 @@ bool FileDB::save(nlohmann::json &record,bool notifyListeners)
 				if ((!old.is_object())||(!_compareRecords(old,record))) {
 					record["revision"] = OSUtils::jsonInt(record["revision"],0ULL) + 1ULL;
 					OSUtils::ztsnprintf(p1,sizeof(p1),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),nwid);
-					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
+					if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1))) {
 						fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
+					}
 					_networkChanged(old,record,notifyListeners);
 					modified = true;
 				}
@@ -110,8 +115,9 @@ bool FileDB::save(nlohmann::json &record,bool notifyListeners)
 						OSUtils::ztsnprintf(p2,sizeof(p2),"%s" ZT_PATH_SEPARATOR_S "%.16llx",_networksPath.c_str(),(unsigned long long)nwid);
 						OSUtils::mkdir(p2);
 						OSUtils::mkdir(pb);
-						if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1)))
+						if (!OSUtils::writeFile(p1,OSUtils::jsonDump(record,-1))) {
 							fprintf(stderr,"WARNING: controller unable to write to path: %s" ZT_EOL_S,p1);
+						}
 					}
 					_memberChanged(old,record,notifyListeners);
 					modified = true;

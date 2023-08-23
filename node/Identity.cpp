@@ -93,8 +93,9 @@ void Identity::generate()
 	} while (_address.isReserved());
 
 	_publicKey = kp.pub;
-	if (!_privateKey)
+	if (!_privateKey) {
 		_privateKey = new C25519::Private();
+	}
 	*_privateKey = kp.priv;
 
 	delete [] genmem;
@@ -102,8 +103,9 @@ void Identity::generate()
 
 bool Identity::locallyValidate() const
 {
-	if (_address.isReserved())
+	if (_address.isReserved()) {
 		return false;
+	}
 
 	unsigned char digest[64];
 	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];

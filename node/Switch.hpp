@@ -208,6 +208,7 @@ private:
 	bool _shouldUnite(const int64_t now,const Address &source,const Address &destination);
 	bool _trySend(void *tPtr,Packet &packet,bool encrypt,int32_t flowId = ZT_QOS_NO_FLOW); // packet is modified if return is true
 	void _sendViaSpecificPath(void *tPtr,SharedPtr<Peer> peer,SharedPtr<Path> viaPath,uint16_t userSpecifiedMtu, int64_t now,Packet &packet,bool encrypt,int32_t flowId);
+	void _recordOutgoingPacketMetrics(const Packet &p);
 
 	const RuntimeEnvironment *const RR;
 	int64_t _lastBeaconResponse;
@@ -240,8 +241,9 @@ private:
 		const unsigned int current = static_cast<unsigned int>(_rxQueuePtr.load());
 		for(unsigned int k=1;k<=ZT_RX_QUEUE_SIZE;++k) {
 			RXQueueEntry *rq = &(_rxQueue[(current - k) % ZT_RX_QUEUE_SIZE]);
-			if ((rq->packetId == packetId)&&(rq->timestamp))
+			if ((rq->packetId == packetId)&&(rq->timestamp)) {
 				return rq;
+			}
 		}
 		++_rxQueuePtr;
 		return &(_rxQueue[static_cast<unsigned int>(current) % ZT_RX_QUEUE_SIZE]);

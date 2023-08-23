@@ -89,6 +89,7 @@ public:
 		_latencyVariance(0.0),
 		_packetLossRatio(0.0),
 		_packetErrorRatio(0.0),
+		_assignedFlowCount(0),
 		_valid(true),
 		_eligible(false),
 		_bonded(false),
@@ -110,6 +111,7 @@ public:
 		_latencyVariance(0.0),
 		_packetLossRatio(0.0),
 		_packetErrorRatio(0.0),
+		_assignedFlowCount(0),
 		_valid(true),
 		_eligible(false),
 		_bonded(false),
@@ -165,8 +167,7 @@ public:
 		unsigned int pl = _latency;
 		if (pl < 0xffff) {
 			_latency = (pl + l) / 2;
-		}
-		else {
+		} else {
 			_latency = l;
 		}
 	}
@@ -230,8 +231,9 @@ public:
 						// tunnels due to very spotty performance and low MTU issues over
 						// these IPv6 tunnel links.
 						const uint8_t *ipd = reinterpret_cast<const uint8_t *>(reinterpret_cast<const struct sockaddr_in6 *>(&a)->sin6_addr.s6_addr);
-						if ((ipd[0] == 0x20)&&(ipd[1] == 0x01)&&(ipd[2] == 0x04)&&(ipd[3] == 0x70))
+						if ((ipd[0] == 0x20)&&(ipd[1] == 0x01)&&(ipd[2] == 0x04)&&(ipd[3] == 0x70)) {
 							return false;
+						}
 					}
 					return true;
 				default:
@@ -303,48 +305,53 @@ public:
 	/**
 	 * @return Mean latency as reported by the bonding layer
 	 */
-	inline unsigned int latencyMean() const { return _latencyMean; }
+	inline float latencyMean() const { return _latencyMean; }
 
 	/**
 	 * @return Latency variance as reported by the bonding layer
 	 */
-	inline unsigned int latencyVariance() const { return _latencyVariance; }
+	inline float latencyVariance() const { return _latencyVariance; }
 
 	/**
 	 * @return Packet Loss Ratio as reported by the bonding layer
 	 */
-	inline unsigned int packetLossRatio() const { return _packetLossRatio; }
+	inline float packetLossRatio() const { return _packetLossRatio; }
 
 	/**
 	 * @return Packet Error Ratio as reported by the bonding layer
 	 */
-	inline unsigned int packetErrorRatio() const { return _packetErrorRatio; }
+	inline float packetErrorRatio() const { return _packetErrorRatio; }
+
+	/**
+	 * @return Number of flows assigned to this path
+	 */
+	inline unsigned int assignedFlowCount() const { return _assignedFlowCount; }
 
 	/**
 	 * @return Whether this path is valid as reported by the bonding layer. The bonding layer
 	 * actually checks with Phy to see if the interface is still up
 	 */
-	inline unsigned int valid() const { return _valid; }
+	inline bool valid() const { return _valid; }
 
 	/**
 	 * @return Whether this path is eligible for use in a bond as reported by the bonding layer
 	 */
-	inline unsigned int eligible() const { return _eligible; }
+	inline bool eligible() const { return _eligible; }
 
 	/**
 	 * @return Whether this path is bonded as reported by the bonding layer
 	 */
-	inline unsigned int bonded() const { return _bonded; }
+	inline bool bonded() const { return _bonded; }
 
 	/**
 	 * @return Whether the user-specified MTU for this path (determined by MTU for parent link)
 	 */
-	inline unsigned int mtu() const { return _mtu; }
+	inline uint16_t mtu() const { return _mtu; }
 
 	/**
 	 * @return Given link capacity as reported by the bonding layer
 	 */
-	inline unsigned int givenLinkSpeed() const { return _givenLinkSpeed; }
+	inline uint32_t givenLinkSpeed() const { return _givenLinkSpeed; }
 
 	/**
 	 * @return Path's quality as reported by the bonding layer
@@ -374,6 +381,7 @@ private:
 	volatile float _latencyVariance;
 	volatile float _packetLossRatio;
 	volatile float _packetErrorRatio;
+	volatile uint16_t _assignedFlowCount;
 	volatile bool _valid;
 	volatile bool _eligible;
 	volatile bool _bonded;

@@ -85,8 +85,9 @@ public:
 		_maxCustodyChainLength((mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1),
 		_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES)
 	{
-		if (_ruleCount > 0)
+		if (_ruleCount > 0) {
 			memcpy(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
+		}
 	}
 
 	/**
@@ -121,9 +122,11 @@ public:
 	{
 		Address i2;
 		for(unsigned int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
-			if (!_custody[i].to)
+			if (!_custody[i].to) {
 				return i2;
-			else i2 = _custody[i].to;
+			} else {
+				i2 = _custody[i].to;
+			}
 		}
 		return i2;
 	}
@@ -380,7 +383,9 @@ public:
 	template<unsigned int C>
 	inline void serialize(Buffer<C> &b,const bool forSign = false) const
 	{
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		if (forSign) {
+			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		}
 
 		// These are the same between Tag and Capability
 		b.append(_nwid);
@@ -409,7 +414,9 @@ public:
 		// This is the size of any additional fields, currently 0.
 		b.append((uint16_t)0);
 
-		if (forSign) b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		if (forSign) {
+			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+		}
 	}
 
 	template<unsigned int C>
@@ -419,40 +426,53 @@ public:
 
 		unsigned int p = startAt;
 
-		_nwid = b.template at<uint64_t>(p); p += 8;
-		_ts = b.template at<uint64_t>(p); p += 8;
-		_id = b.template at<uint32_t>(p); p += 4;
+		_nwid = b.template at<uint64_t>(p);
+		p += 8;
+		_ts = b.template at<uint64_t>(p);
+		p += 8;
+		_id = b.template at<uint32_t>(p);
+		p += 4;
 
-		const unsigned int rc = b.template at<uint16_t>(p); p += 2;
-		if (rc > ZT_MAX_CAPABILITY_RULES)
+		const unsigned int rc = b.template at<uint16_t>(p);
+		p += 2;
+		if (rc > ZT_MAX_CAPABILITY_RULES) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+		}
 		deserializeRules(b,p,_rules,_ruleCount,rc);
 
 		_maxCustodyChainLength = (unsigned int)b[p++];
-		if ((_maxCustodyChainLength < 1)||(_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
+		if ((_maxCustodyChainLength < 1)||(_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+		}
 
 		for(unsigned int i=0;;++i) {
-			const Address to(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
-			if (!to)
+			const Address to(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+			p += ZT_ADDRESS_LENGTH;
+			if (!to) {
 				break;
-			if ((i >= _maxCustodyChainLength)||(i >= ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH))
+			}
+			if ((i >= _maxCustodyChainLength)||(i >= ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)) {
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+			}
 			_custody[i].to = to;
-			_custody[i].from.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); p += ZT_ADDRESS_LENGTH;
+			_custody[i].from.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+			p += ZT_ADDRESS_LENGTH;
 			if (b[p++] == 1) {
-				if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN)
+				if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN) {
 					throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
+				}
 				p += 2;
-				memcpy(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN); p += ZT_C25519_SIGNATURE_LEN;
+				memcpy(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
+				p += ZT_C25519_SIGNATURE_LEN;
 			} else {
 				p += 2 + b.template at<uint16_t>(p);
 			}
 		}
 
 		p += 2 + b.template at<uint16_t>(p);
-		if (p > b.size())
+		if (p > b.size()) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+		}
 
 		return (p - startAt);
 	}

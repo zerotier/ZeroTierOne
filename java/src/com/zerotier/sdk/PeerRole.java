@@ -29,7 +29,7 @@ package com.zerotier.sdk;
 
 /**
  * What trust hierarchy role does this peer have?
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_PeerRole
  */
 public enum PeerRole {

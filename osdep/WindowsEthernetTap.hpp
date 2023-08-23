@@ -152,6 +152,9 @@ private:
 	volatile bool _run;
 	volatile bool _initialized;
 	volatile bool _enabled;
+
+	mutable std::vector<InetAddress> _ifaddrs;
+	mutable uint64_t _lastIfAddrsUpdate;
 };
 
 } // namespace ZeroTier
