@@ -1,0 +1,36 @@
+ARG DOCKER_ARCH
+FROM --platform=linux/${DOCKER_ARCH} alpine:edge AS builder
+
+RUN apk update
+RUN apk add curl
+RUN apk add bash
+RUN apk add file
+RUN apk add rust
+RUN apk add cargo
+RUN apk add make
+RUN apk add cmake
+RUN apk add clang
+RUN apk add openssl-dev
+RUN apk add linux-headers
+RUN apk add build-base
+RUN apk add openssl-libs-static
+
+COPY . .
+RUN ZT_STATIC=1 make
+RUN ls -la
+
+ARG DOCKER_ARCH
+FROM --platform=linux/${DOCKER_ARCH} centos:6 AS stage
+WORKDIR /root/rpmbuild/BUILD
+COPY . .
+COPY --from=builder zerotier-* ./
+RUN curl https://gist.githubusercontent.com/someara/b363002ba6e57b3c474dd027d4daef85/raw/4ac5534139752fc92fbe1a53599a390214f69615/el6%2520vault --output /etc/yum.repos.d/CentOS-Base.repo
+RUN uname -a
+RUN yum -y install make gcc rpm-build
+RUN pwd
+RUN ls -la
+RUN make redhat
+
+FROM scratch AS export
+ARG ZT_NAME
+COPY --from=stage /root/rpmbuild/RPMS/*/*.rpm ./${ZT_NAME}/

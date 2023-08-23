@@ -1194,7 +1194,7 @@ typedef struct
 		uint64_t mac; /* MAC in lower 48 bits */
 		uint32_t adi; /* Additional distinguishing information, usually zero except for IPv4 ARP groups */
 	} multicastSubscriptions[ZT_MAX_MULTICAST_SUBSCRIPTIONS];
-	
+
 	/**
 	 * Network specific DNS configuration
 	 */
@@ -1326,6 +1326,11 @@ typedef struct
 	 * Packet error ratio
 	 */
 	float packetErrorRatio;
+
+	/**
+	 * Number of flows assigned to this path
+	 */
+	uint16_t assignedFlowCount;
 
 	/**
 	 * Address scope

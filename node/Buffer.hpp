@@ -81,8 +81,9 @@ public:
 
 	Buffer(unsigned int l)
 	{
-		if (l > C)
+		if (l > C) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		_l = l;
 	}
 
@@ -100,8 +101,9 @@ public:
 	template<unsigned int C2>
 	inline Buffer &operator=(const Buffer<C2> &b)
 	{
-		if (unlikely(b._l > C))
+		if (unlikely(b._l > C)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		if (C2 == C) {
 			memcpy(this,&b,sizeof(Buffer<C>));
 		} else {
@@ -112,23 +114,26 @@ public:
 
 	inline void copyFrom(const void *b,unsigned int l)
 	{
-		if (unlikely(l > C))
+		if (unlikely(l > C)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		memcpy(_b,b,l);
 		_l = l;
 	}
 
 	unsigned char operator[](const unsigned int i) const
 	{
-		if (unlikely(i >= _l))
+		if (unlikely(i >= _l)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		return (unsigned char)_b[i];
 	}
 
 	unsigned char &operator[](const unsigned int i)
 	{
-		if (unlikely(i >= _l))
+		if (unlikely(i >= _l)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		return ((unsigned char *)_b)[i];
 	}
 
@@ -147,14 +152,16 @@ public:
 	 */
 	unsigned char *field(unsigned int i,unsigned int l)
 	{
-		if (unlikely((i + l) > _l))
+		if (unlikely((i + l) > _l)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		return (unsigned char *)(_b + i);
 	}
 	const unsigned char *field(unsigned int i,unsigned int l) const
 	{
-		if (unlikely((i + l) > _l))
+		if (unlikely((i + l) > _l)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		return (const unsigned char *)(_b + i);
 	}
 
@@ -168,12 +175,14 @@ public:
 	template<typename T>
 	inline void setAt(unsigned int i,const T v)
 	{
-		if (unlikely((i + sizeof(T)) > _l))
+		if (unlikely((i + sizeof(T)) > _l)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 #ifdef ZT_NO_TYPE_PUNNING
 		uint8_t *p = reinterpret_cast<uint8_t *>(_b + i);
-		for(unsigned int x=1;x<=sizeof(T);++x)
+		for(unsigned int x=1;x<=sizeof(T);++x) {
 			*(p++) = (uint8_t)(v >> (8 * (sizeof(T) - x)));
+		}
 #else
 		T *const ZT_VAR_MAY_ALIAS p = reinterpret_cast<T *>(_b + i);
 		*p = Utils::hton(v);
@@ -190,8 +199,9 @@ public:
 	template<typename T>
 	inline T at(unsigned int i) const
 	{
-		if (unlikely((i + sizeof(T)) > _l))
+		if (unlikely((i + sizeof(T)) > _l)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 #ifdef ZT_NO_TYPE_PUNNING
 		T v = 0;
 		const uint8_t *p = reinterpret_cast<const uint8_t *>(_b + i);
@@ -216,12 +226,14 @@ public:
 	template<typename T>
 	inline void append(const T v)
 	{
-		if (unlikely((_l + sizeof(T)) > C))
+		if (unlikely((_l + sizeof(T)) > C)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 #ifdef ZT_NO_TYPE_PUNNING
 		uint8_t *p = reinterpret_cast<uint8_t *>(_b + _l);
-		for(unsigned int x=1;x<=sizeof(T);++x)
+		for(unsigned int x=1;x<=sizeof(T);++x) {
 			*(p++) = (uint8_t)(v >> (8 * (sizeof(T) - x)));
+		}
 #else
 		T *const ZT_VAR_MAY_ALIAS p = reinterpret_cast<T *>(_b + _l);
 		*p = Utils::hton(v);
@@ -238,10 +250,12 @@ public:
 	 */
 	inline void append(unsigned char c,unsigned int n)
 	{
-		if (unlikely((_l + n) > C))
+		if (unlikely((_l + n) > C)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-		for(unsigned int i=0;i<n;++i)
+		}
+		for(unsigned int i=0;i<n;++i) {
 			_b[_l++] = (char)c;
+		}
 	}
 
 	/**
@@ -251,8 +265,9 @@ public:
 	 */
 	inline void appendRandom(unsigned int n)
 	{
-		if (unlikely((_l + n) > C))
+		if (unlikely((_l + n) > C)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		Utils::getSecureRandom(_b + _l,n);
 		_l += n;
 	}
@@ -266,8 +281,9 @@ public:
 	 */
 	inline void append(const void *b,unsigned int l)
 	{
-		if (unlikely((_l + l) > C))
+		if (unlikely((_l + l) > C)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		memcpy(_b + _l,b,l);
 		_l += l;
 	}
@@ -281,10 +297,12 @@ public:
 	inline void appendCString(const char *s)
 	{
 		for(;;) {
-			if (unlikely(_l >= C))
+			if (unlikely(_l >= C)) {
 				throw ZT_EXCEPTION_OUT_OF_BOUNDS;
-			if (!(_b[_l++] = *(s++)))
+			}
+			if (!(_b[_l++] = *(s++))) {
 				break;
+			}
 		}
 	}
 
@@ -313,8 +331,9 @@ public:
 	 */
 	inline char *appendField(unsigned int l)
 	{
-		if (unlikely((_l + l) > C))
+		if (unlikely((_l + l) > C)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		char *r = _b + _l;
 		_l += l;
 		return r;
@@ -330,8 +349,9 @@ public:
 	 */
 	inline void addSize(unsigned int i)
 	{
-		if (unlikely((i + _l) > C))
+		if (unlikely((i + _l) > C)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		_l += i;
 	}
 
@@ -345,8 +365,9 @@ public:
 	 */
 	inline void setSize(const unsigned int i)
 	{
-		if (unlikely(i > C))
+		if (unlikely(i > C)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		_l = i;
 	}
 
@@ -358,10 +379,12 @@ public:
 	 */
 	inline void behead(const unsigned int at)
 	{
-		if (!at)
+		if (!at) {
 			return;
-		if (unlikely(at > _l))
+		}
+		if (unlikely(at > _l)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		::memmove(_b,_b + at,_l -= at);
 	}
 
@@ -375,8 +398,9 @@ public:
 	inline void erase(const unsigned int at,const unsigned int length)
 	{
 		const unsigned int endr = at + length;
-		if (unlikely(endr > _l))
+		if (unlikely(endr > _l)) {
 			throw ZT_EXCEPTION_OUT_OF_BOUNDS;
+		}
 		::memmove(_b + at,_b + endr,_l - endr);
 		_l -= length;
 	}

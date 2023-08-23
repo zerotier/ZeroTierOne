@@ -299,7 +299,7 @@
 /**
  * Delay between checks of peer pings, etc., and also related housekeeping tasks
  */
-#define ZT_PING_CHECK_INVERVAL 5000
+#define ZT_PING_CHECK_INTERVAL 5000
 
 /**
  * How often the local.conf file is checked for changes (service, should be moved there)
@@ -687,6 +687,7 @@
 #define ZT_EXCEPTION_OUT_OF_MEMORY 101
 #define ZT_EXCEPTION_PRIVATE_KEY_REQUIRED 102
 #define ZT_EXCEPTION_INVALID_ARGUMENT 103
+#define ZT_EXCEPTION_INVALID_IDENTITY 104
 #define ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE 200
 #define ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW 201
 #define ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN 202

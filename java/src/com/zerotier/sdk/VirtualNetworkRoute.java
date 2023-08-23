@@ -31,7 +31,7 @@ import java.net.InetSocketAddress;
 
 /**
  * A route to be pushed on a virtual network
- *
+ * <p>
  * Defined in ZeroTierOne.h as ZT_VirtualNetworkRoute
  */
 public class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute>
@@ -126,6 +126,7 @@ public class VirtualNetworkRoute implements Comparable<VirtualNetworkRoute>
             return false;
         }
 
+        //noinspection RedundantIfStatement
         if (metric != other.metric) {
             return false;
         }

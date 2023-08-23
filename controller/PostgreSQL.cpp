@@ -119,6 +119,7 @@ MemberNotificationReceiver::MemberNotificationReceiver(PostgreSQL *p, pqxx::conn
 
 void MemberNotificationReceiver::operator() (const std::string &payload, int packend_pid) {
 	fprintf(stderr, "Member Notification received: %s\n", payload.c_str());
+	Metrics::pgsql_mem_notification++;
 	json tmp(json::parse(payload));
 	json &ov = tmp["old_val"];
 	json &nv = tmp["new_val"];
@@ -141,6 +142,7 @@ NetworkNotificationReceiver::NetworkNotificationReceiver(PostgreSQL *p, pqxx::co
 
 void NetworkNotificationReceiver::operator() (const std::string &payload, int packend_pid) {
 	fprintf(stderr, "Network Notification received: %s\n", payload.c_str());
+	Metrics::pgsql_net_notification++;
 	json tmp(json::parse(payload));
 	json &ov = tmp["old_val"];
 	json &nv = tmp["new_val"];
@@ -372,6 +374,7 @@ void PostgreSQL::nodeIsOnline(const uint64_t networkId, const uint64_t memberId,
 
 AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::string &redirectURL)
 {
+	Metrics::db_get_sso_info++;
 	// NONCE is just a random character string.  no semantic meaning
 	// state = HMAC SHA384 of Nonce based on shared sso key
 	// 
@@ -386,9 +389,16 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 	char authenticationURL[4096] = {0};
 	AuthInfo info;
 	info.enabled = true;
+
+	//if (memberId == "a10dccea52" && networkId == "8056c2e21c24673d") {
+	//	fprintf(stderr, "invalid authinfo for grant's machine\n");
+	//	info.version=1;
+	//	return info;
+	//}
 	// fprintf(stderr, "PostgreSQL::updateMemberOnLoad: %s-%s\n", networkId.c_str(), memberId.c_str());
+	std::shared_ptr<PostgresConnection> c;
 	try {
-		auto c = _pool->borrow();
+		c = _pool->borrow();
 		pqxx::work w(*c->c);
 
 		char nonceBytes[16] = {0};
@@ -450,7 +460,7 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 			    "LEFT OUTER JOIN ztc_network_oidc_config noc "
 				"  ON noc.network_id = n.id "
 				"LEFT OUTER JOIN ztc_oidc_config oc "
-				"  ON noc.client_id = oc.client_id AND noc.org_id = o.org_id "
+				"  ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
 				"WHERE n.id = $1 AND n.sso_enabled = true", networkId);
 		
 			std::string client_id = "";
@@ -460,11 +470,11 @@ AuthInfo PostgreSQL::getSSOAuthInfo(const nlohmann::json &member, const std::str
 			uint64_t sso_version = 0;
 
 			if (r.size() == 1) {
-				client_id = r.at(0)[0].as<std::string>();
-				authorization_endpoint = r.at(0)[1].as<std::string>();
-				issuer = r.at(0)[2].as<std::string>();
-				provider = r.at(0)[3].as<std::string>();
-				sso_version = r.at(0)[4].as<uint64_t>();
+				client_id = r.at(0)[0].as<std::optional<std::string>>().value_or("");
+				authorization_endpoint = r.at(0)[1].as<std::optional<std::string>>().value_or("");
+				issuer = r.at(0)[2].as<std::optional<std::string>>().value_or("");
+				provider = r.at(0)[3].as<std::optional<std::string>>().value_or("");
+				sso_version = r.at(0)[4].as<std::optional<uint64_t>>().value_or(1);
 			} else if (r.size() > 1) {
 				fprintf(stderr, "ERROR: More than one auth endpoint for an organization?!?!? NetworkID: %s\n", networkId.c_str());
 			} else {
@@ -705,6 +715,8 @@ void PostgreSQL::initializeNetworks()
 				}
 			}
 
+			Metrics::network_count++;
+
 		 	_networkChanged(empty, config, false);
 
 			auto end = std::chrono::high_resolution_clock::now();
@@ -772,7 +784,7 @@ void PostgreSQL::initializeMembers()
 
 		if (_redisMemberStatus) {
 			fprintf(stderr, "Initialize Redis for members...\n");
-			std::lock_guard<std::mutex> l(_networks_l);
+			std::unique_lock<std::shared_mutex> l(_networks_l);
 			std::unordered_set<std::string> deletes;
 			for ( auto it : _networks) {
 				uint64_t nwid_i = it.first;
@@ -925,6 +937,8 @@ void PostgreSQL::initializeMembers()
 				}
 			}
 
+			Metrics::member_count++;
+
 			_memberChanged(empty, config, false);
 
 			memberId = "";
@@ -1011,8 +1025,6 @@ void PostgreSQL::heartbeat()
 		int64_t ts = OSUtils::now();
 
 		if(c->c) {
-			pqxx::work w{*c->c};
-
 			std::string major = std::to_string(ZEROTIER_ONE_VERSION_MAJOR);
 			std::string minor = std::to_string(ZEROTIER_ONE_VERSION_MINOR);
 			std::string rev = std::to_string(ZEROTIER_ONE_VERSION_REVISION);
@@ -1023,21 +1035,23 @@ void PostgreSQL::heartbeat()
 			std::string redis_mem_status = (_redisMemberStatus) ? "true" : "false";
 			
 			try {
-			pqxx::result res = w.exec0("INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis, redis_member_status) "
-				"VALUES ("+w.quote(controllerId)+", "+w.quote(hostname)+", TO_TIMESTAMP("+now+"::double precision/1000), "+
-				w.quote(publicIdentity)+", "+major+", "+minor+", "+rev+", "+build+", "+host_port+", "+use_redis+", "+redis_mem_status+") "
-				"ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
-				"public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
-				"v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev, host_port = EXCLUDED.host_port, "
-				"use_redis = EXCLUDED.use_redis, redis_member_status = EXCLUDED.redis_member_status");
+				pqxx::work w{*c->c};
+
+				pqxx::result res =
+					w.exec0("INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis, redis_member_status) "
+							"VALUES ("+w.quote(controllerId)+", "+w.quote(hostname)+", TO_TIMESTAMP("+now+"::double precision/1000), "+
+							w.quote(publicIdentity)+", "+major+", "+minor+", "+rev+", "+build+", "+host_port+", "+use_redis+", "+redis_mem_status+") "
+							"ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
+							"public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
+							"v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev, host_port = EXCLUDED.host_port, "
+							"use_redis = EXCLUDED.use_redis, redis_member_status = EXCLUDED.redis_member_status");
+				w.commit();
 			} catch (std::exception &e) {
-				fprintf(stderr, "Heartbeat update failed: %s\n", e.what());
-				w.abort();
-				_pool->unborrow(c);
+				fprintf(stderr, "%s: Heartbeat update failed: %s\n", controllerId, e.what());
 				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 				continue;
-			}		
-			w.commit();
+			}
+
 		}
 		_pool->unborrow(c);
 
@@ -1138,6 +1152,7 @@ void PostgreSQL::_membersWatcher_Redis() {
 							_redis->xdel(key, id);
 						}
 						lastID = id;
+						Metrics::redis_mem_notification++;
 					}
 				}
 			}
@@ -1228,6 +1243,7 @@ void PostgreSQL::_networksWatcher_Redis() {
 						}
 						lastID = id;
 					}
+					Metrics::redis_net_notification++;
 				}
 			}
 		} catch (sw::redis::Error &e) {
@@ -1261,6 +1277,7 @@ void PostgreSQL::commitThread()
 			continue;
 		}
 		
+		Metrics::pgsql_commit_ticks++;
 		try {
 			nlohmann::json &config = (qitem.first);
 			const std::string objtype = config["objtype"];
@@ -1587,7 +1604,6 @@ void PostgreSQL::commitThread()
 		}
 		_pool->unborrow(c);
 		c.reset();
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
 	}
 
 	fprintf(stderr, "%s commitThread finished\n", _myAddressStr.c_str());
@@ -1679,6 +1695,7 @@ void PostgreSQL::onlineNotification_Postgres()
 					<< " ON CONFLICT (network_id, member_id) DO UPDATE SET address = EXCLUDED.address, last_updated = EXCLUDED.last_updated";
 
 				pipe.insert(memberUpdate.str());
+				Metrics::pgsql_node_checkin++;
 			}
 			while(!pipe.empty()) {
 				pipe.retrieve();
@@ -1786,6 +1803,7 @@ uint64_t PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &con
 			.sadd("network-nodes-all:{"+controllerId+"}:"+networkId, memberId)
 			.hmset("member:{"+controllerId+"}:"+networkId+":"+memberId, record.begin(), record.end());
 		++count;
+		Metrics::redis_node_checkin++;
 	}
 
 	// expire records from all-nodes and network-nodes member list
@@ -1801,7 +1819,7 @@ uint64_t PostgreSQL::_doRedisUpdate(sw::redis::Transaction &tx, std::string &con
 						sw::redis::RightBoundedInterval<double>(expireOld,
 																sw::redis::BoundType::LEFT_OPEN));
 	{
-		std::lock_guard<std::mutex> l(_networks_l);
+		std::shared_lock<std::shared_mutex> l(_networks_l);
 		for (const auto &it : _networks) {
 			uint64_t nwid_i = it.first;
 			char nwidTmp[64];

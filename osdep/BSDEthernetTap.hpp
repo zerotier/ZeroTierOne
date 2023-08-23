@@ -71,6 +71,8 @@ private:
 	int _fd;
 	int _shutdownSignalPipe[2];
 	volatile bool _enabled;
+	mutable std::vector<InetAddress> _ifaddrs;
+	mutable uint64_t _lastIfAddrsUpdate;
 };
 
 } // namespace ZeroTier

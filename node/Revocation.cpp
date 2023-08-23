@@ -23,8 +23,9 @@ namespace ZeroTier {
 
 int Revocation::verify(const RuntimeEnvironment *RR,void *tPtr) const
 {
-	if ((!_signedBy)||(_signedBy != Network::controllerFor(_networkId)))
+	if ((!_signedBy)||(_signedBy != Network::controllerFor(_networkId))) {
 		return -1;
+	}
 	const Identity id(RR->topology->getIdentity(tPtr,_signedBy));
 	if (!id) {
 		RR->sw->requestWhois(tPtr,RR->node->now(),_signedBy);

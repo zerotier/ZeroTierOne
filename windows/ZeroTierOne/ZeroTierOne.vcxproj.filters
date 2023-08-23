@@ -291,6 +291,9 @@
     <ClCompile Include="..\..\osdep\WinFWHelper.cpp">
       <Filter>Source Files\osdep</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\node\Metrics.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h">
@@ -556,6 +559,9 @@
     </ClInclude>
     <ClInclude Include="..\..\osdep\WinFWHelper.hpp">
       <Filter>Header Files\osdep</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\node\Metrics.hpp">
+      <Filter>Header Files\node</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

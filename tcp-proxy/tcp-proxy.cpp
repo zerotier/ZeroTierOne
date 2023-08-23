@@ -43,6 +43,8 @@
 
 #include "../osdep/Phy.hpp"
 
+#include "../node/Metrics.hpp"
+
 #define ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS 300
 #define ZT_TCP_PROXY_TCP_PORT 443
 

@@ -58,12 +58,15 @@ static ZT_INLINE void sha512_compress(sha512_state *const md,uint8_t *const buf)
 	uint64_t S[8], W[80], t0, t1;
 	int i;
 
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < 8; i++) {
 		S[i] = md->state[i];
-	for (i = 0; i < 16; i++)
+	}
+	for (i = 0; i < 16; i++) {
 		LOAD64H(W[i], buf + (8*i));
-	for (i = 16; i < 80; i++)
+	}
+	for (i = 16; i < 80; i++) {
 		W[i] = Gamma1(W[i - 2]) + W[i - 7] + Gamma0(W[i - 15]) + W[i - 16];
+	}
 
 #define RND(a,b,c,d,e,f,g,h,i) \
 	t0 = h + Sigma1(e) + Ch(e, f, g) + K[i] + W[i]; \
@@ -82,8 +85,9 @@ static ZT_INLINE void sha512_compress(sha512_state *const md,uint8_t *const buf)
 		RND(S[1],S[2],S[3],S[4],S[5],S[6],S[7],S[0],i+7);
 	}
 
-	for (i = 0; i < 8; i++)
+	for (i = 0; i < 8; i++) {
 		md->state[i] = md->state[i] + S[i];
+	}
 }
 
 static ZT_INLINE void sha384_init(sha512_state *const md)

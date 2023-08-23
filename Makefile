@@ -30,3 +30,4 @@ endif
 drone:
 	@echo "rendering .drone.yaml from .drone.jsonnet"
 	drone jsonnet --format --stream
+	drone sign zerotier/ZeroTierOne --save

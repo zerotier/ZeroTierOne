@@ -9,7 +9,7 @@ ifeq ($(origin CXX),default)
 	CXX:=$(shell if [ -e /opt/rh/devtoolset-8/root/usr/bin/g++ ]; then echo /opt/rh/devtoolset-8/root/usr/bin/g++; else echo $(CXX); fi)
 endif
 
-INCLUDES?=-Izeroidc/target -isystem ext
+INCLUDES?=-Izeroidc/target -isystem ext -Iext/prometheus-cpp-lite-1.0/core/include -Iext-prometheus-cpp-lite-1.0/3rdparty/http-client-lite/include -Iext/prometheus-cpp-lite-1.0/simpleapi/include
 DEFS?=
 LDLIBS?=
 DESTDIR?=
@@ -119,6 +119,9 @@ ifeq ($(CC_MACH),x86_64)
 	override CFLAGS+=-msse -msse2
 	override CXXFLAGS+=-msse -msse2
 	ZT_SSO_SUPPORTED=1
+	ifeq ($(ZT_CONTROLLER),1)
+		EXT_ARCH=amd64
+	endif
 endif
 ifeq ($(CC_MACH),amd64)
 	ZT_ARCHITECTURE=2
@@ -127,6 +130,9 @@ ifeq ($(CC_MACH),amd64)
 	override CFLAGS+=-msse -msse2
 	override CXXFLAGS+=-msse -msse2
 	ZT_SSO_SUPPORTED=1
+	ifeq ($(ZT_CONTROLLER),1)
+		EXT_ARCH=amd64
+	endif
 endif
 ifeq ($(CC_MACH),powerpc64le)
 	ZT_ARCHITECTURE=8
@@ -229,12 +235,17 @@ endif
 ifeq ($(CC_MACH),arm64)
 	ZT_ARCHITECTURE=4
 	ZT_SSO_SUPPORTED=1
+	ZT_USE_X64_ASM_ED25519=0
 	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_ARCH_ARM_HAS_NEON -march=armv8-a+crypto -mtune=generic -mstrict-align
 endif
 ifeq ($(CC_MACH),aarch64)
 	ZT_ARCHITECTURE=4
 	ZT_SSO_SUPPORTED=1
+	ZT_USE_X64_ASM_ED25519=0
 	override DEFS+=-DZT_NO_TYPE_PUNNING -DZT_ARCH_ARM_HAS_NEON -march=armv8-a+crypto -mtune=generic -mstrict-align
+	ifeq ($(ZT_CONTROLLER),1)
+		EXT_ARCH=arm64
+	endif
 endif
 ifeq ($(CC_MACH),mipsel)
 	ZT_ARCHITECTURE=5
@@ -310,9 +321,9 @@ endif
 
 ifeq ($(ZT_CONTROLLER),1)
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	override LDLIBS+=-Lext/libpqxx-7.7.3/install/ubuntu22.04/lib -lpqxx -lpq ext/hiredis-1.0.2/lib/ubuntu22.04/libhiredis.a ext/redis-plus-plus-1.3.3/install/ubuntu22.04/lib/libredis++.a -lssl -lcrypto
-	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ
-	override INCLUDES+=-I/usr/include/postgresql -Iext/libpqxx-7.7.3/install/ubuntu22.04/include -Iext/hiredis-1.0.2/include/ -Iext/redis-plus-plus-1.3.3/install/ubuntu22.04/include/sw/
+	override LDLIBS+=-Lext/libpqxx-7.7.3/install/ubuntu22.04/$(EXT_ARCH)/lib -lpqxx -lpq ext/hiredis-1.0.2/lib/ubuntu22.04/$(EXT_ARCH)/libhiredis.a ext/redis-plus-plus-1.3.3/install/ubuntu22.04/$(EXT_ARCH)/lib/libredis++.a -lssl -lcrypto
+	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_NO_PEER_METRICS
+	override INCLUDES+=-I/usr/include/postgresql -Iext/libpqxx-7.7.3/install/ubuntu22.04/$(EXT_ARCH)/include -Iext/hiredis-1.0.2/include/ -Iext/redis-plus-plus-1.3.3/install/ubuntu22.04/$(EXT_ARCH)/include/sw/
 endif
 
 # ARM32 hell -- use conservative CFLAGS
@@ -345,6 +356,9 @@ endif
 # Position Independence
 override CFLAGS+=-fPIC -fPIE
 override CXXFLAGS+=-fPIC -fPIE
+
+# Non-executable stack
+override ASFLAGS+=--noexecstack
 
 .PHONY: all
 all:	one
@@ -397,11 +411,19 @@ official:	FORCE
 docker:	FORCE
 	docker build --no-cache -f ext/installfiles/linux/zerotier-containerized/Dockerfile -t zerotier-containerized .
 
-central-controller:	FORCE
-	make -j4 ZT_CONTROLLER=1 ZT_USE_X64_ASM_ED25519=1 one
+_buildx:
+	@echo "docker buildx create"
+	# docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+	docker run --privileged --rm tonistiigi/binfmt --install all
+	@echo docker buildx create --name multiarch --driver docker-container --use
+	@echo docker buildx inspect --bootstrap
 
-central-controller-docker: FORCE
-	docker build --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` .
+central-controller:	FORCE
+	make -j4 ZT_CONTROLLER=1 one
+
+central-controller-docker: _buildx FORCE
+	docker buildx build --platform linux/amd64,linux/arm64 --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` . --push
+	@echo Image: registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP}
 
 debug:	FORCE
 	make ZT_DEBUG=1 one
@@ -476,17 +498,19 @@ echo_flags:
 	@echo "echo_flags :: RUSTFLAGS=$(RUSTFLAGS)"
 	@echo "=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~=~"
 
-# debian: echo_flags
-# 	@echo "building deb package"
-# 	debuild --no-lintian -b -uc -us
-
-debian:	FORCE
+debian: echo_flags
+	@echo "building deb package"
 	debuild --no-lintian -I -i -us -uc -nc -b
+	# debuild --no-lintian -b -uc -us
+
+# debian:	FORCE
+# 	debuild --no-lintian -I -i -us -uc -nc -b
 
 debian-clean: FORCE
 	rm -rf debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one debian/.debhelper debian/debhelper-build-stamp
 
-redhat:	FORCE
+redhat:
+	@echo "building rpm package"
 	rpmbuild --target `rpm -q bash --qf "%{arch}"` -ba zerotier-one.spec
 
 # This installs the packages needed to build ZT locally on CentOS 7 and

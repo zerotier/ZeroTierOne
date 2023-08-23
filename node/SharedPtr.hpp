@@ -37,8 +37,9 @@ public:
 	~SharedPtr()
 	{
 		if (_ptr) {
-			if (--_ptr->__refCount <= 0)
+			if (--_ptr->__refCount <= 0) {
 				delete _ptr;
+			}
 		}
 	}
 
@@ -47,8 +48,9 @@ public:
 		if (_ptr != sp._ptr) {
 			T *p = sp._getAndInc();
 			if (_ptr) {
-				if (--_ptr->__refCount <= 0)
+				if (--_ptr->__refCount <= 0) {
 					delete _ptr;
+				}
 			}
 			_ptr = p;
 		}
@@ -97,8 +99,9 @@ public:
 	inline void zero()
 	{
 		if (_ptr) {
-			if (--_ptr->__refCount <= 0)
+			if (--_ptr->__refCount <= 0) {
 				delete _ptr;
+			}
 			_ptr = (T *)0;
 		}
 	}
@@ -108,8 +111,9 @@ public:
 	 */
 	inline int references()
 	{
-		if (_ptr)
+		if (_ptr) {
 			return _ptr->__refCount.load();
+		}
 		return 0;
 	}
 
@@ -123,8 +127,9 @@ public:
 private:
 	inline T *_getAndInc() const
 	{
-		if (_ptr)
+		if (_ptr) {
 			++_ptr->__refCount;
+		}
 		return _ptr;
 	}
 	T *_ptr;

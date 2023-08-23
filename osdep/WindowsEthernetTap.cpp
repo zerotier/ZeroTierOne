@@ -78,7 +78,7 @@ public:
 	{
 #ifdef _WIN64
 		is64Bit = TRUE;
-		tapDriverPath = "\\tap-windows\\x64\\zttap300.inf";
+		//tapDriverPath = "\\tap-windows\\x64\\zttap300.inf";
 #else
 		is64Bit = FALSE;
 		IsWow64Process(GetCurrentProcess(),&is64Bit);
@@ -86,9 +86,10 @@ public:
 			fprintf(stderr,"FATAL: you must use the 64-bit ZeroTier One service on 64-bit Windows systems\r\n");
 			_exit(1);
 		}
-		tapDriverPath = "\\tap-windows\\x86\\zttap300.inf";
+		//tapDriverPath = "\\tap-windows\\x86\\zttap300.inf";
 #endif
 		tapDriverName = "zttap300";
+		tapDriverPath = "\\zttap300.inf";
 
 		setupApiMod = LoadLibraryA("setupapi.dll");
 		if (!setupApiMod) {
@@ -467,7 +468,8 @@ WindowsEthernetTap::WindowsEthernetTap(
 	_pathToHelpers(hp),
 	_run(true),
 	_initialized(false),
-	_enabled(true)
+	_enabled(true),
+	_lastIfAddrsUpdate(0)
 {
 	char subkeyName[1024];
 	char subkeyClass[1024];
@@ -749,6 +751,14 @@ std::vector<InetAddress> WindowsEthernetTap::ips() const
 	if (!_initialized)
 		return addrs;
 
+	uint64_t now = OSUtils::now();
+
+	if ((now - _lastIfAddrsUpdate) <= GETIFADDRS_CACHE_TIME) {
+		return _ifaddrs;
+	}
+
+	_lastIfAddrsUpdate = now;
+
 	try {
 		MIB_UNICASTIPADDRESS_TABLE *ipt = (MIB_UNICASTIPADDRESS_TABLE *)0;
 		if (GetUnicastIpAddressTable(AF_UNSPEC,&ipt) == NO_ERROR) {
@@ -776,6 +786,8 @@ std::vector<InetAddress> WindowsEthernetTap::ips() const
 
 	std::sort(addrs.begin(),addrs.end());
 	addrs.erase(std::unique(addrs.begin(),addrs.end()),addrs.end());
+
+	_ifaddrs = addrs;
 
 	return addrs;
 }
