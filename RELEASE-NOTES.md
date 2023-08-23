@@ -1,6 +1,16 @@
 ZeroTier Release Notes
 ======
 
+# 2023-08-23 -- Version 1.12.0
+
+  * Experimental Windows ARM64 support
+  * Fix numerous sleep/wake issues on macOS and other platforms
+  * Faster recovery after changes to physical network settings
+  * Prometheus compatible metrics support!
+  * Fix full tunnel mode on recent macOS versions
+  * Numerous macOS DNS fixes
+  * 10-30% speed improvement on Linux
+
 # 2023-03-23 -- Version 1.10.6
 
   * Prevent binding temporary ipv6 addresses on macos (#1910)
