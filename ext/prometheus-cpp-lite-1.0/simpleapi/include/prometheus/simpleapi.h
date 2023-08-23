@@ -14,6 +14,7 @@
 #include <iostream>
 #include <memory>
 #include <functional>
+#include <stdexcept>
 
 namespace prometheus {
   namespace simpleapi {

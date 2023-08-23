@@ -3,7 +3,7 @@ Maintainer: Adam Ierymenko <adam.ierymenko@zerotier.com>
 Section: net
 Priority: optional
 Standards-Version: 3.9.6
-Build-Depends: debhelper (>= 9)
+Build-Depends: debhelper
 Vcs-Git: git://github.com/zerotier/ZeroTierOne
 Vcs-Browser: https://github.com/zerotier/ZeroTierOne
 Homepage: https://www.zerotier.com/
