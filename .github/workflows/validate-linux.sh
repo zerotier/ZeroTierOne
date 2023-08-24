@@ -20,6 +20,9 @@ mkdir $TEST_DIR_PREFIX
 # How long we will wait for ZT to come online before considering it a failure
 MAX_WAIT_SECS=30
 
+ZT_PORT_NODE_1=9996
+ZT_PORT_NODE_2=9997
+
 ################################################################################
 # Multi-node connectivity and performance test                                 #
 ################################################################################
@@ -99,14 +102,19 @@ test() {
 		--xml=yes \
 		--xml-file=$FILENAME_MEMORY_LOG \
 		--leak-check=full \
-		./zerotier-one node1 -p9996 -U >>node_1.log 2>&1 &
+		./zerotier-one node1 -p$ZT_PORT_NODE_1 -U >>node_1.log 2>&1 &
 
 	# Second instance, not run in memory profiler
 	# Don't set up internet access until _after_ zerotier is running
 	# This has been a source of stuckness in the past.
 	$NS2 ip addr del 192.168.1.2/24 dev veth3
-	$NS2 sudo ./zerotier-one node2 -U -p9997 >>node_2.log 2>&1 &
-	sleep 1;
+	$NS2 sudo ./zerotier-one node2 -U -p$ZT_PORT_NODE_2 >>node_2.log 2>&1 &
+
+	sleep 5; # New HTTP control plane is a bit sluggish, so we delay here
+
+	check_bind_to_correct_ports $ZT_PORT_NODE_1
+	check_bind_to_correct_ports $ZT_PORT_NODE_2
+
 	$NS2 ip addr add 192.168.1.2/24 dev veth3
 	$NS2 ip route add default via 192.168.1.1
 
@@ -455,6 +463,32 @@ check_exit_on_invalid_identity() {
 	kill -0 $my_pid
 	if [ $? -eq 0 ]; then
 		exit_test_and_generate_report $TEST_FAIL "Exit test FAILED: Process still running after being fed an invalid identity"
+	fi
+}
+
+################################################################################
+# Check that we're binding to the primary port for TCP/TCP6/UDP                #
+################################################################################
+
+check_bind_to_correct_ports() {
+	PORT_NUMBER=$1
+	if [[ $(sudo netstat -anp | grep "$PORT_NUMBER" | grep "zerotier" | grep "tcp") ]];
+	then
+		:
+	else
+		exit_test_and_generate_report $TEST_FAIL "ZeroTier did not bind to tcp/$1"
+	fi
+	if [[ $(sudo netstat -anp | grep "$PORT_NUMBER" | grep "zerotier" | grep "tcp6") ]];
+	then
+		:
+	else
+		exit_test_and_generate_report $TEST_FAIL "ZeroTier did not bind to tcp6/$1"
+	fi
+	if [[ $(sudo netstat -anp | grep "$PORT_NUMBER" | grep "zerotier" | grep "udp") ]];
+	then
+		:
+	else
+		exit_test_and_generate_report $TEST_FAIL "ZeroTier did not bind to udp/$1"
 	fi
 }
 
