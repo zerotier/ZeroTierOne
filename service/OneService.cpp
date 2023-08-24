@@ -2130,7 +2130,11 @@ public:
 		}
 
 		if(!_controlPlane.bind_to_port("0.0.0.0", _primaryPort)) {
-			fprintf(stderr, "Error binding control plane to port %d\n", _primaryPort);
+			fprintf(stderr, "Error binding control plane to 0.0.0.0:%d\n", _primaryPort);
+			exit(-1);
+		}
+		if(!_controlPlane.bind_to_port("::", _primaryPort)) {
+			fprintf(stderr, "Error binding control plane to :::%d\n", _primaryPort);
 			exit(-1);
 		}
 
