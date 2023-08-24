@@ -110,7 +110,7 @@ test() {
 	$NS2 ip addr del 192.168.1.2/24 dev veth3
 	$NS2 sudo ./zerotier-one node2 -U -p$ZT_PORT_NODE_2 >>node_2.log 2>&1 &
 
-	sleep 5; # New HTTP control plane is a bit sluggish, so we delay here
+	sleep 10; # New HTTP control plane is a bit sluggish, so we delay here
 
 	check_bind_to_correct_ports $ZT_PORT_NODE_1
 	check_bind_to_correct_ports $ZT_PORT_NODE_2
@@ -472,6 +472,8 @@ check_exit_on_invalid_identity() {
 
 check_bind_to_correct_ports() {
 	PORT_NUMBER=$1
+	echo "Checking bound ports:"
+	sudo netstat -anp | grep "$PORT_NUMBER" | grep "zerotier"
 	if [[ $(sudo netstat -anp | grep "$PORT_NUMBER" | grep "zerotier" | grep "tcp") ]];
 	then
 		:
