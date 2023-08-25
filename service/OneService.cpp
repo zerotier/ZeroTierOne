@@ -786,8 +786,11 @@ public:
 	bool _updateAutoApply;
 
     httplib::Server _controlPlane;
+	httplib::Server _controlPlaneV6;
     std::thread _serverThread;
+	std::thread _serverThreadV6;
 	bool _serverThreadRunning;
+	bool _serverThreadRunningV6;
 
     bool _allowTcpFallbackRelay;
 	bool _forceTcpRelay;
@@ -888,8 +891,11 @@ public:
 		,_updater((SoftwareUpdater *)0)
 		,_updateAutoApply(false)
         ,_controlPlane()
+		,_controlPlaneV6()
         ,_serverThread()
+		,_serverThreadV6()
 		,_serverThreadRunning(false)
+		,_serverThreadRunningV6(false)
 		,_forceTcpRelay(false)
 		,_primaryPort(port)
 		,_udpPortPickerCounter(0)
@@ -943,6 +949,10 @@ public:
         _controlPlane.stop();
 		if (_serverThreadRunning) {
 	        _serverThread.join();
+		}
+		_controlPlaneV6.stop();
+		if (_serverThreadRunningV6) {
+			_serverThreadV6.join();
 		}
 
 #ifdef ZT_USE_MINIUPNPC
@@ -1527,6 +1537,22 @@ public:
 
     // Internal HTTP Control Plane
     void startHTTPControlPlane() {
+		// control plane endpoints
+		std::string bondShowPath = "/bond/show/([0-9a-fA-F]{10})";
+		std::string bondRotatePath = "/bond/rotate/([0-9a-fA-F]{10})";
+		std::string setBondMtuPath = "/bond/setmtu/([0-9]{3,5})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})";
+		std::string configPath = "/config";
+		std::string configPostPath = "/config/settings";
+		std::string healthPath = "/health";
+		std::string moonListPath = "/moon";
+		std::string moonPath = "/moon/([0-9a-fA-F]{10})";
+		std::string networkListPath = "/network";
+		std::string networkPath = "/network/([0-9a-fA-F]{16})";
+		std::string peerListPath = "/peer";
+		std::string peerPath = "/peer/([0-9a-fA-F]{10})";
+		std::string statusPath = "/status";
+		std::string metricsPath = "/metrics";
+
         std::vector<std::string> noAuthEndpoints { "/sso", "/health" };
 
 		auto setContent = [=] (const httplib::Request &req, httplib::Response &res, std::string content) {
@@ -1625,8 +1651,7 @@ public:
         };
 
 
-
-		_controlPlane.Get("/bond/show/([0-9a-fA-F]{10})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto bondShow = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			if (!_node->bondController()->inUse()) {
 				setContent(req, res, "");
 				res.status = 400;
@@ -1652,7 +1677,9 @@ public:
 				}
 			}
 			_node->freeQueryResult((void *)pl);
-		});
+		};
+		_controlPlane.Get(bondShowPath, bondShow);
+		_controlPlaneV6.Get(bondShowPath, bondShow);
 
 		auto bondRotate = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			if (!_node->bondController()->inUse()) {
@@ -1675,8 +1702,10 @@ public:
 			}
 			setContent(req, res, "{}");
 		};
-		_controlPlane.Post("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
-		_controlPlane.Put("/bond/rotate/([0-9a-fA-F]{10})", bondRotate);
+		_controlPlane.Post(bondRotatePath, bondRotate);
+		_controlPlane.Put(bondRotatePath, bondRotate);
+		_controlPlaneV6.Post(bondRotatePath, bondRotate);
+		_controlPlaneV6.Put(bondRotatePath, bondRotate);
 
 		auto setMtu = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			if (!_node->bondController()->inUse()) {
@@ -1688,10 +1717,12 @@ public:
 			res.status = _node->bondController()->setAllMtuByTuple(mtu, req.matches[2].str().c_str(), req.matches[3].str().c_str()) ? 200 : 400;
 			setContent(req, res, "{}");
 		};
-		_controlPlane.Post("/bond/setmtu/([0-9]{3,5})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})", setMtu);
-		_controlPlane.Put("/bond/setmtu/([0-9]{3,5})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})", setMtu);
+		_controlPlane.Post(setBondMtuPath, setMtu);
+		_controlPlane.Put(setBondMtuPath, setMtu);
+		_controlPlaneV6.Post(setBondMtuPath, setMtu);
+		_controlPlaneV6.Put(setBondMtuPath, setMtu);
 
-		_controlPlane.Get("/config", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto getConfig = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			std::string config;
 			{
 				Mutex::Lock lc(_localConfig_m);
@@ -1701,7 +1732,9 @@ public:
 				config = "{}";
 			}
 			setContent(req, res, config);
-		});
+		};
+		_controlPlane.Get(configPath, getConfig);
+		_controlPlaneV6.Get(configPath, getConfig);
 
 		auto configPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			json j(OSUtils::jsonParse(req.body));
@@ -1718,10 +1751,12 @@ public:
 			}
 			setContent(req, res, "{}");
 		};
-		_controlPlane.Post("/config/settings", configPost);
-		_controlPlane.Put("/config/settings", configPost);
+		_controlPlane.Post(configPostPath, configPost);
+		_controlPlane.Put(configPostPath, configPost);
+		_controlPlaneV6.Post(configPostPath, configPost);
+		_controlPlaneV6.Put(configPostPath, configPost);
 
-		_controlPlane.Get("/health", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto healthGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			json out = json::object();
 
 			char tmp[256];
@@ -1739,9 +1774,11 @@ public:
 			out["clock"] = OSUtils::now();
 
 			setContent(req, res, out.dump());
-		});
+		};
+		_controlPlane.Get(healthPath, healthGet);
+		_controlPlaneV6.Get(healthPath, healthGet);
 
-		_controlPlane.Get("/moon", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto moonListGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			std::vector<World> moons(_node->moons());
 
 			auto out = json::array();
@@ -1751,9 +1788,11 @@ public:
 				out.push_back(mj);
 			}
 			setContent(req, res, out.dump());
-		});
+		};
+		_controlPlane.Get(moonListPath, moonListGet);
+		_controlPlaneV6.Get(moonListPath, moonListGet);
 
-		_controlPlane.Get("/moon/([0-9a-fA-F]{10})", [&, setContent](const httplib::Request &req, httplib::Response &res){
+		auto moonGet = [&, setContent](const httplib::Request &req, httplib::Response &res){
 			std::vector<World> moons(_node->moons());
 			auto input = req.matches[1];
 			auto out = json::object();
@@ -1765,7 +1804,9 @@ public:
 				}
 			}
 			setContent(req, res, out.dump());
-		});
+		};
+		_controlPlane.Get(moonPath, moonGet);
+		_controlPlaneV6.Get(moonPath, moonGet);
 
 		auto moonPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
@@ -1804,19 +1845,22 @@ public:
 			}
 			setContent(req, res, out.dump());
 		};
-		_controlPlane.Post("/moon/([0-9a-fA-F]{10})", moonPost);
-		_controlPlane.Put("/moon/([0-9a-fA-F]{10})", moonPost);
+		_controlPlane.Post(moonPath, moonPost);
+		_controlPlane.Put(moonPath, moonPost);
+		_controlPlaneV6.Post(moonPath, moonPost);
+		_controlPlaneV6.Put(moonPath, moonPost);
 
-		_controlPlane.Delete("/moon/([0-9a-fA-F]{10})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto moonDelete = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			uint64_t id = Utils::hexStrToU64(input.str().c_str());
 			auto out = json::object();
 			_node->deorbit((void*)0,id);
 			out["result"] = true;
 			setContent(req, res, out.dump());
-		});
+		};
+		_controlPlane.Delete(moonPath, moonDelete);
 
-		_controlPlane.Get("/network", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto networkListGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
             Mutex::Lock _l(_nets_m);
             auto out = json::array();
 
@@ -1827,9 +1871,11 @@ public:
                 out.push_back(nj);
             }
 			setContent(req, res, out.dump());
-        });
+        };
+		_controlPlane.Get(networkListPath, networkListGet);
+		_controlPlaneV6.Get(networkListPath, networkListGet);
 
-        _controlPlane.Get("/network/([0-9a-fA-F]{16})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto networkGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			Mutex::Lock _l(_nets_m);
 
             auto input = req.matches[1];
@@ -1843,7 +1889,9 @@ public:
 			}
 			setContent(req, res, "");
 			res.status = 404;
-        });
+        };
+        _controlPlane.Get(networkPath, networkGet);
+		_controlPlaneV6.Get(networkPath, networkGet);
 
 		auto networkPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
@@ -1897,10 +1945,12 @@ public:
 			setContent(req, res, out.dump());
 #endif
 		};
-		_controlPlane.Post("/network/([0-9a-fA-F]{16})", networkPost);
-		_controlPlane.Put("/network/([0-9a-fA-F]){16}", networkPost);
+		_controlPlane.Post(networkPath, networkPost);
+		_controlPlane.Put(networkPath, networkPost);
+		_controlPlaneV6.Post(networkPath, networkPost);
+		_controlPlaneV6.Put(networkPath, networkPost);
 
-		_controlPlane.Delete("/network/([0-9a-fA-F]{16})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto networkDelete = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			auto input = req.matches[1];
 			auto out = json::object();
 			ZT_VirtualNetworkList *nws = _node->networks();
@@ -1913,9 +1963,11 @@ public:
 			}
 			_node->freeQueryResult((void*)nws);
 			setContent(req, res, out.dump());
-		});
+		};
+		_controlPlane.Delete(networkPath, networkDelete);
+		_controlPlaneV6.Delete(networkPath, networkDelete);
 
-		_controlPlane.Get("/peer", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto peerListGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			ZT_PeerList *pl = _node->peers();
 			auto out = nlohmann::json::array();
 
@@ -1931,9 +1983,11 @@ public:
 			}
 			_node->freeQueryResult((void*)pl);
 			setContent(req, res, out.dump());
-		});
+		};
+		_controlPlane.Get(peerListPath, peerListGet);
+		_controlPlaneV6.Get(peerListPath, peerListGet);
 
-		_controlPlane.Get("/peer/([0-9a-fA-F]{10})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto peerGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			ZT_PeerList *pl = _node->peers();
 
 			auto input = req.matches[1];
@@ -1951,9 +2005,11 @@ public:
 			}
 			_node->freeQueryResult((void*)pl);
 			setContent(req, res, out.dump());
-		});
+		};
+		_controlPlane.Get(peerPath, peerGet);
+		_controlPlaneV6.Get(peerPath, peerGet);
 
-		_controlPlane.Get("/status", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto statusGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
             ZT_NodeStatus status;
             _node->status(&status);
 
@@ -2016,10 +2072,13 @@ public:
             out["planetWorldTimestamp"] = planet.timestamp();
 
 			setContent(req, res, out.dump());
-        });
+        };
+		_controlPlane.Get(statusPath, statusGet);
+		_controlPlaneV6.Get(statusPath, statusGet);
 
 #if ZT_SSO_ENABLED
-        _controlPlane.Get("/sso", [this](const httplib::Request &req, httplib::Response &res) {
+		std::string ssoPath = "/sso";
+		auto ssoGet = [this](const httplib::Request &req, httplib::Response &res) {
             std::string htmlTemplatePath = _homePath + ZT_PATH_SEPARATOR + "sso-auth.template.html";
             std::string htmlTemplate;
             if (!OSUtils::readFile(htmlTemplatePath.c_str(), htmlTemplate)) {
@@ -2085,10 +2144,11 @@ public:
 
                 zeroidc::free_cstr(ret);
             }
-        });
+        };
+        _controlPlane.Get(ssoPath, ssoGet);
+		_controlPlaneV6.Get(ssoPath, ssoGet);
 #endif
-
-        _controlPlane.Get("/metrics", [this](const httplib::Request &req, httplib::Response &res) {
+		auto metricsGet = [this](const httplib::Request &req, httplib::Response &res) {
             std::string statspath = _homePath + ZT_PATH_SEPARATOR + "metrics.prom";
             std::string metrics;
             if (OSUtils::readFile(statspath.c_str(), metrics)) {
@@ -2097,9 +2157,11 @@ public:
                 res.set_content("{}", "application/json");
                 res.status = 500;
             }
-        });
+        };
+        _controlPlane.Get(metricsPath, metricsGet);
+		_controlPlaneV6.Get(metricsPath, metricsGet);
 
-		_controlPlane.set_exception_handler([&, setContent](const httplib::Request &req, httplib::Response &res, std::exception_ptr ep) {
+		auto exceptionHandler = [&, setContent](const httplib::Request &req, httplib::Response &res, std::exception_ptr ep) {
 			char buf[1024];
 			auto fmt = "{\"error\": %d, \"description\": \"%s\"}";
 			try {
@@ -2111,16 +2173,22 @@ public:
 			}
 			setContent(req, res, buf);
 			res.status = 500;
-		});
+		};
+		_controlPlane.set_exception_handler(exceptionHandler);
+		_controlPlaneV6.set_exception_handler(exceptionHandler);
 
 		if (_controller) {
-			_controller->configureHTTPControlPlane(_controlPlane, setContent);
+			_controller->configureHTTPControlPlane(_controlPlane, _controlPlaneV6, setContent);
 		}
 
 		_controlPlane.set_pre_routing_handler(authCheck);
+		_controlPlaneV6.set_pre_routing_handler(authCheck);
 
 #if ZT_DEBUG==1
 		_controlPlane.set_logger([](const httplib::Request &req, const httplib::Response &res) {
+			fprintf(stderr, "%s", http_log(req, res).c_str());
+		});
+		_controlPlaneV6.set_logger([](const httplib::Request &req, const httplib::Response &res) {
 			fprintf(stderr, "%s", http_log(req, res).c_str());
 		});
 #endif
@@ -2129,21 +2197,46 @@ public:
 			exit(-1);
 		}
 
-		if(!_controlPlane.bind_to_port("0.0.0.0", _primaryPort)) {
-			fprintf(stderr, "Error binding control plane to port %d\n", _primaryPort);
-			exit(-1);
+		bool v4controlPlaneBound = false;
+		_controlPlane.set_address_family(AF_INET);
+		if(_controlPlane.bind_to_port("0.0.0.0", _primaryPort)) {
+			_serverThread = std::thread([&] {
+				_serverThreadRunning = true;
+				fprintf(stderr, "Starting Control Plane...\n");
+				if(!_controlPlane.listen_after_bind()) {
+					fprintf(stderr, "Error on listen_after_bind()\n");
+				}
+				fprintf(stderr, "Control Plane Stopped\n");
+				_serverThreadRunning = false;
+			});
+			v4controlPlaneBound = true;
+		} else {
+			fprintf(stderr, "Error binding control plane to 0.0.0.0:%d\n", _primaryPort);
+			v4controlPlaneBound = false;
 		}
 
-        _serverThread = std::thread([&] {
-			_serverThreadRunning = true;
-            fprintf(stderr, "Starting Control Plane...\n");
-            if(!_controlPlane.listen_after_bind()) {
-				fprintf(stderr, "Error on listen_after_bind()\n");
-			}
-            fprintf(stderr, "Control Plane Stopped\n");
-			_serverThreadRunning = false;
-        });
+		bool v6controlPlaneBound = false;
+		_controlPlaneV6.set_address_family(AF_INET6);
+		if(_controlPlaneV6.bind_to_port("::", _primaryPort)) {
+			_serverThreadV6 = std::thread([&] {
+				_serverThreadRunningV6 = true;
+				fprintf(stderr, "Starting V6 Control Plane...\n");
+				if(!_controlPlaneV6.listen_after_bind()) {
+					fprintf(stderr, "Error on V6 listen_after_bind()\n");
+				}
+				fprintf(stderr, "V6 Control Plane Stopped\n");
+				_serverThreadRunningV6 = false;
+			});
+			v6controlPlaneBound = true;
+		} else {
+			fprintf(stderr, "Error binding control plane to [::]:%d\n", _primaryPort);
+			v6controlPlaneBound = false;
+		}
 
+		if (!v4controlPlaneBound && !v6controlPlaneBound) {
+			fprintf(stderr, "ERROR: Could not bind control plane. Exiting...\n");
+			exit(-1);
+		}
     }
 
 	// Must be called after _localConfig is read or modified

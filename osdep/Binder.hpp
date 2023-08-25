@@ -87,11 +87,10 @@ namespace ZeroTier {
 class Binder {
   private:
 	struct _Binding {
-		_Binding() : udpSock((PhySocket*)0), tcpListenSock((PhySocket*)0)
+		_Binding() : udpSock((PhySocket*)0)
 		{
 		}
 		PhySocket* udpSock;
-		PhySocket* tcpListenSock;
 		InetAddress address;
 		char ifname[256] = {};
 	};
@@ -111,7 +110,6 @@ class Binder {
 		Mutex::Lock _l(_lock);
 		for (unsigned int b = 0, c = _bindingCount; b < c; ++b) {
 			phy.close(_bindings[b].udpSock, false);
-			phy.close(_bindings[b].tcpListenSock, false);
 		}
 		_bindingCount = 0;
 	}
@@ -133,7 +131,7 @@ class Binder {
 	template <typename PHY_HANDLER_TYPE, typename INTERFACE_CHECKER> void refresh(Phy<PHY_HANDLER_TYPE>& phy, unsigned int* ports, unsigned int portCount, const std::vector<InetAddress> explicitBind, INTERFACE_CHECKER& ifChecker)
 	{
 		std::map<InetAddress, std::string> localIfAddrs;
-		PhySocket *udps, *tcps;
+		PhySocket *udps;
 		Mutex::Lock _l(_lock);
 		bool interfacesEnumerated = true;
 
@@ -419,11 +417,8 @@ class Binder {
 			}
 			else {
 				PhySocket* const udps = _bindings[b].udpSock;
-				PhySocket* const tcps = _bindings[b].tcpListenSock;
 				_bindings[b].udpSock = (PhySocket*)0;
-				_bindings[b].tcpListenSock = (PhySocket*)0;
 				phy.close(udps, false);
-				phy.close(tcps, false);
 			}
 		}
 
@@ -437,24 +432,20 @@ class Binder {
 			}
 			if (bi == _bindingCount) {
 				udps = phy.udpBind(reinterpret_cast<const struct sockaddr*>(&(ii->first)), (void*)0, ZT_UDP_DESIRED_BUF_SIZE);
-				tcps = phy.tcpListen(reinterpret_cast<const struct sockaddr*>(&(ii->first)), (void*)0);
-				if ((udps) && (tcps)) {
+				if (udps) {
 #ifdef __LINUX__
 					// Bind Linux sockets to their device so routes that we manage do not override physical routes (wish all platforms had this!)
 					if (ii->second.length() > 0) {
 						char tmp[256];
 						Utils::scopy(tmp, sizeof(tmp), ii->second.c_str());
 						int fd = (int)Phy<PHY_HANDLER_TYPE>::getDescriptor(udps);
-						if (fd >= 0)
+						if (fd >= 0) {
 							setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tmp, strlen(tmp));
-						fd = (int)Phy<PHY_HANDLER_TYPE>::getDescriptor(tcps);
-						if (fd >= 0)
-							setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, tmp, strlen(tmp));
+						}
 					}
 #endif	 // __LINUX__
 					if (_bindingCount < ZT_BINDER_MAX_BINDINGS) {
 						_bindings[_bindingCount].udpSock = udps;
-						_bindings[_bindingCount].tcpListenSock = tcps;
 						_bindings[_bindingCount].address = ii->first;
 						memcpy(_bindings[_bindingCount].ifname, (char*)ii->second.c_str(), (int)ii->second.length());
 						++_bindingCount;
@@ -462,7 +453,6 @@ class Binder {
 				}
 				else {
 					phy.close(udps, false);
-					phy.close(tcps, false);
 				}
 			}
 		}
