@@ -1,6 +1,12 @@
 ZeroTier Release Notes
 ======
 
+# 2023-08-25 -- Version 1.12.1
+
+  * Minor release to fix a port binding issue in Linux.
+  * Update Debian dependencies.
+  * No changes for other platforms.
+
 # 2023-08-23 -- Version 1.12.0
 
   * Experimental Windows ARM64 support

@@ -10,7 +10,7 @@ Homepage: https://www.zerotier.com/
 
 Package: zerotier-one
 Architecture: any
-Depends:  ${shlibs:Depends}, ${misc:Depends}, iproute, libstdc++6
+Depends: ${shlibs:Depends}, ${misc:Depends}, libstdc++6
 Homepage: https://www.zerotier.com/
 Description: ZeroTier network virtualization service
  ZeroTier One lets you join ZeroTier virtual networks and
