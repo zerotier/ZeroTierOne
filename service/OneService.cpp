@@ -2197,36 +2197,46 @@ public:
 			exit(-1);
 		}
 
+		bool v4controlPlaneBound = false;
 		_controlPlane.set_address_family(AF_INET);
-		if(!_controlPlane.bind_to_port("0.0.0.0", _primaryPort)) {
+		if(_controlPlane.bind_to_port("0.0.0.0", _primaryPort)) {
+			_serverThread = std::thread([&] {
+				_serverThreadRunning = true;
+				fprintf(stderr, "Starting Control Plane...\n");
+				if(!_controlPlane.listen_after_bind()) {
+					fprintf(stderr, "Error on listen_after_bind()\n");
+				}
+				fprintf(stderr, "Control Plane Stopped\n");
+				_serverThreadRunning = false;
+			});
+			v4controlPlaneBound = true;
+		} else {
 			fprintf(stderr, "Error binding control plane to 0.0.0.0:%d\n", _primaryPort);
+			v4controlPlaneBound = false;
+		}
+
+		bool v6controlPlaneBound = false;
+		_controlPlaneV6.set_address_family(AF_INET6);
+		if(_controlPlaneV6.bind_to_port("::", _primaryPort)) {
+			_serverThreadV6 = std::thread([&] {
+				_serverThreadRunningV6 = true;
+				fprintf(stderr, "Starting V6 Control Plane...\n");
+				if(!_controlPlaneV6.listen_after_bind()) {
+					fprintf(stderr, "Error on V6 listen_after_bind()\n");
+				}
+				fprintf(stderr, "V6 Control Plane Stopped\n");
+				_serverThreadRunningV6 = false;
+			});
+			v6controlPlaneBound = true;
+		} else {
+			fprintf(stderr, "Error binding control plane to [::]:%d\n", _primaryPort);
+			v6controlPlaneBound = false;
+		}
+
+		if (!v4controlPlaneBound && !v6controlPlaneBound) {
+			fprintf(stderr, "ERROR: Could not bind control plane. Exiting...\n");
 			exit(-1);
 		}
-		_controlPlaneV6.set_address_family(AF_INET6);
-		if(!_controlPlaneV6.bind_to_port("::", _primaryPort)) {
-			fprintf(stderr, "Error binding control plane to :::%d\n", _primaryPort);
-			// NOTE: Don't exit here in case of single stack ipv4 machine
-		}
-
-        _serverThread = std::thread([&] {
-			_serverThreadRunning = true;
-            fprintf(stderr, "Starting Control Plane...\n");
-            if(!_controlPlane.listen_after_bind()) {
-				fprintf(stderr, "Error on listen_after_bind()\n");
-			}
-            fprintf(stderr, "Control Plane Stopped\n");
-			_serverThreadRunning = false;
-        });
-
-		_serverThreadV6 = std::thread([&] {
-			_serverThreadRunningV6 = true;
-            fprintf(stderr, "Starting V6 Control Plane...\n");
-            if(!_controlPlaneV6.listen_after_bind()) {
-				fprintf(stderr, "Error on V6 listen_after_bind()\n");
-			}
-            fprintf(stderr, "V6 Control Plane Stopped\n");
-			_serverThreadRunningV6 = false;
-        });
     }
 
 	// Must be called after _localConfig is read or modified
