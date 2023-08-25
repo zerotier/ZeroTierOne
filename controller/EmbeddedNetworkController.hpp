@@ -70,6 +70,7 @@ public:
 
 	void configureHTTPControlPlane(
 		httplib::Server &s,
+		httplib::Server &sV6,
 		const std::function<void(const httplib::Request&, httplib::Response&, std::string)>);
 
 	void handleRemoteTrace(const ZT_RemoteTrace &rt);
