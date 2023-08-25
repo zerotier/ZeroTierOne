@@ -960,6 +960,18 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	sv6.Put(oldAndBustedNetworkCreatePath, createNewNetworkOldAndBusted);
 	sv6.Post(oldAndBustedNetworkCreatePath, createNewNetworkOldAndBusted);
 
+	auto networkPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto networkID = req.matches[1].str();
+		uint64_t nwid = Utils::hexStrToU64(networkID.c_str());
+
+		res.status = 200;
+		setContent(req, res, networkUpdateFromPostData(nwid, req.body));
+	};
+	s.Put(networkPath, networkPost);
+	s.Post(networkPath, networkPost);
+	sv6.Put(networkPath, networkPost);
+	sv6.Post(networkPath, networkPost);
+
 	auto networkDelete = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto networkID = req.matches[1].str();
 		uint64_t nwid = Utils::hexStrToU64(networkID.c_str());
