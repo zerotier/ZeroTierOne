@@ -863,9 +863,17 @@ std::string EmbeddedNetworkController::networkUpdateFromPostData(uint64_t networ
 
 void EmbeddedNetworkController::configureHTTPControlPlane(
 	httplib::Server &s,
+	httplib::Server &sv6,
 	const std::function<void(const httplib::Request&, httplib::Response&, std::string)> setContent)
 {
-	s.Get("/controller/network", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+	// Control plane Endpoints
+	std::string networkListPath = "/controller/network";
+	std::string networkPath = "/controller/network/([0-9a-fA-F]{16})";
+	std::string oldAndBustedNetworkCreatePath = "/controller/network/([0-9a-fA-F]{10})______";
+	std::string memberListPath = "/controller/network/([0-9a-fA-F]{16})/member";
+	std::string memberPath = "/controller/network/([0-9a-fA-F]{16})/member/([0-9a-fA-F]{10})";
+
+	auto networkListGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		std::set<uint64_t> networkIds;
 		_db.networks(networkIds);
 		char tmp[64];
@@ -877,9 +885,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		}
 
 		setContent(req, res, out.dump());
-	});
+	};
+	s.Get(networkListPath, networkListGet);
+	sv6.Get(networkListPath, networkListGet);
 
-	s.Get("/controller/network/([0-9a-fA-F]{16})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+	auto networkGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto networkID = req.matches[1];
 		uint64_t nwid = Utils::hexStrToU64(networkID.str().c_str());
 		json network;
@@ -889,7 +899,9 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		}
 
 		setContent(req, res, network.dump());
-	});
+	};
+	s.Get(networkPath, networkGet);
+	sv6.Get(networkPath, networkGet);
 
 	auto createNewNetwork = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		fprintf(stderr, "creating new network (new style)\n");
@@ -912,8 +924,10 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 
 		setContent(req, res, networkUpdateFromPostData(nwid, req.body));
 	};
-	s.Put("/controller/network", createNewNetwork);
-	s.Post("/controller/network", createNewNetwork);
+	s.Put(networkListPath, createNewNetwork);
+	s.Post(networkListPath, createNewNetwork);
+	sv6.Put(networkListPath, createNewNetwork);
+	sv6.Post(networkListPath, createNewNetwork);
 
 	auto createNewNetworkOldAndBusted = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto inID = req.matches[1].str();
@@ -941,10 +955,24 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		}
 		setContent(req, res, networkUpdateFromPostData(nwid, req.body));
 	};
-	s.Put("/controller/network/([0-9a-fA-F]{10})______", createNewNetworkOldAndBusted);
-	s.Post("/controller/network/([0-9a-fA-F]{10})______", createNewNetworkOldAndBusted);
+	s.Put(oldAndBustedNetworkCreatePath, createNewNetworkOldAndBusted);
+	s.Post(oldAndBustedNetworkCreatePath, createNewNetworkOldAndBusted);
+	sv6.Put(oldAndBustedNetworkCreatePath, createNewNetworkOldAndBusted);
+	sv6.Post(oldAndBustedNetworkCreatePath, createNewNetworkOldAndBusted);
 
-	s.Delete("/controller/network/([0-9a-fA-F]{16})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+	auto networkPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto networkID = req.matches[1].str();
+		uint64_t nwid = Utils::hexStrToU64(networkID.c_str());
+
+		res.status = 200;
+		setContent(req, res, networkUpdateFromPostData(nwid, req.body));
+	};
+	s.Put(networkPath, networkPost);
+	s.Post(networkPath, networkPost);
+	sv6.Put(networkPath, networkPost);
+	sv6.Post(networkPath, networkPost);
+
+	auto networkDelete = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto networkID = req.matches[1].str();
 		uint64_t nwid = Utils::hexStrToU64(networkID.c_str());
 
@@ -956,9 +984,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 
 		_db.eraseNetwork(nwid);
 		setContent(req, res, network.dump());
-	});
+	};
+	s.Delete(networkPath, networkDelete);
+	sv6.Delete(networkPath, networkDelete);
 
-	s.Get("/controller/network/([0-9a-fA-F]{16})/member", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+	auto memberListGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto networkID = req.matches[1];
 		uint64_t nwid = Utils::hexStrToU64(networkID.str().c_str());
 		json network;
@@ -982,9 +1012,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		}
 
 		setContent(req, res, out.dump());
-	});
+	};
+	s.Get(memberListPath, memberListGet);
+	sv6.Get(memberListPath, memberListGet);
 
-	s.Get("/controller/network/([0-9a-fA-F]{16})/member/([0-9a-fA-F]{10})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+	auto memberGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto networkID = req.matches[1];
 		auto memberID = req.matches[2];
 		uint64_t nwid = Utils::hexStrToU64(networkID.str().c_str());
@@ -997,7 +1029,9 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		}
 
 		setContent(req, res, member.dump());
-	});
+	};
+	s.Get(memberPath, memberGet);
+	sv6.Get(memberPath, memberGet);
 
 	auto memberPost = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto networkID = req.matches[1].str();
@@ -1102,10 +1136,12 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 
 		setContent(req, res, member.dump());
 	};
-	s.Put("/controller/network/([0-9a-fA-F]{16})/member/([0-9a-fA-F]{10})", memberPost);
-	s.Post("/controller/network/([0-9a-fA-F]{16})/member/([0-9a-fA-F]{10})", memberPost);
+	s.Put(memberPath, memberPost);
+	s.Post(memberPath, memberPost);
+	sv6.Put(memberPath, memberPost);
+	sv6.Post(memberPath, memberPost);
 
-	s.Delete("/controller/network/([0-9a-fA-F]{16})/member/([0-9a-fA-F]{10})", [&, setContent](const httplib::Request &req, httplib::Response &res) {
+	auto memberDelete = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto networkID = req.matches[1].str();
 		auto memberID = req.matches[2].str();
 
@@ -1126,7 +1162,9 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		_db.eraseMember(nwid, address);
 
 		setContent(req, res, member.dump());
-	});
+	};
+	s.Delete(memberPath, memberDelete);
+	sv6.Delete(memberPath, memberDelete);
 }
 
 void EmbeddedNetworkController::handleRemoteTrace(const ZT_RemoteTrace &rt)
