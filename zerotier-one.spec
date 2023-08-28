@@ -1,9 +1,9 @@
 Name:           zerotier-one
-Version:        1.10.6
+Version:        1.12.1
 Release:        1%{?dist}
 Summary:        ZeroTier network virtualization service
 
-License:        ZeroTier BSL 1.1
+License:        ZeroTier BUSL 1.1
 URL:            https://www.zerotier.com
 
 # Fedora
@@ -143,6 +143,12 @@ chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 %endif
 
 %changelog
+* Fri Aug 25 2023 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.12.1
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
+* Thu Aug 17 2023 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.12.0
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
 * Tue Mar 21 2023 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.10.6
 - see https://github.com/zerotier/ZeroTierOne for release notes
 

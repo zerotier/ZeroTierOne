@@ -3,14 +3,14 @@ Maintainer: Adam Ierymenko <adam.ierymenko@zerotier.com>
 Section: net
 Priority: optional
 Standards-Version: 3.9.6
-Build-Depends: debhelper (>= 9)
+Build-Depends: debhelper
 Vcs-Git: git://github.com/zerotier/ZeroTierOne
 Vcs-Browser: https://github.com/zerotier/ZeroTierOne
 Homepage: https://www.zerotier.com/
 
 Package: zerotier-one
 Architecture: any
-Depends:  iproute2, adduser, libstdc++6 (>= 5), openssl
+Depends: adduser, libstdc++6 (>= 5), openssl
 Homepage: https://www.zerotier.com/
 Description: ZeroTier network virtualization service
  ZeroTier One lets you join ZeroTier virtual networks and

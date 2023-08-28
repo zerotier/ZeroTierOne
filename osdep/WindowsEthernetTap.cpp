@@ -78,7 +78,7 @@ public:
 	{
 #ifdef _WIN64
 		is64Bit = TRUE;
-		tapDriverPath = "\\tap-windows\\x64\\zttap300.inf";
+		//tapDriverPath = "\\tap-windows\\x64\\zttap300.inf";
 #else
 		is64Bit = FALSE;
 		IsWow64Process(GetCurrentProcess(),&is64Bit);
@@ -86,9 +86,10 @@ public:
 			fprintf(stderr,"FATAL: you must use the 64-bit ZeroTier One service on 64-bit Windows systems\r\n");
 			_exit(1);
 		}
-		tapDriverPath = "\\tap-windows\\x86\\zttap300.inf";
+		//tapDriverPath = "\\tap-windows\\x86\\zttap300.inf";
 #endif
 		tapDriverName = "zttap300";
+		tapDriverPath = "\\zttap300.inf";
 
 		setupApiMod = LoadLibraryA("setupapi.dll");
 		if (!setupApiMod) {

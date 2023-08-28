@@ -75,8 +75,8 @@ public class Node {
             EventListener eventListener,
             VirtualNetworkFrameListener frameListener,
             VirtualNetworkConfigListener configListener,
-            PathChecker pathChecker) throws NodeException {
-        ResultCode rc = node_init(
+            PathChecker pathChecker) {
+        return node_init(
                 nodeId,
                 getListener,
                 putListener,
@@ -85,10 +85,6 @@ public class Node {
                 frameListener,
                 configListener,
                 pathChecker);
-        if(rc != ResultCode.RESULT_OK) {
-            throw new NodeException(rc.toString());
-        }
-        return rc;
     }
 
     public boolean isInited() {
@@ -299,7 +295,7 @@ public class Node {
 
     /**
      * Add or update a moon
-     *
+     * <p>
      * Moons are persisted in the data store in moons.d/, so this can persist
      * across invocations if the contents of moon.d are scanned and orbit is
      * called for each on startup.
