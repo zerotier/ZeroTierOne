@@ -279,19 +279,24 @@ PostgreSQL::~PostgreSQL()
 
 void PostgreSQL::configureSmee() 
 {
+	const char *TEMPORAL_SCHEME = "ZT_TEMPORAL_SCHEME";
 	const char *TEMPORAL_HOST = "ZT_TEMPORAL_HOST";
 	const char *TEMPORAL_PORT = "ZT_TEMPORAL_PORT";
 	const char *TEMPORAL_NAMESPACE = "ZT_TEMPORAL_NAMESPACE";
 	const char *SMEE_TASK_QUEUE = "ZT_SMEE_TASK_QUEUE";
 
+	const char *scheme = getenv(TEMPORAL_SCHEME);
+	if (scheme == NULL) {
+		scheme = "http";
+	}
 	const char *host = getenv(TEMPORAL_HOST);
 	const char *port = getenv(TEMPORAL_PORT);
 	const char *ns = getenv(TEMPORAL_NAMESPACE);
 	const char *task_queue = getenv(SMEE_TASK_QUEUE);
 
-	if (host != NULL && port != NULL && ns != NULL && task_queue != NULL) {
+	if (scheme != NULL && host != NULL && port != NULL && ns != NULL && task_queue != NULL) {
 		fprintf(stderr, "creating smee client\n");
-		std::string hostPort = std::string(host) + std::string(":") + std::string(port);
+		std::string hostPort = std::string(scheme) + std::string("://") + std::string(host) + std::string(":") + std::string(port);
 		this->_smee = smeeclient::smee_client_new(hostPort.c_str(), ns, task_queue);
 	} else {
 		fprintf(stderr, "Smee client not configured\n");

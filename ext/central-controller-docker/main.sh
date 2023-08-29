@@ -101,7 +101,7 @@ else
 fi
 
 echo "Waiting for temporal"
-while ! nc -z ${ZT_TEMPORAL_HOST} ${ZTC_TEMPORAL_PORT}; do
+while ! nc -z ${ZT_TEMPORAL_HOST} ${ZT_TEMPORAL_PORT}; do
     echo "waiting...";
     sleep 1;
 done

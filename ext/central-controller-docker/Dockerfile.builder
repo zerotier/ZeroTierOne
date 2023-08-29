@@ -21,6 +21,6 @@ RUN apt -y install \
     curl \
     google-perftools \
     libgoogle-perftools-dev \
-    protobuf-compiler
+    protobuf-compiler 
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
