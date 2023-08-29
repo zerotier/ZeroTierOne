@@ -280,15 +280,21 @@ PostgreSQL::~PostgreSQL()
 void PostgreSQL::configureSmee() 
 {
 	const char *TEMPORAL_HOST = "ZT_TEMPORAL_HOST";
+	const char *TEMPORAL_PORT = "ZT_TEMPORAL_PORT";
 	const char *TEMPORAL_NAMESPACE = "ZT_TEMPORAL_NAMESPACE";
 	const char *SMEE_TASK_QUEUE = "ZT_SMEE_TASK_QUEUE";
 
 	const char *host = getenv(TEMPORAL_HOST);
+	const char *port = getenv(TEMPORAL_PORT);
 	const char *ns = getenv(TEMPORAL_NAMESPACE);
 	const char *task_queue = getenv(SMEE_TASK_QUEUE);
 
-	if (host != NULL && ns != NULL && task_queue != NULL) {
-		this->_smee = smeeclient::smee_client_new(host, ns, task_queue);
+	if (host != NULL && port != NULL && ns != NULL && task_queue != NULL) {
+		fprintf(stderr, "creating smee client\n");
+		std::string hostPort = std::string(host) + std::string(":") + std::string(port);
+		this->_smee = smeeclient::smee_client_new(hostPort.c_str(), ns, task_queue);
+	} else {
+		fprintf(stderr, "Smee client not configured\n");
 	}
 }
 
@@ -1426,6 +1432,13 @@ void PostgreSQL::commitThread()
 
 					if (_smee != NULL && isNewMember) {
 						notifyNewMember(networkId, memberId);
+					} else {
+						if (_smee == NULL) {
+							fprintf(stderr, "smee is NULL\n");
+						}
+						if (!isNewMember) {
+							fprintf(stderr, "nt a new member\n");
+						}
 					}
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);

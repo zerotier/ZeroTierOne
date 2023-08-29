@@ -99,6 +99,9 @@ pub extern "C" fn smee_client_notify_network_joined(
 
     match smee.notify_network_joined(params) {
         Ok(()) => true,
-        Err(_) => false,
+        Err(e) => {
+            println!("error notifying network joined: {0}", e.to_string());
+            false
+        }
     }
 }

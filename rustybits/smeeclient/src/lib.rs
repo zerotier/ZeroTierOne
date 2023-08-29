@@ -80,6 +80,7 @@ impl SmeeClient {
     }
 
     pub fn notify_network_joined(&self, params: NetworkJoinedParams) -> Result<(), Box<dyn std::error::Error>> {
+        println!("notifying network joined");
         let options = WorkflowOptions {
             id_reuse_policy: WorkflowIdReusePolicy::RejectDuplicate,
             execution_timeout: None,
@@ -94,6 +95,7 @@ impl SmeeClient {
         let workflow_id = Uuid::new_v4();
 
         self.tokio_rt.block_on(async {
+            println!("calilng start_workflow");
             self.client
                 .start_workflow(
                     payload,

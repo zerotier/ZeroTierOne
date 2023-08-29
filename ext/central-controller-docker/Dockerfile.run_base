@@ -11,4 +11,5 @@ RUN apt -y install \
     binutils \
     linux-tools-gke \
     perf-tools-unstable \
-    google-perftools
+    google-perftools \
+    netcat
