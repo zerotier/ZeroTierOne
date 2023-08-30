@@ -64,8 +64,6 @@ pub extern "C" fn smee_client_notify_network_joined(
     smee_instance: *mut SmeeClient,
     network_id: *const c_char,
     member_id: *const c_char,
-    hook_id: *const c_char,
-    src_ip: *const c_char,
 ) -> bool {
     let nwid = unsafe {
         assert!(!network_id.is_null());
@@ -77,25 +75,12 @@ pub extern "C" fn smee_client_notify_network_joined(
         CStr::from_ptr(member_id).to_str().unwrap()
     };
 
-    let hid = unsafe {
-        assert!(!hook_id.is_null());
-        CStr::from_ptr(hook_id).to_str().unwrap()
-    };
-
-    let src = unsafe {
-        if src_ip.is_null() {
-            None
-        } else {
-            Some(CStr::from_ptr(src_ip).to_str().unwrap())
-        }
-    };
-
     let smee = unsafe {
         assert!(!smee_instance.is_null());
         &mut *smee_instance
     };
 
-    let params = NetworkJoinedParams::new(nwid, mem_id, hid, src);
+    let params = NetworkJoinedParams::new(nwid, mem_id);
 
     match smee.notify_network_joined(params) {
         Ok(()) => true,

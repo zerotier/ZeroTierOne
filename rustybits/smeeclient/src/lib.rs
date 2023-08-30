@@ -31,24 +31,13 @@ pub struct NetworkJoinedParams {
 
     #[serde(rename = "MemberID")]
     pub member_id: String,
-
-    #[serde(rename = "HookID")]
-    pub hook_id: String,
-
-    #[serde(rename = "SrcIP")]
-    pub src_ip: Option<String>,
 }
 
 impl NetworkJoinedParams {
-    fn new(network_id: &str, member_id: &str, hook_id: &str, src_ip: Option<&str>) -> Self {
+    fn new(network_id: &str, member_id: &str) -> Self {
         Self {
             network_id: network_id.to_string(),
             member_id: member_id.to_string(),
-            hook_id: hook_id.to_string(),
-            src_ip: match src_ip {
-                Some(x) => Some(x.to_string()),
-                None => None,
-            },
         }
     }
 }

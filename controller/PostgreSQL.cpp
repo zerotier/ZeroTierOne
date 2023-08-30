@@ -1690,48 +1690,10 @@ void PostgreSQL::commitThread()
 }
 
 void PostgreSQL::notifyNewMember(const std::string &networkID, const std::string &memberID) {
-	std::shared_ptr<PostgresConnection> c;
-	try {	
-		c = _pool->borrow();
-	} catch (std::exception &e) {
-		fprintf(stderr, "ERROR: %s\n", e.what());
-		return;
-	}
-
-	try {
-		pqxx::work w(*c->c);
-		
-		// TODO: Add check for active subscription
-
-		auto res = w.exec_params("SELECT h.hook_id "
-			"FROM ztc_hook h "
-			"INNER JOIN ztc_hook_hook_types ht "
-				"ON ht.hook_id = h.hook_id "
-			"INNER JOIN ztc_org o "
-				"ON o.org_id = h.org_id "
-			"INNER JOIN ztc_user u "
-				"ON u.id = o.owner_id "
-			"INNER JOIN ztc_network n "
-				"ON n.owner_id = u.id "
-			"WHERE n.id = $1 "
-			"AND ht.hook_type = 'NETWORK_JOIN'", networkID);
-
-		for (auto const &row: res) {
-			std::string hookURL = row[0].as<std::string>();
-			smeeclient::smee_client_notify_network_joined(
-			_smee,
-				networkID.c_str(),
-				memberID.c_str(),
-				hookURL.c_str(),
-				NULL
-			);
-		}
-
-		_pool->unborrow(c);
-	} catch (std::exception &e) {
-		fprintf(stderr, "ERROR: %s\n", e.what());
-		return;
-	}
+	smeeclient::smee_client_notify_network_joined(
+		_smee,
+		networkID.c_str(),
+		memberID.c_str());
 }
 
 void PostgreSQL::onlineNotificationThread()
