@@ -1067,7 +1067,7 @@ public:
 				if (_secondaryPort) {
 					_ports[1] = _secondaryPort;
 				} else {
-					_ports[1] = _secondaryPort = _getRandomPort();
+					_ports[1] = _getRandomPort();
 				}
 			}
 #ifdef ZT_USE_MINIUPNPC
@@ -1129,7 +1129,6 @@ public:
 			int64_t lastBindRefresh = 0;
 			int64_t lastUpdateCheck = clockShouldBe;
 			int64_t lastCleanedPeersDb = 0;
-			int64_t lastLocalInterfaceAddressCheck = (clockShouldBe - ZT_LOCAL_INTERFACE_CHECK_INTERVAL) + 15000; // do this in 15s to give portmapper time to configure and other things time to settle
 			int64_t lastLocalConfFileCheck = OSUtils::now();
 			int64_t lastOnline = lastLocalConfFileCheck;
 			for(;;) {
@@ -1176,16 +1175,22 @@ public:
 				// If secondary port is not configured to a constant value and we've been offline for a while,
 				// bind a new secondary port. This is a workaround for a "coma" issue caused by buggy NATs that stop
 				// working on one port after a while.
-				if (_node->online()) {
-					lastOnline = now;
-				} else if ((_secondaryPort == 0)&&((now - lastOnline) > ZT_PATH_HEARTBEAT_PERIOD)) {
-					_secondaryPort = _getRandomPort();
-					lastBindRefresh = 0;
+				if (_secondaryPort == 0) {
+					if (_node->online()) {
+						lastOnline = now;
+					}
+					if ((now - lastOnline) > ZT_PATH_HEARTBEAT_PERIOD  || restarted) {
+						_ports[1] = _getRandomPort();
+#if ZT_DEBUG==1
+						fprintf(stderr, "randomized secondary port. Now it's %d\n", _ports[1]);
+#endif
+						lastOnline = now; // don't keep spamming this branch. online() will be false for a few seconds
+					}
 				}
 
+
 				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
-				if (((now - lastBindRefresh) >= (_node->bondController()->inUse() ? ZT_BINDER_REFRESH_PERIOD / 4 : ZT_BINDER_REFRESH_PERIOD))||(restarted)) {
-					lastBindRefresh = now;
+				if (((now - lastBindRefresh) >= (_node->bondController()->inUse() ? ZT_BINDER_REFRESH_PERIOD / 4 : ZT_BINDER_REFRESH_PERIOD))||restarted) {
 					unsigned int p[3];
 					unsigned int pc = 0;
 					for(int i=0;i<3;++i) {
@@ -1196,6 +1201,23 @@ public:
 						// Only bother binding UDP ports if we aren't forcing TCP-relay mode
 						_binder.refresh(_phy,p,pc,explicitBind,*this);
 					}
+
+					lastBindRefresh = now;
+
+					// Sync information about physical network interfaces
+					_node->clearLocalInterfaceAddresses();
+#ifdef ZT_USE_MINIUPNPC
+					if (_portMapper) {
+						std::vector<InetAddress> mappedAddresses(_portMapper->get());
+						for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
+							_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
+					}
+#endif
+					std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
+					for(std::vector<InetAddress>::const_iterator i(boundAddrs.begin());i!=boundAddrs.end();++i) {
+						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*i)));
+					}
+
 					{
 						Mutex::Lock _l(_nets_m);
 						for(std::map<uint64_t,NetworkState>::iterator n(_nets.begin());n!=_nets.end();++n) {
@@ -1236,26 +1258,6 @@ public:
 							_node->multicastSubscribe((void *)0,c->first,m->mac().toInt(),m->adi());
 						for(std::vector<MulticastGroup>::iterator m(c->second.second.begin());m!=c->second.second.end();++m)
 							_node->multicastUnsubscribe(c->first,m->mac().toInt(),m->adi());
-					}
-				}
-
-				// Sync information about physical network interfaces
-				if ((now - lastLocalInterfaceAddressCheck) >= (_node->bondController()->inUse() ? ZT_LOCAL_INTERFACE_CHECK_INTERVAL / 8 : ZT_LOCAL_INTERFACE_CHECK_INTERVAL)) {
-					lastLocalInterfaceAddressCheck = now;
-
-					_node->clearLocalInterfaceAddresses();
-
-#ifdef ZT_USE_MINIUPNPC
-					if (_portMapper) {
-						std::vector<InetAddress> mappedAddresses(_portMapper->get());
-						for(std::vector<InetAddress>::const_iterator ext(mappedAddresses.begin());ext!=mappedAddresses.end();++ext)
-							_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*ext)));
-					}
-#endif
-
-					std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
-					for(std::vector<InetAddress>::const_iterator i(boundAddrs.begin());i!=boundAddrs.end();++i) {
-						_node->addLocalInterfaceAddress(reinterpret_cast<const struct sockaddr_storage *>(&(*i)));
 					}
 				}
 
@@ -2037,7 +2039,7 @@ public:
             settings["allowTcpFallbackRelay"] = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],_allowTcpFallbackRelay);
             settings["forceTcpRelay"] = OSUtils::jsonBool(settings["forceTcpRelay"],_forceTcpRelay);
             settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
-            settings["secondaryPort"] = OSUtils::jsonInt(settings["secondaryPort"],(uint64_t)_secondaryPort) & 0xffff;
+            settings["secondaryPort"] = OSUtils::jsonInt(settings["secondaryPort"],(uint64_t)_ports[1]) & 0xffff;
             settings["tertiaryPort"] = OSUtils::jsonInt(settings["tertiaryPort"],(uint64_t)_tertiaryPort) & 0xffff;
             // Enumerate all local address/port pairs that this node is listening on
             std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());

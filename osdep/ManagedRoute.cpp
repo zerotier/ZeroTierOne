@@ -484,58 +484,57 @@ bool ManagedRoute::sync()
 
 
 	if (!hasRoute) {
-		if (_target && _target.netmaskBits() == 0) {
+		if (_target && _target.netmaskBits() == 0) { // Allow Default
 			InetAddress newSystemVia;
 			char newSystemDevice[128];
 			newSystemDevice[0] = (char)0;
 
-			// If macos has a network hiccup, it deletes what _systemVia we had set.
-			// Then we don't know how to set the default route again.
-			// So use the one we had set previously. Don't overwrite it.
-			if (!_systemVia) {
-				// Find system default route that this route should override
-				// We need to put it back when default route is turned off
-				for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
-					if (r->via) {
-						if ( !_systemVia && r->isDefault == 1 && (strcmp(r->device,_device) != 0) ) {
-
-							newSystemVia = r->via;
-							Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
-						}
-					}
-				}
-				if (newSystemVia) { _systemVia = newSystemVia; }
+			// if our routes got deleted
+			// delete the systemd via that we had added with -ifscope
+			if (_systemVia && !!_systemDevice[0]) {
+				_routeCmd("delete",_target,_systemVia,_systemDevice,(const char *)0);
 			}
 
+			_systemVia = newSystemVia;
+			Utils::scopy(_systemDevice,sizeof(_systemDevice),newSystemDevice);
+			// If macos has a network hiccup, it deletes what the route we set, and it's own physical routes.
+			// if !hasRoute (our 0.0.0.0 has been deleted), the OS has changed stuff
+			// So don't assume _systemX are valid anymore. Always get for _system{Via,Device}
 
-			// char buf1[255], buf2[255];
-			// fprintf(stderr, "_systemVia %s new %s\n", _systemVia.toString(buf1), newSystemVia.toString(buf2));
-			if (!_systemVia) { return false; }
+			// Find system default route that this route should override
+			// We need to put it back when default route is turned off
+			for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
+				if (r->via) {
+					if ( r->isDefault == 1 && (strcmp(r->device,_device) != 0) ) {
 
-			if (!_systemDevice[0]) {
-				// Get device corresponding to route if we don't have that already
-				if ((newSystemVia)&&(!newSystemDevice[0])) {
-					rtes = _getRTEs(newSystemVia,true);
-					for(std::vector<_RTE>::iterator r(rtes.begin());r!=rtes.end();++r) {
-						if ( (r->device[0]) && (strcmp(r->device,_device) != 0) && r->target.netmaskBits() != 0) {
-							Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
-							break;
-						}
+						// char buf[255];
+						// fprintf(stderr, "system device1  %s  %s\n", r->via.toString(buf), r->device);
+
+						newSystemVia = r->via;
+						Utils::scopy(newSystemDevice,sizeof(newSystemDevice),r->device);
+						break;
 					}
 				}
-
-				if (newSystemDevice[0]) {
-					Utils::scopy(_systemDevice,sizeof(_systemDevice),newSystemDevice);
-				}
 			}
-			// fprintf(stderr, "_systemDevice %s new %s\n", _systemDevice, newSystemDevice);
-			if (!_systemDevice[0]) { return false; }
 
+			if (newSystemVia) { _systemVia = newSystemVia; }
+			if (newSystemDevice[0]) {
+				Utils::scopy(_systemDevice,sizeof(_systemDevice),newSystemDevice);
+			}
 
-			// Do Default Route route commands
-			_routeCmd("delete",_target,_systemVia,(const char *)0,(const char *)0);
+			// if there's no newSystemVia, the OS might not have
+			// ipv4 or ipv6 connectivity.
+			// we should still add our ZeroTier ipv4 or 6 routes though
+
+			if (!!_systemVia && !!_systemDevice[0]) {
+				_routeCmd("delete",_target,_systemVia,(const char *)0,(const char *)0);
+			}
+
 			_routeCmd("add",_target,_via,(const char *)0,(const char *)0);
-			_routeCmd("add",_target,_systemVia,_systemDevice,(const char *)0);
+
+			if (!!_systemVia && !!_systemDevice[0]) {
+				_routeCmd("add",_target,_systemVia,_systemDevice,(const char *)0);
+			}
 
 			_applied[_target] = true;
 
@@ -595,8 +594,8 @@ void ManagedRoute::remove()
 	for(std::map<InetAddress,bool>::iterator r(_applied.begin());r!=_applied.end();++r) {
 #ifdef __BSD__ // ------------------------------------------------------------
 		if (_target && _target.netmaskBits() == 0) {
-			if (_systemVia) {
-				_routeCmd("delete",_target,_via,(const char *)0,(const char *)0);
+			_routeCmd("delete",_target,_via,(const char *)0,(const char *)0);
+			if (_systemVia && _systemDevice[0]) {
 				_routeCmd("delete",_target,_systemVia,_systemDevice,(const char *)0);
 
 				_routeCmd("add",_target,_systemVia,(const char *)0,(const char *)0);
