@@ -1,6 +1,12 @@
 ZeroTier Release Notes
 ======
 
+# 2023-09-12 -- Version 1.12.2
+
+  * More improvements to macOS full tunnel mode.
+  * Faster recovery after changes to physical network settings.
+
+
 # 2023-08-25 -- Version 1.12.1
 
   * Minor release to fix a port binding issue in Linux.
