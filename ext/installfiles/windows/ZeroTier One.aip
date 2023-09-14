@@ -24,10 +24,10 @@
     <ROW Property="AiFeatIcoZeroTierOne" Value="ZeroTierIcon.exe" Type="8"/>
     <ROW Property="MSIFASTINSTALL" MultiBuildValue="DefaultBuild:2"/>
     <ROW Property="Manufacturer" Value="ZeroTier, Inc."/>
-    <ROW Property="ProductCode" Value="1033:{22301716-32F1-4247-8167-3E5441A87A58} " Type="16"/>
+    <ROW Property="ProductCode" Value="1033:{56528063-D8C2-43F4-97DB-C787E6A2D9DB} " Type="16"/>
     <ROW Property="ProductLanguage" Value="1033"/>
     <ROW Property="ProductName" Value="ZeroTier One"/>
-    <ROW Property="ProductVersion" Value="1.12.1" Options="32"/>
+    <ROW Property="ProductVersion" Value="1.12.2" Options="32"/>
     <ROW Property="REBOOT" MultiBuildValue="DefaultBuild:ReallySuppress"/>
     <ROW Property="SecureCustomProperties" Value="OLDPRODUCTS;AI_NEWERPRODUCTFOUND;AI_SETUPEXEPATH;SETUPEXEDIR"/>
     <ROW Property="UpgradeCode" Value="{B0E2A5F3-88B6-4E77-B922-CB4739B4C4C8}"/>
@@ -62,7 +62,7 @@
     <ROW Directory="regid.201001.com.zerotier_Dir" Directory_Parent="CommonAppDataFolder" DefaultDir="REGID2~1.ZER|regid.2010-01.com.zerotier" DirectoryOptions="12"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiCompsComponent">
-    <ROW Component="AI_CustomARPName" ComponentId="{E391FCA4-D005-4309-A481-415FAEB15274}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
+    <ROW Component="AI_CustomARPName" ComponentId="{A0629900-689C-4BD7-9315-85F05804DF03}" Directory_="APPDIR" Attributes="4" KeyPath="DisplayName" Options="1"/>
     <ROW Component="AI_DisableModify" ComponentId="{46FFA8C5-A0CB-4E05-9AD3-911D543DE8CA}" Directory_="APPDIR" Attributes="4" KeyPath="NoModify" Options="1"/>
     <ROW Component="AI_ExePath" ComponentId="{8E02B36C-7A19-429B-A93E-77A9261AC918}" Directory_="APPDIR" Attributes="4" KeyPath="AI_ExePath"/>
     <ROW Component="APPDIR" ComponentId="{4DD7907D-D7FE-4CD6-B1A0-B5C1625F5133}" Directory_="APPDIR" Attributes="0"/>
@@ -352,8 +352,8 @@
     <ROW Action="AI_DATA_SETTER_1" Condition="(REMOVE)" Sequence="3101"/>
     <ROW Action="InstallFinalize" Sequence="6605" SeqType="0" MsiKey="InstallFinalize"/>
     <ROW Action="AI_RemoveExternalUIStub" Condition="(REMOVE=&quot;ALL&quot;) AND ((VersionNT &gt; 500) OR((VersionNT = 500) AND (ServicePackLevel &gt;= 4)))" Sequence="1501"/>
-    <ROW Action="TapDeviceRemove32" Condition="( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND NOT UPGRADINGPRODUCTCODE ) AND ( NOT VersionNT64 )" Sequence="1605"/>
-    <ROW Action="TapDeviceRemove64" Condition="( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND NOT UPGRADINGPRODUCTCODE ) AND ( VersionNT64 )" Sequence="1606"/>
+    <ROW Action="TapDeviceRemove32" Condition="( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND NOT UPGRADINGPRODUCTCODE ) AND ( NOT VersionNT64 )" Sequence="1601"/>
+    <ROW Action="TapDeviceRemove64" Condition="( Installed AND ( REMOVE = &quot;ALL&quot; OR AI_INSTALL_MODE = &quot;Remove&quot; ) AND NOT UPGRADINGPRODUCTCODE ) AND ( VersionNT64 )" Sequence="1602"/>
     <ROW Action="AI_FwInstall" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5802"/>
     <ROW Action="AI_DATA_SETTER_2" Condition="(VersionNT &gt;= 501) AND (REMOVE &lt;&gt; &quot;ALL&quot;)" Sequence="5801"/>
     <ROW Action="AI_FwUninstall" Condition="(VersionNT &gt;= 501) AND (REMOVE=&quot;ALL&quot;)" Sequence="1702"/>
@@ -368,17 +368,17 @@
     <ROW Action="AI_ExtractLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="1549" Builds="ExeBuild"/>
     <ROW Action="AI_DeleteRLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="1548" Builds="ExeBuild"/>
     <ROW Action="AI_DeleteLzma" Condition="SETUPEXEDIR=&quot;&quot; AND Installed AND (REMOVE&lt;&gt;&quot;ALL&quot;) AND (AI_INSTALL_MODE&lt;&gt;&quot;Remove&quot;) AND (NOT PATCH)" Sequence="6594" Builds="ExeBuild"/>
-    <ROW Action="TerminateUIOld" Sequence="1602"/>
-    <ROW Action="AI_DATA_SETTER_6" Sequence="1601"/>
     <ROW Action="AI_EnableDebugLog" Sequence="52"/>
     <ROW Action="AI_ExtractFiles" Sequence="1399" Builds="ExeBuild"/>
     <ROW Action="AI_DATA_SETTER_4" Sequence="1398"/>
     <ROW Action="AI_GetArpIconPath" Sequence="1401"/>
-    <ROW Action="TerminateUINew" Sequence="1604"/>
-    <ROW Action="AI_DATA_SETTER_5" Sequence="1603"/>
     <ROW Action="LaunchUI" Condition="( NOT Installed ) AND ( ZTHEADLESS = &quot;No&quot; )" Sequence="6606"/>
     <ROW Action="AI_DETECT_MODERNWIN" Condition="(VersionNT &gt;= 603)" Sequence="55" MsiKey="AI_DETECT_MODERNWIN"/>
     <ROW Action="AI_ResolveLocalizedCredentials" Sequence="51"/>
+    <ROW Action="TerminateUIOld" Sequence="202"/>
+    <ROW Action="AI_DATA_SETTER_6" Sequence="201"/>
+    <ROW Action="TerminateUINew" Sequence="204"/>
+    <ROW Action="AI_DATA_SETTER_5" Sequence="203"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.MsiInstallUISequenceComponent">
     <ROW Action="AI_RESTORE_LOCATION" Condition="APPDIR=&quot;&quot;" Sequence="749"/>
@@ -498,7 +498,7 @@
     <ROW XmlAttribute="xsischemaLocation" XmlElement="swidsoftware_identification_tag" Name="xsi:schemaLocation" Flags="14" Order="3" Value="http://standards.iso.org/iso/19770/-2/2008/schema.xsd software_identification_tag.xsd"/>
   </COMPONENT>
   <COMPONENT cid="caphyon.advinst.msicomp.XmlElementComponent">
-    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="1" UpdateIndexInParent="0"/>
+    <ROW XmlElement="swidbuild" ParentElement="swidnumeric" Name="swid:build" Condition="1" Order="2" Flags="14" Text="2" UpdateIndexInParent="0"/>
     <ROW XmlElement="swidentitlement_required_indicator" ParentElement="swidsoftware_identification_tag" Name="swid:entitlement_required_indicator" Condition="1" Order="0" Flags="14" Text="false" UpdateIndexInParent="0"/>
     <ROW XmlElement="swidmajor" ParentElement="swidnumeric" Name="swid:major" Condition="1" Order="0" Flags="14" Text="1" UpdateIndexInParent="0"/>
     <ROW XmlElement="swidminor" ParentElement="swidnumeric" Name="swid:minor" Condition="1" Order="1" Flags="14" Text="12" UpdateIndexInParent="0"/>

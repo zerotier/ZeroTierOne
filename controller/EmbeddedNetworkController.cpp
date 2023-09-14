@@ -867,11 +867,32 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	const std::function<void(const httplib::Request&, httplib::Response&, std::string)> setContent)
 {
 	// Control plane Endpoints
+	std::string controllerPath = "/controller";
 	std::string networkListPath = "/controller/network";
 	std::string networkPath = "/controller/network/([0-9a-fA-F]{16})";
 	std::string oldAndBustedNetworkCreatePath = "/controller/network/([0-9a-fA-F]{10})______";
 	std::string memberListPath = "/controller/network/([0-9a-fA-F]{16})/member";
 	std::string memberPath = "/controller/network/([0-9a-fA-F]{16})/member/([0-9a-fA-F]{10})";
+
+	auto controllerGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		char tmp[4096];
+		const bool dbOk = _db.isReady();
+		OSUtils::ztsnprintf(
+			tmp,
+			sizeof(tmp),
+			"{\n\t\"controller\": true,\n\t\"apiVersion\": %d,\n\t\"clock\": %llu,\n\t\"databaseReady\": %s\n}\n",
+			ZT_NETCONF_CONTROLLER_API_VERSION,
+			(unsigned long long)OSUtils::now(),
+			dbOk ? "true" : "false");
+
+			if (!dbOk) {
+				res.status = 503;
+			}
+
+			setContent(req, res, tmp);
+	};
+	s.Get(controllerPath, controllerGet);
+	sv6.Get(controllerPath, controllerGet);
 
 	auto networkListGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		std::set<uint64_t> networkIds;
@@ -997,16 +1018,14 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 			return;
 		}
 
-		json out = json::array();
+		json out = json::object();
 		std::vector<json> memTmp;
 		if (_db.get(nwid, network, memTmp)) {
 			for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
 				int revision = OSUtils::jsonInt((*m)["revision"], 0);
 				std::string id = OSUtils::jsonString((*m)["id"], "");
 				if (id.length() == 10) {
-					json tmp = json::object();
-					tmp[id] = revision;
-					out.push_back(tmp);
+					out[id] = revision;
 				}
 			}
 		}
