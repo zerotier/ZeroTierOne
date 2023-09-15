@@ -1492,6 +1492,16 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 	ec->portError = _portError;
 	ec->netconfRevision = (_config) ? (unsigned long)_config.revision : 0;
 
+	for (unsigned int i = 0; i<ZT_MAX_NETWORK_TAGS; i++) {
+		if (_config.tags[i].id()) {
+			ec->tags[i][0] = _config.tags[i].id();
+			ec->tags[i][1] = _config.tags[i].value();
+		} else {
+			ec->tagsCount = i;
+			break;
+		}
+	}
+
 	ec->assignedAddressCount = 0;
 	for(unsigned int i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
 		if (i < _config.staticIpCount) {

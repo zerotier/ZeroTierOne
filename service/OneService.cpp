@@ -542,6 +542,19 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 	nj["allowDefault"] = localSettings.allowDefault;
 	nj["allowDNS"] = localSettings.allowDNS;
 
+	nlohmann::json tags = nlohmann::json::array();
+	for(unsigned int i=0;i<ns.config().tagsCount;++i) {
+		if (ns.config().tags[i]) {
+			nlohmann::json tag = nlohmann::json::array();
+			tag = ns.config().tags[i];
+			tags[i] = tag;
+		} else {
+			break;
+		}
+	}
+	nj["tags"] = tags;
+
+
 	nlohmann::json aa = nlohmann::json::array();
 	for(unsigned int i=0;i<ns.config().assignedAddressCount;++i) {
 		aa.push_back(reinterpret_cast<const InetAddress *>(&(ns.config().assignedAddresses[i]))->toString(tmp));

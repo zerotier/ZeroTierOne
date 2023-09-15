@@ -1251,6 +1251,11 @@ typedef struct
 	 * sso provider
 	 **/
 	char ssoProvider[64];
+
+	uint32_t tags[ZT_MAX_NETWORK_TAGS][2];
+	unsigned int tagsCount;
+
+
 } ZT_VirtualNetworkConfig;
 
 /**
