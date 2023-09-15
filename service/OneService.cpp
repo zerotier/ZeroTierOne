@@ -554,6 +554,16 @@ static void _networkToJson(nlohmann::json &nj,NetworkState &ns)
 	}
 	nj["tags"] = tags;
 
+	nlohmann::json caps = nlohmann::json::array();
+	for(unsigned int i=0;i<ns.config().capabilitiesCount;++i) {
+		if (ns.config().capabilities[i]) {
+			caps[i] = ns.config().capabilities[i];
+		} else {
+			break;
+		}
+	}
+	nj["capabilities"] = caps;
+
 
 	nlohmann::json aa = nlohmann::json::array();
 	for(unsigned int i=0;i<ns.config().assignedAddressCount;++i) {

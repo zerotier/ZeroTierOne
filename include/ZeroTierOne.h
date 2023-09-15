@@ -1255,6 +1255,9 @@ typedef struct
 	uint32_t tags[ZT_MAX_NETWORK_TAGS][2];
 	unsigned int tagsCount;
 
+	uint32_t capabilities[ZT_MAX_NETWORK_CAPABILITIES];
+	unsigned int capabilitiesCount;
+
 
 } ZT_VirtualNetworkConfig;
 

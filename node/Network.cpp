@@ -1502,6 +1502,15 @@ void Network::_externalConfig(ZT_VirtualNetworkConfig *ec) const
 		}
 	}
 
+	for (unsigned int i = 0; i<ZT_MAX_NETWORK_CAPABILITIES; i++) {
+		if (_config.capabilities[i].id()) {
+			ec->capabilities[i] = _config.capabilities[i].id();
+		} else {
+			ec->capabilitiesCount = i;
+			break;
+		}
+	}
+
 	ec->assignedAddressCount = 0;
 	for(unsigned int i=0;i<ZT_MAX_ZT_ASSIGNED_ADDRESSES;++i) {
 		if (i < _config.staticIpCount) {
