@@ -118,7 +118,7 @@ static _doZtFilterResult _doZtFilter(
 			if (thisSetMatches) {
 				switch(rt) {
 					case ZT_NETWORK_RULE_ACTION_PRIORITY:
-						qosBucket = (rules[rn].v.qosBucket >= 0 || rules[rn].v.qosBucket <= 8) ? rules[rn].v.qosBucket : 4; // 4 = default bucket (no priority)
+						qosBucket = (rules[rn].v.qosBucket <= 8) ? rules[rn].v.qosBucket : 4; // 4 = default bucket (no priority)
 						return DOZTFILTER_ACCEPT;
 
 					case ZT_NETWORK_RULE_ACTION_DROP:
