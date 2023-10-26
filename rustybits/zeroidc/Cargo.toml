@@ -9,7 +9,7 @@ publish = false
 crate-type = ["staticlib", "rlib"]
 
 [dependencies]
-openidconnect = { version = "3.3", default-features = false, features = [
+openidconnect = { version = "3.4", default-features = false, features = [
     "reqwest",
     "native-tls",
     "accept-rfc3339-timestamps",
