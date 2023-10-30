@@ -1,0 +1,15 @@
+#unstable_features = true
+max_width = 120
+#use_small_heuristics = "Max"
+edition = "2021"
+#empty_item_single_line = true
+newline_style = "Unix"
+struct_lit_width = 60
+tab_spaces = 4
+use_small_heuristics = "Default"
+#fn_single_line = true
+#hex_literal_case = "Lower"
+#merge_imports = true
+#group_imports = "StdExternalCrate"
+single_line_if_else_max_width = 0
+use_try_shorthand = true

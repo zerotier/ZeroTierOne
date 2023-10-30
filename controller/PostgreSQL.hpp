@@ -32,6 +32,10 @@ extern "C" {
 typedef struct pg_conn PGconn;
 }
 
+namespace smeeclient {
+	struct SmeeClient;
+}
+
 namespace ZeroTier {
 
 struct RedisConfig;
@@ -144,6 +148,9 @@ private:
 	uint64_t _doRedisUpdate(sw::redis::Transaction &tx, std::string &controllerId,
 		std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > &lastOnline);
 
+	void configureSmee();
+	void notifyNewMember(const std::string &networkID, const std::string &memberID);
+
 	enum OverrideMode {
 		ALLOW_PGBOUNCER_OVERRIDE = 0,
 		NO_OVERRIDE = 1
@@ -178,6 +185,8 @@ private:
 	std::shared_ptr<sw::redis::Redis> _redis;
 	std::shared_ptr<sw::redis::RedisCluster> _cluster;
     bool _redisMemberStatus;
+
+	smeeclient::SmeeClient *_smee;
 };
 
 } // namespace ZeroTier

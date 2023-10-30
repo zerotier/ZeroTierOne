@@ -22,10 +22,10 @@ jobs:
       uses: Swatinem/rust-cache@v2
       continue-on-error: false
       with:
-        key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}
         shared-key: ${{ runner.os }}-cargo-
         workspaces: |
-          zeroidc/
+          rustybits/
 
     - name: make
       run: make
@@ -54,10 +54,10 @@ jobs:
       uses: Swatinem/rust-cache@v2
       continue-on-error: false
       with:
-        key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}
         shared-key: ${{ runner.os }}-cargo-
         workspaces: |
-          zeroidc/
+          rustybits/
 
     - name: make
       run: make
@@ -86,10 +86,10 @@ jobs:
       uses: Swatinem/rust-cache@v2
       continue-on-error: false
       with:
-        key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}
         shared-key: ${{ runner.os }}-cargo-
         workspaces: |
-          zeroidc/
+          rustybits/
 
     - name: setup msbuild
       uses: microsoft/setup-msbuild@v1.1.3
