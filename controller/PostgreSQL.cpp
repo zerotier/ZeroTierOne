@@ -1437,13 +1437,6 @@ void PostgreSQL::commitThread()
 
 					if (_smee != NULL && isNewMember) {
 						notifyNewMember(networkId, memberId);
-					} else {
-						if (_smee == NULL) {
-							fprintf(stderr, "smee is NULL\n");
-						}
-						if (!isNewMember) {
-							fprintf(stderr, "nt a new member\n");
-						}
 					}
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
