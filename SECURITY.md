@@ -9,9 +9,9 @@ The following versions of ZeroTier One receive security updates
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 1.10.x   | :white_check_mark: |
-| 1.8.x   | :white_check_mark:  |
-| < 1.8.0 | :x: |
+| 1.12.x   | :white_check_mark: |
+| 1.10.x   | :white_check_mark:  |
+| < 1.10.0 | :x: |
 
 ## Reporting a Vulnerability
 
