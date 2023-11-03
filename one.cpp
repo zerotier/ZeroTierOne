@@ -1210,7 +1210,7 @@ static int cli(int argc,char **argv)
 				FSRefMakePath(&fsref, path, sizeof(path)) == noErr) {
 
 		} else if (getenv("SUDO_USER")) {
-			sprintf((char*)path, "/Users/%s/Desktop/", getenv("SUDO_USER"));
+			sprintf((char*)path, "/Users/%s/Desktop", getenv("SUDO_USER"));
 		} else {
 			fprintf(stdout, "%s", dump.str().c_str());
 			return 0;
