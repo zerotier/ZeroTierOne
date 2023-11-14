@@ -24,6 +24,7 @@
 #include <stdexcept>
 #include <vector>
 #include <map>
+#include <algorithm>
 
 #if defined(__FreeBSD__)
 #include <sys/endian.h>
@@ -849,6 +850,19 @@ public:
 	 * Hexadecimal characters 0-f
 	 */
 	static const char HEXCHARS[16];
+
+	/*
+	 * Remove `-` and `:` from a MAC address (in-place).
+	 *
+	 * @param mac The MAC address
+	*/
+	static inline void cleanMac(std::string& mac)
+	{
+		auto start = mac.begin();
+		auto end = mac.end();
+		auto new_end = std::remove_if(start, end, [](char c) { return c == 45 || c == 58; });
+		mac.erase(new_end, end);
+	}
 };
 
 } // namespace ZeroTier
