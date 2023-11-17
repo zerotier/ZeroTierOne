@@ -100,12 +100,14 @@ else
     done
 fi
 
-echo "Waiting for temporal"
-while ! nc -z ${ZT_TEMPORAL_HOST} ${ZT_TEMPORAL_PORT}; do
-    echo "waiting...";
-    sleep 1;
-done
-echo "Temporal is up"
+if [ -n "$ZT_TEMPORAL_HOST" ] && [ -n "$ZT_TEMPORAL_PORT" ]; then
+    echo "waiting for temporal..."
+    while ! nc -z ${ZT_TEMPORAL_HOST} ${ZT_TEMPORAL_PORT}; do
+        echo "waiting...";
+        sleep 1;
+    done
+    echo "Temporal is up"
+fi
 
 export GLIBCXX_FORCE_NEW=1
 export GLIBCPP_FORCE_NEW=1
