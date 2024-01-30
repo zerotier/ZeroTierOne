@@ -1068,6 +1068,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = OSUtils::jsonBool(b["noAutoAssignIps"], false);
 		if (b.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = (uint64_t)OSUtils::jsonInt(b["authenticationExpiryTime"], 0ULL);
 		if (b.count("authenticationURL")) member["authenticationURL"] = OSUtils::jsonString(b["authenticationURL"], "");
+		if (b.count("name")) member["name"] = OSUtils::jsonString(b["name"], "");
 
 		if (b.count("remoteTraceTarget")) {
 			const std::string rtt(OSUtils::jsonString(b["remoteTraceTarget"],""));
