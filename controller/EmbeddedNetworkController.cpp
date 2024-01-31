@@ -869,6 +869,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	// Control plane Endpoints
 	std::string controllerPath = "/controller";
 	std::string networkListPath = "/controller/network";
+	std::string networkListPath2 = "/unstable/controller/network";
 	std::string networkPath = "/controller/network/([0-9a-fA-F]{16})";
 	std::string oldAndBustedNetworkCreatePath = "/controller/network/([0-9a-fA-F]{10})______";
 	std::string memberListPath = "/controller/network/([0-9a-fA-F]{16})/member";
@@ -910,6 +911,48 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	};
 	s.Get(networkListPath, networkListGet);
 	sv6.Get(networkListPath, networkListGet);
+
+	auto networkListGet2 = [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		std::set<uint64_t> networkIds;
+		_db.networks(networkIds);
+
+		auto meta = json::object();
+		auto data = json::array();
+
+		for(std::set<uint64_t>::const_iterator nwid(networkIds.begin()); nwid != networkIds.end(); ++nwid) {
+			json network;
+			if (!_db.get(*nwid, network)) {
+				continue;
+			}
+
+			std::vector<json> memTmp;
+			if (_db.get(*nwid, network, memTmp)) {
+				uint64_t authorizedCount = 0;
+				uint64_t totalCount = memTmp.size();
+
+				for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
+					bool a = OSUtils::jsonBool((*m)["authorized"], 0);
+					if (a) { authorizedCount++; }
+				}
+
+				auto nwMeta = json::object();
+				nwMeta["totalMemberCount"] = totalCount;
+				nwMeta["authorizedMemberCount"] = authorizedCount;
+				network["meta"] = nwMeta;
+			}
+
+			data.push_back(network);
+		}
+		meta["networkCount"] = networkIds.size();
+
+		auto out = json::object();
+		out["data"] = data;
+		out["meta"] = meta;
+
+		setContent(req, res, out.dump());
+	};
+	s.Get(networkListPath2, networkListGet2);
+	sv6.Get(networkListPath2, networkListGet2);
 
 	auto networkGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto networkID = req.matches[1];
