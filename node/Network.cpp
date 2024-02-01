@@ -111,8 +111,18 @@ static _doZtFilterResult _doZtFilter(
 
 	rrl.clear();
 
+	// uncomment for easier debugging fprintf
+	// if (!ztDest) { return DOZTFILTER_ACCEPT; }
+#ifdef ZT_TRACE
+	char buf[40], buf2[40];
+	fprintf(stderr, "\nsrc %s dest %s inbound: %d ethertype %u", ztSource.toString(buf), ztDest.toString(buf2), inbound, etherType);
+#endif
+
 	for(unsigned int rn=0;rn<ruleCount;++rn) {
 		const ZT_VirtualNetworkRuleType rt = (ZT_VirtualNetworkRuleType)(rules[rn].t & 0x3f);
+#ifdef ZT_TRACE
+		fprintf(stderr, "\n%02u %02d", rn, rt);
+#endif
 
 		// First check if this is an ACTION
 		if ((unsigned int)rt <= (unsigned int)ZT_NETWORK_RULE_ACTION__MAX_ID) {
@@ -124,12 +134,21 @@ static _doZtFilterResult _doZtFilter(
 
 					case ZT_NETWORK_RULE_ACTION_DROP: {
 						if (!!skipDrop) {
+#ifdef ZT_TRACE
+							fprintf(stderr, "\tskip Drop");
+#endif
 							skipDrop = 0; continue;
 						}
+#ifdef ZT_TRACE
+						fprintf(stderr, "\tDrop\n");
+#endif
 						return DOZTFILTER_DROP;
 					}
 
 					case ZT_NETWORK_RULE_ACTION_ACCEPT: {
+#ifdef ZT_TRACE
+						fprintf(stderr, "\tAccept\n");
+#endif
 						return (superAccept ? DOZTFILTER_SUPER_ACCEPT : DOZTFILTER_ACCEPT); // match, accept packet
 					}
 
@@ -453,6 +472,14 @@ static _doZtFilterResult _doZtFilter(
 				const Tag *const localTag = std::lower_bound(&(nconf.tags[0]),&(nconf.tags[nconf.tagCount]),rules[rn].v.tag.id,Tag::IdComparePredicate());
 				if ((localTag != &(nconf.tags[nconf.tagCount]))&&(localTag->id() == rules[rn].v.tag.id)) {
 					const Tag *const remoteTag = ((membership) ? membership->getTag(nconf,rules[rn].v.tag.id) : (const Tag *)0);
+#ifdef ZT_TRACE
+					fprintf(stderr, "\tlocal tag [%u: %u] remote tag [%u: %u] match [%u]",
+							!!localTag ? localTag->id() : 0,
+							!!localTag ? localTag->value() : 0,
+							!!remoteTag ? remoteTag->id() : 0,
+							!!remoteTag ? remoteTag->value() : 0,
+							thisRuleMatches);
+#endif
 					if (remoteTag) {
 						const uint32_t ltv = localTag->value();
 						const uint32_t rtv = remoteTag->value();
@@ -473,6 +500,9 @@ static _doZtFilterResult _doZtFilter(
 					} else {
 						if ((inbound)&&(!superAccept)) {
 							thisRuleMatches = hardNo;
+#ifdef ZT_TRACE
+							fprintf(stderr, "\tinbound ");
+#endif
 						} else {
 							// Outbound side is not strict since if we have to match both tags and
 							// we are sending a first packet to a recipient, we probably do not know
@@ -481,6 +511,9 @@ static _doZtFilterResult _doZtFilter(
 							// not strict since we likely do not have these tags.
 							skipDrop = 1;
 							thisRuleMatches = hardYes;
+#ifdef ZT_TRACE
+							fprintf(stderr, "\toutbound ");
+#endif
 						}
 					}
 				} else {
@@ -489,8 +522,16 @@ static _doZtFilterResult _doZtFilter(
 			}	break;
 			case ZT_NETWORK_RULE_MATCH_TAG_SENDER:
 			case ZT_NETWORK_RULE_MATCH_TAG_RECEIVER: {
-					const Tag *const remoteTag = ((membership) ? membership->getTag(nconf,rules[rn].v.tag.id) : (const Tag *)0);
 					const Tag *const localTag = std::lower_bound(&(nconf.tags[0]),&(nconf.tags[nconf.tagCount]),rules[rn].v.tag.id,Tag::IdComparePredicate());
+#ifdef ZT_TRACE
+					const Tag *const remoteTag = ((membership) ? membership->getTag(nconf,rules[rn].v.tag.id) : (const Tag *)0);
+					fprintf(stderr, "\tlocal tag [%u: %u] remote tag [%u: %u] match [%u]",
+							!!localTag ? localTag->id() : 0,
+							!!localTag ? localTag->value() : 0,
+							!!remoteTag ? remoteTag->id() : 0,
+							!!remoteTag ? remoteTag->value() : 0,
+							thisRuleMatches);
+#endif
 				if (superAccept) {
 					skipDrop = 1;
 					thisRuleMatches = hardYes;
