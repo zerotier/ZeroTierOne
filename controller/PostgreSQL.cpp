@@ -1436,7 +1436,21 @@ void PostgreSQL::commitThread()
 					w.commit();
 
 					if (_smee != NULL && isNewMember) {
-						notifyNewMember(networkId, memberId);
+						pqxx::row row = w.exec_params1(
+							"SELECT "
+							"	count(h.hook_id) "
+							"FROM "
+							"	ztc_hook h "
+							"	INNER JOIN ztc_org o ON o.org_id = h.org_id "
+							"   INNER JOIN ztc_network n ON n.owner_id = o.owner_id "
+							" WHERE "
+							"n.id = $1 ",
+							networkId
+						);
+						int64_t hookCount = row[0].as<int64_t>();
+						if (hookCount > 0) {
+							notifyNewMember(networkId, memberId);
+						}
 					}
 
 					const uint64_t nwidInt = OSUtils::jsonIntHex(config["nwid"], 0ULL);
