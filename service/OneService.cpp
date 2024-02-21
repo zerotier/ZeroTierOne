@@ -2041,6 +2041,7 @@ public:
             settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
             settings["secondaryPort"] = OSUtils::jsonInt(settings["secondaryPort"],(uint64_t)_ports[1]) & 0xffff;
             settings["tertiaryPort"] = OSUtils::jsonInt(settings["tertiaryPort"],(uint64_t)_tertiaryPort) & 0xffff;
+            settings["homeDir"] = _homePath;
             // Enumerate all local address/port pairs that this node is listening on
             std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
             auto boundAddrArray = json::array();
