@@ -969,7 +969,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	sv6.Get(networkPath, networkGet);
 
 	auto createNewNetwork = [&, setContent](const httplib::Request &req, httplib::Response &res) {
-		fprintf(stderr, "creating new network (new style)\n");
+		// fprintf(stderr, "creating new network (new style)\n");
 		uint64_t nwid = 0;
 		uint64_t nwidPrefix = (Utils::hexStrToU64(_signingIdAddressString.c_str()) << 24) & 0xffffffffff000000ULL;
 		uint64_t nwidPostfix = 0;
@@ -1136,6 +1136,12 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		auto memberID = req.matches[2].str();
 		uint64_t nwid = Utils::hexStrToU64(networkID.c_str());
 		uint64_t memid = Utils::hexStrToU64(memberID.c_str());
+
+		if (!_db.hasNetwork(nwid)) {
+			res.status = 404;
+			return;
+		}
+
 		json network;
 		json member;
 		_db.get(nwid, network, memid, member);
