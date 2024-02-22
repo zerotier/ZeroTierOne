@@ -1094,26 +1094,26 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 
 		auto out = nlohmann::json::object();
 		auto meta = nlohmann::json::object();
-		auto members = nlohmann::json::array();
 		std::vector<json> memTmp;
 		if (_db.get(nwid, network, memTmp)) {
-			members.push_back(memTmp);
+			uint64_t authorizedCount = 0;
+			uint64_t totalCount = memTmp.size();
+			for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
+				bool a = OSUtils::jsonBool((*m)["authorized"], 0);
+				if (a) { authorizedCount++; }
+			}
+
+			meta["totalCount"] = totalCount;
+			meta["authorizedCount"] = authorizedCount;
+
+			out["data"] = memTmp;
+			out["meta"] = meta;
+
+			setContent(req, res, out.dump());
+		} else {
+			res.status = 404;
+			return;
 		}
-
-		uint64_t authorizedCount = 0;
-		uint64_t totalCount = memTmp.size();
-		for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
-			bool a = OSUtils::jsonBool((*m)["authorized"], 0);
-			if (a) { authorizedCount++; }
-		}
-
-		meta["totalCount"] = totalCount;
-		meta["authorizedCount"] = authorizedCount;
-
-		out["data"] = members;
-		out["meta"] = meta;
-
-		setContent(req, res, out.dump());
 	};
 	s.Get(memberListPath2, memberListGet2);
 	sv6.Get(memberListPath2, memberListGet2);
