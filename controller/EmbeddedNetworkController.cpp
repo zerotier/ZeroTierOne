@@ -918,6 +918,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 
 		auto meta = json::object();
 		auto data = json::array();
+		uint64_t networkCount = 0;
 
 		for(std::set<uint64_t>::const_iterator nwid(networkIds.begin()); nwid != networkIds.end(); ++nwid) {
 			json network;
@@ -927,23 +928,26 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 
 			std::vector<json> memTmp;
 			if (_db.get(*nwid, network, memTmp)) {
-				uint64_t authorizedCount = 0;
-				uint64_t totalCount = memTmp.size();
+				if (!network.is_null()) {
+					uint64_t authorizedCount = 0;
+					uint64_t totalCount = memTmp.size();
+					networkCount++;
 
-				for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
-					bool a = OSUtils::jsonBool((*m)["authorized"], 0);
-					if (a) { authorizedCount++; }
+					for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
+						bool a = OSUtils::jsonBool((*m)["authorized"], 0);
+						if (a) { authorizedCount++; }
+					}
+
+					auto nwMeta = json::object();
+					nwMeta["totalMemberCount"] = totalCount;
+					nwMeta["authorizedMemberCount"] = authorizedCount;
+					network["meta"] = nwMeta;
+
+					data.push_back(network);
 				}
-
-				auto nwMeta = json::object();
-				nwMeta["totalMemberCount"] = totalCount;
-				nwMeta["authorizedMemberCount"] = authorizedCount;
-				network["meta"] = nwMeta;
 			}
-
-			data.push_back(network);
 		}
-		meta["networkCount"] = networkIds.size();
+		meta["networkCount"] = networkCount;
 
 		auto out = json::object();
 		out["data"] = data;
