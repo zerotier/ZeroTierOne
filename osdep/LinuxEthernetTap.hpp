@@ -26,6 +26,7 @@
 #include <mutex>
 #include "../node/MulticastGroup.hpp"
 #include "EthernetTap.hpp"
+#include "BlockingQueue.hpp"
 
 namespace ZeroTier {
 
@@ -34,6 +35,7 @@ class LinuxEthernetTap : public EthernetTap
 public:
 	LinuxEthernetTap(
 		const char *homePath,
+		unsigned int _concurrency,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
@@ -57,9 +59,6 @@ public:
 	virtual void setMtu(unsigned int mtu);
 	virtual void setDns(const char *domain, const std::vector<InetAddress> &servers) {}
 
-
-
-
 private:
 	void (*_handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
@@ -69,13 +68,14 @@ private:
 	std::string _dev;
 	std::vector<MulticastGroup> _multicastGroups;
 	unsigned int _mtu;
+	unsigned int _concurrency;
 	int _fd;
 	int _shutdownSignalPipe[2];
 	std::atomic_bool _enabled;
 	std::atomic_bool _run;
-	std::thread _tapReaderThread;
 	mutable std::vector<InetAddress> _ifaddrs;
 	mutable uint64_t _lastIfAddrsUpdate;
+	std::vector<std::thread> _rxThreads;
 };
 
 } // namespace ZeroTier
