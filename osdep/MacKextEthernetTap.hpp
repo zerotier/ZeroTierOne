@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <thread>
 
 #include "../node/Constants.hpp"
 #include "../node/MAC.hpp"
@@ -36,6 +37,7 @@ class MacKextEthernetTap : public EthernetTap
 public:
 	MacKextEthernetTap(
 		const char *homePath,
+		unsigned int concurrency,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
@@ -70,11 +72,13 @@ private:
 	std::string _homePath;
 	std::string _dev;
 	std::vector<MulticastGroup> _multicastGroups;
+	unsigned int _concurrency;
 	unsigned int _mtu;
 	unsigned int _metric;
 	int _fd;
 	int _shutdownSignalPipe[2];
 	volatile bool _enabled;
+	std::vector<std::thread> _rxThreads;
 };
 
 } // namespace ZeroTier
