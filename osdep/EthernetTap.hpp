@@ -33,6 +33,7 @@ public:
 	static std::shared_ptr<EthernetTap> newInstance(
 		const char *tapDeviceType, // OS-specific, NULL for default
 		const char *homePath,
+		unsigned int concurrency,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
