@@ -44,6 +44,12 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
  - `windows/`: Visual Studio solution files, Windows service code, and the Windows task bar app UI.
  - `zeroidc/`: OIDC implementation used by ZeroTier service to log into SSO-enabled networks. (This part is written in Rust, and more Rust will be appearing in this repository in the future.)
 
+### Contributing
+
+Please do pull requests off of the `dev` branch.
+
+Releases are done by merging `dev` into `main` and then tagging and doing builds. 
+
 ### Build and Platform Notes
 
 To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/`.
