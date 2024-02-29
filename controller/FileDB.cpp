@@ -136,7 +136,7 @@ void FileDB::eraseNetwork(const uint64_t networkId)
 	char p[16384];
 	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx.json",_networksPath.c_str(),networkId);
 	OSUtils::rm(p);
-	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx" ZT_PATH_SEPARATOR_S "member",_networksPath.c_str(),(unsigned long long)networkId);
+	OSUtils::ztsnprintf(p,sizeof(p),"%s" ZT_PATH_SEPARATOR_S "%.16llx",_networksPath.c_str(),(unsigned long long)networkId);
 	OSUtils::rmDashRf(p);
 	_networkChanged(network,nullJson,true);
 	std::lock_guard<std::mutex> l(this->_online_l);
