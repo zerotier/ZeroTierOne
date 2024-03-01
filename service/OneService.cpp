@@ -637,6 +637,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer, SharedPtr<Bond> 
 		j["expired"] = (bool)(peer->paths[i].expired != 0);
 		j["preferred"] = (bool)(peer->paths[i].preferred != 0);
 		j["localSocket"] = peer->paths[i].localSocket;
+		j["localPort"] = peer->paths[i].localPort;
 		if (bond && peer->isBonded) {
 			uint64_t now = OSUtils::now();
 			j["ifname"] = std::string(peer->paths[i].ifname);

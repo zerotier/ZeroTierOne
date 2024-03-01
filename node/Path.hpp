@@ -84,6 +84,7 @@ public:
 		_lastIn(0),
 		_lastTrustEstablishedPacketReceived(0),
 		_lastEchoRequestReceived(0),
+		_localPort(0),
 		_localSocket(-1),
 		_latencyMean(0.0),
 		_latencyVariance(0.0),
@@ -106,6 +107,7 @@ public:
 		_lastIn(0),
 		_lastTrustEstablishedPacketReceived(0),
 		_lastEchoRequestReceived(0),
+		_localPort(0),
 		_localSocket(localSocket),
 		_latencyMean(0.0),
 		_latencyVariance(0.0),
@@ -176,6 +178,11 @@ public:
 	 * @return Local socket as specified by external code
 	 */
 	inline int64_t localSocket() const { return _localSocket; }
+
+	/**
+	 * @return Local port corresponding to the localSocket
+	 */
+	inline int64_t localPort() const { return _localPort; }
 
 	/**
 	 * @return Physical address
@@ -375,6 +382,7 @@ private:
 
 	int64_t _lastEchoRequestReceived;
 
+	uint16_t _localPort;
 	int64_t _localSocket;
 
 	volatile float _latencyMean;
