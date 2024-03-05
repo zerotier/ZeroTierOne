@@ -44,6 +44,12 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
  - `windows/`: Visual Studio solution files, Windows service code, and the Windows task bar app UI.
  - `zeroidc/`: OIDC implementation used by ZeroTier service to log into SSO-enabled networks. (This part is written in Rust, and more Rust will be appearing in this repository in the future.)
 
+### Contributing
+
+Please do pull requests off of the `dev` branch.
+
+Releases are done by merging `dev` into `main` and then tagging and doing builds. 
+
 ### Build and Platform Notes
 
 To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/`.
@@ -81,7 +87,7 @@ On most distributions, macOS, and Windows, the installer will start the service 
 
 A home folder for your system will automatically be created.
 
-The service is controlled via the JSON API, which by default is available at 127.0.0.1 port 9993. We include a *zerotier-cli* command line utility to make API calls for standard things like joining and leaving networks. The *authtoken.secret* file in the home folder contains the secret token for accessing this API. See [service/README.md](service/README.md) for API documentation.
+The service is controlled via the JSON API, which by default is available at `127.0.0.1:9993`. It also listens on `0.0.0.0:9993` which is only usable if `allowManagementFrom` is properly configured in `local.conf`. We include a *zerotier-cli* command line utility to make API calls for standard things like joining and leaving networks. The *authtoken.secret* file in the home folder contains the secret token for accessing this API. See [service/README.md](service/README.md) for API documentation.
 
 Here's where home folders live (by default) on each OS:
 

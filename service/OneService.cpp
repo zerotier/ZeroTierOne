@@ -1172,25 +1172,25 @@ public:
 					}
 				}
 
-				// If secondary port is not configured to a constant value and we've been offline for a while,
-				// bind a new secondary port. This is a workaround for a "coma" issue caused by buggy NATs that stop
-				// working on one port after a while.
-				if (_secondaryPort == 0) {
-					if (_node->online()) {
-						lastOnline = now;
-					}
-					if ((now - lastOnline) > ZT_PATH_HEARTBEAT_PERIOD  || restarted) {
-						_ports[1] = _getRandomPort();
-#if ZT_DEBUG==1
-						fprintf(stderr, "randomized secondary port. Now it's %d\n", _ports[1]);
-#endif
-						lastOnline = now; // don't keep spamming this branch. online() will be false for a few seconds
-					}
-				}
-
-
 				// Refresh bindings in case device's interfaces have changed, and also sync routes to update any shadow routes (e.g. shadow default)
 				if (((now - lastBindRefresh) >= (_node->bondController()->inUse() ? ZT_BINDER_REFRESH_PERIOD / 4 : ZT_BINDER_REFRESH_PERIOD))||restarted) {
+					// If secondary port is not configured to a constant value and we've been offline for a while,
+					// bind a new secondary port. This is a workaround for a "coma" issue caused by buggy NATs that stop
+					// working on one port after a while.
+					if (_secondaryPort == 0) {
+						if (_node->online()) {
+							lastOnline = now;
+						}
+						else if (now - lastOnline > (ZT_PEER_PING_PERIOD * 2) || restarted) {
+							lastOnline = now;	// don't keep changing the port before we have a chance to connect
+							_ports[1] = _getRandomPort();
+
+#if ZT_DEBUG==1
+							fprintf(stderr, "Randomized secondary port. Now it's %d\n", _ports[1]);
+#endif
+						}
+					}
+
 					unsigned int p[3];
 					unsigned int pc = 0;
 					for(int i=0;i<3;++i) {
@@ -2041,6 +2041,7 @@ public:
             settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
             settings["secondaryPort"] = OSUtils::jsonInt(settings["secondaryPort"],(uint64_t)_ports[1]) & 0xffff;
             settings["tertiaryPort"] = OSUtils::jsonInt(settings["tertiaryPort"],(uint64_t)_tertiaryPort) & 0xffff;
+            settings["homeDir"] = _homePath;
             // Enumerate all local address/port pairs that this node is listening on
             std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
             auto boundAddrArray = json::array();
