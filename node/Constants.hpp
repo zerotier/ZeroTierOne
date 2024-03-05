@@ -400,6 +400,11 @@
 #define ZT_QOS_SHORTTERM_SAMPLE_WIN_SIZE 64
 
 /**
+ * Number of samples required before statistics summaries are computed
+ */
+#define ZT_QOS_SHORTTERM_SAMPLE_WIN_MIN_REQ_SIZE 4
+
+/**
  * Max allowable time spent in any queue (in ms)
  */
 #define ZT_AQM_TARGET 5

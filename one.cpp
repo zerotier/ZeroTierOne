@@ -591,7 +591,7 @@ static int cli(int argc,char **argv)
 				printf("200 setmtu OK" ZT_EOL_S);
 				return 0;
 			} else {
-				printf("no link match found, new MTU was not applied" ZT_EOL_S);
+				printf("%d Failed to set MTU: %s" ZT_EOL_S, scode, responseBody.c_str());
 				return 1;
 			}
 			return 0;
@@ -664,37 +664,37 @@ static int cli(int argc,char **argv)
 							printf("\nidx"
 							"                  interface"
 							"                                  "
-							"path               socket\n");
-							for(int i=0; i<100; i++) { printf("-"); }
+							"path               socket             local port\n");
+							for(int i=0; i<120; i++) { printf("-"); }
 							printf("\n");
 							for (int i=0; i<p.size(); i++)
 							{
-								printf("%2d: %26s %51s %.16llx\n",
+								printf("%2d: %26s %51s %.16llx %12d\n",
 									i,
 									OSUtils::jsonString(p[i]["ifname"],"-").c_str(),
 									OSUtils::jsonString(p[i]["address"],"-").c_str(),
-									(unsigned long long)OSUtils::jsonInt(p[i]["localSocket"],0)
+									(unsigned long long)OSUtils::jsonInt(p[i]["localSocket"],0),
+									(uint16_t)OSUtils::jsonInt(p[i]["localPort"],0)
 									);
 							}
-							printf("\nidx     lat      pdv     "
-							"plr     per    capacity    qual      "
-							"rx_age      tx_age  eligible  bonded\n");
-							for(int i=0; i<100; i++) { printf("-"); }
+							printf("\nidx     lat      pdv    "
+							"capacity    qual      "
+							"rx_age      tx_age  eligible  bonded   flows\n");
+							for(int i=0; i<120; i++) { printf("-"); }
 							printf("\n");
 							for (int i=0; i<p.size(); i++)
 							{
-								printf("%2d: %8.2f %8.2f %7.4f %7.4f %10d %7.4f %11d %11d %9d %7d\n",
+								printf("%2d: %8.2f %8.2f %10d %7.4f %11d %11d %9d %7d %7d\n",
 									i,
 									OSUtils::jsonDouble(p[i]["latencyMean"], 0),
 									OSUtils::jsonDouble(p[i]["latencyVariance"], 0),
-									OSUtils::jsonDouble(p[i]["packetLossRatio"], 0),
-									OSUtils::jsonDouble(p[i]["packetErrorRatio"], 0),
 									(int)OSUtils::jsonInt(p[i]["givenLinkSpeed"], 0),
 									OSUtils::jsonDouble(p[i]["relativeQuality"], 0),
 									(int)OSUtils::jsonInt(p[i]["lastInAge"], 0),
 									(int)OSUtils::jsonInt(p[i]["lastOutAge"], 0),
 									(int)OSUtils::jsonInt(p[i]["eligible"],0),
-									(int)OSUtils::jsonInt(p[i]["bonded"],0));
+									(int)OSUtils::jsonInt(p[i]["bonded"],0),
+									(int)OSUtils::jsonInt(p[i]["assignedFlowCount"],0));
 							}
 						}
 					}
@@ -706,6 +706,7 @@ static int cli(int argc,char **argv)
 				return 2;
 			}
 		}
+
 		/* zerotier-cli bond command was malformed in some way */
 		printf("(bond) command is missing required arguments" ZT_EOL_S);
 		return 2;

@@ -1347,7 +1347,15 @@ typedef struct
 	 */
 	char ifname[ZT_MAX_PHYSIFNAME];
 
+	/**
+	 * Pointer to PhySocket object for this path
+	 */
 	uint64_t localSocket;
+
+	/**
+	 * Local port corresponding to this path's localSocket
+	 */
+	uint16_t localPort;
 
 	/**
 	 * Is path expired?
