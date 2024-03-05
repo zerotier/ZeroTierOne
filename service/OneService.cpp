@@ -2445,8 +2445,13 @@ public:
 		}
 
 		// bondingPolicy cannot be used with allowTcpFallbackRelay
-		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
-		_forceTcpRelay = OSUtils::jsonBool(settings["forceTcpRelay"],false);
+		bool _forceTcpRelayTmp = (OSUtils::jsonBool(settings["forceTcpRelay"],false));
+		bool _bondInUse = _node->bondController()->inUse();
+		if (_forceTcpRelayTmp && _bondInUse) {
+			fprintf(stderr, "Warning: forceTcpRelay cannot be used with multipath. Disabling forceTcpRelay\n");
+		}
+		_allowTcpFallbackRelay = (OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true) && !_node->bondController()->inUse());
+		_forceTcpRelay = (_forceTcpRelayTmp && !_node->bondController()->inUse());
 
 #ifdef ZT_TCP_FALLBACK_RELAY
 		_fallbackRelayAddress = InetAddress(OSUtils::jsonString(settings["tcpFallbackRelay"], ZT_TCP_FALLBACK_RELAY).c_str());
