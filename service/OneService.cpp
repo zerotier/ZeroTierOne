@@ -1663,6 +1663,7 @@ public:
 
 			ZT_PeerList *pl = _node->peers();
 			if (pl) {
+				bool foundBond = false;
 				auto id = req.matches[1];
 				auto out = json::object();
 				uint64_t wantp = Utils::hexStrToU64(id.str().c_str());
@@ -1672,11 +1673,17 @@ public:
 						if (bond) {
 							_peerToJson(out,&(pl->peers[i]),bond,(_tcpFallbackTunnel != (TcpConnection *)0));
 							setContent(req, res, out.dump());
+							foundBond = true;
 						} else {
 							setContent(req, res, "");
 							res.status = 400;
 						}
+						break;
 					}
+				}
+				if (!foundBond) {
+					setContent(req, res, "");
+					res.status = 400;
 				}
 			}
 			_node->freeQueryResult((void *)pl);
