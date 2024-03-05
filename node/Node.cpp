@@ -578,6 +578,7 @@ ZT_PeerList *Node::peers() const
 			if((*path)->valid()) {
 				memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
 				p->paths[p->pathCount].localSocket = (*path)->localSocket();
+				p->paths[p->pathCount].localPort = (*path)->localPort();
 				p->paths[p->pathCount].lastSend = (*path)->lastOut();
 				p->paths[p->pathCount].lastReceive = (*path)->lastIn();
 				p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
