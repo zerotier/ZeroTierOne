@@ -1543,7 +1543,7 @@ public:
 		// control plane endpoints
 		std::string bondShowPath = "/bond/show/([0-9a-fA-F]{10})";
 		std::string bondRotatePath = "/bond/rotate/([0-9a-fA-F]{10})";
-		std::string setBondMtuPath = "/bond/setmtu/([0-9]{3,5})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})";
+		std::string setBondMtuPath = "/bond/setmtu/([0-9]{1,6})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})";
 		std::string configPath = "/config";
 		std::string configPostPath = "/config/settings";
 		std::string healthPath = "/health";
@@ -1719,12 +1719,21 @@ public:
 
 		auto setMtu = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			if (!_node->bondController()->inUse()) {
-				setContent(req, res, "");
+				setContent(req, res, "Bonding layer isn't active yet");
 				res.status = 400;
 				return;
 			}
-			uint16_t mtu = atoi(req.matches[1].str().c_str());
+			uint32_t mtu = atoi(req.matches[1].str().c_str());
+			if (mtu < 68 || mtu > 65535) {
+				setContent(req, res, "Specified MTU is not reasonable");
+				res.status = 400;
+				return;
+			}
 			res.status = _node->bondController()->setAllMtuByTuple(mtu, req.matches[2].str().c_str(), req.matches[3].str().c_str()) ? 200 : 400;
+			if (res.status == 400) {
+				setContent(req, res, "Unable to find specified link");
+				return;
+			}
 			setContent(req, res, "{}");
 		};
 		_controlPlane.Post(setBondMtuPath, setMtu);

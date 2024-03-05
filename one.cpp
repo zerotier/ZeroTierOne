@@ -591,7 +591,7 @@ static int cli(int argc,char **argv)
 				printf("200 setmtu OK" ZT_EOL_S);
 				return 0;
 			} else {
-				printf("no link match found, new MTU was not applied" ZT_EOL_S);
+				printf("%d Failed to set MTU: %s" ZT_EOL_S, scode, responseBody.c_str());
 				return 1;
 			}
 			return 0;
