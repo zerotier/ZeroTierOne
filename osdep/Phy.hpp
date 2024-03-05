@@ -146,6 +146,7 @@ private:
 		PhySocketType type;
 		ZT_PHY_SOCKFD_TYPE sock;
 		void *uptr; // user-settable pointer
+		uint16_t localPort;
 		ZT_PHY_SOCKADDR_STORAGE_TYPE saddr; // remote for TCP_OUT and TCP_IN, local for TCP_LISTEN, RAW, and UDP
 	};
 
@@ -242,6 +243,18 @@ public:
 	static inline void** getuptr(PhySocket* s) throw()
 	{
 		return &(reinterpret_cast<PhySocketImpl*>(s)->uptr);
+	}
+
+	/**
+	 * Return the local port corresponding to this PhySocket
+	 *
+	 * @param s Socket object
+	 *
+	 * @return Local port corresponding to this PhySocket
+	 */
+	static inline uint16_t getLocalPort(PhySocket* s) throw()
+	{
+		return reinterpret_cast<PhySocketImpl*>(s)->localPort;
 	}
 
 	/**
@@ -417,6 +430,11 @@ public:
 		sws.type = ZT_PHY_SOCKET_UDP;
 		sws.sock = s;
 		sws.uptr = uptr;
+
+#ifdef __UNIX_LIKE__
+		struct sockaddr_in *sin = (struct sockaddr_in *)localAddress;
+		sws.localPort = htons(sin->sin_port);
+#endif
 		memset(&(sws.saddr),0,sizeof(struct sockaddr_storage));
 		memcpy(&(sws.saddr),localAddress,(localAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
 

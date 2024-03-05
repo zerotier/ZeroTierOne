@@ -637,6 +637,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer, SharedPtr<Bond> 
 		j["expired"] = (bool)(peer->paths[i].expired != 0);
 		j["preferred"] = (bool)(peer->paths[i].preferred != 0);
 		j["localSocket"] = peer->paths[i].localSocket;
+		j["localPort"] = peer->paths[i].localPort;
 		if (bond && peer->isBonded) {
 			uint64_t now = OSUtils::now();
 			j["ifname"] = std::string(peer->paths[i].ifname);
@@ -976,7 +977,7 @@ public:
 					if (!OSUtils::writeFile(authTokenPath.c_str(),_authToken)) {
 						Mutex::Lock _l(_termReason_m);
 						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = "authtoken.secret could not be written";
+						_fatalErrorMessage = "authtoken.secret could not be written (try running with -U to prevent dropping of privileges)";
 						return _termReason;
 					} else {
 						OSUtils::lockDownFile(authTokenPath.c_str(),false);
@@ -996,7 +997,7 @@ public:
 					if (!OSUtils::writeFile(metricsTokenPath.c_str(),_metricsToken)) {
 						Mutex::Lock _l(_termReason_m);
 						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = "metricstoken.secret could not be written";
+						_fatalErrorMessage = "metricstoken.secret could not be written (try running with -U to prevent dropping of privileges)";
 						return _termReason;
 					} else {
 						OSUtils::lockDownFile(metricsTokenPath.c_str(),false);
@@ -1542,7 +1543,7 @@ public:
 		// control plane endpoints
 		std::string bondShowPath = "/bond/show/([0-9a-fA-F]{10})";
 		std::string bondRotatePath = "/bond/rotate/([0-9a-fA-F]{10})";
-		std::string setBondMtuPath = "/bond/setmtu/([0-9]{3,5})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})";
+		std::string setBondMtuPath = "/bond/setmtu/([0-9]{1,6})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})";
 		std::string configPath = "/config";
 		std::string configPostPath = "/config/settings";
 		std::string healthPath = "/health";
@@ -1662,6 +1663,7 @@ public:
 
 			ZT_PeerList *pl = _node->peers();
 			if (pl) {
+				bool foundBond = false;
 				auto id = req.matches[1];
 				auto out = json::object();
 				uint64_t wantp = Utils::hexStrToU64(id.str().c_str());
@@ -1671,11 +1673,17 @@ public:
 						if (bond) {
 							_peerToJson(out,&(pl->peers[i]),bond,(_tcpFallbackTunnel != (TcpConnection *)0));
 							setContent(req, res, out.dump());
+							foundBond = true;
 						} else {
 							setContent(req, res, "");
 							res.status = 400;
 						}
+						break;
 					}
+				}
+				if (!foundBond) {
+					setContent(req, res, "");
+					res.status = 400;
 				}
 			}
 			_node->freeQueryResult((void *)pl);
@@ -1711,12 +1719,21 @@ public:
 
 		auto setMtu = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			if (!_node->bondController()->inUse()) {
-				setContent(req, res, "");
+				setContent(req, res, "Bonding layer isn't active yet");
 				res.status = 400;
 				return;
 			}
-			uint16_t mtu = atoi(req.matches[1].str().c_str());
+			uint32_t mtu = atoi(req.matches[1].str().c_str());
+			if (mtu < 68 || mtu > 65535) {
+				setContent(req, res, "Specified MTU is not reasonable");
+				res.status = 400;
+				return;
+			}
 			res.status = _node->bondController()->setAllMtuByTuple(mtu, req.matches[2].str().c_str(), req.matches[3].str().c_str()) ? 200 : 400;
+			if (res.status == 400) {
+				setContent(req, res, "Unable to find specified link");
+				return;
+			}
 			setContent(req, res, "{}");
 		};
 		_controlPlane.Post(setBondMtuPath, setMtu);
@@ -2428,8 +2445,13 @@ public:
 		}
 
 		// bondingPolicy cannot be used with allowTcpFallbackRelay
-		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
-		_forceTcpRelay = OSUtils::jsonBool(settings["forceTcpRelay"],false);
+		bool _forceTcpRelayTmp = (OSUtils::jsonBool(settings["forceTcpRelay"],false));
+		bool _bondInUse = _node->bondController()->inUse();
+		if (_forceTcpRelayTmp && _bondInUse) {
+			fprintf(stderr, "Warning: forceTcpRelay cannot be used with multipath. Disabling forceTcpRelay\n");
+		}
+		_allowTcpFallbackRelay = (OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true) && !_node->bondController()->inUse());
+		_forceTcpRelay = (_forceTcpRelayTmp && !_node->bondController()->inUse());
 
 #ifdef ZT_TCP_FALLBACK_RELAY
 		_fallbackRelayAddress = InetAddress(OSUtils::jsonString(settings["tcpFallbackRelay"], ZT_TCP_FALLBACK_RELAY).c_str());
