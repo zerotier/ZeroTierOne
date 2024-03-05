@@ -977,7 +977,7 @@ public:
 					if (!OSUtils::writeFile(authTokenPath.c_str(),_authToken)) {
 						Mutex::Lock _l(_termReason_m);
 						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = "authtoken.secret could not be written";
+						_fatalErrorMessage = "authtoken.secret could not be written (try running with -U to prevent dropping of privileges)";
 						return _termReason;
 					} else {
 						OSUtils::lockDownFile(authTokenPath.c_str(),false);
@@ -997,7 +997,7 @@ public:
 					if (!OSUtils::writeFile(metricsTokenPath.c_str(),_metricsToken)) {
 						Mutex::Lock _l(_termReason_m);
 						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = "metricstoken.secret could not be written";
+						_fatalErrorMessage = "metricstoken.secret could not be written (try running with -U to prevent dropping of privileges)";
 						return _termReason;
 					} else {
 						OSUtils::lockDownFile(metricsTokenPath.c_str(),false);
