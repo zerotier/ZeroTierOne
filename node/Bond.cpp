@@ -1094,6 +1094,7 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 	 * Curate the set of paths that are part of the bond proper. Select a set of paths
 	 * per logical link according to eligibility and user-specified constraints.
 	 */
+	int updatedBondedPathCount = 0;
 	if ((_policy == ZT_BOND_POLICY_BALANCE_RR) || (_policy == ZT_BOND_POLICY_BALANCE_XOR) || (_policy == ZT_BOND_POLICY_BALANCE_AWARE)) {
 		if (! _numBondedPaths) {
 			rebuildBond = true;
@@ -1105,7 +1106,6 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 				_paths[i].bonded = false;
 			}
 
-			int updatedBondedPathCount = 0;
 			// Build map associating paths with local physical links. Will be selected from in next step
 			std::map<SharedPtr<Link>, std::vector<int> > linkMap;
 			for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
@@ -1206,6 +1206,14 @@ void Bond::curateBond(int64_t now, bool rebuildBond)
 				_rrIdx = 0;
 			}
 		}
+	}
+	if (_policy == ZT_BOND_POLICY_ACTIVE_BACKUP) {
+		for (int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS; ++i) {
+			if (_paths[i].p && _paths[i].bonded) {
+				updatedBondedPathCount++;
+			}
+		}
+		_numBondedPaths = updatedBondedPathCount;
 	}
 }
 
@@ -1678,7 +1686,7 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 					if (! bFoundPathInQueue) {
 						_abFailoverQueue.push_front(i);
 						log("add link %s to failover queue (%zu links in queue)", pathToStr(_paths[i].p).c_str(), _abFailoverQueue.size());
-						addPathToBond(0, i);
+						addPathToBond(i, 0);
 					}
 				}
 			}
@@ -1728,7 +1736,7 @@ void Bond::processActiveBackupTasks(void* tPtr, int64_t now)
 				if (! bFoundPathInQueue) {
 					_abFailoverQueue.push_front(i);
 					log("add link %s to failover queue (%zu links in queue)", pathToStr(_paths[i].p).c_str(), _abFailoverQueue.size());
-					addPathToBond(0, i);
+					addPathToBond(i, 0);
 				}
 			}
 		}
