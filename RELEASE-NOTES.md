@@ -1,6 +1,14 @@
 ZeroTier Release Notes
 ======
 
+# 2024-03-19 -- Version 1.14.0
+
+  * Various Bug Fixes
+  * Fix rules engine quirks
+  * Improve Multipath
+  * Fix random port rebinding when stuck offline
+  
+
 # 2023-09-12 -- Version 1.12.2
 
   * More improvements to macOS full tunnel mode.
