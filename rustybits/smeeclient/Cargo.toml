@@ -11,7 +11,7 @@ crate-type = ["staticlib", "rlib"]
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 temporal-sdk = { git = "https://github.com/temporalio/sdk-core", branch = "master" }
-temporal-client = { git = "https://github.com/temporalio/sdk-core", branch = "master" }
+temporal-client = { git = "https://github.com/temporalio/sdk-core", branch = "master", features = ["telemetry"] }
 temporal-sdk-core-protos = { git = "https://github.com/temporalio/sdk-core", branch = "master" }
 tokio = { version = "1.29", features = ["full"] }
 url = { version = "2" }

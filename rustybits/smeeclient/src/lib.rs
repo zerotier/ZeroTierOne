@@ -59,7 +59,7 @@ impl SmeeClient {
             .client_version(CLIENT_VERSION)
             .build()?;
 
-        let con = rt.block_on(async { c.connect(namespace.to_string(), None, None).await })?;
+        let con = rt.block_on(async { c.connect(namespace.to_string(), None).await })?;
 
         Ok(Self {
             tokio_rt: rt,
@@ -77,6 +77,8 @@ impl SmeeClient {
             task_timeout: None,
             cron_schedule: None,
             search_attributes: None,
+            enable_eager_workflow_start: false,
+            retry_policy: Some(Default::default()),
         };
 
         let payload = vec![params.as_json_payload()?];
