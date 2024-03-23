@@ -89,7 +89,7 @@ Note that releases are coming few and far between because most of our dev effort
 # 2022-04-25 -- Version 1.8.9
 
  * Fixed a long-standing and strange bug that was causing sporadic "phantom" packet authentication failures. Not a security problem but could be behind sporadic reports of link failures under some conditions.
- * Fized a memory leak in SSO/OIDC support.
+ * Fixed a memory leak in SSO/OIDC support.
  * Fixed SSO/OIDC display error on CLI.
  * Fixed a bug causing nodes to sometimes fail to push certs to each other (primarily affects SSO/OIDC use cases).
  * Fixed a deadlock bug on leaving SSO/OIDC managed networks.
@@ -340,7 +340,7 @@ We're trying to fix all these issues before the 1.6.0 release. Stay tuned.
 # 2017-04-20 -- Version 1.2.4
 
  * Managed routes are now only bifurcated for the default route. This is a change in behavior, though few people will probably notice. Bifurcating all managed routes was causing more trouble than it was worth for most users.
- * Up to 2X crypto speedup on x86-64 (except Windows, which will take some porting) and 32-bit ARM platforms due to integration of fast assembly language implementations of Salsa20/12 from the [supercop](http://bench.cr.yp.to/supercop.html) code base. These were written by Daniel J. Bernstein and are in the public domain. My Macbook Pro (Core i5 2.8ghz) now does almost 1.5GiB/sec Salsa20/12 per core and a Raspberry Pi got a 2X boost. 64-bit ARM support and Windows support will take some work but should not be too hard.
+ * Up to 2X crypto speedup on x86-64 (except Windows, which will take some porting) and 32-bit ARM platforms due to integration of fast assembly language implementations of Salsa20/12 from the [supercop](http://bench.cr.yp.to/supercop.html) code base. These were written by Daniel J. Bernstein and are in the public domain. My MacBook Pro (Core i5 2.8ghz) now does almost 1.5GiB/sec Salsa20/12 per core and a Raspberry Pi got a 2X boost. 64-bit ARM support and Windows support will take some work but should not be too hard.
  * Refactored code that manages credentials to greatly reduce memory use in most cases. This may also result in a small performance improvement.
  * Reworked and simplified path selection and priority logic to fix path instability and dead path persistence edge cases. There have been some sporadic reports of persistent path instabilities and dead paths hanging around that take minutes to resolve. These have proven difficult to reproduce in house, but hopefully this will fix them. In any case it seems to speed up path establishment in our tests and it makes the code simpler and more readable.
  * Eliminated some unused cruft from the code around path management and in the peer class.

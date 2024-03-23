@@ -26,7 +26,7 @@ Additional Use Grant: You may make use of the Licensed Work, provided you
                       ZeroTier behind the scenes to operate a service not
                       related to ZeroTier network administration.
 
-                      * Create Non-Open-Source Commercial Derviative Works
+                      * Create Non-Open-Source Commercial Derivative Works
 
                       (2) Link or directly include the Licensed Work in a
                       commercial or for-profit application or other product
