@@ -58,7 +58,7 @@ To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU 
    - Xcode command line tools for macOS 10.13 or newer are required.
    - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **Linux**
-   - The minimum compiler versions required are GCC/G++ 4.9.3 or CLANG/CLANG++ 3.4.2. (Install `clang` on CentOS 7 as G++ is too old.)
+   - The minimum compiler versions required are GCC/G++ 8.x or CLANG/CLANG++ 5.x.
    - Linux makefiles automatically detect and prefer clang/clang++ if present as it produces smaller and slightly faster binaries in most cases. You can override by supplying CC and CXX variables on the make command line.
    - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **Windows**
