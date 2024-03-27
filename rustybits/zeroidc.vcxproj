@@ -91,7 +91,7 @@
     <NMakeOutput>
     </NMakeOutput>
     <NMakeCleanCommandLine>cargo clean</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>cargo clean &amp; cargo build --release --target=x86_64-pc-windows-msvc</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>cargo clean &amp; cargo build -p zeroidc --release --target=x86_64-pc-windows-msvc</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
