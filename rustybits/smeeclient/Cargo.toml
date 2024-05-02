@@ -1,0 +1,21 @@
+[package]
+name = "smeeclient"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+temporal-sdk = { git = "https://github.com/temporalio/sdk-core", branch = "master" }
+temporal-client = { git = "https://github.com/temporalio/sdk-core", branch = "master", features = ["telemetry"] }
+temporal-sdk-core-protos = { git = "https://github.com/temporalio/sdk-core", branch = "master" }
+tokio = { version = "1.29", features = ["full"] }
+url = { version = "2" }
+uuid = { version = "1.4", features = ["v4"] }
+
+[build-dependencies]
+cbindgen = "0.20"

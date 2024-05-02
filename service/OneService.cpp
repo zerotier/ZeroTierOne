@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -637,6 +637,7 @@ static void _peerToJson(nlohmann::json &pj,const ZT_Peer *peer, SharedPtr<Bond> 
 		j["expired"] = (bool)(peer->paths[i].expired != 0);
 		j["preferred"] = (bool)(peer->paths[i].preferred != 0);
 		j["localSocket"] = peer->paths[i].localSocket;
+		j["localPort"] = peer->paths[i].localPort;
 		if (bond && peer->isBonded) {
 			uint64_t now = OSUtils::now();
 			j["ifname"] = std::string(peer->paths[i].ifname);
@@ -795,6 +796,7 @@ public:
     bool _allowTcpFallbackRelay;
 	bool _forceTcpRelay;
 	bool _allowSecondaryPort;
+	bool _enableWebServer;
 
 	unsigned int _primaryPort;
 	unsigned int _secondaryPort;
@@ -976,7 +978,7 @@ public:
 					if (!OSUtils::writeFile(authTokenPath.c_str(),_authToken)) {
 						Mutex::Lock _l(_termReason_m);
 						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = "authtoken.secret could not be written";
+						_fatalErrorMessage = "authtoken.secret could not be written (try running with -U to prevent dropping of privileges)";
 						return _termReason;
 					} else {
 						OSUtils::lockDownFile(authTokenPath.c_str(),false);
@@ -996,7 +998,7 @@ public:
 					if (!OSUtils::writeFile(metricsTokenPath.c_str(),_metricsToken)) {
 						Mutex::Lock _l(_termReason_m);
 						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = "metricstoken.secret could not be written";
+						_fatalErrorMessage = "metricstoken.secret could not be written (try running with -U to prevent dropping of privileges)";
 						return _termReason;
 					} else {
 						OSUtils::lockDownFile(metricsTokenPath.c_str(),false);
@@ -1542,7 +1544,7 @@ public:
 		// control plane endpoints
 		std::string bondShowPath = "/bond/show/([0-9a-fA-F]{10})";
 		std::string bondRotatePath = "/bond/rotate/([0-9a-fA-F]{10})";
-		std::string setBondMtuPath = "/bond/setmtu/([0-9]{3,5})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})";
+		std::string setBondMtuPath = "/bond/setmtu/([0-9]{1,6})/([a-zA-Z0-9_]{1,16})/([0-9a-fA-F\\.\\:]{1,39})";
 		std::string configPath = "/config";
 		std::string configPostPath = "/config/settings";
 		std::string healthPath = "/health";
@@ -1556,6 +1558,7 @@ public:
 		std::string metricsPath = "/metrics";
 
         std::vector<std::string> noAuthEndpoints { "/sso", "/health" };
+
 
 		auto setContent = [=] (const httplib::Request &req, httplib::Response &res, std::string content) {
 			if (req.has_param("jsonp")) {
@@ -1573,8 +1576,98 @@ public:
 			}
 		};
 
+		//
+		// static file server for app ui'
+		//
+		if (_enableWebServer) {
+			static std::string appUiPath = "/app";
+			static char appUiDir[16384];
+			sprintf(appUiDir,"%s%s",_homePath.c_str(),appUiPath.c_str());
 
-        auto authCheck = [=] (const httplib::Request &req, httplib::Response &res) {
+			auto ret = _controlPlane.set_mount_point(appUiPath, appUiDir);
+			_controlPlaneV6.set_mount_point(appUiPath, appUiDir);
+			if (!ret) {
+				fprintf(stderr, "Mounting app directory failed. Creating it. Path: %s - Dir: %s\n", appUiPath.c_str(), appUiDir);
+				if (!OSUtils::mkdir(appUiDir)) {
+					fprintf(stderr, "Could not create app directory either. Path: %s - Dir: %s\n", appUiPath.c_str(), appUiDir);
+				} else {
+					ret = _controlPlane.set_mount_point(appUiPath, appUiDir);
+					_controlPlaneV6.set_mount_point(appUiPath, appUiDir);
+					if (!ret) {
+						fprintf(stderr, "Really could not create and mount directory. Path: %s - Dir: %s\nWeb apps won't work.\n", appUiPath.c_str(), appUiDir);
+					}
+				}
+			}
+
+			if (ret) {
+				// fallback to /index.html for paths that don't exist for SPAs
+				auto indexFallbackGet = [](const httplib::Request &req, httplib::Response &res) {
+					// fprintf(stderr, "fallback \n");
+
+					auto match = req.matches[1];
+					if (match.matched) {
+
+						// fallback
+						char indexHtmlPath[16384];
+						sprintf(indexHtmlPath,"%s/%s/%s", appUiDir, match.str().c_str(), "index.html");
+						// fprintf(stderr, "fallback path %s\n", indexHtmlPath);
+
+						std::string indexHtml;
+
+						if (!OSUtils::readFile(indexHtmlPath, indexHtml)) {
+							res.status = 500;
+							return;
+						}
+
+						res.set_content(indexHtml.c_str(), "text/html");
+					} else {
+						res.status = 500;
+						return;
+					}
+				};
+
+				auto slashRedirect = [](const httplib::Request &req, httplib::Response &res) {
+					// fprintf(stderr, "redirect \n");
+
+					// add .html
+					std::string htmlFile;
+					char htmlPath[16384];
+					sprintf(htmlPath,"%s%s%s", appUiDir, (req.path).substr(appUiPath.length()).c_str(), ".html");
+					// fprintf(stderr, "path: %s\n", htmlPath);
+					if (OSUtils::readFile(htmlPath, htmlFile)) {
+						res.set_content(htmlFile.c_str(), "text/html");
+						return;
+					} else {
+						res.status = 301;
+						res.set_header("location", req.path + "/");
+					}
+				};
+
+				// auto missingAssetGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
+				// 	fprintf(stderr, "missing \n");
+				// 	res.status = 404;
+				// 	std::string html = "oops";
+				// 	res.set_content(html, "text/plain");
+				// 	res.set_header("Content-Type", "text/plain");
+				// 	return;
+				// };
+
+				// auto fix no trailing slash by adding .html or redirecting to path/
+				_controlPlane.Get(appUiPath + R"((/[\w|-]+)+$)", slashRedirect);
+				_controlPlaneV6.Get(appUiPath + R"((/[\w|-]+)+$)", slashRedirect);
+
+				// // 404 missing assets for *.ext paths
+				//   s.Get(appUiPath + R"(/\.\w+$)", missingAssetGet);
+				// sv6.Get(appUiPath + R"(/\.\w+$)", missingAssetGet);
+
+				// fallback to index.html for unknown paths/files
+				_controlPlane.Get(appUiPath + R"((/[\w|-]+)(/[\w|-]+)*/$)", indexFallbackGet);
+				_controlPlaneV6.Get(appUiPath + R"((/[\w|-]+)(/[\w|-]+)*/$)", indexFallbackGet);
+
+			}
+		}
+
+		auto authCheck = [=] (const httplib::Request &req, httplib::Response &res) {
 			if (req.path == "/metrics") {
 
 				if (req.has_header("x-zt1-auth")) {
@@ -1624,6 +1717,11 @@ public:
 						isAuth = true;
 					}
 
+					// Web Apps base path
+					if (req.path.rfind("/app", 0) == 0) { //starts with /app
+						isAuth = true;
+					}
+
 					if (!isAuth) {
 						// check auth token
 						if (req.has_header("x-zt1-auth")) {
@@ -1662,6 +1760,7 @@ public:
 
 			ZT_PeerList *pl = _node->peers();
 			if (pl) {
+				bool foundBond = false;
 				auto id = req.matches[1];
 				auto out = json::object();
 				uint64_t wantp = Utils::hexStrToU64(id.str().c_str());
@@ -1671,11 +1770,17 @@ public:
 						if (bond) {
 							_peerToJson(out,&(pl->peers[i]),bond,(_tcpFallbackTunnel != (TcpConnection *)0));
 							setContent(req, res, out.dump());
+							foundBond = true;
 						} else {
 							setContent(req, res, "");
 							res.status = 400;
 						}
+						break;
 					}
+				}
+				if (!foundBond) {
+					setContent(req, res, "");
+					res.status = 400;
 				}
 			}
 			_node->freeQueryResult((void *)pl);
@@ -1711,12 +1816,21 @@ public:
 
 		auto setMtu = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 			if (!_node->bondController()->inUse()) {
-				setContent(req, res, "");
+				setContent(req, res, "Bonding layer isn't active yet");
 				res.status = 400;
 				return;
 			}
-			uint16_t mtu = atoi(req.matches[1].str().c_str());
+			uint32_t mtu = atoi(req.matches[1].str().c_str());
+			if (mtu < 68 || mtu > 65535) {
+				setContent(req, res, "Specified MTU is not reasonable");
+				res.status = 400;
+				return;
+			}
 			res.status = _node->bondController()->setAllMtuByTuple(mtu, req.matches[2].str().c_str(), req.matches[3].str().c_str()) ? 200 : 400;
+			if (res.status == 400) {
+				setContent(req, res, "Unable to find specified link");
+				return;
+			}
 			setContent(req, res, "{}");
 		};
 		_controlPlane.Post(setBondMtuPath, setMtu);
@@ -2041,6 +2155,7 @@ public:
             settings["primaryPort"] = OSUtils::jsonInt(settings["primaryPort"],(uint64_t)_primaryPort) & 0xffff;
             settings["secondaryPort"] = OSUtils::jsonInt(settings["secondaryPort"],(uint64_t)_ports[1]) & 0xffff;
             settings["tertiaryPort"] = OSUtils::jsonInt(settings["tertiaryPort"],(uint64_t)_tertiaryPort) & 0xffff;
+            settings["homeDir"] = _homePath;
             // Enumerate all local address/port pairs that this node is listening on
             std::vector<InetAddress> boundAddrs(_binder.allBoundLocalInterfaceAddresses());
             auto boundAddrArray = json::array();
@@ -2427,8 +2542,14 @@ public:
 		}
 
 		// bondingPolicy cannot be used with allowTcpFallbackRelay
-		_allowTcpFallbackRelay = OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true);
-		_forceTcpRelay = OSUtils::jsonBool(settings["forceTcpRelay"],false);
+		bool _forceTcpRelayTmp = (OSUtils::jsonBool(settings["forceTcpRelay"],false));
+		bool _bondInUse = _node->bondController()->inUse();
+		if (_forceTcpRelayTmp && _bondInUse) {
+			fprintf(stderr, "Warning: forceTcpRelay cannot be used with multipath. Disabling forceTcpRelay\n");
+		}
+		_allowTcpFallbackRelay = (OSUtils::jsonBool(settings["allowTcpFallbackRelay"],true) && !_node->bondController()->inUse());
+		_forceTcpRelay = (_forceTcpRelayTmp && !_node->bondController()->inUse());
+		_enableWebServer = (OSUtils::jsonBool(settings["enableWebServer"],false));
 
 #ifdef ZT_TCP_FALLBACK_RELAY
 		_fallbackRelayAddress = InetAddress(OSUtils::jsonString(settings["tcpFallbackRelay"], ZT_TCP_FALLBACK_RELAY).c_str());

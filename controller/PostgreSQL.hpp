@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -30,6 +30,10 @@
 
 extern "C" {
 typedef struct pg_conn PGconn;
+}
+
+namespace smeeclient {
+	struct SmeeClient;
 }
 
 namespace ZeroTier {
@@ -144,6 +148,9 @@ private:
 	uint64_t _doRedisUpdate(sw::redis::Transaction &tx, std::string &controllerId,
 		std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > &lastOnline);
 
+	void configureSmee();
+	void notifyNewMember(const std::string &networkID, const std::string &memberID);
+
 	enum OverrideMode {
 		ALLOW_PGBOUNCER_OVERRIDE = 0,
 		NO_OVERRIDE = 1
@@ -178,6 +185,8 @@ private:
 	std::shared_ptr<sw::redis::Redis> _redis;
 	std::shared_ptr<sw::redis::RedisCluster> _cluster;
     bool _redisMemberStatus;
+
+	smeeclient::SmeeClient *_smee;
 };
 
 } // namespace ZeroTier

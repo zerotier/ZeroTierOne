@@ -100,6 +100,15 @@ else
     done
 fi
 
+if [ -n "$ZT_TEMPORAL_HOST" ] && [ -n "$ZT_TEMPORAL_PORT" ]; then
+    echo "waiting for temporal..."
+    while ! nc -z ${ZT_TEMPORAL_HOST} ${ZT_TEMPORAL_PORT}; do
+        echo "waiting...";
+        sleep 1;
+    done
+    echo "Temporal is up"
+fi
+
 export GLIBCXX_FORCE_NEW=1
 export GLIBCPP_FORCE_NEW=1
 export LD_PRELOAD="/usr/lib/x86_64-linux-gnu/libjemalloc.so.2"

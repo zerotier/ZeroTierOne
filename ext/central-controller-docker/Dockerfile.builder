@@ -20,6 +20,7 @@ RUN apt -y install \
     postgresql-client-common \
     curl \
     google-perftools \
-    libgoogle-perftools-dev
+    libgoogle-perftools-dev \
+    protobuf-compiler 
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
