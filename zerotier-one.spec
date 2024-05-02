@@ -15,20 +15,32 @@ Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
 %if "%{?dist}" == ".fc36"
-BuildRequires: systemd clang openssl1.1 openssl1.1-devel
-Requires:      systemd openssl1.1
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
 %if "%{?dist}" == ".fc37"
-BuildRequires: systemd clang openssl1.1 openssl1.1-devel
-Requires:      systemd openssl1.1
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
 %if "%{?dist}" == ".fc38"
-BuildRequires: systemd clang openssl1.1 openssl1.1-devel
-Requires:      systemd openssl1.1
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
+%if "%{?dist}" == ".fc39"
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
+%if "%{?dist}" == ".fc40"
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
