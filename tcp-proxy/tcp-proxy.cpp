@@ -43,7 +43,7 @@
 
 #include "../osdep/Phy.hpp"
 
-#include "../node/Metrics.hpp"
+#include "Metrics.hpp"
 
 #define ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS 300
 #define ZT_TCP_PROXY_TCP_PORT 443
@@ -127,6 +127,8 @@ struct TcpProxyService
 		if (!*uptr)
 			return;
 		if ((from->sa_family == AF_INET)&&(len >= 16)&&(len < 2048)) {
+			Metrics::udp_bytes_in += len;
+
 			Client &c = *((Client *)*uptr);
 			c.lastActivity = time((time_t *)0);
 
@@ -171,6 +173,7 @@ struct TcpProxyService
 		Client &c = clients[sockN];
 		PhySocket *udp = getUnusedUdp((void *)&c);
 		if (!udp) {
+			Metrics::udp_open_failed++;
 			phy->close(sockN);
 			clients.erase(sockN);
 			printf("** TCP rejected, no more UDP ports to assign\n");
@@ -184,6 +187,7 @@ struct TcpProxyService
 		c.newVersion = false;
 		*uptrN = (void *)&c;
 		printf("<< TCP from %s -> %.16llx\n",inet_ntoa(reinterpret_cast<const struct sockaddr_in *>(from)->sin_addr),(unsigned long long)&c);
+		Metrics::tcp_opened++;
 	}
 
 	void phyOnTcpClose(PhySocket *sock,void **uptr)
@@ -194,12 +198,15 @@ struct TcpProxyService
 		phy->close(c.udp);
 		clients.erase(sock);
 		printf("** TCP %.16llx closed\n",(unsigned long long)*uptr);
+		Metrics::tcp_closed++;
 	}
 
 	void phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
 	{
 		Client &c = *((Client *)*uptr);
 		c.lastActivity = time((time_t *)0);
+
+		Metrics::tcp_bytes_in += len;
 
 		for(unsigned long i=0;i<len;++i) {
 			if (c.tcpReadPtr >= sizeof(c.tcpReadBuf)) {
@@ -246,6 +253,7 @@ struct TcpProxyService
 						if ((ntohs(dest.sin_port) > 1024)&&(payloadLen >= 16)) {
 							phy->udpSend(c.udp,(const struct sockaddr *)&dest,payload,payloadLen);
 							printf(">> TCP %.16llx to %s:%d\n",(unsigned long long)*uptr,inet_ntoa(dest.sin_addr),(int)ntohs(dest.sin_port));
+							Metrics::udp_bytes_out += payloadLen;
 						}
 					}
 
@@ -260,6 +268,7 @@ struct TcpProxyService
 		Client &c = *((Client *)*uptr);
 		if (c.tcpWritePtr) {
 			long n = phy->streamSend(sock,c.tcpWriteBuf,c.tcpWritePtr);
+			Metrics::tcp_bytes_out += n;
 			if (n > 0) {
 				memmove(c.tcpWriteBuf,c.tcpWriteBuf + n,c.tcpWritePtr -= (unsigned long)n);
 				if (!c.tcpWritePtr)
@@ -278,8 +287,10 @@ struct TcpProxyService
 				toClose.push_back(c->second.udp);
 			}
 		}
-		for(std::vector<PhySocket *>::iterator s(toClose.begin());s!=toClose.end();++s)
+		for(std::vector<PhySocket *>::iterator s(toClose.begin());s!=toClose.end();++s) {
 			phy->close(*s);
+			Metrics::tcp_closed++;
+		}
 	}
 };
 
