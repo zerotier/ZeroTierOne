@@ -271,8 +271,8 @@ struct TcpProxyService
 		Client &c = *((Client *)*uptr);
 		if (c.tcpWritePtr) {
 			long n = phy->streamSend(sock,c.tcpWriteBuf,c.tcpWritePtr);
-			Metrics::tcp_bytes_out += n;
 			if (n > 0) {
+				Metrics::tcp_bytes_out += n;
 				memmove(c.tcpWriteBuf,c.tcpWriteBuf + n,c.tcpWritePtr -= (unsigned long)n);
 				if (!c.tcpWritePtr)
 					phy->setNotifyWritable(sock,false);
