@@ -1,9 +1,10 @@
 CXX=$(shell which clang++ g++ c++ 2>/dev/null | head -n 1)
 
-INCLUDES?=-isystem ../ext/prometheus-cpp-lite-1.0/core/include  -isystem ../ext/prometheus-cpp-lite-1.0/simpleapi/include
+INCLUDES?=-isystem ../ext/prometheus-cpp-lite-1.0/core/include  -isystem ../ext/prometheus-cpp-lite-1.0/simpleapi/include -isystem ../ext/
 
 OBJS=Metrics.o	\
-	../node/Metrics.o 
+	../node/Metrics.o \
+	../osdep/OSUtils.o
 
 CXXFLAGS=-O3 -fno-rtti $(INCLUDES) -std=c++17 -pthread -frtti
 

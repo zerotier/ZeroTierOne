@@ -42,11 +42,14 @@
 #include <vector>
 
 #include "../osdep/Phy.hpp"
+#include "../osdep/OSUtils.hpp"
 
 #include "Metrics.hpp"
 
 #define ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS 300
 #define ZT_TCP_PROXY_TCP_PORT 443
+
+#define HOMEDIR "/var/lib/zt-tcp-proxy"
 
 using namespace ZeroTier;
 
@@ -299,6 +302,17 @@ int main(int argc,char **argv)
 	signal(SIGPIPE,SIG_IGN);
 	signal(SIGHUP,SIG_IGN);
 	srand(time((time_t *)0));
+
+	if (!OSUtils::fileExists(HOMEDIR)) {
+		if (!OSUtils::mkdir(HOMEDIR)) {
+			fprintf(stderr,"%s: fatal error: unable to create %s\n",argv[0],HOMEDIR);
+			return 1;
+		}
+	}
+
+	prometheus::simpleapi::saver.set_registry(prometheus::simpleapi::registry_ptr);
+	prometheus::simpleapi::saver.set_delay(std::chrono::seconds(5));
+	prometheus::simpleapi::saver.set_out_file(HOMEDIR "/metrics.json");
 
 	TcpProxyService svc;
 	Phy<TcpProxyService *> phy(&svc,false,true);
