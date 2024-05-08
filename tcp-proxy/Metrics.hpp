@@ -5,6 +5,8 @@
 
 namespace ZeroTier {
     namespace Metrics {
+        extern prometheus::simpleapi::gauge_metric_t tcp_connections;
+
         extern prometheus::simpleapi::counter_metric_t udp_open_failed;
 
         extern prometheus::simpleapi::counter_metric_t tcp_opened;

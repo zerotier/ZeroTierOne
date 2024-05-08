@@ -3,6 +3,9 @@
 
 namespace ZeroTier {
     namespace Metrics {
+        prometheus::simpleapi::gauge_metric_t tcp_connections
+        {"tcp_connections", "TCP connections"};
+
         prometheus::simpleapi::counter_metric_t udp_open_failed
         {"udp_open_failed", "UDP open failed"};
 

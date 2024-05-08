@@ -191,6 +191,7 @@ struct TcpProxyService
 		*uptrN = (void *)&c;
 		printf("<< TCP from %s -> %.16llx\n",inet_ntoa(reinterpret_cast<const struct sockaddr_in *>(from)->sin_addr),(unsigned long long)&c);
 		Metrics::tcp_opened++;
+		Metrics::tcp_connections++;
 	}
 
 	void phyOnTcpClose(PhySocket *sock,void **uptr)
@@ -293,6 +294,7 @@ struct TcpProxyService
 		for(std::vector<PhySocket *>::iterator s(toClose.begin());s!=toClose.end();++s) {
 			phy->close(*s);
 			Metrics::tcp_closed++;
+			Metrics::tcp_connections--;
 		}
 	}
 };
