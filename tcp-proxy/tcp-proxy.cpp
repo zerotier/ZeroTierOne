@@ -321,11 +321,21 @@ int main(int argc,char **argv)
 	svc.phy = &phy;
 	svc.udpPortCounter = 1023;
 
+	uint16_t listenPort = ZT_TCP_PROXY_TCP_PORT;
+	if (argc > 1) {
+		listenPort = (uint16_t)atoi(argv[1]);
+	}
+
+	if (listenPort == 0) {
+		fprintf(stderr,"%s: fatal error: invalid port number\n",argv[0]);
+		return 1;
+	}
+	
 	{
 		struct sockaddr_in laddr;
 		memset(&laddr,0,sizeof(laddr));
 		laddr.sin_family = AF_INET;
-		laddr.sin_port = htons(ZT_TCP_PROXY_TCP_PORT);
+		laddr.sin_port = htons(listenPort);
 		if (!phy.tcpListen((const struct sockaddr *)&laddr)) {
 			fprintf(stderr,"%s: fatal error: unable to bind TCP port %d\n",argv[0],ZT_TCP_PROXY_TCP_PORT);
 			return 1;
