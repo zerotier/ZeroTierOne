@@ -130,7 +130,7 @@ struct TcpProxyService
 		if (!*uptr)
 			return;
 		if ((from->sa_family == AF_INET)&&(len >= 16)&&(len < 2048)) {
-			Metrics::udp_bytes_in += len;
+			// Metrics::udp_bytes_in += len;
 
 			Client &c = *((Client *)*uptr);
 			c.lastActivity = time((time_t *)0);
@@ -176,7 +176,7 @@ struct TcpProxyService
 		Client &c = clients[sockN];
 		PhySocket *udp = getUnusedUdp((void *)&c);
 		if (!udp) {
-			Metrics::udp_open_failed++;
+			// Metrics::udp_open_failed++;
 			phy->close(sockN);
 			clients.erase(sockN);
 			printf("** TCP rejected, no more UDP ports to assign\n");
@@ -190,8 +190,8 @@ struct TcpProxyService
 		c.newVersion = false;
 		*uptrN = (void *)&c;
 		printf("<< TCP from %s -> %.16llx\n",inet_ntoa(reinterpret_cast<const struct sockaddr_in *>(from)->sin_addr),(unsigned long long)&c);
-		Metrics::tcp_opened++;
-		Metrics::tcp_connections++;
+		// Metrics::tcp_opened++;
+		// Metrics::tcp_connections++;
 	}
 
 	void phyOnTcpClose(PhySocket *sock,void **uptr)
@@ -202,7 +202,7 @@ struct TcpProxyService
 		phy->close(c.udp);
 		clients.erase(sock);
 		printf("** TCP %.16llx closed\n",(unsigned long long)*uptr);
-		Metrics::tcp_closed++;
+		// Metrics::tcp_closed++;
 	}
 
 	void phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
@@ -210,7 +210,7 @@ struct TcpProxyService
 		Client &c = *((Client *)*uptr);
 		c.lastActivity = time((time_t *)0);
 
-		Metrics::tcp_bytes_in += len;
+		// Metrics::tcp_bytes_in += len;
 
 		for(unsigned long i=0;i<len;++i) {
 			if (c.tcpReadPtr >= sizeof(c.tcpReadBuf)) {
@@ -257,7 +257,7 @@ struct TcpProxyService
 						if ((ntohs(dest.sin_port) > 1024)&&(payloadLen >= 16)) {
 							phy->udpSend(c.udp,(const struct sockaddr *)&dest,payload,payloadLen);
 							printf(">> TCP %.16llx to %s:%d\n",(unsigned long long)*uptr,inet_ntoa(dest.sin_addr),(int)ntohs(dest.sin_port));
-							Metrics::udp_bytes_out += payloadLen;
+							// Metrics::udp_bytes_out += payloadLen;
 						}
 					}
 
@@ -273,7 +273,7 @@ struct TcpProxyService
 		if (c.tcpWritePtr) {
 			long n = phy->streamSend(sock,c.tcpWriteBuf,c.tcpWritePtr);
 			if (n > 0) {
-				Metrics::tcp_bytes_out += n;
+				// Metrics::tcp_bytes_out += n;
 				memmove(c.tcpWriteBuf,c.tcpWriteBuf + n,c.tcpWritePtr -= (unsigned long)n);
 				if (!c.tcpWritePtr)
 					phy->setNotifyWritable(sock,false);
@@ -293,8 +293,8 @@ struct TcpProxyService
 		}
 		for(std::vector<PhySocket *>::iterator s(toClose.begin());s!=toClose.end();++s) {
 			phy->close(*s);
-			Metrics::tcp_closed++;
-			Metrics::tcp_connections--;
+			// Metrics::tcp_closed++;
+			// Metrics::tcp_connections--;
 		}
 	}
 };
@@ -305,16 +305,16 @@ int main(int argc,char **argv)
 	signal(SIGHUP,SIG_IGN);
 	srand(time((time_t *)0));
 
-	if (!OSUtils::fileExists(HOMEDIR)) {
-		if (!OSUtils::mkdir(HOMEDIR)) {
-			fprintf(stderr,"%s: fatal error: unable to create %s\n",argv[0],HOMEDIR);
-			return 1;
-		}
-	}
+	// if (!OSUtils::fileExists(HOMEDIR)) {
+	// 	if (!OSUtils::mkdir(HOMEDIR)) {
+	// 		fprintf(stderr,"%s: fatal error: unable to create %s\n",argv[0],HOMEDIR);
+	// 		return 1;
+	// 	}
+	// }
 
-	prometheus::simpleapi::saver.set_registry(prometheus::simpleapi::registry_ptr);
-	prometheus::simpleapi::saver.set_delay(std::chrono::seconds(5));
-	prometheus::simpleapi::saver.set_out_file(HOMEDIR "/metrics.json");
+	// prometheus::simpleapi::saver.set_registry(prometheus::simpleapi::registry_ptr);
+	// prometheus::simpleapi::saver.set_delay(std::chrono::seconds(5));
+	// prometheus::simpleapi::saver.set_out_file(HOMEDIR "/metrics.json");
 
 	TcpProxyService svc;
 	Phy<TcpProxyService *> phy(&svc,false,true);

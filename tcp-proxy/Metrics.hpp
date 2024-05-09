@@ -5,18 +5,18 @@
 
 namespace ZeroTier {
     namespace Metrics {
-        extern prometheus::simpleapi::gauge_metric_t tcp_connections;
+        // extern prometheus::simpleapi::gauge_metric_t tcp_connections;
 
-        extern prometheus::simpleapi::counter_metric_t udp_open_failed;
+        // extern prometheus::simpleapi::counter_metric_t udp_open_failed;
 
-        extern prometheus::simpleapi::counter_metric_t tcp_opened;
-        extern prometheus::simpleapi::counter_metric_t tcp_closed;
+        // extern prometheus::simpleapi::counter_metric_t tcp_opened;
+        // extern prometheus::simpleapi::counter_metric_t tcp_closed;
 
-        extern prometheus::simpleapi::counter_metric_t tcp_bytes_in;
-        extern prometheus::simpleapi::counter_metric_t tcp_bytes_out;
+        // extern prometheus::simpleapi::counter_metric_t tcp_bytes_in;
+        // extern prometheus::simpleapi::counter_metric_t tcp_bytes_out;
 
-        extern prometheus::simpleapi::counter_metric_t udp_bytes_in;
-        extern prometheus::simpleapi::counter_metric_t udp_bytes_out;
+        // extern prometheus::simpleapi::counter_metric_t udp_bytes_in;
+        // extern prometheus::simpleapi::counter_metric_t udp_bytes_out;
     }
 }
 
