@@ -194,7 +194,13 @@ namespace {
         assert(ref);
         assert(ref->node == node);
         JNIEnv *env;
-        GETENV(env, ref->jvm);
+        
+        jint getEnvRet;
+        assert(ref->jvm);
+        if ((getEnvRet = ref->jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6)) != JNI_OK) {
+            LOGE("Error calling GetEnv: %d", getEnvRet);
+            assert(false && "Error calling GetEnv");
+        }
 
         if (env->ExceptionCheck()) {
             LOGE("Unhandled pending exception");
