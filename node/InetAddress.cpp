@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -132,7 +132,20 @@ InetAddress::IpScope InetAddress::ipScope() const
 					return IP_SCOPE_PRIVATE;        // fc00::/7
 				}
 			}
+
+			// :::ffff:127.0.0.1
+			// 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff, 0x7f, 0, 0, 1
 			unsigned int k = 0;
+			while ((!ip[k])&&(k < 9)) {
+				++k;
+			}
+			if (k == 9) {
+				if (ip[10] == 0xff && ip[11] == 0xff && ip[12] == 0x7f) {
+					return IP_SCOPE_LOOPBACK;
+				}
+			}
+
+			k = 0;
 			while ((!ip[k])&&(k < 15)) {
 				++k;
 			}

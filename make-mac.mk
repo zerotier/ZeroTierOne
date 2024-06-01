@@ -12,7 +12,8 @@ PRODUCTSIGN=echo
 CODESIGN_APP_CERT=
 CODESIGN_INSTALLER_CERT=
 NOTARIZE=echo
-NOTARIZE_USER_ID=null
+NOTARIZE_APPLE_ID=null
+NOTARIZE_TEAM_ID=null
 
 ZT_BUILD_PLATFORM=3
 ZT_BUILD_ARCHITECTURE=2
@@ -38,8 +39,9 @@ ifeq ($(ZT_OFFICIAL_RELEASE),1)
 	PRODUCTSIGN=productsign
 	CODESIGN_APP_CERT="Developer ID Application: ZeroTier, Inc (8ZD9JUCZ4V)"
 	CODESIGN_INSTALLER_CERT="Developer ID Installer: ZeroTier, Inc (8ZD9JUCZ4V)"
-	NOTARIZE=xcrun altool
-	NOTARIZE_USER_ID="adam.ierymenko@gmail.com"
+	NOTARIZE=xcrun notarytool
+	NOTARIZE_APPLE_ID="adam.ierymenko@gmail.com"
+	NOTARIZE_TEAM_ID="8ZD9JUCZ4V"
 else
 	DEFS+=-DZT_SOFTWARE_UPDATE_DEFAULT="\"download\""
 endif
@@ -166,7 +168,7 @@ mac-dist-pkg: FORCE
 	if [ -f "ZeroTier One Signed.pkg" ]; then mv -f "ZeroTier One Signed.pkg" "ZeroTier One.pkg"; fi
 	rm -f zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_*
 	cat ext/installfiles/mac-update/updater.tmpl.sh "ZeroTier One.pkg" >zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_$(ZT_VERSION_MAJOR).$(ZT_VERSION_MINOR).$(ZT_VERSION_REV)_$(ZT_VERSION_BUILD).exe
-	$(NOTARIZE) -t osx -f "ZeroTier One.pkg" --primary-bundle-id com.zerotier.pkg.ZeroTierOne --output-format xml --notarize-app -u $(NOTARIZE_USER_ID)
+	$(NOTARIZE) submit --apple-id "adam.ierymenko@gmail.com" --team-id "8ZD9JUCZ4V" --wait "ZeroTier One.pkg"
 	echo '*** When Apple notifies that the app is notarized, run: xcrun stapler staple "ZeroTier One.pkg"'
 
 # For ZeroTier, Inc. to build official signed packages
@@ -185,6 +187,9 @@ _buildx:
 
 controller-builder: _buildx FORCE
 	docker buildx build --platform linux/arm64,linux/amd64 --no-cache -t registry.zerotier.com/zerotier/ctlbuild:latest -f ext/central-controller-docker/Dockerfile.builder . --push
+
+controller-run: _buildx FORCE
+	docker buildx build --platform linux/arm64,linux/amd64 --no-cache -t registry.zerotier.com/zerotier-central/ctlrun:latest -f ext/central-controller-docker/Dockerfile.run_base . --push
 
 central-controller-docker: _buildx FORCE
 	docker buildx build --platform linux/arm64,linux/amd64 --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=$(shell git name-rev --name-only HEAD) . --push

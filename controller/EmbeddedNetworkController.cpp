@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -869,10 +869,13 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	// Control plane Endpoints
 	std::string controllerPath = "/controller";
 	std::string networkListPath = "/controller/network";
+	std::string networkListPath2 = "/unstable/controller/network";
 	std::string networkPath = "/controller/network/([0-9a-fA-F]{16})";
 	std::string oldAndBustedNetworkCreatePath = "/controller/network/([0-9a-fA-F]{10})______";
 	std::string memberListPath = "/controller/network/([0-9a-fA-F]{16})/member";
+	std::string memberListPath2 = "/unstable/controller/network/([0-9a-fA-F]{16})/member";
 	std::string memberPath = "/controller/network/([0-9a-fA-F]{16})/member/([0-9a-fA-F]{10})";
+
 
 	auto controllerGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		char tmp[4096];
@@ -885,11 +888,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 			(unsigned long long)OSUtils::now(),
 			dbOk ? "true" : "false");
 
-			if (!dbOk) {
-				res.status = 503;
-			}
+		if (!dbOk) {
+			res.status = 503;
+		}
 
-			setContent(req, res, tmp);
+		setContent(req, res, tmp);
 	};
 	s.Get(controllerPath, controllerGet);
 	sv6.Get(controllerPath, controllerGet);
@@ -910,6 +913,52 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	s.Get(networkListPath, networkListGet);
 	sv6.Get(networkListPath, networkListGet);
 
+	auto networkListGet2 = [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		std::set<uint64_t> networkIds;
+		_db.networks(networkIds);
+
+		auto meta = json::object();
+		auto data = json::array();
+		uint64_t networkCount = 0;
+
+		for(std::set<uint64_t>::const_iterator nwid(networkIds.begin()); nwid != networkIds.end(); ++nwid) {
+			json network;
+			if (!_db.get(*nwid, network)) {
+				continue;
+			}
+
+			std::vector<json> memTmp;
+			if (_db.get(*nwid, network, memTmp)) {
+				if (!network.is_null()) {
+					uint64_t authorizedCount = 0;
+					uint64_t totalCount = memTmp.size();
+					networkCount++;
+
+					for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
+						bool a = OSUtils::jsonBool((*m)["authorized"], 0);
+						if (a) { authorizedCount++; }
+					}
+
+					auto nwMeta = json::object();
+					nwMeta["totalMemberCount"] = totalCount;
+					nwMeta["authorizedMemberCount"] = authorizedCount;
+					network["meta"] = nwMeta;
+
+					data.push_back(network);
+				}
+			}
+		}
+		meta["networkCount"] = networkCount;
+
+		auto out = json::object();
+		out["data"] = data;
+		out["meta"] = meta;
+
+		setContent(req, res, out.dump());
+	};
+	s.Get(networkListPath2, networkListGet2);
+	sv6.Get(networkListPath2, networkListGet2);
+
 	auto networkGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto networkID = req.matches[1];
 		uint64_t nwid = Utils::hexStrToU64(networkID.str().c_str());
@@ -925,7 +974,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	sv6.Get(networkPath, networkGet);
 
 	auto createNewNetwork = [&, setContent](const httplib::Request &req, httplib::Response &res) {
-		fprintf(stderr, "creating new network (new style)\n");
+		// fprintf(stderr, "creating new network (new style)\n");
 		uint64_t nwid = 0;
 		uint64_t nwidPrefix = (Utils::hexStrToU64(_signingIdAddressString.c_str()) << 24) & 0xffffffffff000000ULL;
 		uint64_t nwidPostfix = 0;
@@ -1035,6 +1084,41 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	s.Get(memberListPath, memberListGet);
 	sv6.Get(memberListPath, memberListGet);
 
+	auto memberListGet2 = [&, setContent](const httplib::Request &req, httplib::Response &res) {
+		auto networkID = req.matches[1];
+		uint64_t nwid = Utils::hexStrToU64(networkID.str().c_str());
+		json network;
+		if (!_db.get(nwid, network)) {
+			res.status = 404;
+			return;
+		}
+
+		auto out = nlohmann::json::object();
+		auto meta = nlohmann::json::object();
+		std::vector<json> memTmp;
+		if (_db.get(nwid, network, memTmp)) {
+			uint64_t authorizedCount = 0;
+			uint64_t totalCount = memTmp.size();
+			for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
+				bool a = OSUtils::jsonBool((*m)["authorized"], 0);
+				if (a) { authorizedCount++; }
+			}
+
+			meta["totalCount"] = totalCount;
+			meta["authorizedCount"] = authorizedCount;
+
+			out["data"] = memTmp;
+			out["meta"] = meta;
+
+			setContent(req, res, out.dump());
+		} else {
+			res.status = 404;
+			return;
+		}
+	};
+	s.Get(memberListPath2, memberListGet2);
+	sv6.Get(memberListPath2, memberListGet2);
+
 	auto memberGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		auto networkID = req.matches[1];
 		auto memberID = req.matches[2];
@@ -1057,6 +1141,12 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		auto memberID = req.matches[2].str();
 		uint64_t nwid = Utils::hexStrToU64(networkID.c_str());
 		uint64_t memid = Utils::hexStrToU64(memberID.c_str());
+
+		if (!_db.hasNetwork(nwid)) {
+			res.status = 404;
+			return;
+		}
+
 		json network;
 		json member;
 		_db.get(nwid, network, memid, member);
@@ -1068,6 +1158,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 		if (b.count("noAutoAssignIps")) member["noAutoAssignIps"] = OSUtils::jsonBool(b["noAutoAssignIps"], false);
 		if (b.count("authenticationExpiryTime")) member["authenticationExpiryTime"] = (uint64_t)OSUtils::jsonInt(b["authenticationExpiryTime"], 0ULL);
 		if (b.count("authenticationURL")) member["authenticationURL"] = OSUtils::jsonString(b["authenticationURL"], "");
+		if (b.count("name")) member["name"] = OSUtils::jsonString(b["name"], "");
 
 		if (b.count("remoteTraceTarget")) {
 			const std::string rtt(OSUtils::jsonString(b["remoteTraceTarget"],""));

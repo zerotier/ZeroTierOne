@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -578,6 +578,7 @@ ZT_PeerList *Node::peers() const
 			if((*path)->valid()) {
 				memcpy(&(p->paths[p->pathCount].address),&((*path)->address()),sizeof(struct sockaddr_storage));
 				p->paths[p->pathCount].localSocket = (*path)->localSocket();
+				p->paths[p->pathCount].localPort = (*path)->localPort();
 				p->paths[p->pathCount].lastSend = (*path)->lastOut();
 				p->paths[p->pathCount].lastReceive = (*path)->lastIn();
 				p->paths[p->pathCount].trustedPathId = RR->topology->getOutboundPathTrust((*path)->address());
