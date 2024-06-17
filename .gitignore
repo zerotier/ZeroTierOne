@@ -124,6 +124,7 @@ attic/world/mkworld
 workspace/
 workspace2/
 zeroidc/target/
+tcp-proxy/target
 
 #snapcraft specifics
 /parts/
