@@ -794,7 +794,7 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const Shar
 	Metrics::pkt_frame_in++;
 	int32_t _flowId = ZT_QOS_NO_FLOW;
 	if (peer->flowHashingSupported()) {
-		if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
+		if (size() > ZT_PROTO_VERB_FRAME_IDX_PAYLOAD) {
 			const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
 			const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
 			const uint8_t *const frameData = reinterpret_cast<const uint8_t *>(data()) + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
@@ -885,6 +885,72 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const Shar
 bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,int32_t flowId)
 {
 	Metrics::pkt_ext_frame_in++;
+
+	int32_t _flowId = ZT_QOS_NO_FLOW;
+	if (peer->flowHashingSupported()) {
+		if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
+			const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE);
+			const unsigned int frameLen = size() - ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD;
+			const uint8_t *const frameData = reinterpret_cast<const uint8_t *>(data()) + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD;
+
+			if (etherType == ZT_ETHERTYPE_IPV4 && (frameLen >= 20)) {
+				uint16_t srcPort = 0;
+				uint16_t dstPort = 0;
+				uint8_t proto = (reinterpret_cast<const uint8_t *>(frameData)[9]);
+				const unsigned int headerLen = 4 * (reinterpret_cast<const uint8_t *>(frameData)[0] & 0xf);
+				switch(proto) {
+					case 0x01: // ICMP
+						//flowId = 0x01;
+						break;
+					// All these start with 16-bit source and destination port in that order
+					case 0x06: // TCP
+					case 0x11: // UDP
+					case 0x84: // SCTP
+					case 0x88: // UDPLite
+						if (frameLen > (headerLen + 4)) {
+							unsigned int pos = headerLen + 0;
+							srcPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
+							srcPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
+							pos++;
+							dstPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
+							dstPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
+							_flowId = dstPort ^ srcPort ^ proto;
+						}
+						break;
+				}
+			}
+
+			if (etherType == ZT_ETHERTYPE_IPV6 && (frameLen >= 40)) {
+				uint16_t srcPort = 0;
+				uint16_t dstPort = 0;
+				unsigned int pos;
+				unsigned int proto;
+				_ipv6GetPayload((const uint8_t *)frameData, frameLen, pos, proto);
+				switch(proto) {
+					case 0x3A: // ICMPv6
+						//flowId = 0x3A;
+						break;
+					// All these start with 16-bit source and destination port in that order
+					case 0x06: // TCP
+					case 0x11: // UDP
+					case 0x84: // SCTP
+					case 0x88: // UDPLite
+						if (frameLen > (pos + 4)) {
+							srcPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
+							srcPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
+							pos++;
+							dstPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
+							dstPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
+							_flowId = dstPort ^ srcPort ^ proto;
+						}
+						break;
+					default:
+						break;
+				}
+			}
+		}
+	}
+
 	const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID);
 	const SharedPtr<Network> network(RR->node->network(nwid));
 	if (network) {
@@ -913,7 +979,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 			const uint8_t *const frameData = (const uint8_t *)field(comLen + ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD,frameLen);
 
 			if ((!from)||(from == network->mac())) {
-				peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid,flowId); // trustEstablished because COM is okay
+				peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid,_flowId); // trustEstablished because COM is okay
 				return true;
 			}
 
@@ -924,19 +990,19 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 							network->learnBridgeRoute(from,peer->address());
 						} else {
 							RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_EXT_FRAME,from,to,"bridging not allowed (remote)");
-							peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid,flowId); // trustEstablished because COM is okay
+							peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid,_flowId); // trustEstablished because COM is okay
 							return true;
 						}
 					} else if (to != network->mac()) {
 						if (to.isMulticast()) {
 							if (network->config().multicastLimit == 0) {
 								RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_EXT_FRAME,from,to,"multicast disabled");
-								peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid,flowId); // trustEstablished because COM is okay
+								peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid,_flowId); // trustEstablished because COM is okay
 								return true;
 							}
 						} else if (!network->config().permitsBridging(RR->identity.address())) {
 							RR->t->incomingNetworkFrameDropped(tPtr,network,_path,packetId(),size(),peer->address(),Packet::VERB_EXT_FRAME,from,to,"bridging not allowed (local)");
-							peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid,flowId); // trustEstablished because COM is okay
+							peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid,_flowId); // trustEstablished because COM is okay
 							return true;
 						}
 					}
@@ -959,9 +1025,9 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 		}
 
-		peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid,flowId);
+		peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,true,nwid,_flowId);
 	} else {
-		peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,false,nwid,flowId);
+		peer->received(tPtr,_path,hops(),packetId(),payloadLength(),Packet::VERB_EXT_FRAME,0,Packet::VERB_NOP,false,nwid,_flowId);
 	}
 
 	return true;
