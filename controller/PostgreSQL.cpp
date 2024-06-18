@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -1180,7 +1180,7 @@ void PostgreSQL::_membersWatcher_Redis() {
 									_memberChanged(oldConfig,newConfig,(this->_ready >= 2));
 								}
 							} catch (...) {
-								fprintf(stderr, "json parse error in networkWatcher_Redis\n");
+								fprintf(stderr, "json parse error in _membersWatcher_Redis: %s\n", a.second.c_str());
 							}
 						}
 						if (_rc->clusterMode) {
@@ -1269,8 +1269,8 @@ void PostgreSQL::_networksWatcher_Redis() {
 								if (oldConfig.is_object()||newConfig.is_object()) {
 									_networkChanged(oldConfig,newConfig,(this->_ready >= 2));
 								}
-							} catch (...) {
-								fprintf(stderr, "json parse error in networkWatcher_Redis\n");
+							} catch (std::exception &e) {
+								fprintf(stderr, "json parse error in networkWatcher_Redis: what: %s json: %s\n", e.what(), a.second.c_str());
 							}
 						}
 						if (_rc->clusterMode) {

@@ -111,6 +111,44 @@ namespace {
         bool finishInitializing();
     };
 
+    //
+    // RAII construct for calling AttachCurrentThread and DetachCurrent automatically
+    //
+    struct ScopedJNIThreadAttacher {
+
+        JavaVM *jvm;
+        JNIEnv **env_p;
+        jint getEnvRet;
+
+        ScopedJNIThreadAttacher(JavaVM *jvmIn, JNIEnv **env_pIn, jint getEnvRetIn) :
+        jvm(jvmIn),
+        env_p(env_pIn),
+        getEnvRet(getEnvRetIn) {
+
+            if (getEnvRet != JNI_EDETACHED) {
+                return;
+            }
+
+            jint attachCurrentThreadRet;
+            if ((attachCurrentThreadRet = jvm->AttachCurrentThread(env_p, NULL)) != JNI_OK) {
+                LOGE("Error calling AttachCurrentThread: %d", attachCurrentThreadRet);
+                assert(false && "Error calling AttachCurrentThread");
+            }
+        }
+
+        ~ScopedJNIThreadAttacher() {
+
+            if (getEnvRet != JNI_EDETACHED) {
+                return;
+            }
+
+            jint detachCurrentThreadRet;
+            if ((detachCurrentThreadRet = jvm->DetachCurrentThread()) != JNI_OK) {
+                LOGE("Error calling DetachCurrentThread: %d", detachCurrentThreadRet);
+                assert(false && "Error calling DetachCurrentThread");
+            }
+        }
+    };
 
     /*
     * This must return 0 on success. It can return any OS-dependent error code
@@ -194,7 +232,25 @@ namespace {
         assert(ref);
         assert(ref->node == node);
         JNIEnv *env;
-        GETENV(env, ref->jvm);
+        
+        jint getEnvRet;
+        assert(ref->jvm);
+        getEnvRet = ref->jvm->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6);
+
+        if (!(getEnvRet == JNI_OK || getEnvRet == JNI_EDETACHED)) {
+            LOGE("Error calling GetEnv: %d", getEnvRet);
+            assert(false && "Error calling GetEnv");
+        }
+
+        //
+        // Thread might actually be detached.
+        //
+        // e.g:
+        // https://github.com/zerotier/ZeroTierOne/blob/91e7ce87f09ac1cfdeaf6ff22c3cedcd93574c86/node/Switch.cpp#L519
+        //
+        // Make sure to attach if needed
+        //
+        ScopedJNIThreadAttacher attacher{ref->jvm, &env, getEnvRet};
 
         if (env->ExceptionCheck()) {
             LOGE("Unhandled pending exception");
