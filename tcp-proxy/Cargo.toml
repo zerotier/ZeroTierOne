@@ -9,7 +9,18 @@ authors = ["ZeroTier, Inc. <contact@zerotier.com>"]
 
 [dependencies]
 socket2 = "^0"
-tokio-uring = "0.5.0"
-tokio = "^1.2"
+#tokio-uring = "0.5.0"
+tokio = { version = "^1", default-features = false, features = [
+    "fs",
+    "io-util",
+    "io-std",
+    "net",
+    "rt",
+    "signal",
+    "sync",
+    "time",
+    "macros",
+    "rt-multi-thread",
+] }
 
 [dev-dependencies]
