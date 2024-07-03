@@ -801,6 +801,7 @@ public:
 	std::vector<PacketRecord *> _rxPacketVector;
 	std::vector<std::thread> _rxPacketThreads;
 	Mutex _rxPacketVector_m,_rxPacketThreads_m;
+	bool _enableMulticore;
 
 	bool _allowTcpFallbackRelay;
 	bool _forceTcpRelay;
@@ -934,74 +935,87 @@ public:
 		_ports[1] = 0;
 		_ports[2] = 0;
 
-		bool _enablePinning = false;
-		char* pinningVar = std::getenv("ZT_CPU_PINNING");
-		if (pinningVar) {
-			int tmp = atoi(pinningVar);
+		_enableMulticore = false;
+		char* multicoreVar = std::getenv("ZT_ENABLE_MULTICORE");
+		if (multicoreVar) {
+			int tmp = atoi(multicoreVar);
 			if (tmp > 0) {
-				_enablePinning = true;
+				_enableMulticore = true;
 			}
 		}
-		char* concurrencyVar = std::getenv("ZT_PACKET_PROCESSING_CONCURRENCY");
-		if (concurrencyVar) {
-			int tmp = atoi(concurrencyVar);
-			if (tmp > 0) {
-				_rxThreadCount = tmp;
+		if (_enableMulticore) {
+			bool _enablePinning = false;
+			char* pinningVar = std::getenv("ZT_CORE_PINNING");
+			if (pinningVar) {
+				int tmp = atoi(pinningVar);
+				if (tmp > 0) {
+					_enablePinning = true;
+				}
+			}
+			char* concurrencyVar = std::getenv("ZT_CONCURRENCY");
+			if (concurrencyVar) {
+				int tmp = atoi(concurrencyVar);
+				if (tmp > 0) {
+					_rxThreadCount = tmp;
+				}
+				else {
+					_rxThreadCount = std::thread::hardware_concurrency() >= 4 ? 2 : 1;
+				}
 			}
 			else {
-				_rxThreadCount = std::thread::hardware_concurrency();
+				_rxThreadCount = std::thread::hardware_concurrency() >= 4 ? 2 : 1;
 			}
-		}
-		else {
-			_rxThreadCount = std::thread::hardware_concurrency();
-		}
-		for (unsigned int i = 0; i < _rxThreadCount; ++i) {
-			_rxPacketThreads.push_back(std::thread([this, i]() {
+			fprintf(stderr, "using %d rx threads\n", _rxThreadCount);
+			for (unsigned int i = 0; i < _rxThreadCount; ++i) {
+				_rxPacketThreads.push_back(std::thread([this, i, _enablePinning]() {
 
+				if (_enablePinning) {
 #if defined(__LINUX__) || defined(__FreeBSD__) /* || defined(__APPLE__) */
-				int pinCore = i % _rxThreadCount;
-				fprintf(stderr, "pinning thread %d to core %d\n", i, pinCore);
-				pthread_t self = pthread_self();
-				cpu_set_t cpuset;
-				CPU_ZERO(&cpuset);
-				CPU_SET(pinCore, &cpuset);
+					int pinCore = i % _rxThreadCount;
+					fprintf(stderr, "pinning thread %d to core %d\n", i, pinCore);
+					pthread_t self = pthread_self();
+					cpu_set_t cpuset;
+					CPU_ZERO(&cpuset);
+					CPU_SET(pinCore, &cpuset);
 #endif
 #ifdef __LINUX__
-				int rc = pthread_setaffinity_np(self, sizeof(cpu_set_t), &cpuset);
+					int rc = pthread_setaffinity_np(self, sizeof(cpu_set_t), &cpuset);
 #elif __FreeBSD__
-				int rc = pthread_setaffinity_np(self, sizeof(cpu_set_t), &cpuset);
+					int rc = pthread_setaffinity_np(self, sizeof(cpu_set_t), &cpuset);
 #endif
 #if defined(__LINUX__) || defined(__FreeBSD__) /* || defined(__APPLE__) */
-				if (rc != 0)
-				{
-					fprintf(stderr, "failed to pin thread %d to core %d: %s\n", i, pinCore, strerror(errno));
-					exit(1);
-				}
-#endif
-				PacketRecord* packet = nullptr;
-				for (;;) {
-					if (! _rxPacketQueue.get(packet)) {
-						break;
-					}
-					if (! packet) {
-						break;
-					}
-					const ZT_ResultCode err = _node->processWirePacket(nullptr, packet->now, packet->sock, &(packet->from), packet->data, packet->size, &_nextBackgroundTaskDeadline);
+					if (rc != 0)
 					{
-						Mutex::Lock l(_rxPacketVector_m);
-						_rxPacketVector.push_back(packet);
+						fprintf(stderr, "failed to pin thread %d to core %d: %s\n", i, pinCore, strerror(errno));
+						exit(1);
 					}
-					if (ZT_ResultCode_isFatal(err)) {
-						char tmp[256];
-						OSUtils::ztsnprintf(tmp, sizeof(tmp), "error processing packet: %d", (int)err);
-						Mutex::Lock _l(_termReason_m);
-						_termReason = ONE_UNRECOVERABLE_ERROR;
-						_fatalErrorMessage = tmp;
-						this->terminate();
-						break;
-					}
+#endif
 				}
-			}));
+					PacketRecord* packet = nullptr;
+					for (;;) {
+						if (! _rxPacketQueue.get(packet)) {
+							break;
+						}
+						if (! packet) {
+							break;
+						}
+						const ZT_ResultCode err = _node->processWirePacket(nullptr, packet->now, packet->sock, &(packet->from), packet->data, packet->size, &_nextBackgroundTaskDeadline);
+						{
+							Mutex::Lock l(_rxPacketVector_m);
+							_rxPacketVector.push_back(packet);
+						}
+						if (ZT_ResultCode_isFatal(err)) {
+							char tmp[256];
+							OSUtils::ztsnprintf(tmp, sizeof(tmp), "error processing packet: %d", (int)err);
+							Mutex::Lock _l(_termReason_m);
+							_termReason = ONE_UNRECOVERABLE_ERROR;
+							_fatalErrorMessage = tmp;
+							this->terminate();
+							break;
+						}
+					}
+				}));
+			}
 		}
 
 		prometheus::simpleapi::saver.set_registry(prometheus::simpleapi::registry_ptr);
@@ -2865,24 +2879,38 @@ public:
 			_lastDirectReceiveFromGlobal = now;
 		}
 
-		PacketRecord* packet;
-		_rxPacketVector_m.lock();
-		if (_rxPacketVector.empty()) {
-			packet = new PacketRecord;
+		if (_enableMulticore) {
+			PacketRecord* packet;
+			_rxPacketVector_m.lock();
+			if (_rxPacketVector.empty()) {
+				packet = new PacketRecord;
+			}
+			else {
+				packet = _rxPacketVector.back();
+				_rxPacketVector.pop_back();
+			}
+			_rxPacketVector_m.unlock();
+
+			packet->sock = reinterpret_cast<int64_t>(sock);
+			packet->now = now;
+			memcpy(&(packet->from), from, sizeof(struct sockaddr_storage));
+			packet->size = (unsigned int)len;
+			memcpy(packet->data, data, len);
+			_rxPacketQueue.postLimit(packet, 256 * _rxThreadCount);
 		}
 		else {
-			packet = _rxPacketVector.back();
-			_rxPacketVector.pop_back();
+			const ZT_ResultCode rc = _node->processWirePacket(nullptr,now,reinterpret_cast<int64_t>(sock),reinterpret_cast<const struct sockaddr_storage *>(from),data,len,&_nextBackgroundTaskDeadline);
+			if (ZT_ResultCode_isFatal(rc)) {
+				char tmp[256];
+				OSUtils::ztsnprintf(tmp,sizeof(tmp),"fatal error code from processWirePacket: %d",(int)rc);
+				Mutex::Lock _l(_termReason_m);
+				_termReason = ONE_UNRECOVERABLE_ERROR;
+				_fatalErrorMessage = tmp;
+				this->terminate();
+			}
 		}
-		_rxPacketVector_m.unlock();
-
-		packet->sock = reinterpret_cast<int64_t>(sock);
-		packet->now = now;
-		memcpy(&(packet->from), from, sizeof(struct sockaddr_storage));
-		packet->size = (unsigned int)len;
-		memcpy(packet->data, data, len);
-		_rxPacketQueue.postLimit(packet, 256 * _rxThreadCount);
 	}
+
 
 	inline void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
 	{
@@ -3103,7 +3131,7 @@ public:
 						n.setTap(EthernetTap::newInstance(
 							nullptr,
 							_homePath.c_str(),
-							_rxThreadCount,
+							_enableMulticore ? _rxThreadCount : 1,
 							MAC(nwc->mac),
 							nwc->mtu,
 							(unsigned int)ZT_IF_METRIC,

@@ -28,7 +28,6 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-#include <thread>
 
 namespace ZeroTier {
 
@@ -37,7 +36,6 @@ class MacEthernetTap : public EthernetTap
 public:
 	MacEthernetTap(
 		const char *homePath,
-		unsigned int concurrency,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
@@ -69,7 +67,6 @@ private:
 	uint64_t _nwid;
 	Thread _thread;
 	std::string _homePath;
-	unsigned int _concurrency;
 	std::string _dev;
 	std::vector<MulticastGroup> _multicastGroups;
 	Mutex _putLock;
@@ -82,7 +79,6 @@ private:
 	volatile bool _enabled;
 	mutable std::vector<InetAddress> _ifaddrs;
 	mutable uint64_t _lastIfAddrsUpdate;
-	std::vector<std::thread> _rxThreads;
 
 };
 

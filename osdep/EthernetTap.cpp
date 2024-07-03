@@ -84,9 +84,9 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 			// The "feth" virtual Ethernet device type appeared in Darwin 17.x.x. Older versions
 			// (Sierra and earlier) must use the a kernel extension.
 			if (strtol(osrelease,(char **)0,10) < 17) {
-				return std::shared_ptr<EthernetTap>(new MacKextEthernetTap(homePath,concurrency,mac,mtu,metric,nwid,friendlyName,handler,arg));
+				return std::shared_ptr<EthernetTap>(new MacKextEthernetTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
 			} else {
-				return std::shared_ptr<EthernetTap>(new MacEthernetTap(homePath,concurrency,mac,mtu,metric,nwid,friendlyName,handler,arg));
+				return std::shared_ptr<EthernetTap>(new MacEthernetTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
 			}
 		}
 	}

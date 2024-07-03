@@ -306,7 +306,6 @@ static Mutex globalTapCreateLock;
 
 MacKextEthernetTap::MacKextEthernetTap(
 	const char *homePath,
-	unsigned int concurrency,
 	const MAC &mac,
 	unsigned int mtu,
 	unsigned int metric,
@@ -318,7 +317,6 @@ MacKextEthernetTap::MacKextEthernetTap(
 	_arg(arg),
 	_nwid(nwid),
 	_homePath(homePath),
-	_concurrency(concurrency),
 	_mtu(mtu),
 	_metric(metric),
 	_fd(0),

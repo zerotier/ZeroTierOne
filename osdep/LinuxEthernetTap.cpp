@@ -223,7 +223,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	(void)::pipe(_shutdownSignalPipe);
 
 	bool _enablePinning = false;
-	char* envvar = std::getenv("ZT_CPU_PINNING");
+	char* envvar = std::getenv("ZT_CORE_PINNING");
 	if (envvar) {
 		int tmp = atoi(envvar);
 		if (tmp > 0) {
