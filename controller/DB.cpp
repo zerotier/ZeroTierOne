@@ -382,6 +382,24 @@ void DB::_networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool 
 		const std::string ids = old["id"];
 		const uint64_t networkId = Utils::hexStrToU64(ids.c_str());
 		if (networkId) {
+			try {
+				// deauth all members on the network
+				nlohmann::json network;
+				std::vector<nlohmann::json> members;
+				this->get(networkId, network, members);
+				for(auto i=members.begin();i!=members.end();++i) {
+					const std::string nodeID = (*i)["id"];
+					const uint64_t memberId = Utils::hexStrToU64(nodeID.c_str());
+					std::unique_lock<std::shared_mutex> ll(_changeListeners_l);
+					for(auto j=_changeListeners.begin();j!=_changeListeners.end();++j) {
+						(*j)->onNetworkMemberDeauthorize(this,networkId,memberId);
+					}
+				}
+			} catch (std::exception &e) {
+				std::cerr << "Error deauthorizing members on network delete: " << e.what() << std::endl;
+			}
+
+			// delete the network
 			std::unique_lock<std::shared_mutex> l(_networks_l);
 			_networks.erase(networkId);
 		}
