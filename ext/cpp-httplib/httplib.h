@@ -3163,13 +3163,13 @@ socket_t create_socket(const std::string &host, const std::string &ip, int port,
     if (socket_options) { socket_options(sock); }
 
     if (rp->ai_family == AF_INET6) {
-      auto no = 0;
+      auto yes = 1;
 #ifdef _WIN32
       setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
-                 reinterpret_cast<const char *>(&no), sizeof(no));
+                 reinterpret_cast<const char *>(&yes), sizeof(yes));
 #else
       setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY,
-                 reinterpret_cast<const void *>(&no), sizeof(no));
+                 reinterpret_cast<const void *>(&yes), sizeof(yes));
 #endif
     }
 
