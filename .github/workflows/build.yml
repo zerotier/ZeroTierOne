@@ -4,18 +4,17 @@ jobs:
   build_ubuntu_x64:
     runs-on: gha-runner-x64
     steps:
-    - name: gitconfig
-      run: |
-        git config --global core.autocrlf input
-      #        git config --global core.eol lf
+    # - name: gitconfig
+    #   run: |
+    #     git config --global core.autocrlf input
+    #   #        git config --global core.eol lf
     - name: checkout
       uses: actions/checkout@v3
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
-        target: x86_64-unknown-linux-gnu
-        override: true
+        target: x86_64-unknown-linux-gnu, aarch64-unknown-linux-gnu
         components: rustfmt, clippy
 
     - name: Set up cargo cache
