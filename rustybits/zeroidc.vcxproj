@@ -87,49 +87,49 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <NMakeBuildCommandLine>cargo build --release --target=x86_64-pc-windows-msvc</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>cargo build -p zeroidc --release --target=x86_64-pc-windows-msvc</NMakeBuildCommandLine>
     <NMakeOutput>
     </NMakeOutput>
     <NMakeCleanCommandLine>cargo clean</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>cargo clean &amp; cargo build --release --target=x86_64-pc-windows-msvc</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>cargo clean &amp; cargo build -p zeroidc --release --target=x86_64-pc-windows-msvc</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
-    <NMakeBuildCommandLine>cargo build --release --target=aarch64-pc-windows-msvc</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>cargo build -p zeroidc --release --target=aarch64-pc-windows-msvc</NMakeBuildCommandLine>
     <NMakeOutput />
     <NMakeCleanCommandLine>cargo clean</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>cargo clean &amp; cargo build --release --target=aarch64-pc-windows-msvc</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>cargo clean &amp; cargo build -p zeroidc --release --target=aarch64-pc-windows-msvc</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <NMakeBuildCommandLine>cargo build --target=i686-pc-windows-msvc</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>cargo build -p zeroidc --target=i686-pc-windows-msvc</NMakeBuildCommandLine>
     <NMakeOutput>
     </NMakeOutput>
     <NMakeCleanCommandLine>cargo clean</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>cargo clean &amp; cargo build --target=i686-pc-windows-msvc</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>cargo clean &amp; cargo build -p zeroidc --target=i686-pc-windows-msvc</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <NMakeBuildCommandLine>cargo build --target=x86_64-pc-windows-msvc</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>cargo build -p zeroidc --target=x86_64-pc-windows-msvc</NMakeBuildCommandLine>
     <NMakeOutput>
     </NMakeOutput>
     <NMakeCleanCommandLine>cargo clean</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>cargo clean &amp; cargo build --target=x86_64-pc-windows-msvc</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>cargo clean &amp; cargo build -p zeroidc --target=x86_64-pc-windows-msvc</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
-    <NMakeBuildCommandLine>cargo build --target=aarch64-pc-windows-msvc</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>cargo build -p zeroidc --target=aarch64-pc-windows-msvc</NMakeBuildCommandLine>
     <NMakeOutput />
     <NMakeCleanCommandLine>cargo clean</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>cargo clean &amp; cargo build --target=aarch64-pc-windows-msvc</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>cargo clean &amp; cargo build -p zeroidc --target=aarch64-pc-windows-msvc</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <NMakeBuildCommandLine>cargo build --release --target=i686-pc-windows-msvc</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>cargo build --release -p zeroidc --target=i686-pc-windows-msvc</NMakeBuildCommandLine>
     <NMakeOutput>
     </NMakeOutput>
     <NMakeCleanCommandLine>cargo clean</NMakeCleanCommandLine>
-    <NMakeReBuildCommandLine>cargo clean &amp; cargo build --release --target=i686-pc-windows-msvc</NMakeReBuildCommandLine>
+    <NMakeReBuildCommandLine>cargo clean &amp; cargo build -p zeroidc --release --target=i686-pc-windows-msvc</NMakeReBuildCommandLine>
     <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>
   <ItemDefinitionGroup>

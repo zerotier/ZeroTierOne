@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -876,6 +876,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	std::string memberListPath2 = "/unstable/controller/network/([0-9a-fA-F]{16})/member";
 	std::string memberPath = "/controller/network/([0-9a-fA-F]{16})/member/([0-9a-fA-F]{10})";
 
+
 	auto controllerGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		char tmp[4096];
 		const bool dbOk = _db.isReady();
@@ -887,11 +888,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 			(unsigned long long)OSUtils::now(),
 			dbOk ? "true" : "false");
 
-			if (!dbOk) {
-				res.status = 503;
-			}
+		if (!dbOk) {
+			res.status = 503;
+		}
 
-			setContent(req, res, tmp);
+		setContent(req, res, tmp);
 	};
 	s.Get(controllerPath, controllerGet);
 	sv6.Get(controllerPath, controllerGet);
@@ -918,6 +919,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 
 		auto meta = json::object();
 		auto data = json::array();
+		uint64_t networkCount = 0;
 
 		for(std::set<uint64_t>::const_iterator nwid(networkIds.begin()); nwid != networkIds.end(); ++nwid) {
 			json network;
@@ -927,23 +929,26 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 
 			std::vector<json> memTmp;
 			if (_db.get(*nwid, network, memTmp)) {
-				uint64_t authorizedCount = 0;
-				uint64_t totalCount = memTmp.size();
+				if (!network.is_null()) {
+					uint64_t authorizedCount = 0;
+					uint64_t totalCount = memTmp.size();
+					networkCount++;
 
-				for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
-					bool a = OSUtils::jsonBool((*m)["authorized"], 0);
-					if (a) { authorizedCount++; }
+					for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
+						bool a = OSUtils::jsonBool((*m)["authorized"], 0);
+						if (a) { authorizedCount++; }
+					}
+
+					auto nwMeta = json::object();
+					nwMeta["totalMemberCount"] = totalCount;
+					nwMeta["authorizedMemberCount"] = authorizedCount;
+					network["meta"] = nwMeta;
+
+					data.push_back(network);
 				}
-
-				auto nwMeta = json::object();
-				nwMeta["totalMemberCount"] = totalCount;
-				nwMeta["authorizedMemberCount"] = authorizedCount;
-				network["meta"] = nwMeta;
 			}
-
-			data.push_back(network);
 		}
-		meta["networkCount"] = networkIds.size();
+		meta["networkCount"] = networkCount;
 
 		auto out = json::object();
 		out["data"] = data;
@@ -1090,26 +1095,26 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 
 		auto out = nlohmann::json::object();
 		auto meta = nlohmann::json::object();
-		auto members = nlohmann::json::array();
 		std::vector<json> memTmp;
 		if (_db.get(nwid, network, memTmp)) {
-			members.push_back(memTmp);
+			uint64_t authorizedCount = 0;
+			uint64_t totalCount = memTmp.size();
+			for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
+				bool a = OSUtils::jsonBool((*m)["authorized"], 0);
+				if (a) { authorizedCount++; }
+			}
+
+			meta["totalCount"] = totalCount;
+			meta["authorizedCount"] = authorizedCount;
+
+			out["data"] = memTmp;
+			out["meta"] = meta;
+
+			setContent(req, res, out.dump());
+		} else {
+			res.status = 404;
+			return;
 		}
-
-		uint64_t authorizedCount = 0;
-		uint64_t totalCount = memTmp.size();
-		for (auto m = memTmp.begin(); m != memTmp.end(); ++m) {
-			bool a = OSUtils::jsonBool((*m)["authorized"], 0);
-			if (a) { authorizedCount++; }
-		}
-
-		meta["totalCount"] = totalCount;
-		meta["authorizedCount"] = authorizedCount;
-
-		out["data"] = members;
-		out["meta"] = meta;
-
-		setContent(req, res, out.dump());
 	};
 	s.Get(memberListPath2, memberListGet2);
 	sv6.Get(memberListPath2, memberListGet2);

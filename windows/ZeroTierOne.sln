@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30517.126
+# Visual Studio Version 17
+VisualStudioVersion = 17.9.34622.214
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroTierOne", "ZeroTierOne\ZeroTierOne.vcxproj", "{B00A4957-5977-4AC1-9EF4-571DC27EADA2}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -10,7 +10,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ZeroTierOne", "ZeroTierOne\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TapDriver6", "TapDriver6\TapDriver6.vcxproj", "{43BA7584-D4DB-4F7C-90FC-E2B18A68A213}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zeroidc", "..\zeroidc\zeroidc.vcxproj", "{175C340F-F5BA-4CB1-88AD-533B102E3799}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "zeroidc", "..\rustybits\zeroidc.vcxproj", "{175C340F-F5BA-4CB1-88AD-533B102E3799}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -94,6 +94,7 @@ Global
 		{175C340F-F5BA-4CB1-88AD-533B102E3799}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{175C340F-F5BA-4CB1-88AD-533B102E3799}.Debug|ARM.ActiveCfg = Debug|Win32
 		{175C340F-F5BA-4CB1-88AD-533B102E3799}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{175C340F-F5BA-4CB1-88AD-533B102E3799}.Debug|ARM64.Build.0 = Debug|ARM64
 		{175C340F-F5BA-4CB1-88AD-533B102E3799}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
 		{175C340F-F5BA-4CB1-88AD-533B102E3799}.Debug|Mixed Platforms.Build.0 = Debug|Win32
 		{175C340F-F5BA-4CB1-88AD-533B102E3799}.Debug|Win32.ActiveCfg = Debug|Win32

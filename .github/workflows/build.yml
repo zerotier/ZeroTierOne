@@ -22,10 +22,10 @@ jobs:
       uses: Swatinem/rust-cache@v2
       continue-on-error: false
       with:
-        key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}
         shared-key: ${{ runner.os }}-cargo-
         workspaces: |
-          zeroidc/
+          rustybits/
 
     - name: make
       run: make
@@ -43,21 +43,28 @@ jobs:
       #        git config --global core.eol lf
     - name: checkout
       uses: actions/checkout@v3
-    - name: Install Rust
+    - name: Install Rust aarch64
       uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
         target: aarch64-apple-darwin
         override: true
         components: rustfmt, clippy
+    - name: Install Rust x86_64
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: x86_64-apple-darwin
+        override: true
+        components: rustfmt, clippy
     - name: Set up cargo cache
       uses: Swatinem/rust-cache@v2
       continue-on-error: false
       with:
-        key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}
         shared-key: ${{ runner.os }}-cargo-
         workspaces: |
-          zeroidc/
+          rustybits/
 
     - name: make
       run: make
@@ -86,10 +93,10 @@ jobs:
       uses: Swatinem/rust-cache@v2
       continue-on-error: false
       with:
-        key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}
         shared-key: ${{ runner.os }}-cargo-
         workspaces: |
-          zeroidc/
+          rustybits/
 
     - name: setup msbuild
       uses: microsoft/setup-msbuild@v1.1.3

@@ -44,6 +44,12 @@ The base path contains the ZeroTier One service main entry point (`one.cpp`), se
  - `windows/`: Visual Studio solution files, Windows service code, and the Windows task bar app UI.
  - `zeroidc/`: OIDC implementation used by ZeroTier service to log into SSO-enabled networks. (This part is written in Rust, and more Rust will be appearing in this repository in the future.)
 
+### Contributing
+
+Please do pull requests off of the `dev` branch.
+
+Releases are done by merging `dev` into `main` and then tagging and doing builds. 
+
 ### Build and Platform Notes
 
 To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU make) is required and can be installed from packages or ports. For Windows there is a Visual Studio solution in `windows/`.
@@ -169,3 +175,23 @@ Metrics are also available on disk in ZeroTier's working directory:
 | zt_peer_packet_errors | node_id | Counter | number of incoming packet errors from a peer |
 
 If there are other metrics you'd like to see tracked, ask us in an Issue or send us a Pull Request!
+
+### HTTP / App server
+
+There is a static http file server suitable for hosting Single Page Apps at http://localhost:9993/app/<app-path>
+
+Use `zerotier-cli info -j` to find your zerotier-one service's homeDir
+
+``` sh
+cd $ZT_HOME
+sudo mkdir -p app/app1
+sudo mkdir -p app/appB
+echo '<html><meta charset=utf-8><title>appA</title><body><h1>hello world A' | sudo tee app/appA/index.html 
+echo '<html><meta charset=utf-8><title>app2</title><body><h1>hello world 2' | sudo tee app/app2/index.html 
+curl -sL http://localhost:9993/app/appA http://localhost:9993/app/app2 
+```
+
+Then visit [http://localhost:9993/app/app1/](http://localhost:9993/app/app1/) and [http://localhost:9993/app/appB/](http://localhost:9993/app/appB/)
+
+Requests to paths don't exist return the app root index.html, as is customary for SPAs. 
+If you want, you can write some javascript that talks to the service or controller [api](https://docs.zerotier.com/service/v1).
