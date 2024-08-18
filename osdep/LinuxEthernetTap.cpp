@@ -111,7 +111,6 @@ static void _base32_5_to_8(const uint8_t *in,char *out)
 
 LinuxEthernetTap::LinuxEthernetTap(
 	const char *homePath,
-	unsigned int concurrency,
 	const MAC &mac,
 	unsigned int mtu,
 	unsigned int metric,
@@ -128,7 +127,6 @@ LinuxEthernetTap::LinuxEthernetTap(
 	_fd(0),
 	_enabled(true),
 	_run(true),
-	_concurrency(concurrency),
 	_lastIfAddrsUpdate(0)
 {
 	static std::mutex s_tapCreateLock;
@@ -231,12 +229,27 @@ LinuxEthernetTap::LinuxEthernetTap(
 		}
 	}
 
+	int _concurrency = 1;
+	char* concurrencyVar = std::getenv("ZT_PACKET_PROCESSING_CONCURRENCY");
+	if (concurrencyVar) {
+		int tmp = atoi(concurrencyVar);
+		if (tmp > 0) {
+			_concurrency = tmp;
+		}
+		else {
+			_concurrency = std::max((unsigned int)1,std::thread::hardware_concurrency() / 2);
+		}
+	}
+	else {
+		_concurrency = std::max((unsigned int)1,std::thread::hardware_concurrency() / 2);
+	}
+
 	for (unsigned int i = 0; i < _concurrency; ++i) {
-		_rxThreads.push_back(std::thread([this, i, _enablePinning] {
+		_rxThreads.push_back(std::thread([this, i, _concurrency, _enablePinning] {
 
 			if (_enablePinning) {
 				int pinCore = i % _concurrency;
-				fprintf(stderr, "pinning thread %d to core %d\n", i, pinCore);
+				fprintf(stderr, "pinning tap thread %d to core %d\n", i, pinCore);
 				pthread_t self = pthread_self();
 				cpu_set_t cpuset;
 				CPU_ZERO(&cpuset);
@@ -244,7 +257,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 				int rc = pthread_setaffinity_np(self, sizeof(cpu_set_t), &cpuset);
 				if (rc != 0)
 				{
-					fprintf(stderr, "failed to pin thread %d to core %d: %s\n", i, pinCore, strerror(errno));
+					fprintf(stderr, "failed to pin tap thread %d to core %d: %s\n", i, pinCore, strerror(errno));
 					exit(1);
 				}
 			}

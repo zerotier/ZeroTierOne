@@ -35,7 +35,6 @@ class LinuxEthernetTap : public EthernetTap
 public:
 	LinuxEthernetTap(
 		const char *homePath,
-		unsigned int _concurrency,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
@@ -68,7 +67,6 @@ private:
 	std::string _dev;
 	std::vector<MulticastGroup> _multicastGroups;
 	unsigned int _mtu;
-	unsigned int _concurrency;
 	int _fd;
 	int _shutdownSignalPipe[2];
 	std::atomic_bool _enabled;

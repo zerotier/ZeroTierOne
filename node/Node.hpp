@@ -283,7 +283,7 @@ public:
 		return _lowBandwidthMode;
 	}
 
-private:
+public:
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P

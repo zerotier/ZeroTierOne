@@ -46,6 +46,7 @@
 #include "../node/SHA512.hpp"
 #include "../node/Bond.hpp"
 #include "../node/Peer.hpp"
+#include "../node/PacketMultiplexer.hpp"
 
 #include "../osdep/Phy.hpp"
 #include "../osdep/OSUtils.hpp"
@@ -986,7 +987,7 @@ public:
 #if defined(__LINUX__) || defined(__FreeBSD__) /* || defined(__APPLE__) */
 					if (rc != 0)
 					{
-						fprintf(stderr, "failed to pin thread %d to core %d: %s\n", i, pinCore, strerror(errno));
+						fprintf(stderr, "failed to pin rx thread %d to core %d: %s\n", i, pinCore, strerror(errno));
 						exit(1);
 					}
 #endif
@@ -3131,7 +3132,6 @@ public:
 						n.setTap(EthernetTap::newInstance(
 							nullptr,
 							_homePath.c_str(),
-							_enableMulticore ? _rxThreadCount : 1,
 							MAC(nwc->mac),
 							nwc->mtu,
 							(unsigned int)ZT_IF_METRIC,

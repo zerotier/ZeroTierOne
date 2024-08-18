@@ -519,7 +519,7 @@ void Switch::onLocalEthernet(void *tPtr,const SharedPtr<Network> &network,const 
 						RR->node->putFrame(tPtr, network->id(), network->userPtr(), peerMac, from, ZT_ETHERTYPE_IPV6, 0, adv, 72);
 
 					}).detach();
-					
+
 					return; // NDP emulation done. We have forged a "fake" reply, so no need to send actual NDP query.
 				} // else no NDP emulation
 			} // else no NDP emulation
