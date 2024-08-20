@@ -21,6 +21,11 @@
 
 namespace ZeroTier {
 
+PacketMultiplexer::PacketMultiplexer(const RuntimeEnvironment* renv)
+{
+	RR = renv;
+};
+
 void PacketMultiplexer::putFrame(void* tPtr, uint64_t nwid, void** nuptr, const MAC& source, const MAC& dest, unsigned int etherType, unsigned int vlanId, const void* data, unsigned int len, unsigned int flowId)
 {
 	PacketRecord* packet;
@@ -46,46 +51,26 @@ void PacketMultiplexer::putFrame(void* tPtr, uint64_t nwid, void** nuptr, const 
 	memcpy(packet->data, data, len);
 
 	int bucket = flowId % _concurrency;
-	//fprintf(stderr, "bucket=%d\n", bucket);
-	_rxPacketQueues[bucket]->postLimit(packet, 2048);
+	_rxPacketQueues[bucket]->postLimit(packet, 256);
 }
 
-PacketMultiplexer::PacketMultiplexer(const RuntimeEnvironment* renv)
+void PacketMultiplexer::setUpPostDecodeReceiveThreads(unsigned int concurrency, bool cpuPinningEnabled)
 {
-	RR = renv;
-	bool _enablePinning = false;
-	char* pinningVar = std::getenv("ZT_CPU_PINNING");
-	if (pinningVar) {
-		int tmp = atoi(pinningVar);
-		if (tmp > 0) {
-			_enablePinning = true;
-		}
+	if (! RR->node->getMultithreadingEnabled()) {
+		return;
 	}
-
-    _concurrency = 1;
-	char* concurrencyVar = std::getenv("ZT_PACKET_PROCESSING_CONCURRENCY");
-	if (concurrencyVar) {
-		int tmp = atoi(concurrencyVar);
-		if (tmp > 0) {
-			_concurrency = tmp;
-		}
-		else {
-			_concurrency = std::max((unsigned int)1, std::thread::hardware_concurrency() / 2);
-		}
-	}
-	else {
-		_concurrency = std::max((unsigned int)1, std::thread::hardware_concurrency() / 2);
-	}
+	_concurrency = concurrency;
+	bool _enablePinning = cpuPinningEnabled;
 
 	for (unsigned int i = 0; i < _concurrency; ++i) {
-		fprintf(stderr, "reserved queue for thread %d\n", i);
+		fprintf(stderr, "Reserved queue for thread %d\n", i);
 		_rxPacketQueues.push_back(new BlockingQueue<PacketRecord*>());
 	}
 
 	// Each thread picks from its own queue to feed into the core
 	for (unsigned int i = 0; i < _concurrency; ++i) {
 		_rxThreads.push_back(std::thread([this, i, _enablePinning]() {
-			fprintf(stderr, "created post-decode packet ingestion thread %d\n", i);
+			fprintf(stderr, "Created post-decode packet ingestion thread %d\n", i);
 
 			PacketRecord* packet = nullptr;
 			for (;;) {
@@ -96,7 +81,7 @@ PacketMultiplexer::PacketMultiplexer(const RuntimeEnvironment* renv)
 					break;
 				}
 
-                //fprintf(stderr, "popped packet from queue %d\n", i);
+				// fprintf(stderr, "popped packet from queue %d\n", i);
 
 				MAC sourceMac = MAC(packet->source);
 				MAC destMac = MAC(packet->dest);
@@ -120,6 +105,6 @@ PacketMultiplexer::PacketMultiplexer(const RuntimeEnvironment* renv)
 			}
 		}));
 	}
-};
+}
 
 }	// namespace ZeroTier

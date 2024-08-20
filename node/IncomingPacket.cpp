@@ -794,71 +794,68 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const Shar
 {
 	Metrics::pkt_frame_in++;
 	int32_t _flowId = ZT_QOS_NO_FLOW;
-	//if (peer->flowHashingSupported()) {
-		if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
-			const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
-			const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
-			const uint8_t *const frameData = reinterpret_cast<const uint8_t *>(data()) + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
 
-			if (etherType == ZT_ETHERTYPE_IPV4 && (frameLen >= 20)) {
-				uint16_t srcPort = 0;
-				uint16_t dstPort = 0;
-				uint8_t proto = (reinterpret_cast<const uint8_t *>(frameData)[9]);
-				const unsigned int headerLen = 4 * (reinterpret_cast<const uint8_t *>(frameData)[0] & 0xf);
-				switch(proto) {
-					case 0x01: // ICMP
-						//flowId = 0x01;
-						break;
-					// All these start with 16-bit source and destination port in that order
-					case 0x06: // TCP
-					case 0x11: // UDP
-					case 0x84: // SCTP
-					case 0x88: // UDPLite
-						if (frameLen > (headerLen + 4)) {
-							unsigned int pos = headerLen + 0;
-							srcPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
-							srcPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
-							pos++;
-							dstPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
-							dstPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
-							_flowId = dstPort ^ srcPort ^ proto;
-						}
-						break;
-				}
-			}
+	if (size() > ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD) {
+		const unsigned int etherType = at<uint16_t>(ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE);
+		const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
+		const uint8_t *const frameData = reinterpret_cast<const uint8_t *>(data()) + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
 
-			if (etherType == ZT_ETHERTYPE_IPV6 && (frameLen >= 40)) {
-				uint16_t srcPort = 0;
-				uint16_t dstPort = 0;
-				unsigned int pos;
-				unsigned int proto;
-				_ipv6GetPayload((const uint8_t *)frameData, frameLen, pos, proto);
-				switch(proto) {
-					case 0x3A: // ICMPv6
-						//flowId = 0x3A;
-						break;
-					// All these start with 16-bit source and destination port in that order
-					case 0x06: // TCP
-					case 0x11: // UDP
-					case 0x84: // SCTP
-					case 0x88: // UDPLite
-						if (frameLen > (pos + 4)) {
-							srcPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
-							srcPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
-							pos++;
-							dstPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
-							dstPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
-							_flowId = dstPort ^ srcPort ^ proto;
-						}
-						break;
-					default:
-						break;
-				}
+		if (etherType == ZT_ETHERTYPE_IPV4 && (frameLen >= 20)) {
+			uint16_t srcPort = 0;
+			uint16_t dstPort = 0;
+			uint8_t proto = (reinterpret_cast<const uint8_t *>(frameData)[9]);
+			const unsigned int headerLen = 4 * (reinterpret_cast<const uint8_t *>(frameData)[0] & 0xf);
+			switch(proto) {
+				case 0x01: // ICMP
+					//flowId = 0x01;
+					break;
+				// All these start with 16-bit source and destination port in that order
+				case 0x06: // TCP
+				case 0x11: // UDP
+				case 0x84: // SCTP
+				case 0x88: // UDPLite
+					if (frameLen > (headerLen + 4)) {
+						unsigned int pos = headerLen + 0;
+						srcPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
+						srcPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
+						pos++;
+						dstPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
+						dstPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
+						_flowId = dstPort ^ srcPort ^ proto;
+					}
+					break;
 			}
 		}
-	//}
 
-	//fprintf(stderr, "IncomingPacket::_doFRAME: flowId=%d\n", _flowId);
+		if (etherType == ZT_ETHERTYPE_IPV6 && (frameLen >= 40)) {
+			uint16_t srcPort = 0;
+			uint16_t dstPort = 0;
+			unsigned int pos;
+			unsigned int proto;
+			_ipv6GetPayload((const uint8_t *)frameData, frameLen, pos, proto);
+			switch(proto) {
+				case 0x3A: // ICMPv6
+					//flowId = 0x3A;
+					break;
+				// All these start with 16-bit source and destination port in that order
+				case 0x06: // TCP
+				case 0x11: // UDP
+				case 0x84: // SCTP
+				case 0x88: // UDPLite
+					if (frameLen > (pos + 4)) {
+						srcPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
+						srcPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
+						pos++;
+						dstPort = (reinterpret_cast<const uint8_t *>(frameData)[pos++]) << 8;
+						dstPort |= (reinterpret_cast<const uint8_t *>(frameData)[pos]);
+						_flowId = dstPort ^ srcPort ^ proto;
+					}
+					break;
+				default:
+					break;
+			}
+		}
+	}
 
 	const uint64_t nwid = at<uint64_t>(ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID);
 	const SharedPtr<Network> network(RR->node->network(nwid));
@@ -872,8 +869,12 @@ bool IncomingPacket::_doFRAME(const RuntimeEnvironment *RR,void *tPtr,const Shar
 				const unsigned int frameLen = size() - ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
 				const uint8_t *const frameData = reinterpret_cast<const uint8_t *>(data()) + ZT_PROTO_VERB_FRAME_IDX_PAYLOAD;
 				if (network->filterIncomingPacket(tPtr,peer,RR->identity.address(),sourceMac,network->mac(),frameData,frameLen,etherType,0) > 0) {
-					//RR->node->putFrame(tPtr,nwid,network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen);
-					RR->pm->putFrame(tPtr,nwid,network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen, _flowId);
+					if (RR->node->getMultithreadingEnabled()) {
+						RR->pm->putFrame(tPtr,nwid,network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen, _flowId);
+					}
+					else {
+						RR->node->putFrame(tPtr,nwid,network->userPtr(),sourceMac,network->mac(),etherType,0,(const void *)frameData,frameLen);
+					}
 				}
 			}
 		} else {
@@ -946,8 +947,12 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 					}
 					// fall through -- 2 means accept regardless of bridging checks or other restrictions
 				case 2:
-					//RR->node->putFrame(tPtr,nwid,network->userPtr(),from,to,etherType,0,(const void *)frameData,frameLen);
-					RR->pm->putFrame(tPtr,nwid,network->userPtr(),from,to,etherType,0,(const void *)frameData,frameLen, flowId);
+					if (RR->node->getMultithreadingEnabled()) {
+						RR->pm->putFrame(tPtr,nwid,network->userPtr(),from,to,etherType,0,(const void *)frameData,frameLen, flowId);
+					}
+					else {
+						RR->node->putFrame(tPtr,nwid,network->userPtr(),from,to,etherType,0,(const void *)frameData,frameLen);
+					}
 					break;
 			}
 		}

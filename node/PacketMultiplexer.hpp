@@ -43,11 +43,13 @@ class PacketMultiplexer {
 
 	PacketMultiplexer(const RuntimeEnvironment* renv);
 
+	void setUpPostDecodeReceiveThreads(unsigned int concurrency, bool cpuPinningEnabled);
+
 	void putFrame(void* tPtr, uint64_t nwid, void** nuptr, const MAC& source, const MAC& dest, unsigned int etherType, unsigned int vlanId, const void* data, unsigned int len, unsigned int flowId);
 
 	std::vector<BlockingQueue<PacketRecord*>*> _rxPacketQueues;
 
-    unsigned int _concurrency;
+	unsigned int _concurrency;
 	// pool
 	std::vector<PacketRecord*> _rxPacketVector;
 	std::vector<std::thread> _rxPacketThreads;

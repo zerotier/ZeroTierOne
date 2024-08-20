@@ -240,6 +240,12 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	}
 }
 
+void Node::initMultithreading(bool isEnabled, unsigned int concurrency, bool cpuPinningEnabled)
+{
+	_multithreadingEnabled = isEnabled;
+	RR->pm->setUpPostDecodeReceiveThreads(concurrency, cpuPinningEnabled);
+}
+
 // Closure used to ping upstream and active/online peers
 class _PingPeersThatNeedPing
 {
