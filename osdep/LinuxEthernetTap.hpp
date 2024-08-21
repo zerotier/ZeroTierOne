@@ -35,6 +35,8 @@ class LinuxEthernetTap : public EthernetTap
 public:
 	LinuxEthernetTap(
 		const char *homePath,
+		unsigned int concurrency,
+		bool pinning,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,

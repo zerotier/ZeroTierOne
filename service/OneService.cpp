@@ -3239,6 +3239,8 @@ public:
 
 						n.setTap(EthernetTap::newInstance(
 							nullptr,
+							_concurrency,
+							_cpuPinningEnabled,
 							_homePath.c_str(),
 							MAC(nwc->mac),
 							nwc->mtu,
