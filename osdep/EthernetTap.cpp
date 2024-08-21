@@ -88,7 +88,7 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 				return std::shared_ptr<EthernetTap>(new MacEthernetTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
 			}
 		}
-	}/
+	}
 #endif // __APPLE__
 
 #ifdef __LINUX__
