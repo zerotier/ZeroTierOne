@@ -140,7 +140,7 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 #endif // __NetBSD__
 
 #ifdef __OpenBSD__
-	return std::shared_ptr<EthernetTap>(new BSDEthernetTap(homePath,concurrency,mac,mtu,metric,nwid,friendlyName,handler,arg));
+	return std::shared_ptr<EthernetTap>(new BSDEthernetTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
 #endif // __OpenBSD__
 
 #endif // ZT_SDK?

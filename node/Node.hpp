@@ -283,12 +283,7 @@ public:
 		return _lowBandwidthMode;
 	}
 
-	inline bool getMultithreadingEnabled()
-	{
-		return _multithreadingEnabled;
-	}
-
-	void initMultithreading(bool isEnabled, unsigned int concurrency, bool cpuPinningEnabled);
+	void initMultithreading(unsigned int concurrency, bool cpuPinningEnabled);
 
 
 public:
@@ -339,7 +334,6 @@ public:
 	volatile int64_t _prngState[2];
 	bool _online;
 	bool _lowBandwidthMode;
-	bool _multithreadingEnabled;
 };
 
 } // namespace ZeroTier

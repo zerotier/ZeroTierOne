@@ -991,7 +991,10 @@ public:
 
 	void setUpMultithreading()
 	{
-		_node->initMultithreading(true, _concurrency, _cpuPinningEnabled);
+#if defined(__APPLE__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__WINDOWS__)
+		return;
+#endif
+		_node->initMultithreading(_concurrency, _cpuPinningEnabled);
 		bool pinning = _cpuPinningEnabled;
 
 		fprintf(stderr, "Starting %d RX threads\n", _concurrency);
@@ -2648,6 +2651,7 @@ public:
 			fprintf(stderr,"WARNING: using manually-specified secondary and/or tertiary ports. This can cause NAT issues." ZT_EOL_S);
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
+#if defined(__LINUX__) || defined(__FreeBSD__)
 		_multicoreEnabled = OSUtils::jsonBool(settings["multicoreEnabled"],false);
 		_concurrency = OSUtils::jsonInt(settings["concurrency"],0);
 		_cpuPinningEnabled = OSUtils::jsonBool(settings["cpuPinningEnabled"],false);
@@ -2660,6 +2664,7 @@ public:
 			}
 			setUpMultithreading();
 		}
+#endif
 
 #ifndef ZT_SDK
 		const std::string up(OSUtils::jsonString(settings["softwareUpdate"],ZT_SOFTWARE_UPDATE_DEFAULT));
@@ -2987,7 +2992,7 @@ public:
 		if ((len >= 16) && (reinterpret_cast<const InetAddress*>(from)->ipScope() == InetAddress::IP_SCOPE_GLOBAL)) {
 			_lastDirectReceiveFromGlobal = now;
 		}
-
+#if defined(__LINUX__) || defined(__FreeBSD__)
 		if (_multicoreEnabled) {
 			PacketRecord* packet;
 			_rxPacketVector_m.lock();
@@ -3008,6 +3013,7 @@ public:
 			_rxPacketQueue.postLimit(packet, 256 * _concurrency);
 		}
 		else {
+#endif
 			const ZT_ResultCode rc = _node->processWirePacket(nullptr,now,reinterpret_cast<int64_t>(sock),reinterpret_cast<const struct sockaddr_storage *>(from),data,len,&_nextBackgroundTaskDeadline);
 			if (ZT_ResultCode_isFatal(rc)) {
 				char tmp[256];
@@ -3017,7 +3023,9 @@ public:
 				_fatalErrorMessage = tmp;
 				this->terminate();
 			}
+#if defined(__LINUX__) || defined(__FreeBSD__)
 		}
+#endif
 	}
 
 

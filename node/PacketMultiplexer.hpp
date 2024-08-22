@@ -57,6 +57,7 @@ class PacketMultiplexer {
 
 	std::vector<std::thread> _rxThreads;
 	unsigned int _rxThreadCount;
+	bool _enabled;
 };
 
 }	// namespace ZeroTier
