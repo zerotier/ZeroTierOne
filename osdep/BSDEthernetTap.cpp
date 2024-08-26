@@ -65,6 +65,7 @@ namespace ZeroTier {
 BSDEthernetTap::BSDEthernetTap(
 	const char *homePath,
 	unsigned int concurrency,
+	bool pinning,
 	const MAC &mac,
 	unsigned int mtu,
 	unsigned int metric,
@@ -74,6 +75,7 @@ BSDEthernetTap::BSDEthernetTap(
 	void *arg) :
 	_handler(handler),
 	_concurrency(concurrency),
+	_pinning(pinning),
 	_arg(arg),
 	_nwid(nwid),
 	_mtu(mtu),
@@ -425,25 +427,16 @@ void BSDEthernetTap::setMtu(unsigned int mtu)
 void BSDEthernetTap::threadMain()
 	throw()
 {
-	bool _enablePinning = false;
-	char* envvar = std::getenv("ZT_CPU_PINNING");
-	if (envvar) {
-		int tmp = atoi(envvar);
-		if (tmp > 0) {
-			_enablePinning = true;
-		}
-	}
-
 	// Wait for a moment after startup -- wait for Network to finish
 	// constructing itself.
 	Thread::sleep(500);
 
 	for (unsigned int i = 0; i < _concurrency; ++i) {
-		_rxThreads.push_back(std::thread([this, i, _enablePinning] {
+		_rxThreads.push_back(std::thread([this, i, _pinning] {
 
-			if (_enablePinning) {
+			if (_pinning) {
 				int pinCore = i % _concurrency;
-				fprintf(stderr, "pinning thread %d to core %d\n", i, pinCore);
+				fprintf(stderr, "Pinning thread %d to core %d\n", i, pinCore);
 				pthread_t self = pthread_self();
 				cpu_set_t cpuset;
 				CPU_ZERO(&cpuset);
@@ -452,7 +445,7 @@ void BSDEthernetTap::threadMain()
 				int rc = pthread_setaffinity_np(self, sizeof(cpu_set_t), &cpuset);
 				if (rc != 0)
 				{
-					fprintf(stderr, "failed to pin thread %d to core %d: %s\n", i, pinCore, strerror(errno));
+					fprintf(stderr, "Failed to pin thread %d to core %d: %s\n", i, pinCore, strerror(errno));
 					exit(1);
 				}
 			}

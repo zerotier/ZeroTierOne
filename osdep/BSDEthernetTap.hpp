@@ -36,6 +36,7 @@ public:
 	BSDEthernetTap(
 		const char *homePath,
 		unsigned int concurrency,
+		bool pinning,
 		const MAC &mac,
 		unsigned int mtu,
 		unsigned int metric,
@@ -65,6 +66,7 @@ private:
 	void (*_handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int);
 	void *_arg;
 	unsigned int _concurrency;
+	bool _pinning;
 	uint64_t _nwid;
 	Thread _thread;
 	std::string _dev;
