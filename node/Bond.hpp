@@ -1144,6 +1144,7 @@ class Bond {
 		__attribute__((format(printf, 2, 3)))
 #endif
 	{
+		//if (_peerId != 0x0 && _peerId != 0x0) { return; }
 #ifdef ZT_TRACE
 		time_t rawtime;
 		struct tm* timeinfo;
@@ -1175,6 +1176,7 @@ class Bond {
 		__attribute__((format(printf, 2, 3)))
 #endif
 	{
+		//if (_peerId != 0x0 && _peerId != 0x0) { return; }
 #ifdef ZT_DEBUG
 		time_t rawtime;
 		struct tm* timeinfo;
