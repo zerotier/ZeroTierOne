@@ -2653,7 +2653,7 @@ public:
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
 #if defined(__LINUX__) || defined(__FreeBSD__)
 		_multicoreEnabled = OSUtils::jsonBool(settings["multicoreEnabled"],false);
-		_concurrency = OSUtils::jsonInt(settings["concurrency"],0);
+		_concurrency = OSUtils::jsonInt(settings["concurrency"],1);
 		_cpuPinningEnabled = OSUtils::jsonBool(settings["cpuPinningEnabled"],false);
 		if (_multicoreEnabled) {
 			unsigned int maxConcurrency = std::thread::hardware_concurrency();
