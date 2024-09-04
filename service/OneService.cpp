@@ -2664,6 +2664,11 @@ public:
 			}
 			setUpMultithreading();
 		}
+		else {
+			// Force values in case the user accidentally defined them with multicore disabled
+			_concurrency = 1;
+			_cpuPinningEnabled = false;
+		}
 #endif
 
 #ifndef ZT_SDK
