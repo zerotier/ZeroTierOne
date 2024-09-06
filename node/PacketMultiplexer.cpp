@@ -62,7 +62,7 @@ void PacketMultiplexer::putFrame(void* tPtr, uint64_t nwid, void** nuptr, const 
 	memcpy(packet->data, data, len);
 
 	int bucket = flowId % _concurrency;
-	_rxPacketQueues[bucket]->postLimit(packet, 256);
+	_rxPacketQueues[bucket]->postLimit(packet, 2048);
 }
 
 void PacketMultiplexer::setUpPostDecodeReceiveThreads(unsigned int concurrency, bool cpuPinningEnabled)
