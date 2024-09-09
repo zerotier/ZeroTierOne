@@ -223,11 +223,13 @@
 #define ZT_PLATFORM_NAME "aix" // IBM AIX
 #elif defined(__APPLE__) && defined(__MACH__) // Apple OSX and iOS (Darwin)
 #include <TargetConditionals.h>
-#if TARGET_IPHONE_SIMULATOR == 1
-#define ZT_PLATFORM_NAME "ios" // Apple iOS
-#elif TARGET_OS_IPHONE == 1
-#define ZT_PLATFORM_NAME "ios" // Apple iOS
-#elif TARGET_OS_MAC == 1
+#if defined(TARGET_IPHONE_SIMULATOR) && TARGET_IPHONE_SIMULATOR == 1
+#define ZT_PLATFORM_NAME "ios_sim" // Apple iOS
+#elif defined(TARGET_OS_IPAD) && TARGET_OS_IPAD == 1
+#define ZT_PLATFORM_NAME "ios_ipad"
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE == 1
+#define ZT_PLATFORM_NAME "ios_iphone" // Apple iOS
+#elif defined(TARGET_OS_MAC) && TARGET_OS_MAC == 1
 #define ZT_PLATFORM_NAME "macos" // Apple OSX
 #endif
 #elif defined(__sun) && defined(__SVR4)
