@@ -47,7 +47,7 @@ Additional Use Grant: You may make use of the Licensed Work, provided you
                       services, social welfare, senior care, child care, and
                       the care of persons with disabilities.
 
-Change Date:          2025-01-01
+Change Date:          2026-01-01
 
 Change License:       Apache License version 2.0 as published by the Apache
                       Software Foundation

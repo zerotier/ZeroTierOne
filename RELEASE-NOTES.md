@@ -1,6 +1,15 @@
 ZeroTier Release Notes
 ======
 
+# 2024-05-02 -- Version 1.14.0
+
+  * Linux I/O performance improvements under heavy load
+  * Improvements to multipath
+  * Fix for port rebinding "coma" bug after periods offline (some laptop users)
+  * Fixed a rules engine quirk/ambiguity (GitHub Issue #2200)
+  * Controller API enhancements: node names and other node meta-data
+  * Other bug fixes
+
 # 2023-09-12 -- Version 1.12.2
 
   * More improvements to macOS full tunnel mode.
