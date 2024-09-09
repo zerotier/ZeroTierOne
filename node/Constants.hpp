@@ -202,6 +202,72 @@
 #define ZT_PACKED_STRUCT(D) D __attribute__((packed))
 #endif
 
+#if defined(_WIN32)
+#define ZT_PLATFORM_NAME "windows" // Windows
+#elif defined(_WIN64)
+#define ZT_PLATFORM_NAME "windows" // Windows
+#elif defined(__CYGWIN__)
+#define ZT_PLATFORM_NAME "windows" // Windows (Cygwin POSIX under Microsoft Window)
+#elif defined(__ANDROID__)
+#define ZT_PLATFORM_NAME "android" // Android (implies Linux, so it must come first)
+#elif defined(__linux__)
+#define ZT_PLATFORM_NAME "linux" // Debian, Ubuntu, Gentoo, Fedora, openSUSE, RedHat, Centos and other
+#elif defined(__unix__) || !defined(__APPLE__) && defined(__MACH__)
+#include <sys/param.h>
+#if defined(BSD)
+#define ZT_PLATFORM_NAME "bsd" // FreeBSD, NetBSD, OpenBSD, DragonFly BSD
+#endif
+#elif defined(__hpux)
+#define ZT_PLATFORM_NAME "hp-ux" // HP-UX
+#elif defined(_AIX)
+#define ZT_PLATFORM_NAME "aix" // IBM AIX
+#elif defined(__APPLE__) && defined(__MACH__) // Apple OSX and iOS (Darwin)
+#include <TargetConditionals.h>
+#if defined(TARGET_IPHONE_SIMULATOR) && TARGET_IPHONE_SIMULATOR == 1
+#define ZT_PLATFORM_NAME "ios_sim" // Apple iOS
+#elif defined(TARGET_OS_IPAD) && TARGET_OS_IPAD == 1
+#define ZT_PLATFORM_NAME "ios_ipad"
+#elif defined(TARGET_OS_IPHONE) && TARGET_OS_IPHONE == 1
+#define ZT_PLATFORM_NAME "ios_iphone" // Apple iOS
+#elif defined(TARGET_OS_MAC) && TARGET_OS_MAC == 1
+#define ZT_PLATFORM_NAME "macos" // Apple OSX
+#endif
+#elif defined(__sun) && defined(__SVR4)
+#define ZT_PLATFORM_NAME "solaris" // Oracle Solaris, Open Indiana
+#else
+#define ZT_PLATFORM_NAME "unknown"
+#endif
+#ifndef ZT_PLATFORM_NAME
+#define ZT_PLATFORM_NAME "unknown"
+#endif
+
+#if defined(__amd64) || defined(__amd64__) || defined(__x86_64) || defined(__x86_64__) || defined(__AMD64) || defined(__AMD64__) || defined(_M_X64) || defined(_M_AMD64)
+#define ZT_ARCH_NAME "x86_64"
+#elif defined(__i386__) || defined(__i486__) || defined(__i586__) || defined(__i686__) || defined(_X86_) || defined(_M_IX86) || defined(__X86__) || defined(__I86__) || defined(_M_I86)
+#define ZT_ARCH_NAME "x86"
+#elif defined(__aarch64__) || defined(__AARCH64EL__) || defined(_M_ARM64)
+#define ZT_ARCH_NAME "arm64"
+#elif defined(__arm__) || defined(__TARGET_ARCH_ARM) || defined(_ARM) || defined(_M_ARM) || defined(_M_ARMT) || defined(__arm) || defined(__thumb__)
+#define ZT_ARCH_NAME "arm"
+#elif defined(__loongarch__) || defined(_LOONGARCH_ARCH)
+#define ZT_ARCH_NAME "loongarch"
+#elif defined(__mips__) || defined(__MIPS__)
+#define ZT_ARCH_NAME "mips"
+#elif defined(__riscv) || defined(__riscv_xlen)
+#define ZT_ARCH_NAME "riscv"
+#elif defined(__powerpc__) || defined(__powerpc64__) || defined(__ppc__) || defined(__ppc64__) || defined (_M_PPC)
+#define ZT_ARCH_NAME "powerpc"
+#elif defined(__s390__) || defined(__s390x__) || defined(__zarch__)
+#define ZT_ARCH_NAME "s390"
+#else
+#define ZT_ARCH_NAME "unknown"
+#endif
+#ifndef ZT_ARCH_NAME
+#define ZT_ARCH_NAME "unknown"
+#endif
+
+#define ZT_TARGET_NAME (ZT_PLATFORM_NAME "/" ZT_ARCH_NAME)
+
 /**
  * Length of a ZeroTier address in bytes
  */
