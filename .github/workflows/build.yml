@@ -32,11 +32,13 @@ jobs:
       run: |
         make selftest
         ./zerotier-selftest
+    - name: 'Tar files' # keeps permissions (execute)
+      run: tar -cvf zerotier-one.tar zerotier-one
     - name: Archive production artifacts
       uses: actions/upload-artifact@v4
       with:
         name: zerotier-one-ubuntu-x64
-        path: zerotier-one
+        path: zerotier-one.tar
         retention-days: 7
 
   build_macos:
@@ -74,11 +76,13 @@ jobs:
       run: |
         make selftest
         ./zerotier-selftest
+    - name: 'Tar files' # keeps permissions (execute)
+      run: tar -cvf zerotier-one.tar zerotier-one
     - name: Archive production artifacts
       uses: actions/upload-artifact@v4
       with:
         name: zerotier-one-mac
-        path: zerotier-one
+        path: zerotier-one.tar
         retention-days: 7
 
 
