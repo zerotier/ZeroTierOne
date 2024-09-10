@@ -2547,7 +2547,7 @@ public:
 					}
 					_node->bondController()->addCustomLink(customPolicyStr, new Link(linkNameStr,ipvPref,mtu,capacity,enabled,linkMode,failoverToStr));
 				}
-				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"optimize"));
+				std::string linkSelectMethodStr(OSUtils::jsonString(customPolicy["activeReselect"],"always"));
 				if (linkSelectMethodStr == "always") {
 					newTemplateBond->setLinkSelectMethod(ZT_BOND_RESELECTION_POLICY_ALWAYS);
 				}

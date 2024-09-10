@@ -335,7 +335,6 @@ bool IncomingPacket::_doACK(const RuntimeEnvironment* RR, void* tPtr, const Shar
 bool IncomingPacket::_doQOS_MEASUREMENT(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer)
 {
 	Metrics::pkt_qos_in++;
-	SharedPtr<Bond> bond = peer->bond();
 	if (! peer->rateGateQoS(RR->node->now(), _path)) {
 		return true;
 	}
