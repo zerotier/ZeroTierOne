@@ -9,13 +9,12 @@ jobs:
         git config --global core.autocrlf input
       #        git config --global core.eol lf
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
-        target: x86_64-unknown-linux-gnu
-        override: true
+        targets: x86_64-unknown-linux-gnu
         components: rustfmt, clippy
 
     - name: Set up cargo cache
@@ -33,6 +32,14 @@ jobs:
       run: |
         make selftest
         ./zerotier-selftest
+    - name: 'Tar files' # keeps permissions (execute)
+      run: tar -cvf zerotier-one.tar zerotier-one
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: zerotier-one-ubuntu-x64
+        path: zerotier-one.tar
+        retention-days: 7
 
   build_macos:
     runs-on: macos-latest
@@ -42,20 +49,18 @@ jobs:
         git config --global core.autocrlf input
       #        git config --global core.eol lf
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Install Rust aarch64
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
         target: aarch64-apple-darwin
-        override: true
         components: rustfmt, clippy
     - name: Install Rust x86_64
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
         target: x86_64-apple-darwin
-        override: true
         components: rustfmt, clippy
     - name: Set up cargo cache
       uses: Swatinem/rust-cache@v2
@@ -65,13 +70,21 @@ jobs:
         shared-key: ${{ runner.os }}-cargo-
         workspaces: |
           rustybits/
-
     - name: make
       run: make
     - name: selftest
       run: |
         make selftest
         ./zerotier-selftest
+    - name: 'Tar files' # keeps permissions (execute)
+      run: tar -cvf zerotier-one.tar zerotier-one
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: zerotier-one-mac
+        path: zerotier-one.tar
+        retention-days: 7
+
 
   build_windows:
     runs-on: windows-latest
@@ -81,13 +94,12 @@ jobs:
         git config --global core.autocrlf true
       #        git config --global core.eol lf
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
         target: aarch64-apple-darwin
-        override: true
         components: rustfmt, clippy
     - name: Set up cargo cache
       uses: Swatinem/rust-cache@v2
@@ -99,7 +111,13 @@ jobs:
           rustybits/
 
     - name: setup msbuild
-      uses: microsoft/setup-msbuild@v1.1.3
+      uses: microsoft/setup-msbuild@v2
     - name: msbuild
       run: |
-        msbuild windows\ZeroTierOne.sln /m /p:Configuration=Release  /property:Platform=x64 /t:ZeroTierOne        
+        msbuild windows\ZeroTierOne.sln /m /p:Configuration=Release  /property:Platform=x64 /t:ZeroTierOne
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: zerotier-one-windows
+        path: windows/Build
+        retention-days: 7
