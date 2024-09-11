@@ -32,6 +32,8 @@ class EthernetTap
 public:
 	static std::shared_ptr<EthernetTap> newInstance(
 		const char *tapDeviceType, // OS-specific, NULL for default
+		unsigned int concurrency,
+		bool pinning,
 		const char *homePath,
 		const MAC &mac,
 		unsigned int mtu,

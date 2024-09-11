@@ -88,6 +88,7 @@
     <ClCompile Include="..\..\node\Node.cpp" />
     <ClCompile Include="..\..\node\OutboundMulticast.cpp" />
     <ClCompile Include="..\..\node\Packet.cpp" />
+    <ClCompile Include="..\..\node\PacketMultiplexer.cpp" />
     <ClCompile Include="..\..\node\Path.cpp" />
     <ClCompile Include="..\..\node\Peer.cpp" />
     <ClCompile Include="..\..\node\Poly1305.cpp">
