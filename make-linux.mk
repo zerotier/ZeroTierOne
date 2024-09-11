@@ -364,7 +364,7 @@ override CFLAGS+=-fPIC -fPIE
 override CXXFLAGS+=-fPIC -fPIE
 
 # Non-executable stack
-override ASFLAGS+=--noexecstack
+override LDFLAGS+=-Wl,-z,noexecstack
 
 .PHONY: all
 all:	one

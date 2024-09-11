@@ -105,6 +105,8 @@ namespace ZeroTier {
 
 // Network config version
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION "v"
+// Network config version
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_OS_ARCH "o"
 // Protocol version (see Packet.hpp)
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION "pv"
 // Software vendor
@@ -687,7 +689,7 @@ public:
 
 	/**
 	 * Time current authentication expires or 0 if external authentication is disabled
-	 * 
+	 *
 	 * Not used if authVersion >= 1
 	 */
 	uint64_t authenticationExpiryTime;

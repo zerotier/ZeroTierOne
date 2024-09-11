@@ -283,7 +283,10 @@ public:
 		return _lowBandwidthMode;
 	}
 
-private:
+	void initMultithreading(unsigned int concurrency, bool cpuPinningEnabled);
+
+
+public:
 	RuntimeEnvironment _RR;
 	RuntimeEnvironment *RR;
 	void *_uPtr; // _uptr (lower case) is reserved in Visual Studio :P

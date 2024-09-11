@@ -32,7 +32,7 @@
  * All this stuff is basically undocumented. A lot of tracing through
  * the Darwin/XNU kernel source was required to figure out how to make
  * this actually work.
- * 
+ *
  * We hope to develop a DriverKit-based driver in the near-mid future to
  * replace this weird hack, but it works for now through Big Sur in our
  * testing.

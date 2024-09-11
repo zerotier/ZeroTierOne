@@ -20,6 +20,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <thread>
 
 #include "../node/Constants.hpp"
 #include "../node/MAC.hpp"
@@ -75,6 +76,7 @@ private:
 	int _fd;
 	int _shutdownSignalPipe[2];
 	volatile bool _enabled;
+	std::vector<std::thread> _rxThreads;
 };
 
 } // namespace ZeroTier

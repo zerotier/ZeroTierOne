@@ -57,6 +57,8 @@ namespace ZeroTier {
 
 std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 	const char *tapDeviceType, // OS-specific, NULL for default
+	unsigned int concurrency,
+	bool pinning,
 	const char *homePath,
 	const MAC &mac,
 	unsigned int mtu,
@@ -92,7 +94,7 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 #endif // __APPLE__
 
 #ifdef __LINUX__
-	return std::shared_ptr<EthernetTap>(new LinuxEthernetTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
+	return std::shared_ptr<EthernetTap>(new LinuxEthernetTap(homePath,concurrency,pinning,mac,mtu,metric,nwid,friendlyName,handler,arg));
 #endif // __LINUX__
 
 #ifdef __WINDOWS__
@@ -130,7 +132,7 @@ std::shared_ptr<EthernetTap> EthernetTap::newInstance(
 #endif // __WINDOWS__
 
 #ifdef __FreeBSD__
-	return std::shared_ptr<EthernetTap>(new BSDEthernetTap(homePath,mac,mtu,metric,nwid,friendlyName,handler,arg));
+	return std::shared_ptr<EthernetTap>(new BSDEthernetTap(homePath,concurrency,pinning,mac,mtu,metric,nwid,friendlyName,handler,arg));
 #endif // __FreeBSD__
 
 #ifdef __NetBSD__

@@ -447,7 +447,9 @@ MacKextEthernetTap::~MacKextEthernetTap()
 
 	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
 	Thread::join(_thread);
-
+		for (std::thread &t : _rxThreads) {
+		t.join();
+	}
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
 	::close(_shutdownSignalPipe[1]);
