@@ -58,7 +58,7 @@ To build on Mac and Linux just type `make`. On FreeBSD and OpenBSD `gmake` (GNU 
    - Xcode command line tools for macOS 10.13 or newer are required.
    - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **Linux**
-   - The minimum compiler versions required are GCC/G++ 4.9.3 or CLANG/CLANG++ 3.4.2. (Install `clang` on CentOS 7 as G++ is too old.)
+   - The minimum compiler versions required are GCC/G++ 8.x or CLANG/CLANG++ 5.x.
    - Linux makefiles automatically detect and prefer clang/clang++ if present as it produces smaller and slightly faster binaries in most cases. You can override by supplying CC and CXX variables on the make command line.
    - Rust for x86_64 and ARM64 targets *if SSO is enabled in the build*.
  - **Windows**
@@ -175,3 +175,23 @@ Metrics are also available on disk in ZeroTier's working directory:
 | zt_peer_packet_errors | node_id | Counter | number of incoming packet errors from a peer |
 
 If there are other metrics you'd like to see tracked, ask us in an Issue or send us a Pull Request!
+
+### HTTP / App server
+
+There is a static http file server suitable for hosting Single Page Apps at http://localhost:9993/app/<app-path>
+
+Use `zerotier-cli info -j` to find your zerotier-one service's homeDir
+
+``` sh
+cd $ZT_HOME
+sudo mkdir -p app/app1
+sudo mkdir -p app/appB
+echo '<html><meta charset=utf-8><title>appA</title><body><h1>hello world A' | sudo tee app/appA/index.html 
+echo '<html><meta charset=utf-8><title>app2</title><body><h1>hello world 2' | sudo tee app/app2/index.html 
+curl -sL http://localhost:9993/app/appA http://localhost:9993/app/app2 
+```
+
+Then visit [http://localhost:9993/app/app1/](http://localhost:9993/app/app1/) and [http://localhost:9993/app/appB/](http://localhost:9993/app/appB/)
+
+Requests to paths don't exist return the app root index.html, as is customary for SPAs. 
+If you want, you can write some javascript that talks to the service or controller [api](https://docs.zerotier.com/service/v1).

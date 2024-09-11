@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -35,6 +35,7 @@
 #include "Network.hpp"
 #include "Trace.hpp"
 #include "Metrics.hpp"
+#include "PacketMultiplexer.hpp"
 
 // FIXME: remove this suppression and actually fix warnings
 #ifdef __GNUC__
@@ -119,9 +120,10 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		const unsigned long mcs = sizeof(Multicaster) + (((sizeof(Multicaster) & 0xf) != 0) ? (16 - (sizeof(Multicaster) & 0xf)) : 0);
 		const unsigned long topologys = sizeof(Topology) + (((sizeof(Topology) & 0xf) != 0) ? (16 - (sizeof(Topology) & 0xf)) : 0);
 		const unsigned long sas = sizeof(SelfAwareness) + (((sizeof(SelfAwareness) & 0xf) != 0) ? (16 - (sizeof(SelfAwareness) & 0xf)) : 0);
-		const unsigned long bc = sizeof(Bond) + (((sizeof(Bond) & 0xf) != 0) ? (16 - (sizeof(Bond) & 0xf)) : 0);
+		const unsigned long bcs = sizeof(Bond) + (((sizeof(Bond) & 0xf) != 0) ? (16 - (sizeof(Bond) & 0xf)) : 0);
+		const unsigned long pms = sizeof(PacketMultiplexer) + (((sizeof(PacketMultiplexer) & 0xf) != 0) ? (16 - (sizeof(PacketMultiplexer) & 0xf)) : 0);
 
-		m = reinterpret_cast<char *>(::malloc(16 + ts + sws + mcs + topologys + sas + bc));
+		m = reinterpret_cast<char *>(::malloc(16 + ts + sws + mcs + topologys + sas + bcs + pms));
 		if (!m) {
 			throw std::bad_alloc();
 		}
@@ -141,6 +143,8 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		RR->sa = new (m) SelfAwareness(RR);
 		m += sas;
 		RR->bc = new (m) Bond(RR);
+		m += bcs;
+		RR->pm = new (m) PacketMultiplexer(RR);
 	} catch ( ... ) {
 		if (RR->sa) {
 			RR->sa->~SelfAwareness();
@@ -159,6 +163,9 @@ Node::Node(void *uptr,void *tptr,const struct ZT_Node_Callbacks *callbacks,int64
 		}
 		if (RR->bc) {
 			RR->bc->~Bond();
+		}
+		if (RR->pm) {
+			RR->pm->~PacketMultiplexer();
 		}
 		::free(m);
 		throw;
@@ -190,6 +197,9 @@ Node::~Node()
 	}
 	if (RR->bc) {
 		RR->bc->~Bond();
+	}
+	if (RR->pm) {
+		RR->pm->~PacketMultiplexer();
 	}
 	::free(RR->rtmem);
 }
@@ -228,6 +238,11 @@ ZT_ResultCode Node::processVirtualNetworkFrame(
 	} else {
 		return ZT_RESULT_ERROR_NETWORK_NOT_FOUND;
 	}
+}
+
+void Node::initMultithreading(unsigned int concurrency, bool cpuPinningEnabled)
+{
+	RR->pm->setUpPostDecodeReceiveThreads(concurrency, cpuPinningEnabled);
 }
 
 // Closure used to ping upstream and active/online peers

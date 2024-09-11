@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -105,6 +105,8 @@ namespace ZeroTier {
 
 // Network config version
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_VERSION "v"
+// Network config version
+#define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_OS_ARCH "o"
 // Protocol version (see Packet.hpp)
 #define ZT_NETWORKCONFIG_REQUEST_METADATA_KEY_PROTOCOL_VERSION "pv"
 // Software vendor
@@ -687,7 +689,7 @@ public:
 
 	/**
 	 * Time current authentication expires or 0 if external authentication is disabled
-	 * 
+	 *
 	 * Not used if authVersion >= 1
 	 */
 	uint64_t authenticationExpiryTime;

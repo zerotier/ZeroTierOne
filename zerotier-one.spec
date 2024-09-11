@@ -1,5 +1,5 @@
 Name:           zerotier-one
-Version:        1.12.2
+Version:        1.14.0
 Release:        1%{?dist}
 Summary:        ZeroTier network virtualization service
 
@@ -15,20 +15,32 @@ Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
 %if "%{?dist}" == ".fc36"
-BuildRequires: systemd clang openssl1.1 openssl1.1-devel
-Requires:      systemd openssl1.1
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
 %if "%{?dist}" == ".fc37"
-BuildRequires: systemd clang openssl1.1 openssl1.1-devel
-Requires:      systemd openssl1.1
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
 %if "%{?dist}" == ".fc38"
-BuildRequires: systemd clang openssl1.1 openssl1.1-devel
-Requires:      systemd openssl1.1
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
+%if "%{?dist}" == ".fc39"
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
+Requires(pre): /usr/sbin/useradd, /usr/bin/getent
+%endif
+
+%if "%{?dist}" == ".fc40"
+BuildRequires: systemd clang openssl openssl-devel
+Requires:      systemd openssl
 Requires(pre): /usr/sbin/useradd, /usr/bin/getent
 %endif
 
@@ -143,6 +155,9 @@ chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 %endif
 
 %changelog
+* Tue Mar 19 2024 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.14.0
+- see https://github.com/zerotier/ZeroTierOne for release notes
+
 * Tue Sep 12 2023 Adam Ierymenko <adam.ierymenko@zerotier.com> - 1.12.2
 - see https://github.com/zerotier/ZeroTierOne for release notes
 

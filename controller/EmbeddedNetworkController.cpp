@@ -4,7 +4,7 @@
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
  *
- * Change Date: 2025-01-01
+ * Change Date: 2026-01-01
  *
  * On the date above, in accordance with the Business Source License, use
  * of this software will be governed by version 2.0 of the Apache License.
@@ -878,6 +878,7 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 	std::string memberListPath2 = "/unstable/controller/network/([0-9a-fA-F]{16})/member";
 	std::string memberPath = "/controller/network/([0-9a-fA-F]{16})/member/([0-9a-fA-F]{10})";
 
+
 	auto controllerGet = [&, setContent](const httplib::Request &req, httplib::Response &res) {
 		char tmp[4096];
 		const bool dbOk = _db.isReady();
@@ -889,11 +890,11 @@ void EmbeddedNetworkController::configureHTTPControlPlane(
 			(unsigned long long)OSUtils::now(),
 			dbOk ? "true" : "false");
 
-			if (!dbOk) {
-				res.status = 503;
-			}
+		if (!dbOk) {
+			res.status = 503;
+		}
 
-			setContent(req, res, tmp);
+		setContent(req, res, tmp);
 	};
 	s.Get(controllerPath, controllerGet);
 	sv6.Get(controllerPath, controllerGet);

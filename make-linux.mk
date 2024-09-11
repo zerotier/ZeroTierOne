@@ -62,7 +62,7 @@ ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
 	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++17 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
-	RUSTFLAGS=
+	ZT_CARGO_FLAGS=
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
@@ -71,8 +71,8 @@ else
 	override CFLAGS+=-Wall -Wno-deprecated -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	CXXFLAGS?=-O3 -fstack-protector
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
-	LDFLAGS=-pie -Wl,-z,relro,-z,now
-	RUSTFLAGS=--release
+	LDFLAGS?=-pie -Wl,-z,relro,-z,now
+	ZT_CARGO_FLAGS=--release
 endif
 
 ifeq ($(ZT_QNAP), 1)
@@ -364,7 +364,7 @@ override CFLAGS+=-fPIC -fPIE
 override CXXFLAGS+=-fPIC -fPIE
 
 # Non-executable stack
-override ASFLAGS+=--noexecstack
+override LDFLAGS+=-Wl,-z,noexecstack
 
 .PHONY: all
 all:	one
@@ -438,8 +438,7 @@ debug:	FORCE
 ifeq ($(ZT_SSO_SUPPORTED), 1)
 ifeq ($(ZT_EMBEDDED),)
 zeroidc:	FORCE
-#	export PATH=/root/.cargo/bin:$$PATH; cd zeroidc && cargo build -j1 $(RUSTFLAGS)
-	export PATH=/${HOME}/.cargo/bin:$$PATH; cd rustybits && cargo build $(RUSTFLAGS) -p zeroidc
+	export PATH=/${HOME}/.cargo/bin:$$PATH; cd rustybits && cargo build $(ZT_CARGO_FLAGS) -p zeroidc
 endif
 else
 zeroidc:
@@ -447,7 +446,7 @@ endif
 
 ifeq ($(ZT_CONTROLLER), 1)
 smeeclient:	FORCE
-	export PATH=/${HOME}/.cargo/bin:$$PATH; cd rustybits && cargo build $(RUSTFLAGS) -p smeeclient
+	export PATH=/${HOME}/.cargo/bin:$$PATH; cd rustybits && cargo build $(ZT_CARGO_FLAGS) -p smeeclient
 else
 smeeclient:
 endif
