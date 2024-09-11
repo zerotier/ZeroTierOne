@@ -2617,6 +2617,10 @@ public:
 			_concurrency = 1;
 			_cpuPinningEnabled = false;
 		}
+#else
+		_multicoreEnabled = false;
+		_concurrency = 1;
+		_cpuPinningEnabled = false;
 #endif
 
 #ifndef ZT_SDK
