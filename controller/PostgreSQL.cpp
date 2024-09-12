@@ -780,11 +780,25 @@ void PostgreSQL::initializeNetworks()
 				fprintf(stderr, "adding networks to redis...\n");
 				if (_rc->clusterMode) {
 					auto tx = _cluster->transaction(_myAddressStr, true, false);
-					tx.sadd(setKey, networkSet.begin(), networkSet.end());
+					uint64_t count = 0;
+					for (std::string nwid : networkSet) {
+						tx.sadd(setKey, nwid);
+						if (++count % 30000 == 0) {
+							tx.exec();
+							tx = _cluster->transaction(_myAddressStr, true, false);
+						}
+					}
 					tx.exec();
 				} else {
 					auto tx = _redis->transaction(true, false);
-					tx.sadd(setKey, networkSet.begin(), networkSet.end());
+					uint64_t count = 0;
+					for (std::string nwid : networkSet) {
+						tx.sadd(setKey, nwid);
+						if (++count % 30000 == 0) {
+							tx.exec();
+							tx = _redis->transaction(true, false);
+						}
+					}
 					tx.exec();
 				}
 				fprintf(stderr, "done.\n");
@@ -1005,14 +1019,24 @@ void PostgreSQL::initializeMembers()
 				fprintf(stderr, "Load member data into redis...\n");
 				if (_rc->clusterMode) {
 					auto tx = _cluster->transaction(_myAddressStr, true, false);
+					uint64_t count = 0;
 					for (auto it : networkMembers) {
 						tx.sadd(it.first, it.second);
+						if (++count % 30000 == 0) {
+							tx.exec();
+							tx = _cluster->transaction(_myAddressStr, true, false);
+						}
 					}
 					tx.exec();
 				} else {
 					auto tx = _redis->transaction(true, false);
+					uint64_t count = 0;
 					for (auto it : networkMembers) {
 						tx.sadd(it.first, it.second);
+						if (++count % 30000 == 0) {
+							tx.exec();
+							tx = _redis->transaction(true, false);
+						}
 					}
 					tx.exec();
 				}
@@ -1180,7 +1204,7 @@ void PostgreSQL::_membersWatcher_Redis() {
 									_memberChanged(oldConfig,newConfig,(this->_ready >= 2));
 								}
 							} catch (...) {
-								fprintf(stderr, "json parse error in networkWatcher_Redis\n");
+								fprintf(stderr, "json parse error in _membersWatcher_Redis: %s\n", a.second.c_str());
 							}
 						}
 						if (_rc->clusterMode) {
@@ -1269,8 +1293,8 @@ void PostgreSQL::_networksWatcher_Redis() {
 								if (oldConfig.is_object()||newConfig.is_object()) {
 									_networkChanged(oldConfig,newConfig,(this->_ready >= 2));
 								}
-							} catch (...) {
-								fprintf(stderr, "json parse error in networkWatcher_Redis\n");
+							} catch (std::exception &e) {
+								fprintf(stderr, "json parse error in networkWatcher_Redis: what: %s json: %s\n", e.what(), a.second.c_str());
 							}
 						}
 						if (_rc->clusterMode) {

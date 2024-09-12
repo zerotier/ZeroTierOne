@@ -31,6 +31,7 @@ class NetworkController;
 class SelfAwareness;
 class Trace;
 class Bond;
+class PacketMultiplexer;
 
 /**
  * Holds global state for an instance of ZeroTier::Node
@@ -77,6 +78,7 @@ public:
 	Topology *topology;
 	SelfAwareness *sa;
 	Bond *bc;
+	PacketMultiplexer *pm;
 
 	// This node's identity and string representations thereof
 	Identity identity;

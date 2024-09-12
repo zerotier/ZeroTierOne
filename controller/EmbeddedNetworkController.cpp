@@ -315,12 +315,14 @@ static bool _parseRule(json &r,ZT_VirtualNetworkRule &rule)
 		return true;
 	} else if (t == "MATCH_MAC_SOURCE") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_MAC_SOURCE;
-		const std::string mac(OSUtils::jsonString(r["mac"],"0"));
+		std::string mac(OSUtils::jsonString(r["mac"],"0"));
+		Utils::cleanMac(mac);
 		Utils::unhex(mac.c_str(),(unsigned int)mac.length(),rule.v.mac,6);
 		return true;
 	} else if (t == "MATCH_MAC_DEST") {
 		rule.t |= ZT_NETWORK_RULE_MATCH_MAC_DEST;
-		const std::string mac(OSUtils::jsonString(r["mac"],"0"));
+		std::string mac(OSUtils::jsonString(r["mac"],"0"));
+		Utils::cleanMac(mac);
 		Utils::unhex(mac.c_str(),(unsigned int)mac.length(),rule.v.mac,6);
 		return true;
 	} else if (t == "MATCH_IPV4_SOURCE") {
