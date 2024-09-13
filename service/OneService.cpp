@@ -2599,6 +2599,7 @@ public:
 			fprintf(stderr,"WARNING: using manually-specified secondary and/or tertiary ports. This can cause NAT issues." ZT_EOL_S);
 		}
 		_portMappingEnabled = OSUtils::jsonBool(settings["portMappingEnabled"],true);
+		_node->setLowBandwidthMode(OSUtils::jsonBool(settings["lowBandwidthMode"],false));
 #if defined(__LINUX__) || defined(__FreeBSD__)
 		_multicoreEnabled = OSUtils::jsonBool(settings["multicoreEnabled"],false);
 		_concurrency = OSUtils::jsonInt(settings["concurrency"],1);
