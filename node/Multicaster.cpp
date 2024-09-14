@@ -20,7 +20,6 @@
 #include "Switch.hpp"
 #include "Packet.hpp"
 #include "Peer.hpp"
-#include "C25519.hpp"
 #include "CertificateOfMembership.hpp"
 #include "Node.hpp"
 #include "Network.hpp"
