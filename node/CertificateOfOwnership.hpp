@@ -166,8 +166,8 @@ public:
 		_signedBy.appendTo(b);
 		if (!forSign) {
 			b.append((uint8_t)1); // 1 == Ed25519
-			b.append((uint16_t)ZT_C25519_SIGNATURE_LEN); // length of signature
-			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+			b.append((uint16_t)ZT_ECC_SIGNATURE_LEN); // length of signature
+			b.append(_signature.data,ZT_ECC_SIGNATURE_LEN);
 		}
 
 		b.append((uint16_t)0); // length of additional fields, currently 0
@@ -207,12 +207,12 @@ public:
 		_signedBy.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
 		p += ZT_ADDRESS_LENGTH;
 		if (b[p++] == 1) {
-			if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN) {
+			if (b.template at<uint16_t>(p) != ZT_ECC_SIGNATURE_LEN) {
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			}
 			p += 2;
-			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
-			p += ZT_C25519_SIGNATURE_LEN;
+			memcpy(_signature.data,b.field(p,ZT_ECC_SIGNATURE_LEN),ZT_ECC_SIGNATURE_LEN);
+			p += ZT_ECC_SIGNATURE_LEN;
 		} else {
 			p += 2 + b.template at<uint16_t>(p);
 		}

@@ -4,3 +4,6 @@ CompileFlags:
     - "-I../ext"
     - "-I../ext/prometheus-cpp-lite-1.0/core/include"
     - "-I../ext/prometheus-cpp-lite-1.0/simpleapi/include"
+    - "-I./ext"
+    - "-I./ext/prometheus-cpp-lite-1.0/core/include"
+    - "-I./ext/prometheus-cpp-lite-1.0/simpleapi/include"

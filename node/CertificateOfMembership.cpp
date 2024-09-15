@@ -12,6 +12,7 @@
 /****/
 
 #include "CertificateOfMembership.hpp"
+#include "C25519.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Topology.hpp"
 #include "Switch.hpp"
@@ -43,7 +44,7 @@ CertificateOfMembership::CertificateOfMembership(uint64_t timestamp,uint64_t tim
 	}
 
 	_qualifierCount = 7;
-	memset(_signature.data,0,ZT_C25519_SIGNATURE_LEN);
+	memset(_signature.data,0,ZT_ECC_SIGNATURE_LEN);
 }
 
 bool CertificateOfMembership::agreesWith(const CertificateOfMembership &other, const Identity &otherIdentity) const

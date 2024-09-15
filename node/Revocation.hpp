@@ -135,8 +135,8 @@ public:
 
 		if (!forSign) {
 			b.append((uint8_t)1); // 1 == Ed25519 signature
-			b.append((uint16_t)ZT_C25519_SIGNATURE_LEN);
-			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+			b.append((uint16_t)ZT_ECC_SIGNATURE_LEN);
+			b.append(_signature.data,ZT_ECC_SIGNATURE_LEN);
 		}
 
 		// This is the size of any additional fields, currently 0.
@@ -173,10 +173,10 @@ public:
 		_type = (Credential::Type)b[p++];
 
 		if (b[p++] == 1) {
-			if (b.template at<uint16_t>(p) == ZT_C25519_SIGNATURE_LEN) {
+			if (b.template at<uint16_t>(p) == ZT_ECC_SIGNATURE_LEN) {
 				p += 2;
-				memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
-				p += ZT_C25519_SIGNATURE_LEN;
+				memcpy(_signature.data,b.field(p,ZT_ECC_SIGNATURE_LEN),ZT_ECC_SIGNATURE_LEN);
+				p += ZT_ECC_SIGNATURE_LEN;
 			} else {
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			}

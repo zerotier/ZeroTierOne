@@ -230,7 +230,7 @@ public:
 		}
 		_signedBy.appendTo(b);
 		if (_signedBy) {
-			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+			b.append(_signature.data,ZT_ECC_SIGNATURE_LEN);
 		}
 	}
 
@@ -271,8 +271,8 @@ public:
 		p += ZT_ADDRESS_LENGTH;
 
 		if (_signedBy) {
-			memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
-			p += ZT_C25519_SIGNATURE_LEN;
+			memcpy(_signature.data,b.field(p,ZT_ECC_SIGNATURE_LEN),ZT_ECC_SIGNATURE_LEN);
+			p += ZT_ECC_SIGNATURE_LEN;
 		}
 
 		return (p - startAt);
@@ -293,7 +293,7 @@ public:
 				return false;
 			}
 		}
-		return (memcmp(_signature.data,c._signature.data,ZT_C25519_SIGNATURE_LEN) == 0);
+		return (memcmp(_signature.data,c._signature.data,ZT_ECC_SIGNATURE_LEN) == 0);
 	}
 	inline bool operator!=(const CertificateOfMembership &c) const { return (!(*this == c)); }
 

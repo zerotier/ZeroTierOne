@@ -669,8 +669,8 @@ static void _moonToJson(nlohmann::json &mj,const World &world)
 	OSUtils::ztsnprintf(tmp,sizeof(tmp),"%.16llx",world.id());
 	mj["id"] = tmp;
 	mj["timestamp"] = world.timestamp();
-	mj["signature"] = Utils::hex(world.signature().data,ZT_C25519_SIGNATURE_LEN,tmp);
-	mj["updatesMustBeSignedBy"] = Utils::hex(world.updatesMustBeSignedBy().data,ZT_C25519_PUBLIC_KEY_LEN,tmp);
+	mj["signature"] = Utils::hex(world.signature().data,ZT_ECC_SIGNATURE_LEN,tmp);
+	mj["updatesMustBeSignedBy"] = Utils::hex(world.updatesMustBeSignedBy().data,ZT_ECC_PUBLIC_KEY_SET_LEN,tmp);
 	nlohmann::json ra = nlohmann::json::array();
 	for(std::vector<World::Root>::const_iterator r(world.roots().begin());r!=world.roots().end();++r) {
 		nlohmann::json rj;

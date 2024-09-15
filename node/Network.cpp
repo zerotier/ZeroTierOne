@@ -18,6 +18,7 @@
 
 #include "../include/ZeroTierDebug.h"
 
+#include "C25519.hpp"
 #include "Constants.hpp"
 #include "../version.h"
 #include "Network.hpp"
@@ -995,10 +996,10 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 			if (((chunkIndex + chunkLen) > totalLength)||(totalLength >= ZT_NETWORKCONFIG_DICT_CAPACITY)) { // >= since we need room for a null at the end
 				return 0;
 			}
-			if ((chunk[ptr] != 1)||(chunk.at<uint16_t>(ptr + 1) != ZT_C25519_SIGNATURE_LEN)) {
+			if ((chunk[ptr] != 1)||(chunk.at<uint16_t>(ptr + 1) != ZT_ECC_SIGNATURE_LEN)) {
 				return 0;
 			}
-			const uint8_t *sig = reinterpret_cast<const uint8_t *>(chunk.field(ptr + 3,ZT_C25519_SIGNATURE_LEN));
+			const uint8_t *sig = reinterpret_cast<const uint8_t *>(chunk.field(ptr + 3,ZT_ECC_SIGNATURE_LEN));
 
 			// We can use the signature, which is unique per chunk, to get a per-chunk ID for local deduplication use
 			for(unsigned int i=0;i<16;++i) {
@@ -1027,7 +1028,7 @@ uint64_t Network::handleConfigChunk(void *tPtr,const uint64_t packetId,const Add
 			if (!controllerId) { // we should always have the controller identity by now, otherwise how would we have queried it the first time?
 				return 0;
 			}
-			if (!controllerId.verify(chunk.field(start,ptr - start),ptr - start,sig,ZT_C25519_SIGNATURE_LEN)) {
+			if (!controllerId.verify(chunk.field(start,ptr - start),ptr - start,sig,ZT_ECC_SIGNATURE_LEN)) {
 				return 0;
 			}
 

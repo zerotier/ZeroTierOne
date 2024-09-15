@@ -41,7 +41,7 @@
 /**
  * The (more than) maximum length of a serialized World
  */
-#define ZT_WORLD_MAX_SERIALIZED_LENGTH (((1024 + (32 * ZT_WORLD_MAX_STABLE_ENDPOINTS_PER_ROOT)) * ZT_WORLD_MAX_ROOTS) + ZT_C25519_PUBLIC_KEY_LEN + ZT_C25519_SIGNATURE_LEN + 128)
+#define ZT_WORLD_MAX_SERIALIZED_LENGTH (((1024 + (32 * ZT_WORLD_MAX_STABLE_ENDPOINTS_PER_ROOT)) * ZT_WORLD_MAX_ROOTS) + ZT_ECC_PUBLIC_KEY_SET_LEN + ZT_ECC_SIGNATURE_LEN + 128)
 
 /**
  * World ID for Earth
@@ -174,9 +174,9 @@ public:
 		b.append((uint8_t)_type);
 		b.append((uint64_t)_id);
 		b.append((uint64_t)_ts);
-		b.append(_updatesMustBeSignedBy.data,ZT_C25519_PUBLIC_KEY_LEN);
+		b.append(_updatesMustBeSignedBy.data,ZT_ECC_PUBLIC_KEY_SET_LEN);
 		if (!forSign) {
-			b.append(_signature.data,ZT_C25519_SIGNATURE_LEN);
+			b.append(_signature.data,ZT_ECC_SIGNATURE_LEN);
 		}
 		b.append((uint8_t)_roots.size());
 		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
@@ -220,10 +220,10 @@ public:
 		p += 8;
 		_ts = b.template at<uint64_t>(p);
 		p += 8;
-		memcpy(_updatesMustBeSignedBy.data,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
-		p += ZT_C25519_PUBLIC_KEY_LEN;
-		memcpy(_signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
-		p += ZT_C25519_SIGNATURE_LEN;
+		memcpy(_updatesMustBeSignedBy.data,b.field(p,ZT_ECC_PUBLIC_KEY_SET_LEN),ZT_ECC_PUBLIC_KEY_SET_LEN);
+		p += ZT_ECC_PUBLIC_KEY_SET_LEN;
+		memcpy(_signature.data,b.field(p,ZT_ECC_SIGNATURE_LEN),ZT_ECC_SIGNATURE_LEN);
+		p += ZT_ECC_SIGNATURE_LEN;
 		const unsigned int numRoots = (unsigned int)b[p++];
 		if (numRoots > ZT_WORLD_MAX_ROOTS) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
@@ -248,7 +248,7 @@ public:
 		return (p - startAt);
 	}
 
-	inline bool operator==(const World &w) const { return ((_id == w._id)&&(_ts == w._ts)&&(memcmp(_updatesMustBeSignedBy.data,w._updatesMustBeSignedBy.data,ZT_C25519_PUBLIC_KEY_LEN) == 0)&&(memcmp(_signature.data,w._signature.data,ZT_C25519_SIGNATURE_LEN) == 0)&&(_roots == w._roots)&&(_type == w._type)); }
+	inline bool operator==(const World &w) const { return ((_id == w._id)&&(_ts == w._ts)&&(memcmp(_updatesMustBeSignedBy.data,w._updatesMustBeSignedBy.data,ZT_ECC_PUBLIC_KEY_SET_LEN) == 0)&&(memcmp(_signature.data,w._signature.data,ZT_ECC_SIGNATURE_LEN) == 0)&&(_roots == w._roots)&&(_type == w._type)); }
 	inline bool operator!=(const World &w) const { return (!(*this == w)); }
 
 	/**

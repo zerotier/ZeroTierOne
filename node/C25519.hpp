@@ -18,9 +18,9 @@
 
 namespace ZeroTier {
 
-#define ZT_C25519_PUBLIC_KEY_LEN 64
-#define ZT_C25519_PRIVATE_KEY_LEN 64
-#define ZT_C25519_SIGNATURE_LEN 96
+#define ZT_ECC_PUBLIC_KEY_SET_LEN 64
+#define ZT_ECC_PRIVATE_KEY_SET_LEN 64
+#define ZT_ECC_SIGNATURE_LEN 96
 
 /**
  * A combined Curve25519 ECDH and Ed25519 signature engine
@@ -28,9 +28,9 @@ namespace ZeroTier {
 class C25519
 {
 public:
-	struct Public { uint8_t data[ZT_C25519_PUBLIC_KEY_LEN]; };
-	struct Private { uint8_t data[ZT_C25519_PRIVATE_KEY_LEN]; };
-	struct Signature { uint8_t data[ZT_C25519_SIGNATURE_LEN]; };
+	struct Public { uint8_t data[ZT_ECC_PUBLIC_KEY_SET_LEN]; };
+	struct Private { uint8_t data[ZT_ECC_PRIVATE_KEY_SET_LEN]; };
+	struct Signature { uint8_t data[ZT_ECC_SIGNATURE_LEN]; };
 	struct Pair { Public pub; Private priv; };
 
 	/**
@@ -39,7 +39,7 @@ public:
 	static inline Pair generate()
 	{
 		Pair kp;
-		Utils::getSecureRandom(kp.priv.data,ZT_C25519_PRIVATE_KEY_LEN);
+		Utils::getSecureRandom(kp.priv.data,ZT_ECC_PRIVATE_KEY_SET_LEN);
 		_calcPubDH(kp);
 		_calcPubED(kp);
 		return kp;
@@ -63,7 +63,7 @@ public:
 	{
 		Pair kp;
 		void *const priv = (void *)kp.priv.data;
-		Utils::getSecureRandom(priv,ZT_C25519_PRIVATE_KEY_LEN);
+		Utils::getSecureRandom(priv,ZT_ECC_PRIVATE_KEY_SET_LEN);
 		_calcPubED(kp); // do Ed25519 key -- bytes 32-63 of pub and priv
 		do {
 			++(((uint64_t *)priv)[1]);

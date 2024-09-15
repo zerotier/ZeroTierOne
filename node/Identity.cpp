@@ -16,6 +16,7 @@
 #include <string.h>
 #include <stdint.h>
 
+#include "C25519.hpp"
 #include "Constants.hpp"
 #include "Identity.hpp"
 #include "SHA512.hpp"
@@ -74,7 +75,7 @@ struct _Identity_generate_cond
 	_Identity_generate_cond(unsigned char *sb,char *gm) : digest(sb),genmem(gm) {}
 	inline bool operator()(const C25519::Pair &kp) const
 	{
-		_computeMemoryHardHash(kp.pub.data,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
+		_computeMemoryHardHash(kp.pub.data,ZT_ECC_PUBLIC_KEY_SET_LEN,digest,genmem);
 		return (digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN);
 	}
 	unsigned char *digest;
@@ -109,7 +110,7 @@ bool Identity::locallyValidate() const
 
 	unsigned char digest[64];
 	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
-	_computeMemoryHardHash(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN,digest,genmem);
+	_computeMemoryHardHash(_publicKey.data,ZT_ECC_PUBLIC_KEY_SET_LEN,digest,genmem);
 	delete [] genmem;
 
 	unsigned char addrb[5];
@@ -132,12 +133,12 @@ char *Identity::toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_
 	*(p++) = ':';
 	*(p++) = '0';
 	*(p++) = ':';
-	Utils::hex(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN,p);
-	p += ZT_C25519_PUBLIC_KEY_LEN * 2;
+	Utils::hex(_publicKey.data,ZT_ECC_PUBLIC_KEY_SET_LEN,p);
+	p += ZT_ECC_PUBLIC_KEY_SET_LEN * 2;
 	if ((_privateKey)&&(includePrivate)) {
 		*(p++) = ':';
-		Utils::hex(_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN,p);
-		p += ZT_C25519_PRIVATE_KEY_LEN * 2;
+		Utils::hex(_privateKey->data,ZT_ECC_PRIVATE_KEY_SET_LEN,p);
+		p += ZT_ECC_PRIVATE_KEY_SET_LEN * 2;
 	}
 	*p = (char)0;
 	return buf;
@@ -176,14 +177,14 @@ bool Identity::fromString(const char *str)
 				}
 				break;
 			case 2:
-				if (Utils::unhex(f,_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) != ZT_C25519_PUBLIC_KEY_LEN) {
+				if (Utils::unhex(f,_publicKey.data,ZT_ECC_PUBLIC_KEY_SET_LEN) != ZT_ECC_PUBLIC_KEY_SET_LEN) {
 					_address.zero();
 					return false;
 				}
 				break;
 			case 3:
 				_privateKey = new C25519::Private();
-				if (Utils::unhex(f,_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN) != ZT_C25519_PRIVATE_KEY_LEN) {
+				if (Utils::unhex(f,_privateKey->data,ZT_ECC_PRIVATE_KEY_SET_LEN) != ZT_ECC_PRIVATE_KEY_SET_LEN) {
 					_address.zero();
 					return false;
 				}

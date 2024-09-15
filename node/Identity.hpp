@@ -113,14 +113,14 @@ public:
 
 	/**
 	 * Compute a SHA384 hash of this identity's address and public key(s).
-	 * 
+	 *
 	 * @param sha384buf Buffer with 48 bytes of space to receive hash
 	 */
 	inline void publicKeyHash(void *sha384buf) const
 	{
 		uint8_t address[ZT_ADDRESS_LENGTH];
 		_address.copyTo(address, ZT_ADDRESS_LENGTH);
-		SHA384(sha384buf, address, ZT_ADDRESS_LENGTH, _publicKey.data, ZT_C25519_PUBLIC_KEY_LEN);
+		SHA384(sha384buf, address, ZT_ADDRESS_LENGTH, _publicKey.data, ZT_ECC_PUBLIC_KEY_SET_LEN);
 	}
 
 	/**
@@ -132,7 +132,7 @@ public:
 	inline bool sha512PrivateKey(void *sha) const
 	{
 		if (_privateKey) {
-			SHA512(sha,_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
+			SHA512(sha,_privateKey->data,ZT_ECC_PRIVATE_KEY_SET_LEN);
 			return true;
 		}
 		return false;
@@ -163,7 +163,7 @@ public:
 	 */
 	inline bool verify(const void *data,unsigned int len,const void *signature,unsigned int siglen) const
 	{
-		if (siglen != ZT_C25519_SIGNATURE_LEN) {
+		if (siglen != ZT_ECC_SIGNATURE_LEN) {
 			return false;
 		}
 		return C25519::verify(_publicKey,data,len,signature);
@@ -217,10 +217,10 @@ public:
 	{
 		_address.appendTo(b);
 		b.append((uint8_t)0); // C25519/Ed25519 identity type
-		b.append(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN);
+		b.append(_publicKey.data,ZT_ECC_PUBLIC_KEY_SET_LEN);
 		if ((_privateKey)&&(includePrivate)) {
-			b.append((unsigned char)ZT_C25519_PRIVATE_KEY_LEN);
-			b.append(_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
+			b.append((unsigned char)ZT_ECC_PRIVATE_KEY_SET_LEN);
+			b.append(_privateKey->data,ZT_ECC_PRIVATE_KEY_SET_LEN);
 		} else {
 			b.append((unsigned char)0);
 		}
@@ -253,17 +253,17 @@ public:
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 		}
 
-		memcpy(_publicKey.data,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
-		p += ZT_C25519_PUBLIC_KEY_LEN;
+		memcpy(_publicKey.data,b.field(p,ZT_ECC_PUBLIC_KEY_SET_LEN),ZT_ECC_PUBLIC_KEY_SET_LEN);
+		p += ZT_ECC_PUBLIC_KEY_SET_LEN;
 
 		unsigned int privateKeyLength = (unsigned int)b[p++];
 		if (privateKeyLength) {
-			if (privateKeyLength != ZT_C25519_PRIVATE_KEY_LEN) {
+			if (privateKeyLength != ZT_ECC_PRIVATE_KEY_SET_LEN) {
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			}
 			_privateKey = new C25519::Private();
-			memcpy(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
-			p += ZT_C25519_PRIVATE_KEY_LEN;
+			memcpy(_privateKey->data,b.field(p,ZT_ECC_PRIVATE_KEY_SET_LEN),ZT_ECC_PRIVATE_KEY_SET_LEN);
+			p += ZT_ECC_PRIVATE_KEY_SET_LEN;
 		}
 
 		return (p - startAt);
@@ -304,7 +304,7 @@ public:
 		if (_privateKey) {
 			pair.priv = *_privateKey;
 		} else {
-			memset(pair.priv.data,0,ZT_C25519_PRIVATE_KEY_LEN);
+			memset(pair.priv.data,0,ZT_ECC_PRIVATE_KEY_SET_LEN);
 		}
 		return pair;
 	}
@@ -314,8 +314,8 @@ public:
 	 */
 	inline operator bool() const { return (_address); }
 
-	inline bool operator==(const Identity &id) const { return ((_address == id._address)&&(memcmp(_publicKey.data,id._publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) == 0)); }
-	inline bool operator<(const Identity &id) const { return ((_address < id._address)||((_address == id._address)&&(memcmp(_publicKey.data,id._publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) < 0))); }
+	inline bool operator==(const Identity &id) const { return ((_address == id._address)&&(memcmp(_publicKey.data,id._publicKey.data,ZT_ECC_PUBLIC_KEY_SET_LEN) == 0)); }
+	inline bool operator<(const Identity &id) const { return ((_address < id._address)||((_address == id._address)&&(memcmp(_publicKey.data,id._publicKey.data,ZT_ECC_PUBLIC_KEY_SET_LEN) < 0))); }
 	inline bool operator!=(const Identity &id) const { return !(*this == id); }
 	inline bool operator>(const Identity &id) const { return (id < *this); }
 	inline bool operator<=(const Identity &id) const { return !(id < *this); }
