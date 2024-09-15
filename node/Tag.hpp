@@ -21,7 +21,7 @@
 
 #include "Constants.hpp"
 #include "Credential.hpp"
-#include "C25519.hpp"
+#include "ECC.hpp"
 #include "Address.hpp"
 #include "Identity.hpp"
 #include "Buffer.hpp"
@@ -207,7 +207,7 @@ private:
 	int64_t _ts;
 	Address _issuedTo;
 	Address _signedBy;
-	C25519::Signature _signature;
+	ECC::Signature _signature;
 };
 
 } // namespace ZeroTier

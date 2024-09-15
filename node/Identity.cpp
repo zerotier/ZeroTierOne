@@ -16,7 +16,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include "C25519.hpp"
+#include "ECC.hpp"
 #include "Constants.hpp"
 #include "Identity.hpp"
 #include "SHA512.hpp"
@@ -73,7 +73,7 @@ struct _Identity_generate_cond
 {
 	_Identity_generate_cond() {}
 	_Identity_generate_cond(unsigned char *sb,char *gm) : digest(sb),genmem(gm) {}
-	inline bool operator()(const C25519::Pair &kp) const
+	inline bool operator()(const ECC::Pair &kp) const
 	{
 		_computeMemoryHardHash(kp.pub.data,ZT_ECC_PUBLIC_KEY_SET_LEN,digest,genmem);
 		return (digest[0] < ZT_IDENTITY_GEN_HASHCASH_FIRST_BYTE_LESS_THAN);
@@ -87,15 +87,15 @@ void Identity::generate()
 	unsigned char digest[64];
 	char *genmem = new char[ZT_IDENTITY_GEN_MEMORY];
 
-	C25519::Pair kp;
+	ECC::Pair kp;
 	do {
-		kp = C25519::generateSatisfying(_Identity_generate_cond(digest,genmem));
+		kp = ECC::generateSatisfying(_Identity_generate_cond(digest,genmem));
 		_address.setTo(digest + 59,ZT_ADDRESS_LENGTH); // last 5 bytes are address
 	} while (_address.isReserved());
 
 	_publicKey = kp.pub;
 	if (!_privateKey) {
-		_privateKey = new C25519::Private();
+		_privateKey = new ECC::Private();
 	}
 	*_privateKey = kp.priv;
 
@@ -157,7 +157,7 @@ bool Identity::fromString(const char *str)
 	}
 
 	delete _privateKey;
-	_privateKey = (C25519::Private *)0;
+	_privateKey = (ECC::Private *)0;
 
 	int fno = 0;
 	char *saveptr = (char *)0;
@@ -183,7 +183,7 @@ bool Identity::fromString(const char *str)
 				}
 				break;
 			case 3:
-				_privateKey = new C25519::Private();
+				_privateKey = new ECC::Private();
 				if (Utils::unhex(f,_privateKey->data,ZT_ECC_PRIVATE_KEY_SET_LEN) != ZT_ECC_PRIVATE_KEY_SET_LEN) {
 					_address.zero();
 					return false;

@@ -23,7 +23,7 @@
 #include "../include/ZeroTierOne.h"
 #include "Credential.hpp"
 #include "Address.hpp"
-#include "C25519.hpp"
+#include "ECC.hpp"
 #include "Utils.hpp"
 #include "Buffer.hpp"
 #include "Identity.hpp"
@@ -201,7 +201,7 @@ private:
 	Address _target;
 	Address _signedBy;
 	Credential::Type _type;
-	C25519::Signature _signature;
+	ECC::Signature _signature;
 };
 
 } // namespace ZeroTier

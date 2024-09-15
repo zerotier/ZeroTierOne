@@ -18,7 +18,7 @@
 
 #include "../include/ZeroTierDebug.h"
 
-#include "C25519.hpp"
+#include "ECC.hpp"
 #include "Constants.hpp"
 #include "../version.h"
 #include "Network.hpp"

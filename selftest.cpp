@@ -36,7 +36,7 @@
 #include "node/Peer.hpp"
 #include "node/Dictionary.hpp"
 #include "node/SHA512.hpp"
-#include "node/C25519.hpp"
+#include "node/ECC.hpp"
 #include "node/Poly1305.hpp"
 #include "node/CertificateOfMembership.hpp"
 #include "node/Node.hpp"
@@ -361,13 +361,13 @@ static int testCrypto()
 
 	std::cout << "[crypto] Testing C25519 and Ed25519 against test vectors... "; std::cout.flush();
 	for(int k=0;k<ZT_NUM_C25519_TEST_VECTORS;++k) {
-		C25519::Pair p1,p2;
+		ECC::Pair p1,p2;
 		memcpy(p1.pub.data,C25519_TEST_VECTORS[k].pub1,ZT_C25519_PUBLIC_KEY_LEN);
 		memcpy(p1.priv.data,C25519_TEST_VECTORS[k].priv1,ZT_C25519_PRIVATE_KEY_LEN);
 		memcpy(p2.pub.data,C25519_TEST_VECTORS[k].pub2,ZT_C25519_PUBLIC_KEY_LEN);
 		memcpy(p2.priv.data,C25519_TEST_VECTORS[k].priv2,ZT_C25519_PRIVATE_KEY_LEN);
-		C25519::agree(p1,p2.pub,buf1,64);
-		C25519::agree(p2,p1.pub,buf2,64);
+		ECC::agree(p1,p2.pub,buf1,64);
+		ECC::agree(p2,p1.pub,buf2,64);
 		if (memcmp(buf1,buf2,64)) {
 			std::cout << "FAIL (1)" << std::endl;
 			return -1;
@@ -376,12 +376,12 @@ static int testCrypto()
 			std::cout << "FAIL (2)" << std::endl;
 			return -1;
 		}
-		C25519::Signature sig1 = C25519::sign(p1,buf1,64);
+		ECC::Signature sig1 = ECC::sign(p1,buf1,64);
 		if (memcmp(sig1.data,C25519_TEST_VECTORS[k].agreementSignedBy1,64)) {
 			std::cout << "FAIL (3)" << std::endl;
 			return -1;
 		}
-		C25519::Signature sig2 = C25519::sign(p2,buf1,64);
+		ECC::Signature sig2 = ECC::sign(p2,buf1,64);
 		if (memcmp(sig2.data,C25519_TEST_VECTORS[k].agreementSignedBy2,64)) {
 			std::cout << "FAIL (4)" << std::endl;
 			return -1;
@@ -394,12 +394,12 @@ static int testCrypto()
 		memset(buf1,64,sizeof(buf1));
 		memset(buf2,64,sizeof(buf2));
 		memset(buf3,64,sizeof(buf3));
-		C25519::Pair p1 = C25519::generate();
-		C25519::Pair p2 = C25519::generate();
-		C25519::Pair p3 = C25519::generate();
-		C25519::agree(p1,p2.pub,buf1,64);
-		C25519::agree(p2,p1.pub,buf2,64);
-		C25519::agree(p3,p1.pub,buf3,64);
+		ECC::Pair p1 = ECC::generate();
+		ECC::Pair p2 = ECC::generate();
+		ECC::Pair p3 = ECC::generate();
+		ECC::agree(p1,p2.pub,buf1,64);
+		ECC::agree(p2,p1.pub,buf2,64);
+		ECC::agree(p3,p1.pub,buf3,64);
 		// p1<>p2 should equal p2<>p1
 		if (memcmp(buf1,buf2,64)) {
 			std::cout << "FAIL (1)" << std::endl;
@@ -414,45 +414,45 @@ static int testCrypto()
 	std::cout << "PASS" << std::endl;
 
 	std::cout << "[crypto] Benchmarking C25519 ECC key agreement... "; std::cout.flush();
-	C25519::Pair bp[8];
+	ECC::Pair bp[8];
 	for(int k=0;k<8;++k)
-		bp[k] = C25519::generate();
+		bp[k] = ECC::generate();
 	uint64_t st = OSUtils::now();
 	for(unsigned int k=0;k<50;++k) {
-		C25519::agree(bp[~k & 7],bp[k & 7].pub,buf1,64);
+		ECC::agree(bp[~k & 7],bp[k & 7].pub,buf1,64);
 	}
 	uint64_t et = OSUtils::now();
 	std::cout << ((double)(et - st) / 50.0) << "ms per agreement." << std::endl;
 
 	std::cout << "[crypto] Testing Ed25519 ECC signatures... "; std::cout.flush();
-	C25519::Pair didntSign = C25519::generate();
+	ECC::Pair didntSign = ECC::generate();
 	for(unsigned int i=0;i<10;++i) {
-		C25519::Pair p1 = C25519::generate();
+		ECC::Pair p1 = ECC::generate();
 		for(unsigned int k=0;k<sizeof(buf1);++k)
 			buf1[k] = (unsigned char)rand();
-		C25519::Signature sig = C25519::sign(p1,buf1,sizeof(buf1));
-		if (!C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
+		ECC::Signature sig = ECC::sign(p1,buf1,sizeof(buf1));
+		if (!ECC::verify(p1.pub,buf1,sizeof(buf1),sig)) {
 			std::cout << "FAIL (1)" << std::endl;
 			return -1;
 		}
 		++buf1[17];
-		if (C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
+		if (ECC::verify(p1.pub,buf1,sizeof(buf1),sig)) {
 			std::cout << "FAIL (2)" << std::endl;
 			return -1;
 		}
 		--buf1[17];
-		if (!C25519::verify(p1.pub,buf1,sizeof(buf1),sig)) {
+		if (!ECC::verify(p1.pub,buf1,sizeof(buf1),sig)) {
 			std::cout << "FAIL (3)" << std::endl;
 			return -1;
 		}
-		if (C25519::verify(didntSign.pub,buf1,sizeof(buf1),sig)) {
+		if (ECC::verify(didntSign.pub,buf1,sizeof(buf1),sig)) {
 			std::cout << "FAIL (2)" << std::endl;
 			return -1;
 		}
 		for(unsigned int k=0;k<64;++k) {
-			C25519::Signature sig2(sig);
+			ECC::Signature sig2(sig);
 			sig2.data[rand() % ZT_C25519_SIGNATURE_LEN] ^= (unsigned char)(1 << (rand() & 7));
-			if (C25519::verify(p1.pub,buf1,sizeof(buf1),sig2)) {
+			if (ECC::verify(p1.pub,buf1,sizeof(buf1),sig2)) {
 				std::cout << "FAIL (5)" << std::endl;
 				return -1;
 			}
@@ -463,8 +463,8 @@ static int testCrypto()
 	std::cout << "[crypto] Benchmarking Ed25519 ECC signatures... "; std::cout.flush();
 	st = OSUtils::now();
 	for(int k=0;k<1000;++k) {
-		C25519::Signature sig;
-		C25519::sign(didntSign.priv,didntSign.pub,buf1,sizeof(buf1),sig.data);
+		ECC::Signature sig;
+		ECC::sign(didntSign.priv,didntSign.pub,buf1,sizeof(buf1),sig.data);
 	}
 	et = OSUtils::now();
 	std::cout << ((double)(et - st) / 50.0) << "ms per signature." << std::endl;
@@ -1097,12 +1097,12 @@ int main(int argc,char **argv)
 	// the same result.
 	/*
 	for(int k=0;k<32;++k) {
-		C25519::Pair p1 = C25519::generate();
-		C25519::Pair p2 = C25519::generate();
+		ECC::Pair p1 = ECC::generate();
+		ECC::Pair p2 = ECC::generate();
 		unsigned char agg[64];
-		C25519::agree(p1,p2.pub,agg,64);
-		C25519::Signature sig1 = C25519::sign(p1,agg,64);
-		C25519::Signature sig2 = C25519::sign(p2,agg,64);
+		ECC::agree(p1,p2.pub,agg,64);
+		ECC::Signature sig1 = ECC::sign(p1,agg,64);
+		ECC::Signature sig2 = ECC::sign(p2,agg,64);
 		printf("{{");
 		for(int i=0;i<64;++i)
 			printf("%s0x%.2x",((i > 0) ? "," : ""),(unsigned int)p1.pub.data[i]);

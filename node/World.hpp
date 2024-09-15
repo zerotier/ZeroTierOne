@@ -21,7 +21,7 @@
 #include "InetAddress.hpp"
 #include "Identity.hpp"
 #include "Buffer.hpp"
-#include "C25519.hpp"
+#include "ECC.hpp"
 
 /**
  * Maximum number of roots (sanity limit, okay to increase)
@@ -133,12 +133,12 @@ public:
 	/**
 	 * @return C25519 signature
 	 */
-	inline const C25519::Signature &signature() const { return _signature; }
+	inline const ECC::Signature &signature() const { return _signature; }
 
 	/**
 	 * @return Public key that must sign next update
 	 */
-	inline const C25519::Public &updatesMustBeSignedBy() const { return _updatesMustBeSignedBy; }
+	inline const ECC::Public &updatesMustBeSignedBy() const { return _updatesMustBeSignedBy; }
 
 	/**
 	 * Check whether a world update should replace this one
@@ -154,7 +154,7 @@ public:
 		if ((_id == update._id)&&(_ts < update._ts)&&(_type == update._type)) {
 			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> tmp;
 			update.serialize(tmp,true);
-			return C25519::verify(_updatesMustBeSignedBy,tmp.data(),tmp.size(),update._signature);
+			return ECC::verify(_updatesMustBeSignedBy,tmp.data(),tmp.size(),update._signature);
 		}
 		return false;
 	}
@@ -262,7 +262,7 @@ public:
 	 * @param signWith Key to sign this World with (can have the same public as the next-update signing key, but doesn't have to)
 	 * @return Signed World object
 	 */
-	static inline World make(World::Type t,uint64_t id,uint64_t ts,const C25519::Public &sk,const std::vector<World::Root> &roots,const C25519::Pair &signWith)
+	static inline World make(World::Type t,uint64_t id,uint64_t ts,const ECC::Public &sk,const std::vector<World::Root> &roots,const ECC::Pair &signWith)
 	{
 		World w;
 		w._id = id;
@@ -273,7 +273,7 @@ public:
 
 		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> tmp;
 		w.serialize(tmp,true);
-		w._signature = C25519::sign(signWith,tmp.data(),tmp.size());
+		w._signature = ECC::sign(signWith,tmp.data(),tmp.size());
 
 		return w;
 	}
@@ -282,8 +282,8 @@ protected:
 	uint64_t _id;
 	uint64_t _ts;
 	Type _type;
-	C25519::Public _updatesMustBeSignedBy;
-	C25519::Signature _signature;
+	ECC::Public _updatesMustBeSignedBy;
+	ECC::Signature _signature;
 	std::vector<Root> _roots;
 };
 

@@ -11,8 +11,8 @@
  */
 /****/
 
-#ifndef ZT_C25519_HPP
-#define ZT_C25519_HPP
+#ifndef ZT_ECC_HPP
+#define ZT_ECC_HPP
 
 #include "Utils.hpp"
 
@@ -22,10 +22,7 @@ namespace ZeroTier {
 #define ZT_ECC_PRIVATE_KEY_SET_LEN 64
 #define ZT_ECC_SIGNATURE_LEN 96
 
-/**
- * A combined Curve25519 ECDH and Ed25519 signature engine
- */
-class C25519
+class ECC
 {
 public:
 	struct Public { uint8_t data[ZT_ECC_PUBLIC_KEY_SET_LEN]; };
@@ -34,7 +31,7 @@ public:
 	struct Pair { Public pub; Private priv; };
 
 	/**
-	 * Generate a C25519 elliptic curve key pair
+	 * Generate an elliptic curve key pair
 	 */
 	static inline Pair generate()
 	{

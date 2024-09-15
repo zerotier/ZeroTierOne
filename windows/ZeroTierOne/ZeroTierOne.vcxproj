@@ -200,7 +200,7 @@
     <ClInclude Include="..\..\node\Bond.hpp" />
     <ClInclude Include="..\..\node\BondController.hpp" />
     <ClInclude Include="..\..\node\Buffer.hpp" />
-    <ClInclude Include="..\..\node\C25519.hpp" />
+    <ClInclude Include="..\..\node\ECC.hpp" />
     <ClInclude Include="..\..\node\CertificateOfMembership.hpp" />
     <ClInclude Include="..\..\node\CertificateOfOwnership.hpp" />
     <ClInclude Include="..\..\node\Constants.hpp" />

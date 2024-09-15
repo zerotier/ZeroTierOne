@@ -25,7 +25,7 @@
 #include "Credential.hpp"
 #include "Buffer.hpp"
 #include "Address.hpp"
-#include "C25519.hpp"
+#include "ECC.hpp"
 #include "Identity.hpp"
 #include "Utils.hpp"
 
@@ -310,7 +310,7 @@ private:
 	Address _signedBy;
 	_Qualifier _qualifiers[ZT_NETWORK_COM_MAX_QUALIFIERS];
 	unsigned int _qualifierCount;
-	C25519::Signature _signature;
+	ECC::Signature _signature;
 };
 
 } // namespace ZeroTier

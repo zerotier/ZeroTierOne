@@ -19,7 +19,7 @@
 
 #include "../version.h"
 
-#include "C25519.hpp"
+#include "ECC.hpp"
 #include "Constants.hpp"
 #include "SharedPtr.hpp"
 #include "Node.hpp"
@@ -813,7 +813,7 @@ void Node::ncSendConfig(uint64_t nwid,uint64_t requestPacketId,const Address &de
 					outp.append((uint32_t)totalSize);
 					outp.append((uint32_t)chunkIndex);
 
-					C25519::Signature sig(RR->identity.sign(reinterpret_cast<const uint8_t *>(outp.data()) + sigStart,outp.size() - sigStart));
+					ECC::Signature sig(RR->identity.sign(reinterpret_cast<const uint8_t *>(outp.data()) + sigStart,outp.size() - sigStart));
 					outp.append((uint8_t)1);
 					outp.append((uint16_t)ZT_ECC_SIGNATURE_LEN);
 					outp.append(sig.data,ZT_ECC_SIGNATURE_LEN);

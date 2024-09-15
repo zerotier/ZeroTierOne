@@ -13,7 +13,7 @@
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
-#include "node/C25519.hpp"
+#include "node/ECC.hpp"
 #endif
 
 #include <stdio.h>
@@ -1553,7 +1553,7 @@ static int idtool(int argc,char **argv)
 			fprintf(stderr,"%s is not readable" ZT_EOL_S,argv[3]);
 			return 1;
 		}
-		C25519::Signature signature = id.sign(inf.data(),(unsigned int)inf.length());
+		ECC::Signature signature = id.sign(inf.data(),(unsigned int)inf.length());
 		char hexbuf[1024];
 		printf("%s",Utils::hex(signature.data,ZT_ECC_SIGNATURE_LEN,hexbuf));
 	} else if (!strcmp(argv[1],"verify")) {
@@ -1603,7 +1603,7 @@ static int idtool(int argc,char **argv)
 				return 1;
 			}
 
-			C25519::Pair kp(C25519::generate());
+			ECC::Pair kp(ECC::generate());
 
 			char idtmp[4096];
 			nlohmann::json mj;
@@ -1647,8 +1647,8 @@ static int idtool(int argc,char **argv)
 				return 1;
 			}
 
-			C25519::Pair signingKey;
-			C25519::Public updatesMustBeSignedBy;
+			ECC::Pair signingKey;
+			ECC::Public updatesMustBeSignedBy;
 			Utils::unhex(OSUtils::jsonString(mj["signingKey"],"").c_str(),signingKey.pub.data,ZT_ECC_PUBLIC_KEY_SET_LEN);
 			Utils::unhex(OSUtils::jsonString(mj["signingKey_SECRET"],"").c_str(),signingKey.priv.data,ZT_ECC_PRIVATE_KEY_SET_LEN);
 			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],"").c_str(),updatesMustBeSignedBy.data,ZT_ECC_PUBLIC_KEY_SET_LEN);

@@ -12,7 +12,7 @@
 /****/
 
 #include "CertificateOfMembership.hpp"
-#include "C25519.hpp"
+#include "ECC.hpp"
 #include "RuntimeEnvironment.hpp"
 #include "Topology.hpp"
 #include "Switch.hpp"

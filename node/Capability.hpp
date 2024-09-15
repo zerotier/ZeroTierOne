@@ -21,7 +21,7 @@
 #include "Constants.hpp"
 #include "Credential.hpp"
 #include "Address.hpp"
-#include "C25519.hpp"
+#include "ECC.hpp"
 #include "Utils.hpp"
 #include "Buffer.hpp"
 #include "Identity.hpp"
@@ -496,7 +496,7 @@ private:
 	struct {
 		Address to;
 		Address from;
-		C25519::Signature signature;
+		ECC::Signature signature;
 	} _custody[ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH];
 };
 
