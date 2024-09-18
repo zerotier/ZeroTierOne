@@ -431,10 +431,12 @@ void BSDEthernetTap::threadMain()
 	// constructing itself.
 	Thread::sleep(500);
 
-	for (unsigned int i = 0; i < _concurrency; ++i) {
-		_rxThreads.push_back(std::thread([this, i, _pinning] {
+	bool pinning = _pinning;
 
-			if (_pinning) {
+	for (unsigned int i = 0; i < _concurrency; ++i) {
+		_rxThreads.push_back(std::thread([this, i, pinning] {
+
+			if (pinning) {
 				int pinCore = i % _concurrency;
 				fprintf(stderr, "Pinning thread %d to core %d\n", i, pinCore);
 				pthread_t self = pthread_self();
