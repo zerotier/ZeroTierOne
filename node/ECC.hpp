@@ -11,10 +11,44 @@
  */
 /****/
 
+/*
+ * This file defines the elliptic curve crypto used for ZeroTier V1. The normal
+ * public version uses C25519 and Ed25519, while the FIPS version uses NIST.
+ * FIPS builds are completely incompatible with regular ZeroTier, but that's
+ * fine since FIPS users typically want a fully isolated private network. If you
+ * are not such a user you probably don't want this.
+ */
+
 #ifndef ZT_ECC_HPP
 #define ZT_ECC_HPP
 
 #include "Utils.hpp"
+
+#ifdef ZT_FIPS
+
+/* FIPS140/NIST ECC cryptography */
+/* Note that to be FIPS we also need to link against a FIPS-certified library. */
+
+#include <openssl/evp.h>
+#include <openssl/ec.h>
+#include <openssl/err.h>
+#include <openssl/pem.h>
+#include <openssl/bn.h>
+
+#define ZT_ECC_PUBLIC_KEY_SET_LEN (97 * 2) /* Two ECC P-384 keys */
+#define ZT_ECC_PRIVATE_KEY_SET_LEN (48 * 2) /* Two ECC P-384 secret keys */
+#define ZT_ECC_SIGNATURE_LEN 96 /* NIST P-384 ECDSA signature */
+
+class ECC
+{
+public:
+    struct Public { uint8_t data[ZT_ECC_PUBLIC_KEY_SET_LEN]; };
+	struct Private { uint8_t data[ZT_ECC_PRIVATE_KEY_SET_LEN]; };
+	struct Signature { uint8_t data[ZT_ECC_SIGNATURE_LEN]; };
+	struct Pair { Public pub; Private priv; };
+};
+
+#else // Curve25519 / Ed25519
 
 namespace ZeroTier {
 
@@ -164,5 +198,7 @@ private:
 };
 
 } // namespace ZeroTier
+
+#endif
 
 #endif

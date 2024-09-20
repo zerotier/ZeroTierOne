@@ -8,15 +8,10 @@ Derived from public domain code by D. J. Bernstein.
 // This code remains in the public domain.
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <string.h>
 
-#include "Constants.hpp"
 #include "ECC.hpp"
 #include "SHA512.hpp"
-#include "Buffer.hpp"
-#include "Hashtable.hpp"
-#include "Mutex.hpp"
 
 #ifdef __WINDOWS__
 #pragma warning(disable: 4146)
