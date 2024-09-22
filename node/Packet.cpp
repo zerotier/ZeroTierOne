@@ -1009,7 +1009,6 @@ void Packet::armor(const void *key,bool encryptPayload,const AES aesKeys[2])
 {
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 	if ((aesKeys) && (encryptPayload)) {
-		//char tmp0[16],tmp1[16];
 		setCipher(ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV);
 
 		uint8_t *const payload = data + ZT_PACKET_IDX_VERB;

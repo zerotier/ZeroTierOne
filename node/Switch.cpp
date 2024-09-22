@@ -83,31 +83,7 @@ void Switch::onRemotePacket(void *tPtr,const int64_t localSocket,const InetAddre
 		const SharedPtr<Path> path(RR->topology->getPath(localSocket,fromAddr));
 		path->received(now);
 
-		if (len == 13) {
-			/* LEGACY: before VERB_PUSH_DIRECT_PATHS, peers used broadcast
-			 * announcements on the LAN to solve the 'same network problem.' We
-			 * no longer send these, but we'll listen for them for a while to
-			 * locate peers with versions <1.0.4. */
-
-			const Address beaconAddr(reinterpret_cast<const char *>(data) + 8,5);
-			if (beaconAddr == RR->identity.address()) {
-				return;
-			}
-			if (!RR->node->shouldUsePathForZeroTierTraffic(tPtr,beaconAddr,localSocket,fromAddr)) {
-				return;
-			}
-			const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,beaconAddr));
-			if (peer) { // we'll only respond to beacons from known peers
-				if ((now - _lastBeaconResponse) >= 2500) { // limit rate of responses
-					_lastBeaconResponse = now;
-					Packet outp(peer->address(),RR->identity.address(),Packet::VERB_NOP);
-					outp.armor(peer->key(),true,peer->aesKeysIfSupported());
-					Metrics::pkt_nop_out++;
-					path->send(RR,tPtr,outp.data(),outp.size(),now);
-				}
-			}
-
-		} else if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) { // SECURITY: min length check is important since we do some C-style stuff below!
+		if (len > ZT_PROTO_MIN_FRAGMENT_LENGTH) {
 			if (reinterpret_cast<const uint8_t *>(data)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] == ZT_PACKET_FRAGMENT_INDICATOR) {
 				// Handle fragment ----------------------------------------------------
 

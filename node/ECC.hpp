@@ -35,6 +35,7 @@
 #include <openssl/pem.h>
 #include <openssl/bn.h>
 
+#define ZT_ECC_EPHEMERAL_PUBLIC_KEY_LEN 97 /* Single ECC P-384 key */
 #define ZT_ECC_PUBLIC_KEY_SET_LEN (97 * 2) /* Two ECC P-384 keys */
 #define ZT_ECC_PRIVATE_KEY_SET_LEN (48 * 2) /* Two ECC P-384 secret keys */
 #define ZT_ECC_SIGNATURE_LEN 96 /* NIST P-384 ECDSA signature */
@@ -52,9 +53,10 @@ public:
 
 namespace ZeroTier {
 
-#define ZT_ECC_PUBLIC_KEY_SET_LEN 64
-#define ZT_ECC_PRIVATE_KEY_SET_LEN 64
-#define ZT_ECC_SIGNATURE_LEN 96
+#define ZT_ECC_EPHEMERAL_PUBLIC_KEY_LEN 32 /* Single C25519 ECDH key */
+#define ZT_ECC_PUBLIC_KEY_SET_LEN 64 /* C25519 and Ed25519 keys */
+#define ZT_ECC_PRIVATE_KEY_SET_LEN 64 /* C25519 and Ed25519 secret keys */
+#define ZT_ECC_SIGNATURE_LEN 96 /* Ed25519 signature plus (not necessary) hash */
 
 class ECC
 {

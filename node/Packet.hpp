@@ -59,10 +59,15 @@
  * 10 - 1.4.0 ... 1.4.6
  * 11 - 1.4.7 ... 1.4.8
  *    + Multipath capability and load balancing (beta)
- * 12 - 1.4.8 ... CURRENT (1.4 series)
+ * 12 - 1.4.8 ... 1.16.0
  *    + AES-GMAC-SIV backported for faster peer-to-peer crypto
+ * 13 - 1.16.0 ... CURRENT
+ *    + Old deprecated "encrypted" flag removed
+ *    + Ephemeral keying with second encryption pass to hide HELLO etc.
+ *    + Encrypted HELLO packets to anyone but roots
+ *    + Remove deprecated parsing of LAN announcements
  */
-#define ZT_PROTO_VERSION 12
+#define ZT_PROTO_VERSION 13
 
 /**
  * Minimum supported protocol version
@@ -101,6 +106,18 @@
 #define ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 1
 
 /**
+ * Cipher suite: NONE
+ *
+ * This differs from POLY1305/NONE in that *no* crypto is done, not even
+ * authentication. This is for trusted local LAN interconnects for internal
+ * SDN use within a data center.
+ *
+ * For this mode the MAC field becomes a trusted path ID and must match the
+ * configured ID of a trusted path or the packet is discarded.
+ */
+#define ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH 2
+
+/**
  * AES-GMAC-SIV backported from 2.x
  */
 #define ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV 3
@@ -116,23 +133,15 @@
 #define ZT_KBKDF_LABEL_AES_GMAC_SIV_K1 '1'
 
 /**
- * Cipher suite: NONE
+ * Header flag indicating ephemeral keying and second encryption pass.
  *
- * This differs from POLY1305/NONE in that *no* crypto is done, not even
- * authentication. This is for trusted local LAN interconnects for internal
- * SDN use within a data center.
+ * If this is set, the packet will have an ephemeral key appended to it its payload
+ * will be encrypted with AES-CTR using this ephemeral key and the packet's header
+ * as an IV.
  *
- * For this mode the MAC field becomes a trusted path ID and must match the
- * configured ID of a trusted path or the packet is discarded.
+ * Note that this is a reuse of a flag that has long been deprecated and ignored.
  */
-#define ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH 2
-
-/**
- * DEPRECATED payload encrypted flag, may be re-used in the future.
- *
- * This has been replaced by the three-bit cipher suite selection field.
- */
-#define ZT_PROTO_FLAG_ENCRYPTED 0x80
+#define ZT_PROTO_FLAG_EXTENDED_ARMOR 0x80
 
 /**
  * Header flag indicating that a packet is fragmented
@@ -147,66 +156,8 @@
  */
 #define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80
 
-/**
- * Rounds used for Salsa20 encryption in ZT
- *
- * Discussion:
- *
- * DJB (Salsa20's designer) designed Salsa20 with a significant margin of 20
- * rounds, but has said repeatedly that 12 is likely sufficient. So far (as of
- * July 2015) there are no published attacks against 12 rounds, let alone 20.
- *
- * In cryptography, a "break" means something different from what it means in
- * common discussion. If a cipher is 256 bits strong and someone finds a way
- * to reduce key search to 254 bits, this constitutes a "break" in the academic
- * literature. 254 bits is still far beyond what can be leveraged to accomplish
- * a "break" as most people would understand it -- the actual decryption and
- * reading of traffic.
- *
- * Nevertheless, "attacks only get better" as cryptographers like to say. As
- * a result, they recommend not using anything that's shown any weakness even
- * if that weakness is so far only meaningful to academics. It may be a sign
- * of a deeper problem.
- *
- * So why choose a lower round count?
- *
- * Turns out the speed difference is nontrivial. On a Macbook Pro (Core i3) 20
- * rounds of SSE-optimized Salsa20 achieves ~508mb/sec/core, while 12 rounds
- * hits ~832mb/sec/core. ZeroTier is designed for multiple objectives:
- * security, simplicity, and performance. In this case a deference was made
- * for performance.
- *
- * Meta discussion:
- *
- * The cipher is not the thing you should be paranoid about.
- *
- * I'll qualify that. If the cipher is known to be weak, like RC4, or has a
- * key size that is too small, like DES, then yes you should worry about
- * the cipher.
- *
- * But if the cipher is strong and your adversary is anyone other than the
- * intelligence apparatus of a major superpower, you are fine in that
- * department.
- *
- * Go ahead. Search for the last ten vulnerabilities discovered in SSL. Not
- * a single one involved the breaking of a cipher. Now broaden your search.
- * Look for issues with SSH, IPSec, etc. The only cipher-related issues you
- * will find might involve the use of RC4 or MD5, algorithms with known
- * issues or small key/digest sizes. But even weak ciphers are difficult to
- * exploit in the real world -- you usually need a lot of data and a lot of
- * compute time. No, virtually EVERY security vulnerability you will find
- * involves a problem with the IMPLEMENTATION not with the cipher.
- *
- * A flaw in ZeroTier's protocol or code is incredibly, unbelievably
- * more likely than a flaw in Salsa20 or any other cipher or cryptographic
- * primitive it uses. We're talking odds of dying in a car wreck vs. odds of
- * being personally impacted on the head by a meteorite. Nobody without a
- * billion dollar budget is going to break into your network by actually
- * cracking Salsa20/12 (or even /8) in the field.
- *
- * So stop worrying about the cipher unless you are, say, the Kremlin and your
- * adversary is the NSA and the GCHQ. In that case... well that's above my
- * pay grade. I'll just say defense in depth.
+/*
+ * Rounds used for deprecated Salsa20 encryption
  */
 #define ZT_PROTO_SALSA20_ROUNDS 12
 
@@ -795,7 +746,7 @@ public:
 		 *   <[8] 64-bit network ID>
      *   <[2] 16-bit length of error-related data (optional)>
      *   <[...] error-related data (optional)>
-     * 
+     *
      * Error related data is a Dictionary containing things like a URL
      * for authentication or a human-readable error message, and is
      * optional and may be absent or empty.
@@ -1267,12 +1218,6 @@ public:
 	{
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
 		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38); // bits: FFCCCHHH
-		// Set DEPRECATED "encrypted" flag -- used by pre-1.0.3 peers
-		if (c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) {
-			b |= ZT_PROTO_FLAG_ENCRYPTED;
-		} else {
-			b &= (~ZT_PROTO_FLAG_ENCRYPTED);
-		}
 	}
 
 	/**
