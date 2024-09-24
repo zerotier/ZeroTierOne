@@ -29,6 +29,7 @@
 #include "AES.hpp"
 #include "Utils.hpp"
 #include "Buffer.hpp"
+#include "Identity.hpp"
 
 /**
  * Protocol version -- incremented only for major changes
@@ -179,6 +180,11 @@
 #define ZT_PACKET_IDX_MAC 19
 #define ZT_PACKET_IDX_VERB 27
 #define ZT_PACKET_IDX_PAYLOAD 28
+
+/**
+ * Index where extended armor encryption starts (right after flags, before MAC)
+ */
+#define ZT_PACKET_IDX_EXTENDED_ARMOR_START ZT_PACKET_IDX_MAC
 
 /**
  * Packet buffer size (can be changed)
@@ -744,12 +750,12 @@ public:
 		 *
 		 * ERROR response payload:
 		 *   <[8] 64-bit network ID>
-     *   <[2] 16-bit length of error-related data (optional)>
-     *   <[...] error-related data (optional)>
-     *
-     * Error related data is a Dictionary containing things like a URL
-     * for authentication or a human-readable error message, and is
-     * optional and may be absent or empty.
+		 *   <[2] 16-bit length of error-related data (optional)>
+		 *   <[...] error-related data (optional)>
+		 *
+		 * Error related data is a Dictionary containing things like a URL
+		 * for authentication or a human-readable error message, and is
+		 * optional and may be absent or empty.
 		 */
 		VERB_NETWORK_CONFIG_REQUEST = 0x0b,
 
@@ -1283,7 +1289,7 @@ public:
 	 * @param encryptPayload If true, encrypt packet payload, else just MAC
 	 * @param aesKeys If non-NULL these are the two keys for AES-GMAC-SIV
 	 */
-	void armor(const void *key,bool encryptPayload,const AES aesKeys[2]);
+	void armor(const void *key,bool encryptPayload,bool extendedArmor,const AES aesKeys[2],const Identity &identity);
 
 	/**
 	 * Verify and (if encrypted) decrypt packet
@@ -1296,7 +1302,7 @@ public:
 	 * @param aesKeys If non-NULL these are the two keys for AES-GMAC-SIV
 	 * @return False if packet is invalid or failed MAC authenticity check
 	 */
-	bool dearmor(const void *key,const AES aesKeys[2]);
+	bool dearmor(const void *key,const AES aesKeys[2],const Identity &identity);
 
 	/**
 	 * Encrypt/decrypt a separately armored portion of a packet

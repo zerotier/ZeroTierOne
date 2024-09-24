@@ -1005,9 +1005,13 @@ static inline int LZ4_decompress_safe(const char* source, char* dest, int compre
 
 const unsigned char Packet::ZERO_KEY[32] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
 
-void Packet::armor(const void *key,bool encryptPayload,const AES aesKeys[2])
+void Packet::armor(const void *key,bool encryptPayload,bool extendedArmor,const AES aesKeys[2],const Identity &identity)
 {
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
+
+	if (extendedArmor) {
+	}
+
 	if ((aesKeys) && (encryptPayload)) {
 		setCipher(ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV);
 
@@ -1066,7 +1070,7 @@ void Packet::armor(const void *key,bool encryptPayload,const AES aesKeys[2])
 	}
 }
 
-bool Packet::dearmor(const void *key,const AES aesKeys[2])
+bool Packet::dearmor(const void *key,const AES aesKeys[2],const Identity &identity)
 {
 	uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
 	const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
