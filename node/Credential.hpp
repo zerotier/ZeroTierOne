@@ -14,17 +14,6 @@
 #ifndef ZT_CREDENTIAL_HPP
 #define ZT_CREDENTIAL_HPP
 
-#include <string>
-#include <memory>
-#include <stdexcept>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-
-#include "Constants.hpp"
-
 namespace ZeroTier {
 
 /**

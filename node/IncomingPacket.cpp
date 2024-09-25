@@ -68,7 +68,7 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment *RR,void *tPtr,int32_t f
 		const SharedPtr<Peer> peer(RR->topology->getPeer(tPtr,sourceAddress));
 		if (peer) {
 			if (!_authenticated) {
-				if (!dearmor(peer->key(), peer->aesKeys())) {
+				if (!dearmor(peer->key(), peer->aesKeys(), RR->identity)) {
 					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,packetId(),sourceAddress,hops(),"invalid MAC");
 					peer->recordIncomingInvalidPacket(_path);
 					return true;
@@ -398,13 +398,13 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 
 				uint8_t key[ZT_SYMMETRIC_KEY_SIZE];
 				if (RR->identity.agree(id,key)) {
-					if (dearmor(key, peer->aesKeysIfSupported())) { // ensure packet is authentic, otherwise drop
+					if (dearmor(key, peer->aesKeysIfSupported(), RR->identity)) { // ensure packet is authentic, otherwise drop
 						RR->t->incomingPacketDroppedHELLO(tPtr,_path,pid,fromAddress,"address collision");
 						Packet outp(id.address(),RR->identity.address(),Packet::VERB_ERROR);
 						outp.append((uint8_t)Packet::VERB_HELLO);
 						outp.append((uint64_t)pid);
 						outp.append((uint8_t)Packet::ERROR_IDENTITY_COLLISION);
-						outp.armor(key,true,peer->aesKeysIfSupported());
+						outp.armor(key,true,false,peer->aesKeysIfSupported(),peer->identity());
 						Metrics::pkt_error_out++;
 						Metrics::pkt_error_identity_collision_out++;
 						_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
@@ -419,7 +419,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 			} else {
 				// Identity is the same as the one we already have -- check packet integrity
 
-				if (!dearmor(peer->key(), peer->aesKeysIfSupported())) {
+				if (!dearmor(peer->key(), peer->aesKeysIfSupported(), RR->identity)) {
 					RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops(),"invalid MAC");
 					return true;
 				}
@@ -444,7 +444,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 
 		// Check packet integrity and MAC (this is faster than locallyValidate() so do it first to filter out total crap)
 		SharedPtr<Peer> newPeer(new Peer(RR,RR->identity,id));
-		if (!dearmor(newPeer->key(), newPeer->aesKeysIfSupported())) {
+		if (!dearmor(newPeer->key(), newPeer->aesKeysIfSupported(), RR->identity)) {
 			RR->t->incomingPacketMessageAuthenticationFailure(tPtr,_path,pid,fromAddress,hops(),"invalid MAC");
 			return true;
 		}
@@ -510,38 +510,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MAJOR);
 	outp.append((unsigned char)ZEROTIER_ONE_VERSION_MINOR);
 	outp.append((uint16_t)ZEROTIER_ONE_VERSION_REVISION);
-
-	if (protoVersion >= 5) {
-		_path->address().serialize(outp);
-	} else {
-		/* LEGACY COMPATIBILITY HACK:
-		 *
-		 * For a while now (since 1.0.3), ZeroTier has recognized changes in
-		 * its network environment empirically by examining its external network
-		 * address as reported by trusted peers. In versions prior to 1.1.0
-		 * (protocol version < 5), they did this by saving a snapshot of this
-		 * information (in SelfAwareness.hpp) keyed by reporting device ID and
-		 * address type.
-		 *
-		 * This causes problems when clustering is combined with symmetric NAT.
-		 * Symmetric NAT remaps ports, so different endpoints in a cluster will
-		 * report back different exterior addresses. Since the old code keys
-		 * this by device ID and not sending physical address and compares the
-		 * entire address including port, it constantly thinks its external
-		 * surface is changing and resets connections when talking to a cluster.
-		 *
-		 * In new code we key by sending physical address and device and we also
-		 * take the more conservative position of only interpreting changes in
-		 * IP address (neglecting port) as a change in network topology that
-		 * necessitates a reset. But we can make older clients work here by
-		 * nulling out the port field. Since this info is only used for empirical
-		 * detection of link changes, it doesn't break anything else.
-		 */
-		InetAddress tmpa(_path->address());
-		tmpa.setPort(0);
-		tmpa.serialize(outp);
-	}
-
+	_path->address().serialize(outp);
 	const unsigned int worldUpdateSizeAt = outp.size();
 	outp.addSize(2); // make room for 16-bit size field
 	if ((planetWorldId)&&(RR->topology->planetWorldTimestamp() > planetWorldTimestamp)&&(planetWorldId == RR->topology->planetWorldId())) {
@@ -562,7 +531,7 @@ bool IncomingPacket::_doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool
 	}
 	outp.setAt<uint16_t>(worldUpdateSizeAt,(uint16_t)(outp.size() - (worldUpdateSizeAt + 2)));
 
-	outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+	outp.armor(peer->key(),true,false,peer->aesKeysIfSupported(),peer->identity());
 	peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
 	Metrics::pkt_ok_out++;
 	_path->send(RR,tPtr,outp.data(),outp.size(),now);
@@ -724,7 +693,7 @@ bool IncomingPacket::_doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const Shar
 
 	if (count > 0) {
 		Metrics::pkt_ok_out++;
-		outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+		outp.armor(peer->key(),true,false,peer->aesKeysIfSupported(),RR->identity);
 		_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
 	}
 
@@ -952,7 +921,7 @@ bool IncomingPacket::_doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const 
 			outp.append((uint64_t)packetId());
 			outp.append((uint64_t)nwid);
 			const int64_t now = RR->node->now();
-			outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+			outp.armor(peer->key(),true,false,peer->aesKeysIfSupported(),peer->identity());
 			peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
 			Metrics::pkt_ok_out++;
 			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
@@ -981,7 +950,7 @@ bool IncomingPacket::_doECHO(const RuntimeEnvironment *RR,void *tPtr,const Share
 	if (size() > ZT_PACKET_IDX_PAYLOAD) {
 		outp.append(reinterpret_cast<const unsigned char *>(data()) + ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD);
 	}
-	outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+	outp.armor(peer->key(),true,false,peer->aesKeysIfSupported(),peer->identity());
 	peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
 	Metrics::pkt_ok_out++;
 	_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
@@ -1177,7 +1146,7 @@ bool IncomingPacket::_doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,void
 		outp.append(requestPacketId);
 		outp.append((unsigned char)Packet::ERROR_UNSUPPORTED_OPERATION);
 		outp.append(nwid);
-		outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+		outp.armor(peer->key(),true,false,peer->aesKeysIfSupported(),peer->identity());
 		Metrics::pkt_error_out++;
 		Metrics::pkt_error_unsupported_op_out++;
 		_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
@@ -1201,7 +1170,7 @@ bool IncomingPacket::_doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,c
 			outp.append((uint64_t)network->id());
 			outp.append((uint64_t)configUpdateId);
 			const int64_t now = RR->node->now();
-			outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+			outp.armor(peer->key(),true,false,peer->aesKeysIfSupported(),peer->identity());
 			peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
 			Metrics::pkt_ok_out++;
 			_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
@@ -1244,7 +1213,7 @@ bool IncomingPacket::_doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr
 		outp.append((uint32_t)mg.adi());
 		const unsigned int gatheredLocally = RR->mc->gather(peer->address(),nwid,mg,outp,gatherLimit);
 		if (gatheredLocally > 0) {
-			outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+			outp.armor(peer->key(),true,false,peer->aesKeysIfSupported(),peer->identity());
 			peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
 			Metrics::pkt_ok_out++;
 			_path->send(RR,tPtr,outp.data(),outp.size(),now);
@@ -1348,7 +1317,7 @@ bool IncomingPacket::_doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,
 			outp.append((unsigned char)0x02); // flag 0x02 = contains gather results
 			if (RR->mc->gather(peer->address(),nwid,to,outp,gatherLimit)) {
 				const int64_t now = RR->node->now();
-				outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+				outp.armor(peer->key(),true,false,peer->aesKeysIfSupported(),peer->identity());
 				peer->recordOutgoingPacket(_path,outp.packetId(),outp.payloadLength(),outp.verb(),ZT_QOS_NO_FLOW,now);
 				Metrics::pkt_ok_out++;
 				_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());
@@ -1490,7 +1459,7 @@ void IncomingPacket::_sendErrorNeedCredentials(const RuntimeEnvironment *RR,void
 	outp.append(packetId());
 	outp.append((uint8_t)Packet::ERROR_NEED_MEMBERSHIP_CERTIFICATE);
 	outp.append(nwid);
-	outp.armor(peer->key(),true,peer->aesKeysIfSupported());
+	outp.armor(peer->key(),true,false,peer->aesKeysIfSupported(),peer->identity());
 	Metrics::pkt_error_out++;
 	Metrics::pkt_error_need_membership_cert_out++;
 	_path->send(RR,tPtr,outp.data(),outp.size(),RR->node->now());

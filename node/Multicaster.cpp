@@ -198,7 +198,7 @@ void Multicaster::send(
 					if (!network->config().disableCompression()) {
 						outp.compress();
 					}
-					outp.armor(bestMulticastReplicator->key(),true,bestMulticastReplicator->aesKeysIfSupported());
+					outp.armor(bestMulticastReplicator->key(),true,false,bestMulticastReplicator->aesKeysIfSupported(),bestMulticastReplicator->identity());
 					Metrics::pkt_multicast_frame_out++;
 					bestMulticastReplicatorPath->send(RR,tPtr,outp.data(),outp.size(),now);
 					return;

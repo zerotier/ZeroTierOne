@@ -1183,6 +1183,25 @@ public:
     }
 
     /**
+     * @return True if packet is encrypted with an extra ephemeral key
+     */
+    inline bool extendedArmor() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_EXTENDED_ARMOR) != 0); }
+
+    /**
+     * Set this packet's extended armor flag
+     *
+     * @param f Extended armor flag value
+     */
+    inline void setExtendedArmor(bool f)
+    {
+        if (f) {
+            (*this)[ZT_PACKET_IDX_FLAGS] |= (char)ZT_PROTO_FLAG_EXTENDED_ARMOR;
+        } else {
+            (*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_EXTENDED_ARMOR);
+        }
+    }
+
+    /**
      * @return True if compressed (result only valid if unencrypted)
      */
     inline bool compressed() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED) != 0); }
@@ -1287,6 +1306,8 @@ public:
      *
      * @param key 32-byte key
      * @param encryptPayload If true, encrypt packet payload, else just MAC
+     * @param extendedArmor Use an ephemeral key to encrypt payload (for encrypted HELLO)
+     * @param identity Identity of packet recipient/destination
      * @param aesKeys If non-NULL these are the two keys for AES-GMAC-SIV
      */
     void armor(const void *key,bool encryptPayload,bool extendedArmor,const AES aesKeys[2],const Identity &identity);
@@ -1300,6 +1321,7 @@ public:
      *
      * @param key 32-byte key
      * @param aesKeys If non-NULL these are the two keys for AES-GMAC-SIV
+     * @param identity Receiver's identity (must include secret)
      * @return False if packet is invalid or failed MAC authenticity check
      */
     bool dearmor(const void *key,const AES aesKeys[2],const Identity &identity);
