@@ -112,6 +112,17 @@
 #define ZT_PROTO_FLAG_FRAGMENTED 0x40
 
 /**
+ * Header flag indicating ephemeral keying and second encryption pass.
+ *
+ * If this is set, the packet will have an ephemeral key appended to it its payload
+ * will be encrypted with AES-CTR using this ephemeral key and the packet's header
+ * as an IV.
+ *
+ * Note that this is a reuse of a flag that has long been deprecated and ignored.
+ */
+#define ZT_PROTO_FLAG_EXTENDED_ARMOR 0x80
+
+/**
  * Verb flag indicating payload is compressed with LZ4
  */
 #define ZT_PROTO_VERB_FLAG_COMPRESSED 0x80
@@ -1152,6 +1163,29 @@ public:
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
 		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38); // bits: FFCCCHHH
 	}
+
+	/**
+     * @return True if packet is encrypted with an extra ephemeral key
+     */
+    inline bool extendedArmor() const
+    {
+        return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_EXTENDED_ARMOR) != 0);
+    }
+
+    /**
+     * Set this packet's extended armor flag
+     *
+     * @param f Extended armor flag value
+     */
+    inline void setExtendedArmor(bool f)
+    {
+        if (f) {
+            (*this)[ZT_PACKET_IDX_FLAGS] |= (char)ZT_PROTO_FLAG_EXTENDED_ARMOR;
+        }
+        else {
+            (*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_EXTENDED_ARMOR);
+        }
+    }
 
 	/**
 	 * Get the trusted path ID for this packet (only meaningful if cipher is trusted path)

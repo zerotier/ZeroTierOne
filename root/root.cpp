@@ -61,6 +61,7 @@
 #include "../node/Packet.hpp"
 #include "../node/SharedPtr.hpp"
 #include "../node/Utils.hpp"
+#include "../node/AES.hpp"
 #include "../osdep/BlockingQueue.hpp"
 #include "../osdep/OSUtils.hpp"
 #include "geoip-html.h"
@@ -265,6 +266,8 @@ static ZT_ALWAYS_INLINE std::array<uint64_t, 2> ip6ToH128(const InetAddress& ip)
     return i128;
 }
 
+#define ZT_PACKET_IDX_EXTENDED_ARMOR_START 19
+
 static void handlePacket(const int sock, const InetAddress* const ip, Packet& pkt)
 {
     char ipstr[128], ipstr2[128], astr[32], astr2[32], tmpstr[256];
@@ -280,6 +283,23 @@ static void handlePacket(const int sock, const InetAddress* const ip, Packet& pk
 
     if ((! fragment) && (! pkt.fragmented()) && (dest == s_self.address())) {
         SharedPtr<RootPeer> peer;
+
+        if ((pkt.cipher() == ZT_PROTO_CIPHER_SUITE__POLY1305_NONE) && pkt.extendedArmor()) {
+            if (pkt.size() < (ZT_PROTO_MIN_PACKET_LENGTH + 32)) {
+                return;
+            }
+            uint8_t ephemeralSymmetric[64];
+            C25519::agree(s_self.c25519SecretKey(), (const uint8_t *)pkt.data() + (pkt.size() - 32), ephemeralSymmetric);
+            SHA512(ephemeralSymmetric, ephemeralSymmetric, 32);
+
+            AES cipher(ephemeralSymmetric);
+            uint32_t ctrIv[4];
+            memcpy(ctrIv, pkt.data(), 12);
+            ctrIv[3] = 0;
+            cipher.ctr((const uint8_t *)ctrIv, (const uint8_t *)pkt.data() + ZT_PACKET_IDX_EXTENDED_ARMOR_START, (pkt.size() - ZT_PACKET_IDX_EXTENDED_ARMOR_START) - 32, (uint8_t *)pkt.data() + ZT_PACKET_IDX_EXTENDED_ARMOR_START);
+
+            pkt.setSize(pkt.size() - 32);
+        }
 
         // If this is an un-encrypted HELLO, either learn a new peer or verify
         // that this is a peer we already know.
@@ -304,7 +324,6 @@ static void handlePacket(const int sock, const InetAddress* const ip, Packet& pk
                             pkt.reset(source, s_self.address(), Packet::VERB_ERROR);
                             pkt.append((uint8_t)Packet::VERB_HELLO);
                             pkt.append(origId);
-                            ;
                             pkt.append((uint8_t)Packet::ERROR_IDENTITY_COLLISION);
                             pkt.armor(key, true);
                             sendto(sock, pkt.data(), pkt.size(), SENDTO_FLAGS, (const struct sockaddr*)ip, (socklen_t)((ip->ss_family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6)));

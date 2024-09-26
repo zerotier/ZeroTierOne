@@ -447,7 +447,9 @@ public:
 
 	ZT_ALWAYS_INLINE unsigned long hashCode() const { return ((unsigned long)_address.toInt() + (unsigned long)_pub.c25519[0] + (unsigned long)_pub.c25519[1] + (unsigned long)_pub.c25519[2]); }
 
-private:
+	ZT_ALWAYS_INLINE const uint8_t *c25519SecretKey() const { return this->_priv.c25519; }
+
+	private:
 	Address _address;
 	Type _type;
 	bool _hasPrivate;

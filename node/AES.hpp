@@ -135,17 +135,8 @@ public:
 		while (len >= 16) {
 			_encryptSW((const uint8_t *)ctr,(uint8_t *)cenc);
 			ctr[1] = Utils::hton(++bctr);
-#ifdef ZT_NO_TYPE_PUNNING
 			for(unsigned int k=0;k<16;++k)
 				*(o++) = *(i++) ^ ((uint8_t *)cenc)[k];
-#else
-			*((uint64_t *)o) = *((const uint64_t *)i) ^ cenc[0];
-			o += 8;
-			i += 8;
-			*((uint64_t *)o) = *((const uint64_t *)i) ^ cenc[1];
-			o += 8;
-			i += 8;
-#endif
 			len -= 16;
 		}
 
