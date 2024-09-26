@@ -14,13 +14,12 @@
 #ifndef ZT_ARP_HPP
 #define ZT_ARP_HPP
 
-#include <stdint.h>
-
-#include <utility>
-
 #include "../node/Constants.hpp"
 #include "../node/Hashtable.hpp"
 #include "../node/MAC.hpp"
+
+#include <stdint.h>
+#include <utility>
 
 /**
  * Maximum possible ARP length
@@ -67,77 +66,77 @@ namespace ZeroTier {
  * This class is not thread-safe and must be guarded if used in multi-threaded
  * code.
  */
-class Arp
-{
-public:
-	Arp();
+class Arp {
+  public:
+    Arp();
 
-	/**
-	 * Set a local IP entry that we should respond to ARPs for
-	 *
-	 * @param mac Our local MAC address
-	 * @param ip IP in big-endian byte order (sin_addr.s_addr)
-	 */
-	void addLocal(uint32_t ip,const MAC &mac);
+    /**
+     * Set a local IP entry that we should respond to ARPs for
+     *
+     * @param mac Our local MAC address
+     * @param ip IP in big-endian byte order (sin_addr.s_addr)
+     */
+    void addLocal(uint32_t ip, const MAC& mac);
 
-	/**
-	 * Delete a local IP entry or a cached ARP entry
-	 *
-	 * @param ip IP in big-endian byte order (sin_addr.s_addr)
-	 */
-	void remove(uint32_t ip);
+    /**
+     * Delete a local IP entry or a cached ARP entry
+     *
+     * @param ip IP in big-endian byte order (sin_addr.s_addr)
+     */
+    void remove(uint32_t ip);
 
-	/**
-	 * Process ARP packets
-	 *
-	 * For ARP queries, a response is generated and responseLen is set to its
-	 * frame payload length in bytes.
-	 *
-	 * For ARP responses, the cache is populated and the IP address entry that
-	 * was learned is returned.
-	 *
-	 * @param arp ARP frame data
-	 * @param len Length of ARP frame (usually 28)
-	 * @param response Response buffer -- MUST be a minimum of ZT_ARP_BUF_LENGTH in size
-	 * @param responseLen Response length, or set to 0 if no response
-	 * @param responseDest Destination of response, or set to null if no response
-	 * @return IP address learned or 0 if no new IPs in cache
-	 */
-	uint32_t processIncomingArp(const void *arp,unsigned int len,void *response,unsigned int &responseLen,MAC &responseDest);
+    /**
+     * Process ARP packets
+     *
+     * For ARP queries, a response is generated and responseLen is set to its
+     * frame payload length in bytes.
+     *
+     * For ARP responses, the cache is populated and the IP address entry that
+     * was learned is returned.
+     *
+     * @param arp ARP frame data
+     * @param len Length of ARP frame (usually 28)
+     * @param response Response buffer -- MUST be a minimum of ZT_ARP_BUF_LENGTH in size
+     * @param responseLen Response length, or set to 0 if no response
+     * @param responseDest Destination of response, or set to null if no response
+     * @return IP address learned or 0 if no new IPs in cache
+     */
+    uint32_t processIncomingArp(const void* arp, unsigned int len, void* response, unsigned int& responseLen, MAC& responseDest);
 
-	/**
-	 * Get the MAC corresponding to an IP, generating a query if needed
-	 *
-	 * This returns a MAC for a remote IP. The local MAC is returned for local
-	 * IPs as well. It may also generate a query if the IP is not known or the
-	 * entry needs to be refreshed. In this case queryLen will be set to a
-	 * non-zero value, so this should always be checked on return even if the
-	 * MAC returned is non-null.
-	 *
-	 * @param localMac Local MAC address of host interface
+    /**
+     * Get the MAC corresponding to an IP, generating a query if needed
+     *
+     * This returns a MAC for a remote IP. The local MAC is returned for local
+     * IPs as well. It may also generate a query if the IP is not known or the
+     * entry needs to be refreshed. In this case queryLen will be set to a
+     * non-zero value, so this should always be checked on return even if the
+     * MAC returned is non-null.
+     *
+     * @param localMac Local MAC address of host interface
      * @param localIp Local IP address of host interface
-	 * @param targetIp IP to look up
-	 * @param query Buffer for generated query -- MUST be a minimum of ZT_ARP_BUF_LENGTH in size
-	 * @param queryLen Length of generated query, or set to 0 if no query generated
-	 * @param queryDest Destination of query, or set to null if no query generated
-	 * @return MAC or 0 if no cached entry for this IP
-	 */
-	MAC query(const MAC &localMac,uint32_t localIp,uint32_t targetIp,void *query,unsigned int &queryLen,MAC &queryDest);
+     * @param targetIp IP to look up
+     * @param query Buffer for generated query -- MUST be a minimum of ZT_ARP_BUF_LENGTH in size
+     * @param queryLen Length of generated query, or set to 0 if no query generated
+     * @param queryDest Destination of query, or set to null if no query generated
+     * @return MAC or 0 if no cached entry for this IP
+     */
+    MAC query(const MAC& localMac, uint32_t localIp, uint32_t targetIp, void* query, unsigned int& queryLen, MAC& queryDest);
 
-private:
-	struct _ArpEntry
-	{
-		_ArpEntry() : lastQuerySent(0),lastResponseReceived(0),mac(),local(false) {}
-		uint64_t lastQuerySent; // Time last query was sent or 0 for local IP
-		uint64_t lastResponseReceived; // Time of last ARP response or 0 for local IP
-		MAC mac; // MAC address of device responsible for IP or null if not known yet
-		bool local; // True if this is a local ARP entry
-	};
+  private:
+    struct _ArpEntry {
+        _ArpEntry() : lastQuerySent(0), lastResponseReceived(0), mac(), local(false)
+        {
+        }
+        uint64_t lastQuerySent;          // Time last query was sent or 0 for local IP
+        uint64_t lastResponseReceived;   // Time of last ARP response or 0 for local IP
+        MAC mac;                         // MAC address of device responsible for IP or null if not known yet
+        bool local;                      // True if this is a local ARP entry
+    };
 
-	Hashtable< uint32_t,_ArpEntry > _cache;
-	uint64_t _lastCleaned;
+    Hashtable<uint32_t, _ArpEntry> _cache;
+    uint64_t _lastCleaned;
 };
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
 
 #endif

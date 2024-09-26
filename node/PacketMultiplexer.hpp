@@ -25,41 +25,41 @@
 namespace ZeroTier {
 
 struct PacketRecord {
-	void* tPtr;
-	uint64_t nwid;
-	void** nuptr;
-	uint64_t source;
-	uint64_t dest;
-	unsigned int etherType;
-	unsigned int vlanId;
-	uint8_t data[ZT_MAX_MTU];
-	unsigned int len;
-	unsigned int flowId;
+    void* tPtr;
+    uint64_t nwid;
+    void** nuptr;
+    uint64_t source;
+    uint64_t dest;
+    unsigned int etherType;
+    unsigned int vlanId;
+    uint8_t data[ZT_MAX_MTU];
+    unsigned int len;
+    unsigned int flowId;
 };
 
 class PacketMultiplexer {
   public:
-	const RuntimeEnvironment* RR;
+    const RuntimeEnvironment* RR;
 
-	PacketMultiplexer(const RuntimeEnvironment* renv);
+    PacketMultiplexer(const RuntimeEnvironment* renv);
 
-	void setUpPostDecodeReceiveThreads(unsigned int concurrency, bool cpuPinningEnabled);
+    void setUpPostDecodeReceiveThreads(unsigned int concurrency, bool cpuPinningEnabled);
 
-	void putFrame(void* tPtr, uint64_t nwid, void** nuptr, const MAC& source, const MAC& dest, unsigned int etherType, unsigned int vlanId, const void* data, unsigned int len, unsigned int flowId);
+    void putFrame(void* tPtr, uint64_t nwid, void** nuptr, const MAC& source, const MAC& dest, unsigned int etherType, unsigned int vlanId, const void* data, unsigned int len, unsigned int flowId);
 
-	std::vector<BlockingQueue<PacketRecord*>*> _rxPacketQueues;
+    std::vector<BlockingQueue<PacketRecord*>*> _rxPacketQueues;
 
-	unsigned int _concurrency;
-	// pool
-	std::vector<PacketRecord*> _rxPacketVector;
-	std::vector<std::thread> _rxPacketThreads;
-	Mutex _rxPacketVector_m, _rxPacketThreads_m;
+    unsigned int _concurrency;
+    // pool
+    std::vector<PacketRecord*> _rxPacketVector;
+    std::vector<std::thread> _rxPacketThreads;
+    Mutex _rxPacketVector_m, _rxPacketThreads_m;
 
-	std::vector<std::thread> _rxThreads;
-	unsigned int _rxThreadCount;
-	bool _enabled;
+    std::vector<std::thread> _rxThreads;
+    unsigned int _rxThreadCount;
+    bool _enabled;
 };
 
-}	// namespace ZeroTier
+}   // namespace ZeroTier
 
-#endif	 // ZT_PACKET_MULTIPLEXER_HPP
+#endif   // ZT_PACKET_MULTIPLEXER_HPP

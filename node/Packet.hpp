@@ -14,22 +14,20 @@
 #ifndef ZT_N_PACKET_HPP
 #define ZT_N_PACKET_HPP
 
-#include <stdint.h>
-#include <string.h>
-#include <stdio.h>
-
-#include <string>
-#include <iostream>
-
-#include "Constants.hpp"
-
+#include "AES.hpp"
 #include "Address.hpp"
+#include "Buffer.hpp"
+#include "Constants.hpp"
+#include "Identity.hpp"
 #include "Poly1305.hpp"
 #include "Salsa20.hpp"
-#include "AES.hpp"
 #include "Utils.hpp"
-#include "Buffer.hpp"
-#include "Identity.hpp"
+
+#include <iostream>
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <string>
 
 /**
  * Protocol version -- incremented only for major changes
@@ -173,12 +171,12 @@
 #define ZT_PUSH_DIRECT_PATHS_FLAG_CLUSTER_REDIRECT 0x02
 
 // Field indexes in packet header
-#define ZT_PACKET_IDX_IV 0
-#define ZT_PACKET_IDX_DEST 8
-#define ZT_PACKET_IDX_SOURCE 13
-#define ZT_PACKET_IDX_FLAGS 18
-#define ZT_PACKET_IDX_MAC 19
-#define ZT_PACKET_IDX_VERB 27
+#define ZT_PACKET_IDX_IV      0
+#define ZT_PACKET_IDX_DEST    8
+#define ZT_PACKET_IDX_SOURCE  13
+#define ZT_PACKET_IDX_FLAGS   18
+#define ZT_PACKET_IDX_MAC     19
+#define ZT_PACKET_IDX_VERB    27
 #define ZT_PACKET_IDX_PAYLOAD 28
 
 /**
@@ -197,12 +195,12 @@
 #define ZT_PROTO_MIN_PACKET_LENGTH ZT_PACKET_IDX_PAYLOAD
 
 // Indexes of fields in fragment header
-#define ZT_PACKET_FRAGMENT_IDX_PACKET_ID 0
-#define ZT_PACKET_FRAGMENT_IDX_DEST 8
+#define ZT_PACKET_FRAGMENT_IDX_PACKET_ID          0
+#define ZT_PACKET_FRAGMENT_IDX_DEST               8
 #define ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR 13
-#define ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO 14
-#define ZT_PACKET_FRAGMENT_IDX_HOPS 15
-#define ZT_PACKET_FRAGMENT_IDX_PAYLOAD 16
+#define ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO        14
+#define ZT_PACKET_FRAGMENT_IDX_HOPS               15
+#define ZT_PACKET_FRAGMENT_IDX_PAYLOAD            16
 
 /**
  * Magic number found at ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR
@@ -221,89 +219,89 @@
 // See their respective handler functions.
 
 #define ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION (ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION + 1)
-#define ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION (ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION + 1)
-#define ZT_PROTO_VERB_HELLO_IDX_REVISION (ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION + 1)
-#define ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP (ZT_PROTO_VERB_HELLO_IDX_REVISION + 2)
-#define ZT_PROTO_VERB_HELLO_IDX_IDENTITY (ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP + 8)
+#define ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION    (ZT_PROTO_VERB_HELLO_IDX_PROTOCOL_VERSION + 1)
+#define ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION    (ZT_PROTO_VERB_HELLO_IDX_MAJOR_VERSION + 1)
+#define ZT_PROTO_VERB_HELLO_IDX_REVISION         (ZT_PROTO_VERB_HELLO_IDX_MINOR_VERSION + 1)
+#define ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP        (ZT_PROTO_VERB_HELLO_IDX_REVISION + 2)
+#define ZT_PROTO_VERB_HELLO_IDX_IDENTITY         (ZT_PROTO_VERB_HELLO_IDX_TIMESTAMP + 8)
 
-#define ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB      (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_ERROR_IDX_IN_RE_PACKET_ID (ZT_PROTO_VERB_ERROR_IDX_IN_RE_VERB + 1)
-#define ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE (ZT_PROTO_VERB_ERROR_IDX_IN_RE_PACKET_ID + 8)
-#define ZT_PROTO_VERB_ERROR_IDX_PAYLOAD (ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE + 1)
+#define ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE      (ZT_PROTO_VERB_ERROR_IDX_IN_RE_PACKET_ID + 8)
+#define ZT_PROTO_VERB_ERROR_IDX_PAYLOAD         (ZT_PROTO_VERB_ERROR_IDX_ERROR_CODE + 1)
 
-#define ZT_PROTO_VERB_OK_IDX_IN_RE_VERB (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_OK_IDX_IN_RE_VERB      (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID (ZT_PROTO_VERB_OK_IDX_IN_RE_VERB + 1)
-#define ZT_PROTO_VERB_OK_IDX_PAYLOAD (ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID + 8)
+#define ZT_PROTO_VERB_OK_IDX_PAYLOAD         (ZT_PROTO_VERB_OK_IDX_IN_RE_PACKET_ID + 8)
 
 #define ZT_PROTO_VERB_WHOIS_IDX_ZTADDRESS (ZT_PACKET_IDX_PAYLOAD)
 
-#define ZT_PROTO_VERB_RENDEZVOUS_IDX_FLAGS (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_RENDEZVOUS_IDX_FLAGS     (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS (ZT_PROTO_VERB_RENDEZVOUS_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT (ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS + 5)
-#define ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN (ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT + 2)
-#define ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS (ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN + 1)
+#define ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT      (ZT_PROTO_VERB_RENDEZVOUS_IDX_ZTADDRESS + 5)
+#define ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN   (ZT_PROTO_VERB_RENDEZVOUS_IDX_PORT + 2)
+#define ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRESS   (ZT_PROTO_VERB_RENDEZVOUS_IDX_ADDRLEN + 1)
 
 #define ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE + 2)
+#define ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE  (ZT_PROTO_VERB_FRAME_IDX_NETWORK_ID + 8)
+#define ZT_PROTO_VERB_FRAME_IDX_PAYLOAD    (ZT_PROTO_VERB_FRAME_IDX_ETHERTYPE + 2)
 
 #define ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_EXT_FRAME_LEN_NETWORK_ID 8
-#define ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS (ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID + ZT_PROTO_VERB_EXT_FRAME_LEN_NETWORK_ID)
-#define ZT_PROTO_VERB_EXT_FRAME_LEN_FLAGS 1
-#define ZT_PROTO_VERB_EXT_FRAME_IDX_COM (ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS + ZT_PROTO_VERB_EXT_FRAME_LEN_FLAGS)
-#define ZT_PROTO_VERB_EXT_FRAME_IDX_TO (ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS + ZT_PROTO_VERB_EXT_FRAME_LEN_FLAGS)
-#define ZT_PROTO_VERB_EXT_FRAME_LEN_TO 6
-#define ZT_PROTO_VERB_EXT_FRAME_IDX_FROM (ZT_PROTO_VERB_EXT_FRAME_IDX_TO + ZT_PROTO_VERB_EXT_FRAME_LEN_TO)
-#define ZT_PROTO_VERB_EXT_FRAME_LEN_FROM 6
-#define ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_EXT_FRAME_IDX_FROM + ZT_PROTO_VERB_EXT_FRAME_LEN_FROM)
-#define ZT_PROTO_VERB_EXT_FRAME_LEN_ETHERTYPE 2
-#define ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD (ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE + ZT_PROTO_VERB_EXT_FRAME_LEN_ETHERTYPE)
+#define ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS      (ZT_PROTO_VERB_EXT_FRAME_IDX_NETWORK_ID + ZT_PROTO_VERB_EXT_FRAME_LEN_NETWORK_ID)
+#define ZT_PROTO_VERB_EXT_FRAME_LEN_FLAGS      1
+#define ZT_PROTO_VERB_EXT_FRAME_IDX_COM        (ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS + ZT_PROTO_VERB_EXT_FRAME_LEN_FLAGS)
+#define ZT_PROTO_VERB_EXT_FRAME_IDX_TO         (ZT_PROTO_VERB_EXT_FRAME_IDX_FLAGS + ZT_PROTO_VERB_EXT_FRAME_LEN_FLAGS)
+#define ZT_PROTO_VERB_EXT_FRAME_LEN_TO         6
+#define ZT_PROTO_VERB_EXT_FRAME_IDX_FROM       (ZT_PROTO_VERB_EXT_FRAME_IDX_TO + ZT_PROTO_VERB_EXT_FRAME_LEN_TO)
+#define ZT_PROTO_VERB_EXT_FRAME_LEN_FROM       6
+#define ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE  (ZT_PROTO_VERB_EXT_FRAME_IDX_FROM + ZT_PROTO_VERB_EXT_FRAME_LEN_FROM)
+#define ZT_PROTO_VERB_EXT_FRAME_LEN_ETHERTYPE  2
+#define ZT_PROTO_VERB_EXT_FRAME_IDX_PAYLOAD    (ZT_PROTO_VERB_EXT_FRAME_IDX_ETHERTYPE + ZT_PROTO_VERB_EXT_FRAME_LEN_ETHERTYPE)
 
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN + 2)
+#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN   (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_NETWORK_ID + 8)
+#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT       (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST_IDX_DICT_LEN + 2)
 
-#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID   (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS        (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_NETWORK_ID + 8)
+#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC          (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_FLAGS + 1)
+#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI          (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_MAC + 6)
 #define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_ADI + 4)
-#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT + 4)
+#define ZT_PROTO_VERB_MULTICAST_GATHER_IDX_COM          (ZT_PROTO_VERB_MULTICAST_GATHER_IDX_GATHER_LIMIT + 4)
 
 // Note: COM, GATHER_LIMIT, and SOURCE_MAC are optional, and so are specified without size
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID (ZT_PACKET_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID   (ZT_PACKET_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS        (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_NETWORK_ID + 8)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_COM          (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
 #define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_GATHER_LIMIT (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC + 6)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI + 4)
-#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + 2)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_SOURCE_MAC   (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC     (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FLAGS + 1)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI     (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE    (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_DEST_ADI + 4)
+#define ZT_PROTO_VERB_MULTICAST_FRAME_IDX_FRAME        (ZT_PROTO_VERB_MULTICAST_FRAME_IDX_ETHERTYPE + 2)
 
-#define ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP        (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
 #define ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP + 8)
-#define ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION + 1)
-#define ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION (ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION + 1)
-#define ZT_PROTO_VERB_HELLO__OK__IDX_REVISION (ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION + 1)
+#define ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION    (ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION + 1)
+#define ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION    (ZT_PROTO_VERB_HELLO__OK__IDX_MAJOR_VERSION + 1)
+#define ZT_PROTO_VERB_HELLO__OK__IDX_REVISION         (ZT_PROTO_VERB_HELLO__OK__IDX_MINOR_VERSION + 1)
 
 #define ZT_PROTO_VERB_WHOIS__OK__IDX_IDENTITY (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
 
 #define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN + 2)
+#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN   (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_NETWORK_ID + 8)
+#define ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT       (ZT_PROTO_VERB_NETWORK_CONFIG_REQUEST__OK__IDX_DICT_LEN + 2)
 
-#define ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC (ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI (ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID     (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC            (ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_NETWORK_ID + 8)
+#define ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI            (ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_MAC + 6)
 #define ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_GATHER_RESULTS (ZT_PROTO_VERB_MULTICAST_GATHER__OK__IDX_ADI + 4)
 
-#define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
-#define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID + 8)
-#define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC + 6)
-#define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI + 4)
+#define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID             (ZT_PROTO_VERB_OK_IDX_PAYLOAD)
+#define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC                    (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_NETWORK_ID + 8)
+#define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI                    (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_MAC + 6)
+#define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS                  (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_ADI + 4)
 #define ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_COM_AND_GATHER_RESULTS (ZT_PROTO_VERB_MULTICAST_FRAME__OK__IDX_FLAGS + 1)
 
 // ---------------------------------------------------------------------------
@@ -345,9 +343,8 @@ namespace ZeroTier {
  * For unencrypted packets, MAC is computed on plaintext. Only HELLO is ever
  * sent in the clear, as it's the "here is my public key" message.
  */
-class Packet : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH>
-{
-public:
+class Packet : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH> {
+  public:
     /**
      * A packet fragment
      *
@@ -374,22 +371,17 @@ public:
      * receipt to authenticate and decrypt; there is no per-fragment MAC. (But if
      * fragments are corrupt, the MAC will fail for the whole assembled packet.)
      */
-    class Fragment : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH>
-    {
-    public:
-        Fragment() :
-            Buffer<ZT_PROTO_MAX_PACKET_LENGTH>()
+    class Fragment : public Buffer<ZT_PROTO_MAX_PACKET_LENGTH> {
+      public:
+        Fragment() : Buffer<ZT_PROTO_MAX_PACKET_LENGTH>()
         {
         }
 
-        template<unsigned int C2>
-        Fragment(const Buffer<C2> &b) :
-            Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
+        template <unsigned int C2> Fragment(const Buffer<C2>& b) : Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
         {
         }
 
-        Fragment(const void *data,unsigned int len) :
-            Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len)
+        Fragment(const void* data, unsigned int len) : Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data, len)
         {
         }
 
@@ -402,9 +394,9 @@ public:
          * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
          * @param fragTotal Total number of fragments (including 0)
          */
-        Fragment(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
+        Fragment(const Packet& p, unsigned int fragStart, unsigned int fragLen, unsigned int fragNo, unsigned int fragTotal)
         {
-            init(p,fragStart,fragLen,fragNo,fragTotal);
+            init(p, fragStart, fragLen, fragNo, fragTotal);
         }
 
         /**
@@ -416,7 +408,7 @@ public:
          * @param fragNo Which fragment (>= 1, since 0 is Packet with end chopped off)
          * @param fragTotal Total number of fragments (including 0)
          */
-        inline void init(const Packet &p,unsigned int fragStart,unsigned int fragLen,unsigned int fragNo,unsigned int fragTotal)
+        inline void init(const Packet& p, unsigned int fragStart, unsigned int fragLen, unsigned int fragNo, unsigned int fragTotal)
         {
             if ((fragStart + fragLen) > p.size()) {
                 throw ZT_EXCEPTION_OUT_OF_BOUNDS;
@@ -424,13 +416,13 @@ public:
             setSize(fragLen + ZT_PROTO_MIN_FRAGMENT_LENGTH);
 
             // NOTE: this copies both the IV/packet ID and the destination address.
-            memcpy(field(ZT_PACKET_FRAGMENT_IDX_PACKET_ID,13),p.field(ZT_PACKET_IDX_IV,13),13);
+            memcpy(field(ZT_PACKET_FRAGMENT_IDX_PACKET_ID, 13), p.field(ZT_PACKET_IDX_IV, 13), 13);
 
             (*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_INDICATOR] = ZT_PACKET_FRAGMENT_INDICATOR;
             (*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO] = (char)(((fragTotal & 0xf) << 4) | (fragNo & 0xf));
             (*this)[ZT_PACKET_FRAGMENT_IDX_HOPS] = 0;
 
-            memcpy(field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,fragLen),p.field(fragStart,fragLen),fragLen);
+            memcpy(field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD, fragLen), p.field(fragStart, fragLen), fragLen);
         }
 
         /**
@@ -438,32 +430,50 @@ public:
          *
          * @return Destination ZT address
          */
-        inline Address destination() const { return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+        inline Address destination() const
+        {
+            return Address(field(ZT_PACKET_FRAGMENT_IDX_DEST, ZT_ADDRESS_LENGTH), ZT_ADDRESS_LENGTH);
+        }
 
         /**
          * @return True if fragment is of a valid length
          */
-        inline bool lengthValid() const { return (size() >= ZT_PACKET_FRAGMENT_IDX_PAYLOAD); }
+        inline bool lengthValid() const
+        {
+            return (size() >= ZT_PACKET_FRAGMENT_IDX_PAYLOAD);
+        }
 
         /**
          * @return ID of packet this is a fragment of
          */
-        inline uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_FRAGMENT_IDX_PACKET_ID); }
+        inline uint64_t packetId() const
+        {
+            return at<uint64_t>(ZT_PACKET_FRAGMENT_IDX_PACKET_ID);
+        }
 
         /**
          * @return Total number of fragments in packet
          */
-        inline unsigned int totalFragments() const { return (((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) >> 4) & 0xf); }
+        inline unsigned int totalFragments() const
+        {
+            return (((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) >> 4) & 0xf);
+        }
 
         /**
          * @return Fragment number of this fragment
          */
-        inline unsigned int fragmentNumber() const { return ((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) & 0xf); }
+        inline unsigned int fragmentNumber() const
+        {
+            return ((unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_FRAGMENT_NO]) & 0xf);
+        }
 
         /**
          * @return Fragment ZT hop count
          */
-        inline unsigned int hops() const { return (unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]); }
+        inline unsigned int hops() const
+        {
+            return (unsigned int)((*this)[ZT_PACKET_FRAGMENT_IDX_HOPS]);
+        }
 
         /**
          * Increment this packet's hop count
@@ -476,14 +486,17 @@ public:
         /**
          * @return Length of payload in bytes
          */
-        inline unsigned int payloadLength() const { return ((size() > ZT_PACKET_FRAGMENT_IDX_PAYLOAD) ? (size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD) : 0); }
+        inline unsigned int payloadLength() const
+        {
+            return ((size() > ZT_PACKET_FRAGMENT_IDX_PAYLOAD) ? (size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD) : 0);
+        }
 
         /**
          * @return Raw packet payload
          */
-        inline const unsigned char *payload() const
+        inline const unsigned char* payload() const
         {
-            return field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD,size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD);
+            return field(ZT_PACKET_FRAGMENT_IDX_PAYLOAD, size() - ZT_PACKET_FRAGMENT_IDX_PAYLOAD);
         }
     };
 
@@ -1013,8 +1026,7 @@ public:
     /**
      * Error codes for VERB_ERROR
      */
-    enum ErrorCode
-    {
+    enum ErrorCode {
         /* No error, not actually used in transit */
         ERROR_NONE = 0x00,
 
@@ -1042,18 +1054,15 @@ public:
         /* Multicasts to this group are not wanted */
         ERROR_UNWANTED_MULTICAST = 0x08,
 
-    /* Network requires external or 2FA authentication (e.g. SSO). */
-    ERROR_NETWORK_AUTHENTICATION_REQUIRED = 0x09
+        /* Network requires external or 2FA authentication (e.g. SSO). */
+        ERROR_NETWORK_AUTHENTICATION_REQUIRED = 0x09
     };
 
-    template<unsigned int C2>
-    Packet(const Buffer<C2> &b) :
-        Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
+    template <unsigned int C2> Packet(const Buffer<C2>& b) : Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(b)
     {
     }
 
-    Packet(const void *data,unsigned int len) :
-        Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data,len)
+    Packet(const void* data, unsigned int len) : Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(data, len)
     {
     }
 
@@ -1064,11 +1073,10 @@ public:
      * Use the header access methods (setDestination() and friends) to fill out
      * the header. Payload should be appended; initial size is header size.
      */
-    Packet() :
-        Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
+    Packet() : Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
     {
-        Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
-        (*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags, cipher ID, and hops
+        Utils::getSecureRandom(field(ZT_PACKET_IDX_IV, 8), 8);
+        (*this)[ZT_PACKET_IDX_FLAGS] = 0;   // zero flags, cipher ID, and hops
     }
 
     /**
@@ -1080,10 +1088,9 @@ public:
      * @param prototype Prototype packet
      * @param dest Destination ZeroTier address for new packet
      */
-    Packet(const Packet &prototype,const Address &dest) :
-        Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(prototype)
+    Packet(const Packet& prototype, const Address& dest) : Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(prototype)
     {
-        Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
+        Utils::getSecureRandom(field(ZT_PACKET_IDX_IV, 8), 8);
         setDestination(dest);
     }
 
@@ -1094,13 +1101,12 @@ public:
      * @param source Source ZT address
      * @param v Verb
      */
-    Packet(const Address &dest,const Address &source,const Verb v) :
-        Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
+    Packet(const Address& dest, const Address& source, const Verb v) : Buffer<ZT_PROTO_MAX_PACKET_LENGTH>(ZT_PROTO_MIN_PACKET_LENGTH)
     {
-        Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
+        Utils::getSecureRandom(field(ZT_PACKET_IDX_IV, 8), 8);
         setDestination(dest);
         setSource(source);
-        (*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags and hops
+        (*this)[ZT_PACKET_IDX_FLAGS] = 0;   // zero flags and hops
         setVerb(v);
     }
 
@@ -1111,13 +1117,13 @@ public:
      * @param source Source ZT address
      * @param v Verb
      */
-    inline void reset(const Address &dest,const Address &source,const Verb v)
+    inline void reset(const Address& dest, const Address& source, const Verb v)
     {
         setSize(ZT_PROTO_MIN_PACKET_LENGTH);
-        Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8);
+        Utils::getSecureRandom(field(ZT_PACKET_IDX_IV, 8), 8);
         setDestination(dest);
         setSource(source);
-        (*this)[ZT_PACKET_IDX_FLAGS] = 0; // zero flags, cipher ID, and hops
+        (*this)[ZT_PACKET_IDX_FLAGS] = 0;   // zero flags, cipher ID, and hops
         setVerb(v);
     }
 
@@ -1128,45 +1134,66 @@ public:
      * technically different but otherwise identical copies of the same
      * packet.
      */
-    inline void newInitializationVector() { Utils::getSecureRandom(field(ZT_PACKET_IDX_IV,8),8); }
+    inline void newInitializationVector()
+    {
+        Utils::getSecureRandom(field(ZT_PACKET_IDX_IV, 8), 8);
+    }
 
     /**
      * Set this packet's destination
      *
      * @param dest ZeroTier address of destination
      */
-    inline void setDestination(const Address &dest) { dest.copyTo(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+    inline void setDestination(const Address& dest)
+    {
+        dest.copyTo(field(ZT_PACKET_IDX_DEST, ZT_ADDRESS_LENGTH), ZT_ADDRESS_LENGTH);
+    }
 
     /**
      * Set this packet's source
      *
      * @param source ZeroTier address of source
      */
-    inline void setSource(const Address &source) { source.copyTo(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+    inline void setSource(const Address& source)
+    {
+        source.copyTo(field(ZT_PACKET_IDX_SOURCE, ZT_ADDRESS_LENGTH), ZT_ADDRESS_LENGTH);
+    }
 
     /**
      * Get this packet's destination
      *
      * @return Destination ZT address
      */
-    inline Address destination() const { return Address(field(ZT_PACKET_IDX_DEST,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+    inline Address destination() const
+    {
+        return Address(field(ZT_PACKET_IDX_DEST, ZT_ADDRESS_LENGTH), ZT_ADDRESS_LENGTH);
+    }
 
     /**
      * Get this packet's source
      *
      * @return Source ZT address
      */
-    inline Address source() const { return Address(field(ZT_PACKET_IDX_SOURCE,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH); }
+    inline Address source() const
+    {
+        return Address(field(ZT_PACKET_IDX_SOURCE, ZT_ADDRESS_LENGTH), ZT_ADDRESS_LENGTH);
+    }
 
     /**
      * @return True if packet is of valid length
      */
-    inline bool lengthValid() const { return (size() >= ZT_PROTO_MIN_PACKET_LENGTH); }
+    inline bool lengthValid() const
+    {
+        return (size() >= ZT_PROTO_MIN_PACKET_LENGTH);
+    }
 
     /**
      * @return True if packet is fragmented (expect fragments)
      */
-    inline bool fragmented() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0); }
+    inline bool fragmented() const
+    {
+        return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_FRAGMENTED) != 0);
+    }
 
     /**
      * Set this packet's fragmented flag
@@ -1177,7 +1204,8 @@ public:
     {
         if (f) {
             (*this)[ZT_PACKET_IDX_FLAGS] |= (char)ZT_PROTO_FLAG_FRAGMENTED;
-        } else {
+        }
+        else {
             (*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_FRAGMENTED);
         }
     }
@@ -1185,7 +1213,10 @@ public:
     /**
      * @return True if packet is encrypted with an extra ephemeral key
      */
-    inline bool extendedArmor() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_EXTENDED_ARMOR) != 0); }
+    inline bool extendedArmor() const
+    {
+        return (((unsigned char)(*this)[ZT_PACKET_IDX_FLAGS] & ZT_PROTO_FLAG_EXTENDED_ARMOR) != 0);
+    }
 
     /**
      * Set this packet's extended armor flag
@@ -1196,7 +1227,8 @@ public:
     {
         if (f) {
             (*this)[ZT_PACKET_IDX_FLAGS] |= (char)ZT_PROTO_FLAG_EXTENDED_ARMOR;
-        } else {
+        }
+        else {
             (*this)[ZT_PACKET_IDX_FLAGS] &= (char)(~ZT_PROTO_FLAG_EXTENDED_ARMOR);
         }
     }
@@ -1204,19 +1236,25 @@ public:
     /**
      * @return True if compressed (result only valid if unencrypted)
      */
-    inline bool compressed() const { return (((unsigned char)(*this)[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED) != 0); }
+    inline bool compressed() const
+    {
+        return (((unsigned char)(*this)[ZT_PACKET_IDX_VERB] & ZT_PROTO_VERB_FLAG_COMPRESSED) != 0);
+    }
 
     /**
      * @return ZeroTier forwarding hops (0 to 7)
      */
-    inline unsigned int hops() const { return ((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x07); }
+    inline unsigned int hops() const
+    {
+        return ((unsigned int)(*this)[ZT_PACKET_IDX_FLAGS] & 0x07);
+    }
 
     /**
      * Increment this packet's hop count
      */
     inline void incrementHops()
     {
-        unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
+        unsigned char& b = (*this)[ZT_PACKET_IDX_FLAGS];
         b = (b & 0xf8) | ((b + 1) & 0x07);
     }
 
@@ -1241,8 +1279,8 @@ public:
      */
     inline void setCipher(unsigned int c)
     {
-        unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
-        b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38); // bits: FFCCCHHH
+        unsigned char& b = (*this)[ZT_PACKET_IDX_FLAGS];
+        b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38);   // bits: FFCCCHHH
     }
 
     /**
@@ -1250,7 +1288,10 @@ public:
      *
      * @return Trusted path ID (from MAC field)
      */
-    inline uint64_t trustedPathId() const { return at<uint64_t>(ZT_PACKET_IDX_MAC); }
+    inline uint64_t trustedPathId() const
+    {
+        return at<uint64_t>(ZT_PACKET_IDX_MAC);
+    }
 
     /**
      * Set this packet's trusted path ID and set the cipher spec to trusted path
@@ -1260,7 +1301,7 @@ public:
     inline void setTrusted(const uint64_t tpid)
     {
         setCipher(ZT_PROTO_CIPHER_SUITE__NO_CRYPTO_TRUSTED_PATH);
-        setAt(ZT_PACKET_IDX_MAC,tpid);
+        setAt(ZT_PACKET_IDX_MAC, tpid);
     }
 
     /**
@@ -1274,7 +1315,10 @@ public:
      *
      * @return Packet ID
      */
-    inline uint64_t packetId() const { return at<uint64_t>(ZT_PACKET_IDX_IV); }
+    inline uint64_t packetId() const
+    {
+        return at<uint64_t>(ZT_PACKET_IDX_IV);
+    }
 
     /**
      * Set packet verb
@@ -1284,22 +1328,34 @@ public:
      *
      * @param v New packet verb
      */
-    inline void setVerb(Verb v) { (*this)[ZT_PACKET_IDX_VERB] = (char)v; }
+    inline void setVerb(Verb v)
+    {
+        (*this)[ZT_PACKET_IDX_VERB] = (char)v;
+    }
 
     /**
      * @return Packet verb (not including flag bits)
      */
-    inline Verb verb() const { return (Verb)((*this)[ZT_PACKET_IDX_VERB] & 0x1f); }
+    inline Verb verb() const
+    {
+        return (Verb)((*this)[ZT_PACKET_IDX_VERB] & 0x1f);
+    }
 
     /**
      * @return Length of packet payload
      */
-    inline unsigned int payloadLength() const { return ((size() < ZT_PROTO_MIN_PACKET_LENGTH) ? 0 : (size() - ZT_PROTO_MIN_PACKET_LENGTH)); }
+    inline unsigned int payloadLength() const
+    {
+        return ((size() < ZT_PROTO_MIN_PACKET_LENGTH) ? 0 : (size() - ZT_PROTO_MIN_PACKET_LENGTH));
+    }
 
     /**
      * @return Raw packet payload
      */
-    inline const unsigned char *payload() const { return field(ZT_PACKET_IDX_PAYLOAD,size() - ZT_PACKET_IDX_PAYLOAD); }
+    inline const unsigned char* payload() const
+    {
+        return field(ZT_PACKET_IDX_PAYLOAD, size() - ZT_PACKET_IDX_PAYLOAD);
+    }
 
     /**
      * Armor packet for transport
@@ -1310,7 +1366,7 @@ public:
      * @param identity Identity of packet recipient/destination
      * @param aesKeys If non-NULL these are the two keys for AES-GMAC-SIV
      */
-    void armor(const void *key,bool encryptPayload,bool extendedArmor,const AES aesKeys[2],const Identity &identity);
+    void armor(const void* key, bool encryptPayload, bool extendedArmor, const AES aesKeys[2], const Identity& identity);
 
     /**
      * Verify and (if encrypted) decrypt packet
@@ -1324,7 +1380,7 @@ public:
      * @param identity Receiver's identity (must include secret)
      * @return False if packet is invalid or failed MAC authenticity check
      */
-    bool dearmor(const void *key,const AES aesKeys[2],const Identity &identity);
+    bool dearmor(const void* key, const AES aesKeys[2], const Identity& identity);
 
     /**
      * Encrypt/decrypt a separately armored portion of a packet
@@ -1339,7 +1395,7 @@ public:
      * @param start Start of encrypted portion
      * @param len Length of encrypted portion
      */
-    void cryptField(const void *key,unsigned int start,unsigned int len);
+    void cryptField(const void* key, unsigned int start, unsigned int len);
 
     /**
      * Attempt to compress payload if not already (must be unencrypted)
@@ -1363,7 +1419,7 @@ public:
      */
     bool uncompress();
 
-private:
+  private:
     static const unsigned char ZERO_KEY[32];
 
     /**
@@ -1377,13 +1433,13 @@ private:
      * @param in Input key (32 bytes)
      * @param out Output buffer (32 bytes)
      */
-    inline void _salsa20MangleKey(const unsigned char *in,unsigned char *out) const
+    inline void _salsa20MangleKey(const unsigned char* in, unsigned char* out) const
     {
-        const unsigned char *d = (const unsigned char *)data();
+        const unsigned char* d = (const unsigned char*)data();
 
         // IV and source/destination addresses. Using the addresses divides the
         // key space into two halves-- A->B and B->A (since order will change).
-        for(unsigned int i=0;i<18;++i) { // 8 + (ZT_ADDRESS_LENGTH * 2) == 18
+        for (unsigned int i = 0; i < 18; ++i) {   // 8 + (ZT_ADDRESS_LENGTH * 2) == 18
             out[i] = in[i] ^ d[i];
         }
 
@@ -1395,15 +1451,15 @@ private:
         // Raw packet size in bytes -- thus each packet size defines a new
         // key space.
         out[19] = in[19] ^ (unsigned char)(size() & 0xff);
-        out[20] = in[20] ^ (unsigned char)((size() >> 8) & 0xff); // little endian
+        out[20] = in[20] ^ (unsigned char)((size() >> 8) & 0xff);   // little endian
 
         // Rest of raw key is used unchanged
-        for(unsigned int i=21;i<32;++i) {
+        for (unsigned int i = 21; i < 32; ++i) {
             out[i] = in[i];
         }
     }
 };
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
 
 #endif

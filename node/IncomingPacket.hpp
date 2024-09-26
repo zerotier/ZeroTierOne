@@ -14,13 +14,13 @@
 #ifndef ZT_INCOMINGPACKET_HPP
 #define ZT_INCOMINGPACKET_HPP
 
-#include <stdexcept>
-
+#include "MulticastGroup.hpp"
 #include "Packet.hpp"
 #include "Path.hpp"
-#include "Utils.hpp"
-#include "MulticastGroup.hpp"
 #include "Peer.hpp"
+#include "Utils.hpp"
+
+#include <stdexcept>
 
 /*
  * The big picture:
@@ -46,102 +46,96 @@ class Network;
 /**
  * Subclass of packet that handles the decoding of it
  */
-class IncomingPacket : public Packet
-{
-public:
-	IncomingPacket() :
-		Packet(),
-		_receiveTime(0),
-		_path(),
-		_authenticated(false)
-	{
-	}
+class IncomingPacket : public Packet {
+  public:
+    IncomingPacket() : Packet(), _receiveTime(0), _path(), _authenticated(false)
+    {
+    }
 
-	/**
-	 * Create a new packet-in-decode
-	 *
-	 * @param data Packet data
-	 * @param len Packet length
-	 * @param path Path over which packet arrived
-	 * @param now Current time
-	 * @throws std::out_of_range Range error processing packet
-	 */
-	IncomingPacket(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now) :
-		Packet(data,len),
-		_receiveTime(now),
-		_path(path),
-		_authenticated(false)
-	{
-	}
+    /**
+     * Create a new packet-in-decode
+     *
+     * @param data Packet data
+     * @param len Packet length
+     * @param path Path over which packet arrived
+     * @param now Current time
+     * @throws std::out_of_range Range error processing packet
+     */
+    IncomingPacket(const void* data, unsigned int len, const SharedPtr<Path>& path, int64_t now) : Packet(data, len), _receiveTime(now), _path(path), _authenticated(false)
+    {
+    }
 
-	/**
-	 * Init packet-in-decode in place
-	 *
-	 * @param data Packet data
-	 * @param len Packet length
-	 * @param path Path over which packet arrived
-	 * @param now Current time
-	 * @throws std::out_of_range Range error processing packet
-	 */
-	inline void init(const void *data,unsigned int len,const SharedPtr<Path> &path,int64_t now)
-	{
-		copyFrom(data,len);
-		_receiveTime = now;
-		_path = path;
-		_authenticated = false;
-	}
+    /**
+     * Init packet-in-decode in place
+     *
+     * @param data Packet data
+     * @param len Packet length
+     * @param path Path over which packet arrived
+     * @param now Current time
+     * @throws std::out_of_range Range error processing packet
+     */
+    inline void init(const void* data, unsigned int len, const SharedPtr<Path>& path, int64_t now)
+    {
+        copyFrom(data, len);
+        _receiveTime = now;
+        _path = path;
+        _authenticated = false;
+    }
 
-	/**
-	 * Attempt to decode this packet
-	 *
-	 * Note that this returns 'true' if processing is complete. This says nothing
-	 * about whether the packet was valid. A rejection is 'complete.'
-	 *
-	 * Once true is returned, this must not be called again. The packet's state
-	 * may no longer be valid.
-	 *
-	 * @param RR Runtime environment
-	 * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
-	 * @return True if decoding and processing is complete, false if caller should try again
-	 */
-	bool tryDecode(const RuntimeEnvironment *RR,void *tPtr,int32_t flowId);
+    /**
+     * Attempt to decode this packet
+     *
+     * Note that this returns 'true' if processing is complete. This says nothing
+     * about whether the packet was valid. A rejection is 'complete.'
+     *
+     * Once true is returned, this must not be called again. The packet's state
+     * may no longer be valid.
+     *
+     * @param RR Runtime environment
+     * @param tPtr Thread pointer to be handed through to any callbacks called as a result of this call
+     * @return True if decoding and processing is complete, false if caller should try again
+     */
+    bool tryDecode(const RuntimeEnvironment* RR, void* tPtr, int32_t flowId);
 
-	/**
-	 * @return Time of packet receipt / start of decode
-	 */
-	inline uint64_t receiveTime() const { return _receiveTime; }
+    /**
+     * @return Time of packet receipt / start of decode
+     */
+    inline uint64_t receiveTime() const
+    {
+        return _receiveTime;
+    }
 
-private:
-	// These are called internally to handle packet contents once it has
-	// been authenticated, decrypted, decompressed, and classified.
-	bool _doERROR(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doHELLO(const RuntimeEnvironment *RR,void *tPtr,const bool alreadyAuthenticated);
-	bool _doACK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doQOS_MEASUREMENT(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doOK(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doWHOIS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doRENDEZVOUS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doFRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,int32_t flowId);
-	bool _doEXT_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,int32_t flowId);
-	bool _doECHO(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doMULTICAST_LIKE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doNETWORK_CREDENTIALS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doNETWORK_CONFIG(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doMULTICAST_GATHER(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doMULTICAST_FRAME(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doPUSH_DIRECT_PATHS(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doUSER_MESSAGE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doREMOTE_TRACE(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
-	bool _doPATH_NEGOTIATION_REQUEST(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer);
+  private:
+    // These are called internally to handle packet contents once it has
+    // been authenticated, decrypted, decompressed, and classified.
+    bool _doERROR(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doHELLO(const RuntimeEnvironment* RR, void* tPtr, const bool alreadyAuthenticated);
+    bool _doACK(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doQOS_MEASUREMENT(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doOK(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doWHOIS(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doRENDEZVOUS(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doFRAME(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer, int32_t flowId);
+    bool _doEXT_FRAME(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer, int32_t flowId);
+    bool _doECHO(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doMULTICAST_LIKE(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doNETWORK_CREDENTIALS(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doNETWORK_CONFIG_REQUEST(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doNETWORK_CONFIG(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doMULTICAST_GATHER(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doMULTICAST_FRAME(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doPUSH_DIRECT_PATHS(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doUSER_MESSAGE(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doREMOTE_TRACE(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+    bool _doPATH_NEGOTIATION_REQUEST(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
 
-	void _sendErrorNeedCredentials(const RuntimeEnvironment *RR,void *tPtr,const SharedPtr<Peer> &peer,const uint64_t nwid);
+    void _sendErrorNeedCredentials(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer, const uint64_t nwid);
 
-	uint64_t _receiveTime;
-	SharedPtr<Path> _path;
-	bool _authenticated;
+    uint64_t _receiveTime;
+    SharedPtr<Path> _path;
+    bool _authenticated;
 };
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
 
 #endif

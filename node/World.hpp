@@ -14,14 +14,14 @@
 #ifndef ZT_WORLD_HPP
 #define ZT_WORLD_HPP
 
-#include <vector>
-#include <string>
-
-#include "Constants.hpp"
-#include "InetAddress.hpp"
-#include "Identity.hpp"
 #include "Buffer.hpp"
+#include "Constants.hpp"
 #include "ECC.hpp"
+#include "Identity.hpp"
+#include "InetAddress.hpp"
+
+#include <string>
+#include <vector>
 
 /**
  * Maximum number of roots (sanity limit, okay to increase)
@@ -76,217 +76,249 @@ namespace ZeroTier {
  * world ID for Mars and nearby space is defined but not yet used, and a test
  * world ID is provided for testing purposes.
  */
-class World
-{
-public:
-	/**
-	 * World type -- do not change IDs
-	 */
-	enum Type
-	{
-		TYPE_NULL = 0,
-		TYPE_PLANET = 1, // Planets, of which there is currently one (Earth)
-		TYPE_MOON = 127  // Moons, which are user-created and many
-	};
+class World {
+  public:
+    /**
+     * World type -- do not change IDs
+     */
+    enum Type {
+        TYPE_NULL = 0,
+        TYPE_PLANET = 1,   // Planets, of which there is currently one (Earth)
+        TYPE_MOON = 127    // Moons, which are user-created and many
+    };
 
-	/**
-	 * Upstream server definition in world/moon
-	 */
-	struct Root
-	{
-		Identity identity;
-		std::vector<InetAddress> stableEndpoints;
+    /**
+     * Upstream server definition in world/moon
+     */
+    struct Root {
+        Identity identity;
+        std::vector<InetAddress> stableEndpoints;
 
-		inline bool operator==(const Root &r) const { return ((identity == r.identity)&&(stableEndpoints == r.stableEndpoints)); }
-		inline bool operator!=(const Root &r) const { return (!(*this == r)); }
-		inline bool operator<(const Root &r) const { return (identity < r.identity); } // for sorting
-	};
+        inline bool operator==(const Root& r) const
+        {
+            return ((identity == r.identity) && (stableEndpoints == r.stableEndpoints));
+        }
+        inline bool operator!=(const Root& r) const
+        {
+            return (! (*this == r));
+        }
+        inline bool operator<(const Root& r) const
+        {
+            return (identity < r.identity);
+        }   // for sorting
+    };
 
-	/**
-	 * Construct an empty / null World
-	 */
-	World() :
-		_id(0),
-		_ts(0),
-		_type(TYPE_NULL) {}
+    /**
+     * Construct an empty / null World
+     */
+    World() : _id(0), _ts(0), _type(TYPE_NULL)
+    {
+    }
 
-	/**
-	 * @return Root servers for this world and their stable endpoints
-	 */
-	inline const std::vector<World::Root> &roots() const { return _roots; }
+    /**
+     * @return Root servers for this world and their stable endpoints
+     */
+    inline const std::vector<World::Root>& roots() const
+    {
+        return _roots;
+    }
 
-	/**
-	 * @return World type: planet or moon
-	 */
-	inline Type type() const { return _type; }
+    /**
+     * @return World type: planet or moon
+     */
+    inline Type type() const
+    {
+        return _type;
+    }
 
-	/**
-	 * @return World unique identifier
-	 */
-	inline uint64_t id() const { return _id; }
+    /**
+     * @return World unique identifier
+     */
+    inline uint64_t id() const
+    {
+        return _id;
+    }
 
-	/**
-	 * @return World definition timestamp
-	 */
-	inline uint64_t timestamp() const { return _ts; }
+    /**
+     * @return World definition timestamp
+     */
+    inline uint64_t timestamp() const
+    {
+        return _ts;
+    }
 
-	/**
-	 * @return C25519 signature
-	 */
-	inline const ECC::Signature &signature() const { return _signature; }
+    /**
+     * @return C25519 signature
+     */
+    inline const ECC::Signature& signature() const
+    {
+        return _signature;
+    }
 
-	/**
-	 * @return Public key that must sign next update
-	 */
-	inline const ECC::Public &updatesMustBeSignedBy() const { return _updatesMustBeSignedBy; }
+    /**
+     * @return Public key that must sign next update
+     */
+    inline const ECC::Public& updatesMustBeSignedBy() const
+    {
+        return _updatesMustBeSignedBy;
+    }
 
-	/**
-	 * Check whether a world update should replace this one
-	 *
-	 * @param update Candidate update
-	 * @return True if update is newer than current, matches its ID and type, and is properly signed (or if current is NULL)
-	 */
-	inline bool shouldBeReplacedBy(const World &update)
-	{
-		if ((_id == 0)||(_type == TYPE_NULL)) {
-			return true;
-		}
-		if ((_id == update._id)&&(_ts < update._ts)&&(_type == update._type)) {
-			Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> tmp;
-			update.serialize(tmp,true);
-			return ECC::verify(_updatesMustBeSignedBy,tmp.data(),tmp.size(),update._signature);
-		}
-		return false;
-	}
+    /**
+     * Check whether a world update should replace this one
+     *
+     * @param update Candidate update
+     * @return True if update is newer than current, matches its ID and type, and is properly signed (or if current is NULL)
+     */
+    inline bool shouldBeReplacedBy(const World& update)
+    {
+        if ((_id == 0) || (_type == TYPE_NULL)) {
+            return true;
+        }
+        if ((_id == update._id) && (_ts < update._ts) && (_type == update._type)) {
+            Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> tmp;
+            update.serialize(tmp, true);
+            return ECC::verify(_updatesMustBeSignedBy, tmp.data(), tmp.size(), update._signature);
+        }
+        return false;
+    }
 
-	/**
-	 * @return True if this World is non-empty
-	 */
-	inline operator bool() const { return (_type != TYPE_NULL); }
+    /**
+     * @return True if this World is non-empty
+     */
+    inline operator bool() const
+    {
+        return (_type != TYPE_NULL);
+    }
 
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b,bool forSign = false) const
-	{
-		if (forSign) {
-			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
-		}
+    template <unsigned int C> inline void serialize(Buffer<C>& b, bool forSign = false) const
+    {
+        if (forSign) {
+            b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
+        }
 
-		b.append((uint8_t)_type);
-		b.append((uint64_t)_id);
-		b.append((uint64_t)_ts);
-		b.append(_updatesMustBeSignedBy.data,ZT_ECC_PUBLIC_KEY_SET_LEN);
-		if (!forSign) {
-			b.append(_signature.data,ZT_ECC_SIGNATURE_LEN);
-		}
-		b.append((uint8_t)_roots.size());
-		for(std::vector<Root>::const_iterator r(_roots.begin());r!=_roots.end();++r) {
-			r->identity.serialize(b);
-			b.append((uint8_t)r->stableEndpoints.size());
-			for(std::vector<InetAddress>::const_iterator ep(r->stableEndpoints.begin());ep!=r->stableEndpoints.end();++ep) {
-				ep->serialize(b);
-			}
-		}
-		if (_type == TYPE_MOON) {
-			b.append((uint16_t)0); // no attached dictionary (for future use)
-		}
+        b.append((uint8_t)_type);
+        b.append((uint64_t)_id);
+        b.append((uint64_t)_ts);
+        b.append(_updatesMustBeSignedBy.data, ZT_ECC_PUBLIC_KEY_SET_LEN);
+        if (! forSign) {
+            b.append(_signature.data, ZT_ECC_SIGNATURE_LEN);
+        }
+        b.append((uint8_t)_roots.size());
+        for (std::vector<Root>::const_iterator r(_roots.begin()); r != _roots.end(); ++r) {
+            r->identity.serialize(b);
+            b.append((uint8_t)r->stableEndpoints.size());
+            for (std::vector<InetAddress>::const_iterator ep(r->stableEndpoints.begin()); ep != r->stableEndpoints.end(); ++ep) {
+                ep->serialize(b);
+            }
+        }
+        if (_type == TYPE_MOON) {
+            b.append((uint16_t)0);   // no attached dictionary (for future use)
+        }
 
-		if (forSign) {
-			b.append((uint64_t)0xf7f7f7f7f7f7f7f7ULL);
-		}
-	}
+        if (forSign) {
+            b.append((uint64_t)0xf7f7f7f7f7f7f7f7ULL);
+        }
+    }
 
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
-	{
-		unsigned int p = startAt;
+    template <unsigned int C> inline unsigned int deserialize(const Buffer<C>& b, unsigned int startAt = 0)
+    {
+        unsigned int p = startAt;
 
-		_roots.clear();
+        _roots.clear();
 
-		switch((Type)b[p++]) {
-			case TYPE_NULL: // shouldn't ever really happen in serialized data but it's not invalid
-				_type = TYPE_NULL;
-				break;
-			case TYPE_PLANET:
-				_type = TYPE_PLANET;
-				break;
-			case TYPE_MOON:
-				_type = TYPE_MOON;
-				break;
-			default:
-				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
-		}
+        switch ((Type)b[p++]) {
+            case TYPE_NULL:   // shouldn't ever really happen in serialized data but it's not invalid
+                _type = TYPE_NULL;
+                break;
+            case TYPE_PLANET:
+                _type = TYPE_PLANET;
+                break;
+            case TYPE_MOON:
+                _type = TYPE_MOON;
+                break;
+            default:
+                throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
+        }
 
-		_id = b.template at<uint64_t>(p);
-		p += 8;
-		_ts = b.template at<uint64_t>(p);
-		p += 8;
-		memcpy(_updatesMustBeSignedBy.data,b.field(p,ZT_ECC_PUBLIC_KEY_SET_LEN),ZT_ECC_PUBLIC_KEY_SET_LEN);
-		p += ZT_ECC_PUBLIC_KEY_SET_LEN;
-		memcpy(_signature.data,b.field(p,ZT_ECC_SIGNATURE_LEN),ZT_ECC_SIGNATURE_LEN);
-		p += ZT_ECC_SIGNATURE_LEN;
-		const unsigned int numRoots = (unsigned int)b[p++];
-		if (numRoots > ZT_WORLD_MAX_ROOTS) {
-			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-		}
-		for(unsigned int k=0;k<numRoots;++k) {
-			_roots.push_back(Root());
-			Root &r = _roots.back();
-			p += r.identity.deserialize(b,p);
-			unsigned int numStableEndpoints = b[p++];
-			if (numStableEndpoints > ZT_WORLD_MAX_STABLE_ENDPOINTS_PER_ROOT) {
-				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
-			}
-			for(unsigned int kk=0;kk<numStableEndpoints;++kk) {
-				r.stableEndpoints.push_back(InetAddress());
-				p += r.stableEndpoints.back().deserialize(b,p);
-			}
-		}
-		if (_type == TYPE_MOON) {
-			p += b.template at<uint16_t>(p) + 2;
-		}
+        _id = b.template at<uint64_t>(p);
+        p += 8;
+        _ts = b.template at<uint64_t>(p);
+        p += 8;
+        memcpy(_updatesMustBeSignedBy.data, b.field(p, ZT_ECC_PUBLIC_KEY_SET_LEN), ZT_ECC_PUBLIC_KEY_SET_LEN);
+        p += ZT_ECC_PUBLIC_KEY_SET_LEN;
+        memcpy(_signature.data, b.field(p, ZT_ECC_SIGNATURE_LEN), ZT_ECC_SIGNATURE_LEN);
+        p += ZT_ECC_SIGNATURE_LEN;
+        const unsigned int numRoots = (unsigned int)b[p++];
+        if (numRoots > ZT_WORLD_MAX_ROOTS) {
+            throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+        }
+        for (unsigned int k = 0; k < numRoots; ++k) {
+            _roots.push_back(Root());
+            Root& r = _roots.back();
+            p += r.identity.deserialize(b, p);
+            unsigned int numStableEndpoints = b[p++];
+            if (numStableEndpoints > ZT_WORLD_MAX_STABLE_ENDPOINTS_PER_ROOT) {
+                throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
+            }
+            for (unsigned int kk = 0; kk < numStableEndpoints; ++kk) {
+                r.stableEndpoints.push_back(InetAddress());
+                p += r.stableEndpoints.back().deserialize(b, p);
+            }
+        }
+        if (_type == TYPE_MOON) {
+            p += b.template at<uint16_t>(p) + 2;
+        }
 
-		return (p - startAt);
-	}
+        return (p - startAt);
+    }
 
-	inline bool operator==(const World &w) const { return ((_id == w._id)&&(_ts == w._ts)&&(memcmp(_updatesMustBeSignedBy.data,w._updatesMustBeSignedBy.data,ZT_ECC_PUBLIC_KEY_SET_LEN) == 0)&&(memcmp(_signature.data,w._signature.data,ZT_ECC_SIGNATURE_LEN) == 0)&&(_roots == w._roots)&&(_type == w._type)); }
-	inline bool operator!=(const World &w) const { return (!(*this == w)); }
+    inline bool operator==(const World& w) const
+    {
+        return (
+            (_id == w._id) && (_ts == w._ts) && (memcmp(_updatesMustBeSignedBy.data, w._updatesMustBeSignedBy.data, ZT_ECC_PUBLIC_KEY_SET_LEN) == 0) && (memcmp(_signature.data, w._signature.data, ZT_ECC_SIGNATURE_LEN) == 0)
+            && (_roots == w._roots) && (_type == w._type));
+    }
+    inline bool operator!=(const World& w) const
+    {
+        return (! (*this == w));
+    }
 
-	/**
-	 * Create a World object signed with a key pair
-	 *
-	 * @param t World type
-	 * @param id World ID
-	 * @param ts World timestamp / revision
-	 * @param sk Key that must be used to sign the next future update to this world
-	 * @param roots Roots and their stable endpoints
-	 * @param signWith Key to sign this World with (can have the same public as the next-update signing key, but doesn't have to)
-	 * @return Signed World object
-	 */
-	static inline World make(World::Type t,uint64_t id,uint64_t ts,const ECC::Public &sk,const std::vector<World::Root> &roots,const ECC::Pair &signWith)
-	{
-		World w;
-		w._id = id;
-		w._ts = ts;
-		w._type = t;
-		w._updatesMustBeSignedBy = sk;
-		w._roots = roots;
+    /**
+     * Create a World object signed with a key pair
+     *
+     * @param t World type
+     * @param id World ID
+     * @param ts World timestamp / revision
+     * @param sk Key that must be used to sign the next future update to this world
+     * @param roots Roots and their stable endpoints
+     * @param signWith Key to sign this World with (can have the same public as the next-update signing key, but doesn't have to)
+     * @return Signed World object
+     */
+    static inline World make(World::Type t, uint64_t id, uint64_t ts, const ECC::Public& sk, const std::vector<World::Root>& roots, const ECC::Pair& signWith)
+    {
+        World w;
+        w._id = id;
+        w._ts = ts;
+        w._type = t;
+        w._updatesMustBeSignedBy = sk;
+        w._roots = roots;
 
-		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> tmp;
-		w.serialize(tmp,true);
-		w._signature = ECC::sign(signWith,tmp.data(),tmp.size());
+        Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> tmp;
+        w.serialize(tmp, true);
+        w._signature = ECC::sign(signWith, tmp.data(), tmp.size());
 
-		return w;
-	}
+        return w;
+    }
 
-protected:
-	uint64_t _id;
-	uint64_t _ts;
-	Type _type;
-	ECC::Public _updatesMustBeSignedBy;
-	ECC::Signature _signature;
-	std::vector<Root> _roots;
+  protected:
+    uint64_t _id;
+    uint64_t _ts;
+    Type _type;
+    ECC::Public _updatesMustBeSignedBy;
+    ECC::Signature _signature;
+    std::vector<Root> _roots;
 };
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
 
 #endif

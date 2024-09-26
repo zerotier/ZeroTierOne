@@ -15,49 +15,45 @@
 
 #ifdef __APPLE__
 
-#include "../node/Utils.hpp"
-#include "../node/Mutex.hpp"
 #include "../node/Dictionary.hpp"
-#include "OSUtils.hpp"
+#include "../node/Mutex.hpp"
+#include "../node/Utils.hpp"
+#include "MacDNSHelper.hpp"
 #include "MacEthernetTap.hpp"
 #include "MacEthernetTapAgent.h"
-#include "MacDNSHelper.hpp"
+#include "OSUtils.hpp"
 
+#include <algorithm>
+#include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <filesystem>
+#include <ifaddrs.h>
+#include <map>
+#include <net/if.h>
+#include <net/if_dl.h>
+#include <net/route.h>
+#include <netinet/in.h>
+#include <set>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
-
-#include <unistd.h>
-#include <signal.h>
-
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <sys/wait.h>
-#include <sys/select.h>
-#include <sys/cdefs.h>
-#include <sys/uio.h>
-#include <sys/param.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <net/route.h>
-#include <net/if.h>
-#include <net/if_dl.h>
-#include <sys/sysctl.h>
-#include <ifaddrs.h>
-
 #include <string>
-#include <map>
-#include <set>
-#include <algorithm>
-#include <filesystem>
+#include <sys/cdefs.h>
+#include <sys/ioctl.h>
+#include <sys/param.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/sysctl.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
-static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
+static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff), 0);
 
 #define MACOS_FETH_MAX_MTU_SYSCTL "net.link.fake.max_mtu"
 
@@ -68,487 +64,504 @@ static bool globalTapInitialized = false;
 static bool fethMaxMtuAdjusted = false;
 
 MacEthernetTap::MacEthernetTap(
-	const char *homePath,
-	const MAC &mac,
-	unsigned int mtu,
-	unsigned int metric,
-	uint64_t nwid,
-	const char *friendlyName,
-	void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *data,unsigned int len),
-	void *arg) :
-	_handler(handler),
-	_arg(arg),
-	_nwid(nwid),
-	_homePath(homePath),
-	_mtu(mtu),
-	_metric(metric),
-	_devNo(0),
-	_agentStdin(-1),
-	_agentStdout(-1),
-	_agentStderr(-1),
-	_agentStdin2(-1),
-	_agentStdout2(-1),
-	_agentStderr2(-1),
-	_agentPid(-1),
-	_enabled(true),
-	_lastIfAddrsUpdate(0)
+    const char* homePath,
+    const MAC& mac,
+    unsigned int mtu,
+    unsigned int metric,
+    uint64_t nwid,
+    const char* friendlyName,
+    void (*handler)(void*, void*, uint64_t, const MAC&, const MAC&, unsigned int, unsigned int, const void* data, unsigned int len),
+    void* arg)
+    : _handler(handler)
+    , _arg(arg)
+    , _nwid(nwid)
+    , _homePath(homePath)
+    , _mtu(mtu)
+    , _metric(metric)
+    , _devNo(0)
+    , _agentStdin(-1)
+    , _agentStdout(-1)
+    , _agentStderr(-1)
+    , _agentStdin2(-1)
+    , _agentStdout2(-1)
+    , _agentStderr2(-1)
+    , _agentPid(-1)
+    , _enabled(true)
+    , _lastIfAddrsUpdate(0)
 {
-	char ethaddr[64],mtustr[16],devnostr[16],devstr[16],metricstr[16];
-	OSUtils::ztsnprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
-	OSUtils::ztsnprintf(mtustr,sizeof(mtustr),"%u",mtu);
-	OSUtils::ztsnprintf(metricstr,sizeof(metricstr),"%u",metric);
+    char ethaddr[64], mtustr[16], devnostr[16], devstr[16], metricstr[16];
+    OSUtils::ztsnprintf(ethaddr, sizeof(ethaddr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", (int)mac[0], (int)mac[1], (int)mac[2], (int)mac[3], (int)mac[4], (int)mac[5]);
+    OSUtils::ztsnprintf(mtustr, sizeof(mtustr), "%u", mtu);
+    OSUtils::ztsnprintf(metricstr, sizeof(metricstr), "%u", metric);
 
-	std::string agentPath(homePath);
-	agentPath.push_back(ZT_PATH_SEPARATOR);
-	agentPath.append("MacEthernetTapAgent");
-	if (!OSUtils::fileExists(agentPath.c_str()))
-		throw std::runtime_error("MacEthernetTapAgent not present in ZeroTier home");
+    std::string agentPath(homePath);
+    agentPath.push_back(ZT_PATH_SEPARATOR);
+    agentPath.append("MacEthernetTapAgent");
+    if (! OSUtils::fileExists(agentPath.c_str()))
+        throw std::runtime_error("MacEthernetTapAgent not present in ZeroTier home");
 
-	Mutex::Lock _gl(globalTapCreateLock); // only make one at a time
+    Mutex::Lock _gl(globalTapCreateLock);   // only make one at a time
 
-	if (!fethMaxMtuAdjusted) {
-		fethMaxMtuAdjusted = true;
-		int old_mtu = 0;
-		size_t old_mtu_len = sizeof(old_mtu);
-		int mtu = 10000;
-		sysctlbyname(MACOS_FETH_MAX_MTU_SYSCTL, &old_mtu, &old_mtu_len, &mtu, sizeof(mtu));
-	}
+    if (! fethMaxMtuAdjusted) {
+        fethMaxMtuAdjusted = true;
+        int old_mtu = 0;
+        size_t old_mtu_len = sizeof(old_mtu);
+        int mtu = 10000;
+        sysctlbyname(MACOS_FETH_MAX_MTU_SYSCTL, &old_mtu, &old_mtu_len, &mtu, sizeof(mtu));
+    }
 
-	// Destroy all feth devices on first tap start in case ZeroTier did not exit cleanly last time.
-	// We leave interfaces less than feth100 alone in case something else is messing with feth devices.
-	if (!globalTapInitialized) {
-		globalTapInitialized = true;
-		struct ifaddrs *ifa = (struct ifaddrs *)0;
-		std::set<std::string> deleted;
-		if (!getifaddrs(&ifa)) {
-			struct ifaddrs *p = ifa;
-			while (p) {
-				int nameLen = (int)strlen(p->ifa_name);
-				// Delete feth# from feth0 to feth9999, but don't touch >10000.
-				if ((!strncmp(p->ifa_name,"feth",4))&&(nameLen >= 5)&&(nameLen <= 8)&&(deleted.count(std::string(p->ifa_name)) == 0)) {
-					deleted.insert(std::string(p->ifa_name));
-					const char *args[4];
-					args[0] = "/sbin/ifconfig";
-					args[1] = p->ifa_name;
-					args[2] = "destroy";
-					args[3] = (char *)0;
-					const pid_t pid = vfork();
-					if (pid == 0) {
-						execv(args[0],const_cast<char **>(args));
-						_exit(-1);
-					} else if (pid > 0) {
-						int rv = 0;
-						waitpid(pid,&rv,0);
-					}
-				}
-				p = p->ifa_next;
-			}
-			freeifaddrs(ifa);
-		}
-	}
+    // Destroy all feth devices on first tap start in case ZeroTier did not exit cleanly last time.
+    // We leave interfaces less than feth100 alone in case something else is messing with feth devices.
+    if (! globalTapInitialized) {
+        globalTapInitialized = true;
+        struct ifaddrs* ifa = (struct ifaddrs*)0;
+        std::set<std::string> deleted;
+        if (! getifaddrs(&ifa)) {
+            struct ifaddrs* p = ifa;
+            while (p) {
+                int nameLen = (int)strlen(p->ifa_name);
+                // Delete feth# from feth0 to feth9999, but don't touch >10000.
+                if ((! strncmp(p->ifa_name, "feth", 4)) && (nameLen >= 5) && (nameLen <= 8) && (deleted.count(std::string(p->ifa_name)) == 0)) {
+                    deleted.insert(std::string(p->ifa_name));
+                    const char* args[4];
+                    args[0] = "/sbin/ifconfig";
+                    args[1] = p->ifa_name;
+                    args[2] = "destroy";
+                    args[3] = (char*)0;
+                    const pid_t pid = vfork();
+                    if (pid == 0) {
+                        execv(args[0], const_cast<char**>(args));
+                        _exit(-1);
+                    }
+                    else if (pid > 0) {
+                        int rv = 0;
+                        waitpid(pid, &rv, 0);
+                    }
+                }
+                p = p->ifa_next;
+            }
+            freeifaddrs(ifa);
+        }
+    }
 
-	unsigned int devNo = 100 + ((nwid ^ (nwid >> 32) ^ (nwid >> 48)) % 4900);
-	for(;;) {
-		OSUtils::ztsnprintf(devnostr,sizeof(devnostr),"%u",devNo);
-		OSUtils::ztsnprintf(devstr,sizeof(devstr),"feth%u",devNo);
-		bool duplicate = false;
-		struct ifaddrs *ifa = (struct ifaddrs *)0;
-		if (!getifaddrs(&ifa)) {
-			struct ifaddrs *p = ifa;
-			while (p) {
-				if (!strcmp(p->ifa_name,devstr)) {
-					duplicate = true;
-					break;
-				}
-				p = p->ifa_next;
-			}
-			freeifaddrs(ifa);
-		}
-		if (duplicate) {
-			devNo = (devNo + 1) % 5000;
-			if (devNo < 100)
-				devNo = 100;
-		} else {
-			_dev = devstr;
-			_devNo = devNo;
-			break;
-		}
-	}
+    unsigned int devNo = 100 + ((nwid ^ (nwid >> 32) ^ (nwid >> 48)) % 4900);
+    for (;;) {
+        OSUtils::ztsnprintf(devnostr, sizeof(devnostr), "%u", devNo);
+        OSUtils::ztsnprintf(devstr, sizeof(devstr), "feth%u", devNo);
+        bool duplicate = false;
+        struct ifaddrs* ifa = (struct ifaddrs*)0;
+        if (! getifaddrs(&ifa)) {
+            struct ifaddrs* p = ifa;
+            while (p) {
+                if (! strcmp(p->ifa_name, devstr)) {
+                    duplicate = true;
+                    break;
+                }
+                p = p->ifa_next;
+            }
+            freeifaddrs(ifa);
+        }
+        if (duplicate) {
+            devNo = (devNo + 1) % 5000;
+            if (devNo < 100)
+                devNo = 100;
+        }
+        else {
+            _dev = devstr;
+            _devNo = devNo;
+            break;
+        }
+    }
 
-	if (::pipe(_shutdownSignalPipe))
-		throw std::runtime_error("pipe creation failed");
+    if (::pipe(_shutdownSignalPipe))
+        throw std::runtime_error("pipe creation failed");
 
-	int agentStdin[2];
-	int agentStdout[2];
-	int agentStderr[2];
-	if (::pipe(agentStdin))
-		throw std::runtime_error("pipe creation failed");
-	if (::pipe(agentStdout))
-		throw std::runtime_error("pipe creation failed");
-	if (::pipe(agentStderr))
-		throw std::runtime_error("pipe creation failed");
-	_agentStdin = agentStdin[1];
-	_agentStdout = agentStdout[0];
-	_agentStderr = agentStderr[0];
-	_agentStdin2 = agentStdin[0];
-	_agentStdout2 = agentStdout[1];
-	_agentStderr2 = agentStderr[1];
-	long apid = (long)fork();
-	if (apid < 0) {
-		throw std::runtime_error("fork failed");
-	} else if (apid == 0) {
-		::dup2(agentStdin[0],STDIN_FILENO);
-		::dup2(agentStdout[1],STDOUT_FILENO);
-		::dup2(agentStderr[1],STDERR_FILENO);
-		::close(agentStdin[0]);
-		::close(agentStdin[1]);
-		::close(agentStdout[0]);
-		::close(agentStdout[1]);
-		::close(agentStderr[0]);
-		::close(agentStderr[1]);
-		::execl(agentPath.c_str(),agentPath.c_str(),devnostr,ethaddr,mtustr,metricstr,(char *)0);
-		::_exit(-1);
-	} else {
-		_agentPid = apid;
+    int agentStdin[2];
+    int agentStdout[2];
+    int agentStderr[2];
+    if (::pipe(agentStdin))
+        throw std::runtime_error("pipe creation failed");
+    if (::pipe(agentStdout))
+        throw std::runtime_error("pipe creation failed");
+    if (::pipe(agentStderr))
+        throw std::runtime_error("pipe creation failed");
+    _agentStdin = agentStdin[1];
+    _agentStdout = agentStdout[0];
+    _agentStderr = agentStderr[0];
+    _agentStdin2 = agentStdin[0];
+    _agentStdout2 = agentStdout[1];
+    _agentStderr2 = agentStderr[1];
+    long apid = (long)fork();
+    if (apid < 0) {
+        throw std::runtime_error("fork failed");
+    }
+    else if (apid == 0) {
+        ::dup2(agentStdin[0], STDIN_FILENO);
+        ::dup2(agentStdout[1], STDOUT_FILENO);
+        ::dup2(agentStderr[1], STDERR_FILENO);
+        ::close(agentStdin[0]);
+        ::close(agentStdin[1]);
+        ::close(agentStdout[0]);
+        ::close(agentStdout[1]);
+        ::close(agentStderr[0]);
+        ::close(agentStderr[1]);
+        ::execl(agentPath.c_str(), agentPath.c_str(), devnostr, ethaddr, mtustr, metricstr, (char*)0);
+        ::_exit(-1);
+    }
+    else {
+        _agentPid = apid;
 
-		// Wait up to 10 seconds for the subprocess to actually create the device. This prevents
-		// things like routes from being created before the device exists.
-		for(int waitLoops=0;;++waitLoops) {
-			struct ifaddrs *ifa = (struct ifaddrs *)0;
-			if (!getifaddrs(&ifa)) {
-				struct ifaddrs *p = ifa;
-				while (p) {
-					if ((p->ifa_name)&&(!strcmp(devstr, p->ifa_name))) {
-						waitLoops = -1;
-						break;
-					}
-					p = p->ifa_next;
-				}
-				freeifaddrs(ifa);
-			}
-			if (waitLoops == -1) {
-				break;
-			} else if (waitLoops >= 100) { // 10 seconds
-				throw std::runtime_error("feth device creation timed out");
-			}
-			Thread::sleep(100);
-		}
-	}
+        // Wait up to 10 seconds for the subprocess to actually create the device. This prevents
+        // things like routes from being created before the device exists.
+        for (int waitLoops = 0;; ++waitLoops) {
+            struct ifaddrs* ifa = (struct ifaddrs*)0;
+            if (! getifaddrs(&ifa)) {
+                struct ifaddrs* p = ifa;
+                while (p) {
+                    if ((p->ifa_name) && (! strcmp(devstr, p->ifa_name))) {
+                        waitLoops = -1;
+                        break;
+                    }
+                    p = p->ifa_next;
+                }
+                freeifaddrs(ifa);
+            }
+            if (waitLoops == -1) {
+                break;
+            }
+            else if (waitLoops >= 100) {   // 10 seconds
+                throw std::runtime_error("feth device creation timed out");
+            }
+            Thread::sleep(100);
+        }
+    }
 
-	_thread = Thread::start(this);
+    _thread = Thread::start(this);
 }
 
 MacEthernetTap::~MacEthernetTap()
 {
-	char tmp[64];
-	const char *args[4];
-	pid_t pid0,pid1;
+    char tmp[64];
+    const char* args[4];
+    pid_t pid0, pid1;
 
-	MacDNSHelper::removeDNS(_nwid);
-	MacDNSHelper::removeIps4(_nwid);
-	MacDNSHelper::removeIps6(_nwid);
+    MacDNSHelper::removeDNS(_nwid);
+    MacDNSHelper::removeIps4(_nwid);
+    MacDNSHelper::removeIps6(_nwid);
 
-	Mutex::Lock _gl(globalTapCreateLock);
-	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
+    Mutex::Lock _gl(globalTapCreateLock);
+    ::write(_shutdownSignalPipe[1], "\0", 1);   // causes thread to exit
 
-	int ec = 0;
-	::kill(_agentPid,SIGKILL);
-	::waitpid(_agentPid,&ec,0);
+    int ec = 0;
+    ::kill(_agentPid, SIGKILL);
+    ::waitpid(_agentPid, &ec, 0);
 
-	args[0] = "/sbin/ifconfig";
-	args[1] = _dev.c_str();
-	args[2] = "destroy";
-	args[3] = (char *)0;
-	pid0 = vfork();
-	if (pid0 == 0) {
-		execv(args[0],const_cast<char **>(args));
-		_exit(-1);
-	}
+    args[0] = "/sbin/ifconfig";
+    args[1] = _dev.c_str();
+    args[2] = "destroy";
+    args[3] = (char*)0;
+    pid0 = vfork();
+    if (pid0 == 0) {
+        execv(args[0], const_cast<char**>(args));
+        _exit(-1);
+    }
 
-	snprintf(tmp,sizeof(tmp),"feth%u",_devNo + 5000);
-	//args[0] = "/sbin/ifconfig";
-	args[1] = tmp;
-	//args[2] = "destroy";
-	//args[3] = (char *)0;
-	pid1 = vfork();
-	if (pid1 == 0) {
-		execv(args[0],const_cast<char **>(args));
-		_exit(-1);
-	}
+    snprintf(tmp, sizeof(tmp), "feth%u", _devNo + 5000);
+    // args[0] = "/sbin/ifconfig";
+    args[1] = tmp;
+    // args[2] = "destroy";
+    // args[3] = (char *)0;
+    pid1 = vfork();
+    if (pid1 == 0) {
+        execv(args[0], const_cast<char**>(args));
+        _exit(-1);
+    }
 
-	if (pid0 > 0) {
-		int rv = 0;
-		waitpid(pid0,&rv,0);
-	}
-	if (pid1 > 0) {
-		int rv = 0;
-		waitpid(pid1,&rv,0);
-	}
+    if (pid0 > 0) {
+        int rv = 0;
+        waitpid(pid0, &rv, 0);
+    }
+    if (pid1 > 0) {
+        int rv = 0;
+        waitpid(pid1, &rv, 0);
+    }
 
-	Thread::join(_thread);
+    Thread::join(_thread);
 }
 
-void MacEthernetTap::setEnabled(bool en) { _enabled = en; }
-bool MacEthernetTap::enabled() const { return _enabled; }
-
-bool MacEthernetTap::addIp(const InetAddress &ip)
+void MacEthernetTap::setEnabled(bool en)
 {
-	char tmp[128];
-
-	if (!ip)
-		return false;
-
-	std::string cmd;
-	cmd.push_back((char)ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG);
-	cmd.append((ip.ss_family == AF_INET6) ? "inet6" : "inet");
-	cmd.push_back(0);
-	cmd.append(ip.toString(tmp));
-	cmd.push_back(0);
-	cmd.append("alias");
-	cmd.push_back(0);
-
-	uint16_t l = (uint16_t)cmd.length();
-	_putLock.lock();
-	write(_agentStdin,&l,2);
-	write(_agentStdin,cmd.data(),cmd.length());
-	_putLock.unlock();
-
-	return true;
+    _enabled = en;
+}
+bool MacEthernetTap::enabled() const
+{
+    return _enabled;
 }
 
-bool MacEthernetTap::removeIp(const InetAddress &ip)
+bool MacEthernetTap::addIp(const InetAddress& ip)
 {
-	char tmp[128];
+    char tmp[128];
 
-	if (!ip)
-		return false;
+    if (! ip)
+        return false;
 
-	std::string cmd;
-	cmd.push_back((char)ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG);
-	cmd.append((ip.ss_family == AF_INET6) ? "inet6" : "inet");
-	cmd.push_back(0);
-	cmd.append(ip.toString(tmp));
-	cmd.push_back(0);
-	cmd.append("-alias");
-	cmd.push_back(0);
+    std::string cmd;
+    cmd.push_back((char)ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG);
+    cmd.append((ip.ss_family == AF_INET6) ? "inet6" : "inet");
+    cmd.push_back(0);
+    cmd.append(ip.toString(tmp));
+    cmd.push_back(0);
+    cmd.append("alias");
+    cmd.push_back(0);
 
-	uint16_t l = (uint16_t)cmd.length();
-	_putLock.lock();
-	write(_agentStdin,&l,2);
-	write(_agentStdin,cmd.data(),cmd.length());
-	_putLock.unlock();
+    uint16_t l = (uint16_t)cmd.length();
+    _putLock.lock();
+    write(_agentStdin, &l, 2);
+    write(_agentStdin, cmd.data(), cmd.length());
+    _putLock.unlock();
 
-	return true;
+    return true;
+}
+
+bool MacEthernetTap::removeIp(const InetAddress& ip)
+{
+    char tmp[128];
+
+    if (! ip)
+        return false;
+
+    std::string cmd;
+    cmd.push_back((char)ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG);
+    cmd.append((ip.ss_family == AF_INET6) ? "inet6" : "inet");
+    cmd.push_back(0);
+    cmd.append(ip.toString(tmp));
+    cmd.push_back(0);
+    cmd.append("-alias");
+    cmd.push_back(0);
+
+    uint16_t l = (uint16_t)cmd.length();
+    _putLock.lock();
+    write(_agentStdin, &l, 2);
+    write(_agentStdin, cmd.data(), cmd.length());
+    _putLock.unlock();
+
+    return true;
 }
 
 std::vector<InetAddress> MacEthernetTap::ips() const
 {
-	uint64_t now = OSUtils::now();
+    uint64_t now = OSUtils::now();
 
-	if ((now - _lastIfAddrsUpdate) <= GETIFADDRS_CACHE_TIME) {
-		return _ifaddrs;
-	}
-	_lastIfAddrsUpdate = now;
+    if ((now - _lastIfAddrsUpdate) <= GETIFADDRS_CACHE_TIME) {
+        return _ifaddrs;
+    }
+    _lastIfAddrsUpdate = now;
 
-	struct ifaddrs *ifa = (struct ifaddrs *)0;
-	std::vector<InetAddress> r;
+    struct ifaddrs* ifa = (struct ifaddrs*)0;
+    std::vector<InetAddress> r;
 
-	if (!getifaddrs(&ifa)) {
-		struct ifaddrs *p = ifa;
-		while (p) {
-			if ((p->ifa_name)&&(!strcmp(p->ifa_name,_dev.c_str()))&&(p->ifa_addr)) {
-				switch(p->ifa_addr->sa_family) {
-					case AF_INET: {
-						struct sockaddr_in *sin = (struct sockaddr_in *)p->ifa_addr;
-						struct sockaddr_in *nm = (struct sockaddr_in *)p->ifa_netmask;
-						r.push_back(InetAddress(&(sin->sin_addr.s_addr),4,Utils::countBits((uint32_t)nm->sin_addr.s_addr)));
-					}	break;
-					case AF_INET6: {
-						struct sockaddr_in6 *sin = (struct sockaddr_in6 *)p->ifa_addr;
-						struct sockaddr_in6 *nm = (struct sockaddr_in6 *)p->ifa_netmask;
-						uint32_t b[4];
-						memcpy(b,nm->sin6_addr.s6_addr,sizeof(b));
-						r.push_back(InetAddress(sin->sin6_addr.s6_addr,16,Utils::countBits(b[0]) + Utils::countBits(b[1]) + Utils::countBits(b[2]) + Utils::countBits(b[3])));
-					}	break;
-				}
-			}
-			p = p->ifa_next;
-		}
-		freeifaddrs(ifa);
-	}
-	std::sort(r.begin(),r.end());
-	r.erase(std::unique(r.begin(),r.end()),r.end());
+    if (! getifaddrs(&ifa)) {
+        struct ifaddrs* p = ifa;
+        while (p) {
+            if ((p->ifa_name) && (! strcmp(p->ifa_name, _dev.c_str())) && (p->ifa_addr)) {
+                switch (p->ifa_addr->sa_family) {
+                    case AF_INET: {
+                        struct sockaddr_in* sin = (struct sockaddr_in*)p->ifa_addr;
+                        struct sockaddr_in* nm = (struct sockaddr_in*)p->ifa_netmask;
+                        r.push_back(InetAddress(&(sin->sin_addr.s_addr), 4, Utils::countBits((uint32_t)nm->sin_addr.s_addr)));
+                    } break;
+                    case AF_INET6: {
+                        struct sockaddr_in6* sin = (struct sockaddr_in6*)p->ifa_addr;
+                        struct sockaddr_in6* nm = (struct sockaddr_in6*)p->ifa_netmask;
+                        uint32_t b[4];
+                        memcpy(b, nm->sin6_addr.s6_addr, sizeof(b));
+                        r.push_back(InetAddress(sin->sin6_addr.s6_addr, 16, Utils::countBits(b[0]) + Utils::countBits(b[1]) + Utils::countBits(b[2]) + Utils::countBits(b[3])));
+                    } break;
+                }
+            }
+            p = p->ifa_next;
+        }
+        freeifaddrs(ifa);
+    }
+    std::sort(r.begin(), r.end());
+    r.erase(std::unique(r.begin(), r.end()), r.end());
 
-	_ifaddrs = r;
+    _ifaddrs = r;
 
-	return r;
+    return r;
 }
 
-void MacEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
+void MacEthernetTap::put(const MAC& from, const MAC& to, unsigned int etherType, const void* data, unsigned int len)
 {
-	struct iovec iov[3];
-	unsigned char hdr[15];
-	uint16_t l;
-	if ((_agentStdin > 0)&&(len <= _mtu)&&(_enabled)) {
-		hdr[0] = ZT_MACETHERNETTAPAGENT_STDIN_CMD_PACKET;
-		to.copyTo(hdr + 1,6);
-		from.copyTo(hdr + 7,6);
-		hdr[13] = (unsigned char)((etherType >> 8) & 0xff);
-		hdr[14] = (unsigned char)(etherType & 0xff);
-		l = (uint16_t)(len + 15);
-		iov[0].iov_base = &l;
-		iov[0].iov_len = 2;
-		iov[1].iov_base = hdr;
-		iov[1].iov_len = 15;
-		iov[2].iov_base = const_cast<void *>(data);
-		iov[2].iov_len = len;
-		_putLock.lock();
-		writev(_agentStdin,iov,3);
-		_putLock.unlock();
-	}
+    struct iovec iov[3];
+    unsigned char hdr[15];
+    uint16_t l;
+    if ((_agentStdin > 0) && (len <= _mtu) && (_enabled)) {
+        hdr[0] = ZT_MACETHERNETTAPAGENT_STDIN_CMD_PACKET;
+        to.copyTo(hdr + 1, 6);
+        from.copyTo(hdr + 7, 6);
+        hdr[13] = (unsigned char)((etherType >> 8) & 0xff);
+        hdr[14] = (unsigned char)(etherType & 0xff);
+        l = (uint16_t)(len + 15);
+        iov[0].iov_base = &l;
+        iov[0].iov_len = 2;
+        iov[1].iov_base = hdr;
+        iov[1].iov_len = 15;
+        iov[2].iov_base = const_cast<void*>(data);
+        iov[2].iov_len = len;
+        _putLock.lock();
+        writev(_agentStdin, iov, 3);
+        _putLock.unlock();
+    }
 }
 
-std::string MacEthernetTap::deviceName() const { return _dev; }
-void MacEthernetTap::setFriendlyName(const char *friendlyName) {}
-
-void MacEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)
+std::string MacEthernetTap::deviceName() const
 {
-	std::vector<MulticastGroup> newGroups;
+    return _dev;
+}
+void MacEthernetTap::setFriendlyName(const char* friendlyName)
+{
+}
 
-	struct ifmaddrs *ifmap = (struct ifmaddrs *)0;
-	if (!getifmaddrs(&ifmap)) {
-		struct ifmaddrs *p = ifmap;
-		while (p) {
-			if (p->ifma_addr->sa_family == AF_LINK) {
-				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
-				struct sockaddr_dl *la = (struct sockaddr_dl *)p->ifma_addr;
-				if ((la->sdl_alen == 6)&&(in->sdl_nlen <= _dev.length())&&(!memcmp(_dev.data(),in->sdl_data,in->sdl_nlen)))
-					newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen,6),0));
-			}
-			p = p->ifma_next;
-		}
-		freeifmaddrs(ifmap);
-	}
+void MacEthernetTap::scanMulticastGroups(std::vector<MulticastGroup>& added, std::vector<MulticastGroup>& removed)
+{
+    std::vector<MulticastGroup> newGroups;
 
-	std::vector<InetAddress> allIps(ips());
-	for(std::vector<InetAddress>::iterator ip(allIps.begin());ip!=allIps.end();++ip)
-		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
+    struct ifmaddrs* ifmap = (struct ifmaddrs*)0;
+    if (! getifmaddrs(&ifmap)) {
+        struct ifmaddrs* p = ifmap;
+        while (p) {
+            if (p->ifma_addr->sa_family == AF_LINK) {
+                struct sockaddr_dl* in = (struct sockaddr_dl*)p->ifma_name;
+                struct sockaddr_dl* la = (struct sockaddr_dl*)p->ifma_addr;
+                if ((la->sdl_alen == 6) && (in->sdl_nlen <= _dev.length()) && (! memcmp(_dev.data(), in->sdl_data, in->sdl_nlen)))
+                    newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen, 6), 0));
+            }
+            p = p->ifma_next;
+        }
+        freeifmaddrs(ifmap);
+    }
 
-	std::sort(newGroups.begin(),newGroups.end());
-	newGroups.erase(std::unique(newGroups.begin(),newGroups.end()),newGroups.end());
+    std::vector<InetAddress> allIps(ips());
+    for (std::vector<InetAddress>::iterator ip(allIps.begin()); ip != allIps.end(); ++ip)
+        newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
 
-	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
-		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))
-			added.push_back(*m);
-	}
-	for(std::vector<MulticastGroup>::iterator m(_multicastGroups.begin());m!=_multicastGroups.end();++m) {
-		if (!std::binary_search(newGroups.begin(),newGroups.end(),*m))
-			removed.push_back(*m);
-	}
+    std::sort(newGroups.begin(), newGroups.end());
+    newGroups.erase(std::unique(newGroups.begin(), newGroups.end()), newGroups.end());
 
-	_multicastGroups.swap(newGroups);
+    for (std::vector<MulticastGroup>::iterator m(newGroups.begin()); m != newGroups.end(); ++m) {
+        if (! std::binary_search(_multicastGroups.begin(), _multicastGroups.end(), *m))
+            added.push_back(*m);
+    }
+    for (std::vector<MulticastGroup>::iterator m(_multicastGroups.begin()); m != _multicastGroups.end(); ++m) {
+        if (! std::binary_search(newGroups.begin(), newGroups.end(), *m))
+            removed.push_back(*m);
+    }
+
+    _multicastGroups.swap(newGroups);
 }
 
 void MacEthernetTap::setMtu(unsigned int mtu)
 {
-	if (_mtu != mtu) {
-		char tmp[16];
-		std::string cmd;
-		cmd.push_back((char)ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG);
-		cmd.append("mtu");
-		cmd.push_back(0);
-		OSUtils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);
-		cmd.append(tmp);
-		cmd.push_back(0);
-		uint16_t l = (uint16_t)cmd.length();
-		_putLock.lock();
-		write(_agentStdin,&l,2);
-		write(_agentStdin,cmd.data(),cmd.length());
-		_putLock.unlock();
-		_mtu = mtu;
-	}
+    if (_mtu != mtu) {
+        char tmp[16];
+        std::string cmd;
+        cmd.push_back((char)ZT_MACETHERNETTAPAGENT_STDIN_CMD_IFCONFIG);
+        cmd.append("mtu");
+        cmd.push_back(0);
+        OSUtils::ztsnprintf(tmp, sizeof(tmp), "%u", mtu);
+        cmd.append(tmp);
+        cmd.push_back(0);
+        uint16_t l = (uint16_t)cmd.length();
+        _putLock.lock();
+        write(_agentStdin, &l, 2);
+        write(_agentStdin, cmd.data(), cmd.length());
+        _putLock.unlock();
+        _mtu = mtu;
+    }
 }
 
 #define ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE 131072
 
-void MacEthernetTap::threadMain()
-	throw()
+void MacEthernetTap::threadMain() throw()
 {
-	char agentReadBuf[ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE];
-	char agentStderrBuf[256];
-	fd_set readfds,nullfds;
-	MAC to,from;
+    char agentReadBuf[ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE];
+    char agentStderrBuf[256];
+    fd_set readfds, nullfds;
+    MAC to, from;
 
-	Thread::sleep(250);
+    Thread::sleep(250);
 
-	const int nfds = std::max(std::max(_shutdownSignalPipe[0],_agentStdout),_agentStderr) + 1;
-	long agentReadPtr = 0;
-	fcntl(_agentStdout,F_SETFL,fcntl(_agentStdout,F_GETFL)|O_NONBLOCK);
-	fcntl(_agentStderr,F_SETFL,fcntl(_agentStderr,F_GETFL)|O_NONBLOCK);
+    const int nfds = std::max(std::max(_shutdownSignalPipe[0], _agentStdout), _agentStderr) + 1;
+    long agentReadPtr = 0;
+    fcntl(_agentStdout, F_SETFL, fcntl(_agentStdout, F_GETFL) | O_NONBLOCK);
+    fcntl(_agentStderr, F_SETFL, fcntl(_agentStderr, F_GETFL) | O_NONBLOCK);
 
-	FD_ZERO(&readfds);
-	FD_ZERO(&nullfds);
-	for(;;) {
-		FD_SET(_shutdownSignalPipe[0],&readfds);
-		FD_SET(_agentStdout,&readfds);
-		FD_SET(_agentStderr,&readfds);
-		select(nfds,&readfds,&nullfds,&nullfds,(struct timeval *)0);
+    FD_ZERO(&readfds);
+    FD_ZERO(&nullfds);
+    for (;;) {
+        FD_SET(_shutdownSignalPipe[0], &readfds);
+        FD_SET(_agentStdout, &readfds);
+        FD_SET(_agentStderr, &readfds);
+        select(nfds, &readfds, &nullfds, &nullfds, (struct timeval*)0);
 
-		if (FD_ISSET(_shutdownSignalPipe[0],&readfds))
-			break;
+        if (FD_ISSET(_shutdownSignalPipe[0], &readfds))
+            break;
 
-		if (FD_ISSET(_agentStdout,&readfds)) {
-			long n = (long)read(_agentStdout,agentReadBuf + agentReadPtr,ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE - agentReadPtr);
-			if (n > 0) {
-				agentReadPtr += n;
-				while (agentReadPtr >= 2) {
-					long len = *((uint16_t *)agentReadBuf);
-					if (agentReadPtr >= (len + 2)) {
-						char *msg = agentReadBuf + 2;
+        if (FD_ISSET(_agentStdout, &readfds)) {
+            long n = (long)read(_agentStdout, agentReadBuf + agentReadPtr, ZT_MACETHERNETTAP_AGENT_READ_BUF_SIZE - agentReadPtr);
+            if (n > 0) {
+                agentReadPtr += n;
+                while (agentReadPtr >= 2) {
+                    long len = *((uint16_t*)agentReadBuf);
+                    if (agentReadPtr >= (len + 2)) {
+                        char* msg = agentReadBuf + 2;
 
-						if ((len > 14)&&(_enabled)) {
-							to.setTo(msg,6);
-							from.setTo(msg + 6,6);
-							_handler(_arg,(void *)0,_nwid,from,to,ntohs(((const uint16_t *)msg)[6]),0,(const void *)(msg + 14),(unsigned int)len - 14);
-						}
+                        if ((len > 14) && (_enabled)) {
+                            to.setTo(msg, 6);
+                            from.setTo(msg + 6, 6);
+                            _handler(_arg, (void*)0, _nwid, from, to, ntohs(((const uint16_t*)msg)[6]), 0, (const void*)(msg + 14), (unsigned int)len - 14);
+                        }
 
-						if (agentReadPtr > (len + 2)) {
-							memmove(agentReadBuf,agentReadBuf + len + 2,agentReadPtr -= (len + 2));
-						} else {
-							agentReadPtr = 0;
-						}
-					} else {
-						break;
-					}
-				}
-			}
-		}
+                        if (agentReadPtr > (len + 2)) {
+                            memmove(agentReadBuf, agentReadBuf + len + 2, agentReadPtr -= (len + 2));
+                        }
+                        else {
+                            agentReadPtr = 0;
+                        }
+                    }
+                    else {
+                        break;
+                    }
+                }
+            }
+        }
 
-		if (FD_ISSET(_agentStderr,&readfds)) {
-			read(_agentStderr,agentStderrBuf,sizeof(agentStderrBuf));
-			/*
-			const ssize_t n = read(_agentStderr,agentStderrBuf,sizeof(agentStderrBuf));
-			if (n > 0)
-				write(STDERR_FILENO,agentStderrBuf,(size_t)n);
-			*/
-		}
-	}
+        if (FD_ISSET(_agentStderr, &readfds)) {
+            read(_agentStderr, agentStderrBuf, sizeof(agentStderrBuf));
+            /*
+            const ssize_t n = read(_agentStderr,agentStderrBuf,sizeof(agentStderrBuf));
+            if (n > 0)
+                write(STDERR_FILENO,agentStderrBuf,(size_t)n);
+            */
+        }
+    }
 
-	::close(_agentStdin);
-	::close(_agentStdout);
-	::close(_agentStderr);
-	::close(_agentStdin2);
-	::close(_agentStdout2);
-	::close(_agentStderr2);
-	::close(_shutdownSignalPipe[0]);
-	::close(_shutdownSignalPipe[1]);
+    ::close(_agentStdin);
+    ::close(_agentStdout);
+    ::close(_agentStderr);
+    ::close(_agentStdin2);
+    ::close(_agentStdout2);
+    ::close(_agentStderr2);
+    ::close(_shutdownSignalPipe[0]);
+    ::close(_shutdownSignalPipe[1]);
 }
 
-void MacEthernetTap::setDns(const char *domain, const std::vector<InetAddress> &servers)
+void MacEthernetTap::setDns(const char* domain, const std::vector<InetAddress>& servers)
 {
-	MacDNSHelper::setDNS(this->_nwid, domain, servers);
+    MacDNSHelper::setDNS(this->_nwid, domain, servers);
 }
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
 
-#endif // __APPLE__
+#endif   // __APPLE__

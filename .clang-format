@@ -57,7 +57,7 @@ SpacesInCStyleCastParentheses: 'false'
 SpacesInContainerLiterals: 'true'
 SpacesInParentheses: 'false'
 SpacesInSquareBrackets: 'false'
-UseTab: 'Always'
+UseTab: 'Never'
 
 ---
 Language: Cpp

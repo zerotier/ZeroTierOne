@@ -12,32 +12,34 @@
 /****/
 
 #include "Tag.hpp"
-#include "RuntimeEnvironment.hpp"
+
 #include "Identity.hpp"
-#include "Topology.hpp"
-#include "Switch.hpp"
 #include "Network.hpp"
 #include "Node.hpp"
+#include "RuntimeEnvironment.hpp"
+#include "Switch.hpp"
+#include "Topology.hpp"
 
 namespace ZeroTier {
 
-int Tag::verify(const RuntimeEnvironment *RR,void *tPtr) const
+int Tag::verify(const RuntimeEnvironment* RR, void* tPtr) const
 {
-	if ((!_signedBy)||(_signedBy != Network::controllerFor(_networkId))) {
-		return -1;
-	}
-	const Identity id(RR->topology->getIdentity(tPtr,_signedBy));
-	if (!id) {
-		RR->sw->requestWhois(tPtr,RR->node->now(),_signedBy);
-		return 1;
-	}
-	try {
-		Buffer<(sizeof(Tag) * 2)> tmp;
-		this->serialize(tmp,true);
-		return (id.verify(tmp.data(),tmp.size(),_signature) ? 0 : -1);
-	} catch ( ... ) {
-		return -1;
-	}
+    if ((! _signedBy) || (_signedBy != Network::controllerFor(_networkId))) {
+        return -1;
+    }
+    const Identity id(RR->topology->getIdentity(tPtr, _signedBy));
+    if (! id) {
+        RR->sw->requestWhois(tPtr, RR->node->now(), _signedBy);
+        return 1;
+    }
+    try {
+        Buffer<(sizeof(Tag) * 2)> tmp;
+        this->serialize(tmp, true);
+        return (id.verify(tmp.data(), tmp.size(), _signature) ? 0 : -1);
+    }
+    catch (...) {
+        return -1;
+    }
 }
 
-} // namespace ZeroTier
+}   // namespace ZeroTier
