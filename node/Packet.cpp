@@ -1071,6 +1071,7 @@ void Packet::armor(const void *key,bool encryptPayload,bool extendedArmor,const 
         }
     }
 
+    /* NOTE: this is currently only ever used with NONE encryption for HELLO packets. */
     if (extendedArmor) {
         ECC::Pair ephemeralKeyPair = ECC::generate();
         uint8_t ephemeralSymmetric[32];
@@ -1088,9 +1089,10 @@ void Packet::armor(const void *key,bool encryptPayload,bool extendedArmor,const 
 bool Packet::dearmor(const void *key,const AES aesKeys[2],const Identity &identity)
 {
     uint8_t *const data = reinterpret_cast<uint8_t *>(unsafeData());
+    const unsigned int cs = cipher();
 
-    if (extendedArmor()) {
-        if (size() < ZT_ECC_EPHEMERAL_PUBLIC_KEY_LEN) {
+    if (extendedArmor() && (cs == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_NONE)) {
+        if (size() < (ZT_PACKET_IDX_VERB + 1 + ZT_ECC_EPHEMERAL_PUBLIC_KEY_LEN)) {
             return false;
         }
         uint8_t ephemeralSymmetric[32];
@@ -1112,7 +1114,6 @@ bool Packet::dearmor(const void *key,const AES aesKeys[2],const Identity &identi
 
     const unsigned int payloadLen = size() - ZT_PACKET_IDX_VERB;
     unsigned char *const payload = data + ZT_PACKET_IDX_VERB;
-    const unsigned int cs = cipher();
 
     if (cs == ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV) {
         if (aesKeys) {
