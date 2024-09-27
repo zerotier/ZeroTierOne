@@ -10,8 +10,7 @@
  * of this software will be governed by version 2.0 of the Apache License.
  */
 
-#include <prometheus/histogram.h>
-#include <prometheus/simpleapi.h>
+#include "Metrics.hpp"
 
 namespace prometheus {
 namespace simpleapi {

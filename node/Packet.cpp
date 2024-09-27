@@ -1162,6 +1162,7 @@ void Packet::armor(const void* key, bool encryptPayload, bool extendedArmor, con
         AES::CTR aesCtr(cipher);
         aesCtr.init(data, 0, data + ZT_PACKET_IDX_EXTENDED_ARMOR_START);
         aesCtr.crypt(data + ZT_PACKET_IDX_EXTENDED_ARMOR_START, size() - ZT_PACKET_IDX_EXTENDED_ARMOR_START);
+        aesCtr.finish();
 
         this->append(ephemeralKeyPair.pub.data, ZT_ECC_EPHEMERAL_PUBLIC_KEY_LEN);
     }
@@ -1184,7 +1185,8 @@ bool Packet::dearmor(const void* key, const AES aesKeys[2], const Identity& iden
         AES cipher(ephemeralSymmetric);
         AES::CTR aesCtr(cipher);
         aesCtr.init(data, 0, data + ZT_PACKET_IDX_EXTENDED_ARMOR_START);
-        aesCtr.crypt(data + ZT_PACKET_IDX_EXTENDED_ARMOR_START, size() - ZT_PACKET_IDX_EXTENDED_ARMOR_START);
+        aesCtr.crypt(data + ZT_PACKET_IDX_EXTENDED_ARMOR_START, (size() - ZT_PACKET_IDX_EXTENDED_ARMOR_START) - ZT_ECC_EPHEMERAL_PUBLIC_KEY_LEN);
+        aesCtr.finish();
 
         this->setSize(size() - ZT_ECC_EPHEMERAL_PUBLIC_KEY_LEN);
 

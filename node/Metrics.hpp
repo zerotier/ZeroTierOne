@@ -12,6 +12,7 @@
 #ifndef METRICS_H_
 #define METRICS_H_
 
+#include <prometheus/gauge.h>
 #include <prometheus/histogram.h>
 #include <prometheus/simpleapi.h>
 

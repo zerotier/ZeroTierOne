@@ -25,6 +25,7 @@
 #include "Switch.hpp"
 #include "Trace.hpp"
 #include "Utils.hpp"
+#include "Switch.hpp"
 
 namespace ZeroTier {
 
