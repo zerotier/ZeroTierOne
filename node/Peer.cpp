@@ -465,8 +465,7 @@ void Peer::sendHELLO(void* tPtr, const int64_t localSocket, const InetAddress& a
     Metrics::pkt_hello_out++;
 
     if (atAddress) {
-        // TODO: this is where extended armor should be invoked
-        outp.armor(_key, false, false, nullptr, _id);
+        outp.armor(_key, false, true, nullptr, _id);
         RR->node->expectReplyTo(outp.packetId());
         RR->node->putPacket(tPtr, RR->node->lowBandwidthModeEnabled() ? localSocket : -1, atAddress, outp.data(), outp.size());
     }
