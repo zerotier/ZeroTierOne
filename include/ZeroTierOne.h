@@ -84,7 +84,7 @@ extern "C" {
 /**
  * Minimum UDP payload size allowed
  */
-#define ZT_MIN_PHYSMTU 1400
+#define ZT_MIN_PHYSMTU 510
 
 /**
  * Maximum physical interface name length. This number is gigantic because of Windows.
