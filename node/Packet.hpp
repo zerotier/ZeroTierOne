@@ -1268,7 +1268,7 @@ public:
 		unsigned char &b = (*this)[ZT_PACKET_IDX_FLAGS];
 		b = (b & 0xc7) | (unsigned char)((c << 3) & 0x38); // bits: FFCCCHHH
 		// Set DEPRECATED "encrypted" flag -- used by pre-1.0.3 peers
-		if (c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012) {
+		if (c == ZT_PROTO_CIPHER_SUITE__C25519_POLY1305_SALSA2012 || c == ZT_PROTO_CIPHER_SUITE__AES_GMAC_SIV) {
 			b |= ZT_PROTO_FLAG_ENCRYPTED;
 		} else {
 			b &= (~ZT_PROTO_FLAG_ENCRYPTED);
