@@ -44,7 +44,7 @@ jobs:
         sudo ./.github/workflows/validate-linux.sh
 
     - name: Archive test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{github.sha}}-test-results
         path: "*test-results*"
