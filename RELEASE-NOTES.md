@@ -1,6 +1,13 @@
 ZeroTier Release Notes
 ======
 
+# 2024-10-23 -- Version 1.14.2
+
+  * Fix for missing entitlement on macOS Sequoia.
+  * Fix for a problem correctly parsing local.conf to enable low bandwidth mode.
+  * Increment versions of some dependent libraries.
+  * Other fixes.
+
 # 2024-09-12 -- Version 1.14.1
 
   * Multithreaded packet I/O support! Currently this is just for Linux and must

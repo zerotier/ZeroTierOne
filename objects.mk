@@ -30,7 +30,8 @@ CORE_OBJS=\
 	node/Trace.o \
 	node/Utils.o \
 	node/Bond.o \
-	node/PacketMultiplexer.o
+	node/PacketMultiplexer.o \
+	osdep/OSUtils.o
 
 ONE_OBJS=\
 	controller/EmbeddedNetworkController.o \
@@ -42,7 +43,6 @@ ONE_OBJS=\
 	osdep/EthernetTap.o \
 	osdep/ManagedRoute.o \
 	osdep/Http.o \
-	osdep/OSUtils.o \
 	service/SoftwareUpdater.o \
 	service/OneService.o
 
