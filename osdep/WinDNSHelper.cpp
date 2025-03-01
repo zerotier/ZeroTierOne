@@ -328,7 +328,6 @@ void WinDNSHelper::setDNS(uint64_t nwid, const char* domain, const std::vector<I
 			char nwString[32] = { 0 };
 			sprintf(nwString, "%.16llx", nwid);
 			RegSetKeyValueA(dnsKey, NULL, "Comment", REG_SZ, nwString, strlen(nwString));
-
 			DWORD configOpts = 8;
 			RegSetKeyValueA(dnsKey, NULL, "ConfigOptions", REG_DWORD, &configOpts, sizeof(DWORD));
 			RegSetKeyValueA(dnsKey, NULL, "DisplayName", REG_SZ, "", 0);
@@ -350,5 +349,4 @@ void WinDNSHelper::removeDNS(uint64_t nwid)
 		RegDelnode(HKEY_LOCAL_MACHINE, hasConfig.second.c_str());
 	}
 }
-
 }
