@@ -1548,7 +1548,8 @@ void EmbeddedNetworkController::_request(
 				authInfo.add(ZT_AUTHINFO_DICT_KEY_CENTRAL_ENDPOINT_URL, info.centralAuthURL.c_str());
 				authInfo.add(ZT_AUTHINFO_DICT_KEY_NONCE, info.ssoNonce.c_str());
 				authInfo.add(ZT_AUTHINFO_DICT_KEY_STATE, info.ssoState.c_str());
-				authInfo.add(ZT_AUTHINFO_DICT_KEY_CLIENT_ID, info.ssoClientID.c_str());
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_CLIENT_ID, info.ssoClientID.c_str()); 
+				authInfo.add(ZT_AUTHINFO_DICT_KEY_SSO_PROVIDER, info.ssoProvider.c_str());
 				_sender->ncSendError(nwid,requestPacketId,identity.address(),NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED, authInfo.data(), authInfo.sizeBytes());
 			}
 			DB::cleanMember(member);

@@ -64,6 +64,7 @@ You can control a few settings including the identity used and the authtoken use
 - `ZEROTIER_API_SECRET`: replaces the `authtoken.secret` before booting and allows you to manage the control socket's authentication key.
 - `ZEROTIER_IDENTITY_PUBLIC`: the `identity.public` file for zerotier-one. Use `zerotier-idtool` to generate one of these for you.
 - `ZEROTIER_IDENTITY_SECRET`: the `identity.secret` file for zerotier-one. Use `zerotier-idtool` to generate one of these for you.
+- `ZEROTIER_LOCAL_CONF`: Sets the the `local.conf` file content for zerotier-one
 
 ### Tips
 

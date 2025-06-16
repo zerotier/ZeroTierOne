@@ -16,7 +16,10 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use std::time::Duration;
 use temporal_client::{Client, ClientOptionsBuilder, RetryClient, WorkflowClientTrait, WorkflowOptions};
-use temporal_sdk_core_protos::{coresdk::AsJsonPayloadExt, temporal::api::enums::v1::WorkflowIdReusePolicy};
+use temporal_sdk_core_protos::{
+    coresdk::AsJsonPayloadExt,
+    temporal::api::enums::v1::{WorkflowIdConflictPolicy, WorkflowIdReusePolicy},
+};
 use url::Url;
 use uuid::Uuid;
 
@@ -72,6 +75,7 @@ impl SmeeClient {
         println!("notifying network joined");
         let options = WorkflowOptions {
             id_reuse_policy: WorkflowIdReusePolicy::RejectDuplicate,
+            id_conflict_policy: WorkflowIdConflictPolicy::Fail,
             execution_timeout: None,
             run_timeout: None,
             task_timeout: None,

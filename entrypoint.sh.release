@@ -9,15 +9,16 @@ mkztfile() {
   file=$1
   mode=$2
   content=$3
-
+  echo "creating $file"
   mkdir -p /var/lib/zerotier-one
-  echo "$content" > "/var/lib/zerotier-one/$file"
+  echo -n "$content" > "/var/lib/zerotier-one/$file"
   chmod "$mode" "/var/lib/zerotier-one/$file"
 }
 
 if [ "x$ZEROTIER_API_SECRET" != "x" ]
 then
   mkztfile authtoken.secret 0600 "$ZEROTIER_API_SECRET"
+  mkztfile metricstoken.secret 0600 "$ZEROTIER_API_SECRET"
 fi
 
 if [ "x$ZEROTIER_IDENTITY_PUBLIC" != "x" ]
@@ -28,6 +29,11 @@ fi
 if [ "x$ZEROTIER_IDENTITY_SECRET" != "x" ]
 then
   mkztfile identity.secret 0600 "$ZEROTIER_IDENTITY_SECRET"
+fi
+
+if [ "x$ZEROTIER_LOCAL_CONF" != "x" ]
+then
+  mkztfile local.conf 0644 "$ZEROTIER_LOCAL_CONF"
 fi
 
 mkztfile zerotier-one.port 0600 "9993"
