@@ -256,9 +256,6 @@ void Multicaster::send(
 			for(unsigned int i=0;i<activeBridgeCount;++i) {
 				if ((activeBridges[i] != RR->identity.address())&&(activeBridges[i] != origin)) {
 					out.sendOnly(RR,tPtr,activeBridges[i]); // optimization: don't use dedup log if it's a one-pass send
-					if (++count >= limit) {
-						break;
-					}
 				}
 			}
 
