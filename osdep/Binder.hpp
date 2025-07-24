@@ -470,6 +470,7 @@ class Binder {
 					if (_bindingCount < ZT_BINDER_MAX_BINDINGS) {
 						_bindings[_bindingCount].udpSock = udps;
 						_bindings[_bindingCount].address = ii->first;
+						memset(_bindings[_bindingCount].ifname, 0x0, ZT_MAX_PHYSIFNAME);
 						memcpy(_bindings[_bindingCount].ifname, (char*)ii->second.c_str(), (int)ii->second.length());
 						++_bindingCount;
 					}
