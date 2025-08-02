@@ -5,7 +5,8 @@ TOPDIR=$(shell pwd)
 INCLUDES=-I$(shell pwd)/rustybits/target -isystem $(TOPDIR)/ext  -I$(TOPDIR)/ext/prometheus-cpp-lite-1.0/core/include -I$(TOPDIR)/ext-prometheus-cpp-lite-1.0/3rdparty/http-client-lite/include -I$(TOPDIR)/ext/prometheus-cpp-lite-1.0/simpleapi/include
 DEFS=
 LIBS=
-ARCH_FLAGS=-arch x86_64 -arch arm64 
+ARCH := x86_64 arm64
+ARCH_FLAGS=$(addprefix -arch ,$(ARCH))
 
 CODESIGN=echo
 PRODUCTSIGN=echo
@@ -58,7 +59,7 @@ ifeq ($(ZT_CONTROLLER),1)
 	MACOS_VERSION_MIN=10.15
 	override CXXFLAGS=$(CFLAGS) -std=c++17 -stdlib=libc++
 	LIBS+=-L/opt/homebrew/lib -L/usr/local/opt/libpqxx/lib -L/usr/local/opt/libpq/lib -L/usr/local/opt/openssl/lib/ -lpqxx -lpq -lssl -lcrypto -lgssapi_krb5 ext/redis-plus-plus-1.1.1/install/macos/lib/libredis++.a ext/hiredis-0.14.1/lib/macos/libhiredis.a rustybits/target/libsmeeclient.a
-	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER_USE_REDIS -DZT_CONTROLLER 
+	DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_CONTROLLER_USE_REDIS -DZT_CONTROLLER
 	INCLUDES+=-I/opt/homebrew/include -I/opt/homebrew/opt/libpq/include -I/usr/local/opt/libpq/include -I/usr/local/opt/libpqxx/include -Iext/hiredis-0.14.1/include/ -Iext/redis-plus-plus-1.1.1/install/macos/include/sw/ -Irustybits/target/
 else
 	MACOS_VERSION_MIN=10.13
@@ -74,6 +75,7 @@ endif
 # Debug mode -- dump trace output, build binary with -g
 ifeq ($(ZT_DEBUG),1)
 	ZT_TRACE=1
+	ARCH=
 	ARCH_FLAGS=
 	CFLAGS+=-Wall -g $(INCLUDES) $(DEFS) $(ARCH_FLAGS)
 	STRIP=echo
@@ -113,12 +115,12 @@ mac-agent: FORCE
 	$(CODESIGN) -f --options=runtime -s $(CODESIGN_APP_CERT) MacEthernetTapAgent
 
 osdep/MacDNSHelper.o: osdep/MacDNSHelper.mm
-	$(CXX) $(CXXFLAGS) -c osdep/MacDNSHelper.mm -o osdep/MacDNSHelper.o 
+	$(CXX) $(CXXFLAGS) -c osdep/MacDNSHelper.mm -o osdep/MacDNSHelper.o
 
 ifeq ($(ZT_CONTROLLER),1)
-one:	zeroidc smeeclient $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
+one:	zeroidc smeeclient $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
 else
-one:	zeroidc $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent 
+one:	zeroidc $(CORE_OBJS) $(ONE_OBJS) one.o mac-agent
 endif
 	$(CXX) $(CXXFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LIBS) rustybits/target/libzeroidc.a
 	# $(STRIP) zerotier-one
@@ -140,12 +142,12 @@ rustybits/target/libsmeeclient.a:	FORCE
 endif
 
 rustybits/target/libzeroidc.a:	FORCE
-	cd rustybits && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build -p zeroidc --target=x86_64-apple-darwin $(EXTRA_CARGO_FLAGS)
-	cd rustybits && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build -p zeroidc --target=aarch64-apple-darwin $(EXTRA_CARGO_FLAGS)
-	cd rustybits && lipo -create target/x86_64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a target/aarch64-apple-darwin/$(RUST_VARIANT)/libzeroidc.a -output target/libzeroidc.a
+	if [[ "$(ARCH)" == *"x86_64"* ]]; then cd rustybits && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build -p zeroidc --target=x86_64-apple-darwin $(EXTRA_CARGO_FLAGS); fi
+	if [[ "$(ARCH)" == *"arm64"* ]]; then cd rustybits && MACOSX_DEPLOYMENT_TARGET=$(MACOS_VERSION_MIN) cargo build -p zeroidc --target=aarch64-apple-darwin $(EXTRA_CARGO_FLAGS); fi
+	cd rustybits && lipo -create target/*/$(RUST_VARIANT)/libzeroidc.a -output target/libzeroidc.a
 
 central-controller:
-	make ARCH_FLAGS="-arch x86_64" ZT_CONTROLLER=1 one
+	make ARCH=x86_64 ZT_CONTROLLER=1 one
 
 zerotier-idtool: one
 
@@ -210,11 +212,11 @@ central-controller-docker: _buildx FORCE
 
 centralv2-controller-docker: _buildx FORCE
 	docker buildx build --platform linux/amd64,linux/arm64 --no-cache -t us-central1-docker.pkg.dev/zerotier-d648c7/central-v2/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` . --push
-	@echo Image: us-central1-docker.pkg.dev/zerotier-d648c7/central-v2/ztcentral-controller:${TIMESTAMP} 
+	@echo Image: us-central1-docker.pkg.dev/zerotier-d648c7/central-v2/ztcentral-controller:${TIMESTAMP}
 
 docker-release:	_buildx
 	docker buildx build --platform linux/386,linux/amd64,linux/arm/v7,linux/arm64,linux/mips64le,linux/ppc64le,linux/s390x -t zerotier/zerotier:${RELEASE_DOCKER_TAG} -t zerotier/zerotier:latest --build-arg VERSION=${RELEASE_VERSION} -f Dockerfile.release . --push
-	
+
 clean:
 	rm -rf MacEthernetTapAgent *.dSYM build-* *.a *.pkg *.dmg *.o node/*.o controller/*.o service/*.o osdep/*.o ext/http-parser/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-selftest zerotier-cli zerotier doc/node_modules zt1_update_$(ZT_BUILD_PLATFORM)_$(ZT_BUILD_ARCHITECTURE)_* rustybits/target/
 
