@@ -1,0 +1,49 @@
+{
+  "// Basic TCP proxy settings":"",
+  "tcpPort": 8443,
+  "// External TCP port for firewall rules (if different from internal port)":"",
+  "// externalTcpPort": 443,
+  
+  "// Legacy Linode-specific settings (still supported for backward compatibility)":"",
+  "linodeApiToken": "your_linode_api_token",
+  "linodeFirewallId": "12345",
+  
+  "// Cloud-agnostic settings":"",
+  "cloudProvider": "linode",
+  "cloudApiToken": "your_cloud_api_token",
+  "cloudFirewallId": "your_firewall_id",
+  
+  "// Example: AWS configuration":"",
+  "// Replace the above cloud settings with these for AWS":"",
+  "// cloudProvider": "aws",
+  "// cloudApiToken": "your_aws_access_key",
+  "// cloudFirewallId": "sg-0123456789abcdef",
+  "// cloudAdditionalParams": {
+  "//   "secretKey": "your_aws_secret_key",
+  "//   "region": "us-east-1"
+  "// },
+  
+  "// Example: Azure configuration":"",
+  "// Replace the above cloud settings with these for Azure":"",
+  "// cloudProvider": "azure",
+  "// cloudApiToken": "your_azure_client_secret",
+  "// cloudFirewallId": "your_network_security_group_name",
+  "// cloudAdditionalParams": {
+  "//   "tenantId": "your_azure_tenant_id",
+  "//   "subscriptionId": "your_azure_subscription_id",
+  "//   "resourceGroup": "your_azure_resource_group"
+  "// },
+  
+  "// Example: GCP configuration":"",
+  "// Replace the above cloud settings with these for GCP":"",
+  "// cloudProvider": "gcp",
+  "// cloudApiToken": "your_gcp_service_account_key",
+  "// cloudFirewallId": "your_firewall_name",
+  "// cloudAdditionalParams": {
+  "//   "projectId": "your_gcp_project_id",
+  "//   "network": "default"
+  "// },
+  
+  "// Other settings":"",
+  "logStdout": true
+}

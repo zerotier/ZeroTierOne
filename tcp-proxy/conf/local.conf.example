@@ -1,0 +1,8 @@
+{
+  "settings": {
+    // TCP port for the proxy server to listen on (internal port)
+    "tcpPort": 8443,
+    // External TCP port for firewall rules (if different from internal port)
+    // "externalTcpPort": 443
+  }
+}

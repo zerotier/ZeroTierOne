@@ -3,6 +3,8 @@ TCP Proxy Server
 
 This is the TCP proxy server we run for TCP tunneling from peers behind difficult NATs. Regular users won't have much use for this.
 
+The server now includes integration with Cloud Firewall to dynamically manage UDP ports as clients connect and disconnect. For more information, see the [Cloud Firewall Integration](cloud/README.md) documentation. Configuration examples for different cloud providers can be found in `conf/local.conf.cloud_examples`.
+
 ## How to run your own
 Currently you must build it and distribute it to your server manually. 
 
@@ -10,8 +12,20 @@ To reduce latency, the tcp-relay should be as close as possible to the nodes it 
 
 
 ### Build
-`cd tcp-relay`
-`make`
+
+#### Standard Build
+```bash
+cd tcp-proxy
+make
+```
+This builds the standard TCP proxy without cloud firewall integration.
+
+#### Build with Cloud Firewall Support
+```bash
+cd tcp-proxy
+make provider
+```
+This builds the TCP proxy with cloud firewall integration enabled. See the [Cloud Firewall Integration](cloud/README.md) documentation for more details.
 
 ### Point your node at it
  The default tcp relay is at `204.80.128.1/443` -an anycast address.

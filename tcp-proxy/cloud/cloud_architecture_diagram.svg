@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="800" height="600" viewBox="0 0 800 600">
+  <!-- Background -->
+  <rect x="0" y="0" width="800" height="600" fill="#f8f9fa" />
+  
+  <!-- Title -->
+  <text x="400" y="40" font-family="Arial" font-size="24" text-anchor="middle" font-weight="bold">ZeroTier Cloud Firewall Manager Architecture</text>
+  
+  <!-- Abstract Base Class -->
+  <rect x="300" y="80" width="200" height="100" rx="5" ry="5" fill="#e6f2ff" stroke="#0066cc" stroke-width="2" />
+  <text x="400" y="110" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">CloudFirewallManager</text>
+  <line x1="300" y1="120" x2="500" y2="120" stroke="#0066cc" stroke-width="1" />
+  <text x="310" y="140" font-family="Arial" font-size="12">+ initialize(): bool</text>
+  <text x="310" y="160" font-family="Arial" font-size="12">+ addPort(port: uint16_t): bool</text>
+  <text x="310" y="180" font-family="Arial" font-size="12">+ removePort(port: uint16_t): bool</text>
+  
+  <!-- Factory Class -->
+  <rect x="550" y="80" width="200" height="100" rx="5" ry="5" fill="#fff2e6" stroke="#ff8c1a" stroke-width="2" />
+  <text x="650" y="110" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">FirewallManagerFactory</text>
+  <line x1="550" y1="120" x2="750" y2="120" stroke="#ff8c1a" stroke-width="1" />
+  <text x="560" y="140" font-family="Arial" font-size="12">+ createFirewallManager(</text>
+  <text x="570" y="160" font-family="Arial" font-size="12">provider: string,</text>
+  <text x="570" y="180" font-family="Arial" font-size="12">...): CloudFirewallManager*</text>
+  
+  <!-- Implementations -->
+  <rect x="50" y="250" width="180" height="80" rx="5" ry="5" fill="#e6ffe6" stroke="#009900" stroke-width="2" />
+  <text x="140" y="280" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">LinodeFirewallManager</text>
+  <line x1="50" y1="290" x2="230" y2="290" stroke="#009900" stroke-width="1" />
+  <text x="60" y="310" font-family="Arial" font-size="12">Implementation for Linode</text>
+  
+  <rect x="250" y="250" width="180" height="80" rx="5" ry="5" fill="#e6ffe6" stroke="#009900" stroke-width="2" />
+  <text x="340" y="280" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">AwsFirewallManager</text>
+  <line x1="250" y1="290" x2="430" y2="290" stroke="#009900" stroke-width="1" />
+  <text x="260" y="310" font-family="Arial" font-size="12">Implementation for AWS</text>
+  
+  <rect x="450" y="250" width="180" height="80" rx="5" ry="5" fill="#e6ffe6" stroke="#009900" stroke-width="2" />
+  <text x="540" y="280" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">AzureFirewallManager</text>
+  <line x1="450" y1="290" x2="630" y2="290" stroke="#009900" stroke-width="1" />
+  <text x="460" y="310" font-family="Arial" font-size="12">Implementation for Azure</text>
+  
+  <rect x="650" y="250" width="180" height="80" rx="5" ry="5" fill="#e6ffe6" stroke="#009900" stroke-width="2" />
+  <text x="740" y="280" font-family="Arial" font-size="14" text-anchor="middle" font-weight="bold">GcpFirewallManager</text>
+  <line x1="650" y1="290" x2="830" y2="290" stroke="#009900" stroke-width="1" />
+  <text x="660" y="310" font-family="Arial" font-size="12">Implementation for GCP</text>
+  
+  <!-- Client Code -->
+  <rect x="300" y="400" width="200" height="80" rx="5" ry="5" fill="#ffe6e6" stroke="#cc0000" stroke-width="2" />
+  <text x="400" y="430" font-family="Arial" font-size="16" text-anchor="middle" font-weight="bold">tcp-proxy.cpp</text>
+  <line x1="300" y1="440" x2="500" y2="440" stroke="#cc0000" stroke-width="1" />
+  <text x="310" y="460" font-family="Arial" font-size="12">Client code using the factory</text>
+  
+  <!-- Inheritance Arrows -->
+  <line x1="140" y1="250" x2="350" y2="180" stroke="#009900" stroke-width="1.5" stroke-dasharray="5,5" />
+  <polygon points="350,180 340,170 360,170" fill="#009900" />
+  
+  <line x1="340" y1="250" x2="380" y2="180" stroke="#009900" stroke-width="1.5" stroke-dasharray="5,5" />
+  <polygon points="380,180 370,170 390,170" fill="#009900" />
+  
+  <line x1="540" y1="250" x2="420" y2="180" stroke="#009900" stroke-width="1.5" stroke-dasharray="5,5" />
+  <polygon points="420,180 410,170 430,170" fill="#009900" />
+  
+  <line x1="740" y1="250" x2="450" y2="180" stroke="#009900" stroke-width="1.5" stroke-dasharray="5,5" />
+  <polygon points="450,180 440,170 460,170" fill="#009900" />
+  
+  <!-- Factory Usage Arrow -->
+  <line x1="550" y1="130" x2="500" y2="130" stroke="#ff8c1a" stroke-width="1.5" />
+  <polygon points="500,130 510,125 510,135" fill="#ff8c1a" />
+  
+  <!-- Client Usage Arrows -->
+  <line x1="400" y1="400" x2="400" y2="180" stroke="#cc0000" stroke-width="1.5" />
+  <polygon points="400,180 395,190 405,190" fill="#cc0000" />
+  
+  <line x1="400" y1="400" x2="650" y2="180" stroke="#cc0000" stroke-width="1.5" />
+  <polygon points="650,180 640,185 645,170" fill="#cc0000" />
+  
+  <!-- Legend -->
+  <rect x="50" y="500" width="20" height="20" fill="#e6f2ff" stroke="#0066cc" stroke-width="2" />
+  <text x="80" y="515" font-family="Arial" font-size="12">Abstract Base Class</text>
+  
+  <rect x="200" y="500" width="20" height="20" fill="#fff2e6" stroke="#ff8c1a" stroke-width="2" />
+  <text x="230" y="515" font-family="Arial" font-size="12">Factory Class</text>
+  
+  <rect x="350" y="500" width="20" height="20" fill="#e6ffe6" stroke="#009900" stroke-width="2" />
+  <text x="380" y="515" font-family="Arial" font-size="12">Concrete Implementations</text>
+  
+  <rect x="550" y="500" width="20" height="20" fill="#ffe6e6" stroke="#cc0000" stroke-width="2" />
+  <text x="580" y="515" font-family="Arial" font-size="12">Client Code</text>
+  
+  <line x1="50" y="540" x2="70" y2="540" stroke="#009900" stroke-width="1.5" stroke-dasharray="5,5" />
+  <text x="80" y="545" font-family="Arial" font-size="12">Inheritance</text>
+  
+  <line x1="200" y="540" x2="220" y2="540" stroke="#cc0000" stroke-width="1.5" />
+  <text x="230" y="545" font-family="Arial" font-size="12">Usage/Dependency</text>
+</svg>
