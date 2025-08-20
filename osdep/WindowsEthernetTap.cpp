@@ -16,9 +16,10 @@
 #include "../node/Constants.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Utils.hpp"
-#include "..\windows\TapDriver6\tap-windows.h"
+#include "../windows/TapDriver6/tap-windows.h"
 #include "OSUtils.hpp"
 #include "WinDNSHelper.hpp"
+#include "../node/Metrics.hpp"
 
 #include <IPHlpApi.h>
 #include <SetupAPI.h>
@@ -816,7 +817,14 @@ std::vector<InetAddress> WindowsEthernetTap::ips() const
 
 void WindowsEthernetTap::put(const MAC& from, const MAC& to, unsigned int etherType, const void* data, unsigned int len)
 {
-	if ((! _initialized) || (! _enabled) || (_tap == INVALID_HANDLE_VALUE) || (len > _mtu))
+	// Check MTU and add to histogram
+	ZeroTier::Metrics::vl2_frame_size_hist.Observe(len);
+	if (len > this->_mtu) {
+		ZeroTier::Metrics::vl2_would_fragment_or_drop_rx++;
+		return;
+	}
+	
+	if ((! _initialized) || (! _enabled) || (_tap == INVALID_HANDLE_VALUE))
 		return;
 
 	Mutex::Lock _l(_injectPending_m);

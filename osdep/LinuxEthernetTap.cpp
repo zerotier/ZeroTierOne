@@ -16,6 +16,7 @@
 #endif
 
 #include "../node/Constants.hpp"
+#include "../node/Metrics.hpp"
 
 #ifdef __LINUX__
 
@@ -507,6 +508,11 @@ std::vector<InetAddress> LinuxEthernetTap::ips() const
 
 void LinuxEthernetTap::put(const MAC& from, const MAC& to, unsigned int etherType, const void* data, unsigned int len)
 {
+	// VL2 frame size histogram
+	ZeroTier::Metrics::vl2_frame_size_hist.Observe(len);
+	if (len > this->_mtu) {
+		ZeroTier::Metrics::vl2_would_fragment_or_drop_rx++;
+	}
 	char putBuf[ZT_MAX_MTU + 64];
 	if ((_fd > 0) && (len <= _mtu) && (_enabled)) {
 		to.copyTo(putBuf, 6);

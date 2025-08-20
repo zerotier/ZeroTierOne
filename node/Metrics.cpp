@@ -13,6 +13,7 @@
 // clang-format off
 #include <prometheus/simpleapi.h>
 #include <prometheus/histogram.h>
+#include "Metrics.hpp"
 // clang-format on
 
 namespace prometheus {
@@ -162,5 +163,68 @@ prometheus::simpleapi::gauge_metric_t pool_avail { "controller_pgsql_available_c
 prometheus::simpleapi::gauge_metric_t pool_in_use { "controller_pgsql_in_use_conns", "number of postgres database connections in use" };
 prometheus::simpleapi::counter_metric_t pool_errors { "controller_pgsql_connection_errors", "number of connection errors the connection pool has seen" };
 #endif
-}	// namespace Metrics
-}	// namespace ZeroTier
+
+        // Fragmentation Metrics
+        prometheus::simpleapi::counter_family_t packet_fragmentation
+        { "zt_packet_fragmentation", "ZeroTier packet fragmentation events" };
+
+        // VL2 Fragmentation Metrics
+        prometheus::simpleapi::counter_metric_t vl2_oversized_frame_tx
+        { packet_fragmentation.Add({{"layer", "VL2"}, {"direction", "tx"}, {"reason", "oversized_frame"}}) };
+        prometheus::simpleapi::counter_metric_t vl2_would_fragment_or_drop_rx
+        { packet_fragmentation.Add({{"layer", "VL2"}, {"direction", "rx"}, {"reason", "would_fragment_or_drop"}}) };
+
+        // VL1 Fragmentation Metrics
+        prometheus::simpleapi::counter_metric_t vl1_fragmented_tx
+        { packet_fragmentation.Add({{"layer", "VL1"}, {"direction", "tx"}, {"reason", "mtu_exceeded"}}) };
+        prometheus::simpleapi::counter_metric_t vl1_fragment_rx
+        { packet_fragmentation.Add({{"layer", "VL1"}, {"direction", "rx"}, {"reason", "fragment"}}) };
+        prometheus::simpleapi::counter_metric_t vl1_reassembly_failed_rx
+        { packet_fragmentation.Add({{"layer", "VL1"}, {"direction", "rx"}, {"reason", "reassembly_failed"}}) };
+        prometheus::simpleapi::counter_metric_t vl1_fragment_without_head_rx
+        { packet_fragmentation.Add({{"layer", "VL1"}, {"direction", "rx"}, {"reason", "fragment_without_head"}}) };
+        prometheus::simpleapi::counter_metric_t vl1_fragment_before_head_rx
+        { packet_fragmentation.Add({{"layer", "VL1"}, {"direction", "rx"}, {"reason", "fragment_before_head"}}) };
+        prometheus::simpleapi::counter_metric_t vl1_duplicate_fragment_rx
+        { packet_fragmentation.Add({{"layer", "VL1"}, {"direction", "rx"}, {"reason", "duplicate_fragment"}}) };
+        prometheus::simpleapi::counter_metric_t vl1_duplicate_head_rx
+        { packet_fragmentation.Add({{"layer", "VL1"}, {"direction", "rx"}, {"reason", "duplicate_head"}}) };
+
+        // VL1 Fragmentation Histogram and Counters
+        prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &vl1_fragments_per_packet_histogram =
+            prometheus::Builder<prometheus::Histogram<uint64_t>>()
+                .Name("zt_vl1_fragments_per_packet")
+                .Help("Histogram of fragments per packet at VL1")
+                .Register(prometheus::simpleapi::registry);
+        prometheus::simpleapi::counter_metric_t vl1_incomplete_reassembly_rx
+        { packet_fragmentation.Add({{"layer", "VL1"}, {"direction", "rx"}, {"reason", "incomplete_reassembly"}}) };
+        prometheus::simpleapi::counter_metric_t vl1_vl2_double_fragmentation_tx
+        { packet_fragmentation.Add({{"layer", "VL1_VL2"}, {"direction", "tx"}, {"reason", "double_fragmentation"}}) };
+
+        prometheus::Histogram<uint64_t> &vl1_fragments_per_packet_hist =
+            vl1_fragments_per_packet_histogram.Add(
+                {},
+                std::vector<uint64_t>(std::begin(ZeroTier::Metrics::VL1_FRAGMENTS_PER_PACKET_BUCKETS), std::end(ZeroTier::Metrics::VL1_FRAGMENTS_PER_PACKET_BUCKETS))
+            );
+
+        // VL2 Frame Size Histogram
+        // Buckets: 512 (IoT/legacy), 576 (min IPv4), 1200 (QUIC/mobile), 1280 (min IPv6),
+        // 1332, 1380, 1400 (VPN/overlay), 1420 (cloud), 1460 (TCP MSS), 1472 (ICMP/MTU),
+        // 1480 (ICMP/MTU), 1492 (PPPoE), 1500 (Ethernet), 2800 (VL2 default), 9000 (jumbo)
+        prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &vl2_frame_size_histogram =
+            prometheus::Builder<prometheus::Histogram<uint64_t>>()
+                .Name("zt_vl2_frame_size")
+                .Help("Histogram of frame sizes delivered to TAP (VL2)")
+                .Register(prometheus::simpleapi::registry);
+        prometheus::simpleapi::counter_metric_t vl2_incomplete_reassembly_rx
+        { packet_fragmentation.Add({{"layer", "VL2"}, {"direction", "rx"}, {"reason", "incomplete_reassembly"}}) };
+        prometheus::simpleapi::counter_metric_t vl2_vl1_double_fragmentation_tx
+        { packet_fragmentation.Add({{"layer", "VL2_VL1"}, {"direction", "tx"}, {"reason", "double_fragmentation"}}) };
+
+        prometheus::Histogram<uint64_t> &vl2_frame_size_hist =
+            vl2_frame_size_histogram.Add(
+                {},
+                std::vector<uint64_t>(std::begin(ZeroTier::Metrics::VL2_FRAME_SIZE_BUCKETS), std::end(ZeroTier::Metrics::VL2_FRAME_SIZE_BUCKETS))
+            );
+    }
+}

@@ -22,6 +22,7 @@
 #include "MacEthernetTap.hpp"
 #include "MacEthernetTapAgent.h"
 #include "OSUtils.hpp"
+#include "../node/Metrics.hpp"
 
 #include <algorithm>
 #include <arpa/inet.h>
@@ -393,6 +394,11 @@ std::vector<InetAddress> MacEthernetTap::ips() const
 
 void MacEthernetTap::put(const MAC& from, const MAC& to, unsigned int etherType, const void* data, unsigned int len)
 {
+	// VL2 frame size histogram
+	Metrics::vl2_frame_size_hist.Observe(len);
+	if (len > this->_mtu) {
+		Metrics::vl2_would_fragment_or_drop_rx++;
+	}
 	struct iovec iov[3];
 	unsigned char hdr[15];
 	uint16_t l;

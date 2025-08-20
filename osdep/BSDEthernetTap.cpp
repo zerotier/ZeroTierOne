@@ -51,6 +51,13 @@
 #include <unistd.h>
 #include <utility>
 
+#include "../node/Constants.hpp"
+#include "../node/Utils.hpp"
+#include "../node/Mutex.hpp"
+#include "OSUtils.hpp"
+#include "BSDEthernetTap.hpp"
+#include "../node/Metrics.hpp"
+
 #define ZT_BASE32_CHARS "0123456789abcdefghijklmnopqrstuv"
 #define ZT_TAP_BUF_SIZE (1024 * 16)
 
@@ -353,6 +360,11 @@ std::vector<InetAddress> BSDEthernetTap::ips() const
 
 void BSDEthernetTap::put(const MAC& from, const MAC& to, unsigned int etherType, const void* data, unsigned int len)
 {
+	// VL2 frame size histogram
+	Metrics::vl2_frame_size_hist.Observe(len);
+	if (len > this->_mtu) {
+		Metrics::vl2_would_fragment_or_drop_rx++;
+	}
 	char putBuf[ZT_MAX_MTU + 64];
 	if ((_fd > 0) && (len <= _mtu) && (_enabled)) {
 		to.copyTo(putBuf, 6);

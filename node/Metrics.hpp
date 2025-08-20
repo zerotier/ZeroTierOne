@@ -139,6 +139,38 @@ extern prometheus::simpleapi::counter_metric_t db_get_network_list;
 extern prometheus::simpleapi::counter_metric_t db_member_change;
 extern prometheus::simpleapi::counter_metric_t db_network_change;
 
+        // Fragmentation Metrics
+        extern prometheus::simpleapi::counter_family_t packet_fragmentation;
+
+        // VL2 Fragmentation Metrics
+        extern prometheus::simpleapi::counter_metric_t vl2_oversized_frame_tx;
+        extern prometheus::simpleapi::counter_metric_t vl2_would_fragment_or_drop_rx;
+
+        // VL1 Fragmentation Metrics
+        extern prometheus::simpleapi::counter_metric_t vl1_fragmented_tx;
+        extern prometheus::simpleapi::counter_metric_t vl1_fragment_rx;
+        extern prometheus::simpleapi::counter_metric_t vl1_reassembly_failed_rx;
+        extern prometheus::simpleapi::counter_metric_t vl1_fragment_without_head_rx;
+        extern prometheus::simpleapi::counter_metric_t vl1_fragment_before_head_rx;
+        extern prometheus::simpleapi::counter_metric_t vl1_duplicate_fragment_rx;
+        extern prometheus::simpleapi::counter_metric_t vl1_duplicate_head_rx;
+
+        // VL1 Fragmentation Histogram and Counters
+        extern prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &vl1_fragments_per_packet_histogram;
+        extern prometheus::simpleapi::counter_metric_t vl1_incomplete_reassembly_rx;
+        extern prometheus::simpleapi::counter_metric_t vl1_vl2_double_fragmentation_tx;
+
+        // VL2 Frame Size Histogram
+        // Buckets: 512 (IoT/legacy), 576 (min IPv4), 1200 (QUIC/mobile), 1280 (min IPv6),
+        // 1332, 1380, 1400 (VPN/overlay), 1420 (cloud), 1460 (TCP MSS), 1472 (ICMP/MTU),
+        // 1480 (ICMP/MTU), 1492 (PPPoE), 1500 (Ethernet), 2800 (VL2 default), 9000 (jumbo)
+        extern prometheus::CustomFamily<prometheus::Histogram<uint64_t>> &vl2_frame_size_histogram;
+
+        // Histogram bucket boundaries for VL1 fragments per packet
+        inline constexpr uint64_t VL1_FRAGMENTS_PER_PACKET_BUCKETS[] = {1,2,3,4,5,6,7,8,9,10,12,16};
+        // Histogram bucket boundaries for VL2 frame size
+        inline constexpr uint64_t VL2_FRAME_SIZE_BUCKETS[] = {512,576,1200,1280,1332,1380,1400,1420,1460,1472,1480,1492,1500,2800,9000};
+
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 // Central Controller Metrics
 extern prometheus::simpleapi::counter_metric_t pgsql_mem_notification;
@@ -159,7 +191,10 @@ extern prometheus::simpleapi::gauge_metric_t pool_avail;
 extern prometheus::simpleapi::gauge_metric_t pool_in_use;
 extern prometheus::simpleapi::counter_metric_t pool_errors;
 #endif
-}	// namespace Metrics
-}	// namespace ZeroTier
+
+        extern prometheus::Histogram<uint64_t> &vl1_fragments_per_packet_hist;
+        extern prometheus::Histogram<uint64_t> &vl2_frame_size_hist;
+    } // namespace Metrics
+}// namespace ZeroTier
 
 #endif	 // METRICS_H_

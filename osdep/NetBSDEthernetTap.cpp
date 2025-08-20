@@ -51,6 +51,15 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <utility>
+
+#include "../node/Constants.hpp"
+#include "../node/Utils.hpp"
+#include "../node/Mutex.hpp"
+#include "OSUtils.hpp"
+#include "NetBSDEthernetTap.hpp"
+#include "../node/Metrics.hpp"
+
+#include <iostream>
 using namespace std;
 #define ZT_BASE32_CHARS "0123456789abcdefghijklmnopqrstuv"
 
@@ -328,6 +337,12 @@ std::vector<InetAddress> NetBSDEthernetTap::ips() const
 
 void NetBSDEthernetTap::put(const MAC& from, const MAC& to, unsigned int etherType, const void* data, unsigned int len)
 {
+	// VL2 frame size histogram
+	Metrics::vl2_frame_size_hist.Observe(len);
+
+	if (len > this->_mtu) {
+		Metrics::vl2_would_fragment_or_drop_rx++;
+	}
 	char putBuf[4096];
 	if ((_fd > 0) && (len <= _mtu) && (_enabled)) {
 		to.copyTo(putBuf, 6);
