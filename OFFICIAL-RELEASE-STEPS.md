@@ -30,4 +30,4 @@ You will need [Packages](http://s.sudre.free.fr/Software/Packages/about.html) an
 
 ## Windows
 
-First load the Visual Studio solution and rebuild the UI and ZeroTier One in both x64 and i386 `Release` mode. Then load [Advanced Installer Enterprise](http://www.advancedinstaller.com/), check that the version is correct, and build. The build will fail if any build artifacts are missing, and Windows must have our product singing key (from DigiCert) available to sign the resulting MSI file. The MSI must then be tested on at least a few different CLEAN Windows VMs to ensure that the installer is valid and properly signed.
+First load the Visual Studio solution and rebuild the UI and ZeroTier One in both x64, i386, and arm64 `Release` mode. Then load [Advanced Installer Enterprise](http://www.advancedinstaller.com/), check that the version is correct, and build. The build will fail if any build artifacts are missing, and Windows must have our product singing key (from DigiCert) available to sign the resulting MSI file. The MSI must then be tested on at least a few different CLEAN Windows VMs to ensure that the installer is valid and properly signed.

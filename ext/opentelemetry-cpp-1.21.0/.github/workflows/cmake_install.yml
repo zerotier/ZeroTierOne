@@ -1,0 +1,372 @@
+name: CMake Install Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  windows_2022_vcpkg_submodule:
+    name: Windows 2022 vcpkg submodule versions cxx17 (static libs - dll)
+    runs-on: windows-2022
+    env:
+      # Set to the latest version of cmake 3.x
+      CMAKE_VERSION: '3.31.6'
+      # cxx17 is the default for windows-2022
+      CXX_STANDARD: '17'
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: 'recursive'
+      - name: Build dependencies with vcpkg submodule
+        run: |
+          ./ci/setup_cmake.ps1
+          ./ci/setup_windows_ci_environment.ps1
+      - name: Run Tests
+        run: ./ci/do_ci.ps1 cmake.install.test
+      - name: Run DLL Tests
+        run: ./ci/do_ci.ps1 cmake.dll.install.test
+
+  windows_2019_vcpkg_submodule_min_cmake:
+    name: Windows 2019 vcpkg submodule versions minimum cmake cxx14 (static libs)
+    runs-on: windows-2019
+    env:
+      # cmake 3.15 is the minimum for windows builds (See https://github.com/open-telemetry/opentelemetry-cpp/pull/3349#discussion_r2030319430)
+      CMAKE_VERSION: '3.15.0'
+      # cxx14 is the default for windows-2019
+      CXX_STANDARD: '14'
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: 'recursive'
+      - name: Build dependencies with vcpkg submodule
+        run: |
+          ./ci/setup_cmake.ps1
+          ./ci/setup_windows_ci_environment.ps1
+      - name: Run Tests
+        run: ./ci/do_ci.ps1 cmake.install.test
+
+  ubuntu_2404_system_packages:
+    name: Ubuntu 24.04 apt packages cxx17 (static libs - shared libs)
+    runs-on: ubuntu-24.04
+    env:
+      INSTALL_TEST_DIR: '/home/runner/install_test'
+      # CMake 3.28 is apt package version for Ubuntu 24.04
+      CMAKE_VERSION: '3.28.3'
+      # cxx17 is the default for Ubuntu 24.04
+      CXX_STANDARD: '17'
+      BUILD_TYPE: 'Debug'
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        submodules: 'recursive'
+    - name: Install libcurl, zlib, nlohmann-json with apt
+      run: |
+        sudo -E ./ci/setup_ci_environment.sh
+        sudo -E ./ci/setup_cmake.sh
+        sudo -E ./ci/setup_googletest.sh
+    - name: Install abseil, protobuf, and grpc with apt
+      run: |
+        sudo -E apt-get update
+        sudo -E apt-get install -y libabsl-dev libprotobuf-dev libgrpc++-dev protobuf-compiler protobuf-compiler-grpc
+    - name: Run Tests (static libs)
+      env:
+        BUILD_SHARED_LIBS: 'OFF'
+      run: ./ci/do_ci.sh cmake.install.test
+    - name: Run Tests (shared libs)
+      env:
+        BUILD_SHARED_LIBS: 'ON'
+      run: ./ci/do_ci.sh cmake.install.test
+
+  ubuntu_2404_latest:
+    name: Ubuntu 24.04 latest versions cxx20 (static libs)
+    runs-on: ubuntu-24.04
+    env:
+      INSTALL_TEST_DIR: '/home/runner/install_test'
+      # Set to the latest version of cmake 3.x
+      CMAKE_VERSION: '3.31.6'
+      # Set to the latest cxx standard supported by opentelemetry-cpp
+      CXX_STANDARD: '20'
+      # Versions below set to the latest version available
+      # The abseil and protobuf versions are taken from
+      # the grpc submodules at the GRPC_VERSION tag
+      GOOGLETEST_VERSION: '1.16.0'
+      ABSEIL_CPP_VERSION: '20240722.1'
+      PROTOBUF_VERSION: '29.0'
+      GRPC_VERSION: 'v1.71.0'
+      BUILD_TYPE: 'Debug'
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        submodules: 'recursive'
+    - name: Install gtest, libcurl, zlib, nlohmann-json with apt
+      run: |
+        sudo -E ./ci/setup_ci_environment.sh
+        sudo -E ./ci/setup_cmake.sh
+        sudo -E ./ci/setup_googletest.sh
+    - name: Build abseil, protobuf, and grpc with ci scripts
+      run: |
+        sudo -E ./ci/install_abseil.sh
+        sudo -E ./ci/install_protobuf.sh
+        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+    - name: Run Tests (static libs)
+      env:
+        BUILD_SHARED_LIBS: 'OFF'
+      run: ./ci/do_ci.sh cmake.install.test
+
+  ubuntu_2204_stable:
+    name: Ubuntu 22.04 stable versions cxx17 (static libs - shared libs)
+    runs-on: ubuntu-22.04
+    env:
+      INSTALL_TEST_DIR: '/home/runner/install_test'
+      # CMake 3.22 is the apt package version for Ubuntu 22.04
+      CMAKE_VERSION: '3.22.0'
+      CXX_STANDARD: '17'
+      # These are stable versions tested in the main ci workflow
+      # and defaults in the devcontainer
+      GOOGLETEST_VERSION: '1.14.0'
+      ABSEIL_CPP_VERSION: '20230125.3'
+      PROTOBUF_VERSION: '23.3'
+      GRPC_VERSION: 'v1.55.0'
+      BUILD_TYPE: 'Debug'
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        submodules: 'recursive'
+    - name: Install gtest, libcurl, zlib, nlohmann-json with apt
+      run: |
+        sudo -E ./ci/setup_ci_environment.sh
+        sudo -E ./ci/setup_cmake.sh
+        sudo -E ./ci/setup_googletest.sh
+    - name: Build abseil, protobuf, and grpc with ci scripts
+      run: |
+        sudo -E ./ci/install_abseil.sh
+        sudo -E ./ci/install_protobuf.sh
+        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+    - name: Run Tests (static libs)
+      env:
+        BUILD_SHARED_LIBS: 'OFF'
+      run: ./ci/do_ci.sh cmake.install.test
+    - name: Run Tests (shared libs)
+      env:
+        BUILD_SHARED_LIBS: 'ON'
+      run: ./ci/do_ci.sh cmake.install.test
+
+  ubuntu_2204_minimum:
+    name: Ubuntu 22.04 minimum versions cxx14 (static libs - shared libs)
+    runs-on: ubuntu-22.04
+    env:
+      INSTALL_TEST_DIR: '/home/runner/install_test'
+      # Set to the current minimum version of cmake
+      CMAKE_VERSION: '3.14.0'
+      # cxx14 is the default for Ubuntu 22.04
+      CXX_STANDARD: '14'
+      # This is the apt package version of googletest for Ubuntu 22.04
+      GOOGLETEST_VERSION: '1.11.0'
+      # These are minimum versions tested in the main ci workflow
+      ABSEIL_CPP_VERSION: '20220623.2'
+      PROTOBUF_VERSION: '21.12'
+      GRPC_VERSION: 'v1.49.2'
+      BUILD_TYPE: 'Debug'
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        submodules: 'recursive'
+    - name: Install gtest, libcurl, zlib, nlohmann-json with apt
+      run: |
+        sudo -E ./ci/setup_ci_environment.sh
+        sudo -E ./ci/setup_cmake.sh
+        sudo -E ./ci/setup_googletest.sh
+    - name: Build abseil, protobuf, and grpc with ci scripts
+      run: |
+        sudo -E ./ci/install_abseil.sh
+        sudo -E ./ci/install_protobuf.sh
+        sudo -E ./ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+    - name: Run Tests (static libs)
+      env:
+          BUILD_SHARED_LIBS: 'OFF'
+      run: ./ci/do_ci.sh cmake.install.test
+    - name: Run Tests (shared libs)
+      env:
+          BUILD_SHARED_LIBS: 'ON'
+      run: ./ci/do_ci.sh cmake.install.test
+
+  ubuntu_2404_conan_stable:
+    name: Ubuntu 24.04 conan stable versions cxx17 (static libs - shared libs - opentracing shim)
+    runs-on: ubuntu-24.04
+    env:
+      INSTALL_TEST_DIR: '/home/runner/install_test'
+       # CMake 3.28 is apt package version for Ubuntu 24.04
+      CMAKE_VERSION: '3.28.3'
+      CXX_STANDARD: '17'
+      CMAKE_TOOLCHAIN_FILE: /home/runner/conan/build/Debug/generators/conan_toolchain.cmake
+      BUILD_TYPE: 'Debug'
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: 'recursive'
+      - name: Install Conan
+        run: |
+          python3 -m pip install pip==25.0.1
+          pip install "conan==2.15.1"
+          conan profile detect --force
+      - name: Install or build all dependencies with Conan
+        run: |
+          sudo -E ./ci/setup_cmake.sh
+          conan install install/conan/conanfile_stable.txt --build=missing -of /home/runner/conan -s build_type=${BUILD_TYPE} -s compiler.cppstd=${CXX_STANDARD}
+      - name: Run Tests (static libs)
+        env:
+          BUILD_SHARED_LIBS: 'OFF'
+        run: ./ci/do_ci.sh cmake.install.test
+      - name: Run Tests (shared libs)
+        env:
+          BUILD_SHARED_LIBS: 'ON'
+        run: ./ci/do_ci.sh cmake.install.test
+      - name: verify pkgconfig packages
+        run: |
+          export PKG_CONFIG_PATH=$INSTALL_TEST_DIR/lib/pkgconfig:$PKG_CONFIG_PATH
+          ./ci/verify_packages.sh
+      - name: Run OpenTracing Shim Test
+        run: ./ci/do_ci.sh cmake.opentracing_shim.install.test
+
+  ubuntu_2404_conan_latest:
+    name: Ubuntu 24.04 conan latest versions cxx17 (static libs)
+    runs-on: ubuntu-24.04
+    env:
+      INSTALL_TEST_DIR: '/home/runner/install_test'
+      # Set to the latest version of cmake 3.x
+      CMAKE_VERSION: '3.31.6'
+      CXX_STANDARD: '17'
+      CMAKE_TOOLCHAIN_FILE: /home/runner/conan/build/Debug/generators/conan_toolchain.cmake
+      BUILD_TYPE: 'Debug'
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: 'recursive'
+      - name: Install Conan
+        run: |
+          python3 -m pip install pip==25.0.1
+          pip install "conan==2.15.1"
+          conan profile detect --force
+      - name: Install or build all dependencies with Conan
+        run: |
+          sudo -E ./ci/setup_cmake.sh
+          conan install install/conan/conanfile_latest.txt --build=missing -of /home/runner/conan -s build_type=${BUILD_TYPE} -s compiler.cppstd=${CXX_STANDARD}
+      - name: Run Tests (static libs)
+        env:
+          BUILD_SHARED_LIBS: 'OFF'
+        run: ./ci/do_ci.sh cmake.install.test
+      - name: verify pkgconfig packages
+        run: |
+          export PKG_CONFIG_PATH=$INSTALL_TEST_DIR/lib/pkgconfig:$PKG_CONFIG_PATH
+          ./ci/verify_packages.sh
+
+  macos_14_conan_stable:
+    name: macOS 14 conan stable versions cxx17 (static libs)
+    runs-on: macos-14
+    env:
+      INSTALL_TEST_DIR: '/Users/runner/install_test'
+      CMAKE_VERSION: '3.28.3'
+      CXX_STANDARD: '17'
+      CMAKE_TOOLCHAIN_FILE: '/Users/runner/conan/build/Debug/generators/conan_toolchain.cmake'
+      BUILD_TYPE: 'Debug'
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        submodules: 'recursive'
+    - name: Install Conan and tools
+      run: |
+        brew install conan autoconf automake libtool coreutils
+        ./ci/setup_cmake_macos.sh
+        conan profile detect --force
+    - name: Install or build all dependencies with Conan
+      run: conan install install/conan/conanfile_stable.txt --build=missing -of /Users/runner/conan -s build_type=${BUILD_TYPE} -s compiler.cppstd=${CXX_STANDARD}
+    - name: Run Tests (static libs)
+      env:
+        BUILD_SHARED_LIBS: 'OFF'
+      run: ./ci/do_ci.sh cmake.install.test
+
+  macos_14_brew_packages:
+    name: macOS 14 brew latest versions cxx17 (static libs)
+    runs-on: macos-14
+    env:
+      INSTALL_TEST_DIR: '/Users/runner/install_test'
+      # Set to the latest version of cmake 3.x
+      CMAKE_VERSION: '3.31.6'
+      CXX_STANDARD: '17'
+      BUILD_TYPE: 'Debug'
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        submodules: 'recursive'
+    - name: Install Dependencies with Homebrew
+      run: |
+        ./ci/setup_cmake_macos.sh
+        brew install coreutils
+        brew install googletest
+        brew install google-benchmark
+        brew install zlib
+        brew install abseil
+        brew install protobuf
+        brew install grpc
+        brew install nlohmann-json
+        brew install prometheus-cpp
+    - name: Run Tests (static libs)
+      env:
+        BUILD_SHARED_LIBS: 'OFF'
+      run: ./ci/do_ci.sh cmake.install.test

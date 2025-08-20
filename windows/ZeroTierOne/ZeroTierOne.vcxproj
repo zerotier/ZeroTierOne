@@ -66,17 +66,10 @@
     <ClCompile Include="..\..\node\AES_aesni.cpp" />
     <ClCompile Include="..\..\node\AES_armcrypto.cpp" />
     <ClCompile Include="..\..\node\Bond.cpp" />
-    <ClCompile Include="..\..\node\C25519.cpp">
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">MaxSpeed</Optimization>
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">MaxSpeed</Optimization>
-      <Optimization Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">MaxSpeed</Optimization>
-      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Default</BasicRuntimeChecks>
-      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Default</BasicRuntimeChecks>
-      <BasicRuntimeChecks Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">Default</BasicRuntimeChecks>
-    </ClCompile>
     <ClCompile Include="..\..\node\Capability.cpp" />
     <ClCompile Include="..\..\node\CertificateOfMembership.cpp" />
     <ClCompile Include="..\..\node\CertificateOfOwnership.cpp" />
+    <ClCompile Include="..\..\node\ECC.cpp" />
     <ClCompile Include="..\..\node\Identity.cpp" />
     <ClCompile Include="..\..\node\IncomingPacket.cpp" />
     <ClCompile Include="..\..\node\InetAddress.cpp" />
@@ -200,7 +193,7 @@
     <ClInclude Include="..\..\node\Bond.hpp" />
     <ClInclude Include="..\..\node\BondController.hpp" />
     <ClInclude Include="..\..\node\Buffer.hpp" />
-    <ClInclude Include="..\..\node\C25519.hpp" />
+    <ClInclude Include="..\..\node\ECC.hpp" />
     <ClInclude Include="..\..\node\CertificateOfMembership.hpp" />
     <ClInclude Include="..\..\node\CertificateOfOwnership.hpp" />
     <ClInclude Include="..\..\node\Constants.hpp" />
@@ -415,7 +408,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>${SolutionDir)\..\ext\opentelemetry-cpp-api-only;$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;$(SolutionDir)\..\ext\opentelemetry-cpp-api-only\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
@@ -458,7 +451,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>${SolutionDir)\..\ext\opentelemetry-cpp-api-only;$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;$(SolutionDir)\..\ext\opentelemetry-cpp-api-only\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_RULES_ENGINE_DEBUGGING;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
@@ -481,7 +474,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;$(SolutionDir)\..\ext\opentelemetry-cpp-api-only\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_EXPORT;FD_SETSIZE=1024;NOMINMAX;STATICLIB;WIN32;ZT_TRACE;ZT_RULES_ENGINE_DEBUGGING;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="disable";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <DisableSpecificWarnings>4996</DisableSpecificWarnings>
@@ -549,7 +542,7 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;$(SolutionDir)\..\ext\opentelemetry-cpp-api-only\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;STATICLIB;ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <StringPooling>true</StringPooling>
@@ -585,7 +578,7 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;$(SolutionDir)\..\ext\opentelemetry-cpp-api-only\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_SALSA20_SSE;ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
@@ -623,7 +616,7 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\ext;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\core\include;$(SolutionDir)\..\ext\prometheus-cpp-lite-1.0\simpleapi\include;$(SolutionDir)\..\rustybits\target;$(SolutionDir)\..\ext\opentelemetry-cpp-api-only\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>ZT_SSO_ENABLED=1;ZT_EXPORT;FD_SETSIZE=1024;STATICLIB;ZT_SOFTWARE_UPDATE_DEFAULT="apply";ZT_USE_MINIUPNPC;MINIUPNP_STATICLIB;WIN32;NOMINMAX;ZT_BUILD_PLATFORM=2;ZT_BUILD_ARCHITECTURE=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>

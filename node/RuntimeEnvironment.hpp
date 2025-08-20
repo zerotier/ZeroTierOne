@@ -14,11 +14,11 @@
 #ifndef ZT_RUNTIMEENVIRONMENT_HPP
 #define ZT_RUNTIMEENVIRONMENT_HPP
 
-#include <string.h>
-
 #include "Constants.hpp"
-#include "Utils.hpp"
 #include "Identity.hpp"
+#include "Utils.hpp"
+
+#include <string.h>
 
 namespace ZeroTier {
 
@@ -36,17 +36,9 @@ class PacketMultiplexer;
 /**
  * Holds global state for an instance of ZeroTier::Node
  */
-class RuntimeEnvironment
-{
-public:
-	RuntimeEnvironment(Node *n) :
-		node(n)
-		,localNetworkController((NetworkController *)0)
-		,rtmem((void *)0)
-		,sw((Switch *)0)
-		,mc((Multicaster *)0)
-		,topology((Topology *)0)
-		,sa((SelfAwareness *)0)
+class RuntimeEnvironment {
+  public:
+	RuntimeEnvironment(Node* n) : node(n), localNetworkController((NetworkController*)0), rtmem((void*)0), sw((Switch*)0), mc((Multicaster*)0), topology((Topology*)0), sa((SelfAwareness*)0)
 	{
 		publicIdentityStr[0] = (char)0;
 		secretIdentityStr[0] = (char)0;
@@ -54,17 +46,17 @@ public:
 
 	~RuntimeEnvironment()
 	{
-		Utils::burn(secretIdentityStr,sizeof(secretIdentityStr));
+		Utils::burn(secretIdentityStr, sizeof(secretIdentityStr));
 	}
 
 	// Node instance that owns this RuntimeEnvironment
-	Node *const node;
+	Node* const node;
 
 	// This is set externally to an instance of this base class
-	NetworkController *localNetworkController;
+	NetworkController* localNetworkController;
 
 	// Memory actually occupied by Trace, Switch, etc.
-	void *rtmem;
+	void* rtmem;
 
 	/* Order matters a bit here. These are constructed in this order
 	 * and then deleted in the opposite order on Node exit. The order ensures
@@ -72,13 +64,13 @@ public:
 	 *
 	 * These are constant and never null after startup unless indicated. */
 
-	Trace *t;
-	Switch *sw;
-	Multicaster *mc;
-	Topology *topology;
-	SelfAwareness *sa;
-	Bond *bc;
-	PacketMultiplexer *pm;
+	Trace* t;
+	Switch* sw;
+	Multicaster* mc;
+	Topology* topology;
+	SelfAwareness* sa;
+	Bond* bc;
+	PacketMultiplexer* pm;
 
 	// This node's identity and string representations thereof
 	Identity identity;
@@ -86,6 +78,6 @@ public:
 	char secretIdentityStr[ZT_IDENTITY_STRING_BUFFER_LENGTH];
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

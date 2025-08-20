@@ -1,9 +1,5 @@
 #!/bin/bash
 
-if [ -z "$ZT_IDENTITY_PATH" ]; then
-    echo '*** FAILED: ZT_IDENTITY_PATH environment variable is not defined'
-    exit 1
-fi
 if [ -z "$ZT_DB_HOST" ]; then
     echo '*** FAILED: ZT_DB_HOST environment variable not defined'
     exit 1
@@ -23,6 +19,9 @@ fi
 if [ -z "$ZT_DB_PASSWORD" ]; then
     echo '*** FAILED: ZT_DB_PASSWORD environment variable not defined'
     exit 1
+fi
+if [ -z "$ZT_DB_TYPE" ]; then
+    ZT_DB_TYPE="postgres"
 fi
 
 REDIS=""
@@ -56,10 +55,14 @@ fi
 mkdir -p /var/lib/zerotier-one
 
 pushd /var/lib/zerotier-one
-ln -s $ZT_IDENTITY_PATH/identity.public identity.public
-ln -s $ZT_IDENTITY_PATH/identity.secret identity.secret
-if [ -f  "$ZT_IDENTITY_PATH/authtoken.secret" ]; then
-    ln -s $ZT_IDENTITY_PATH/authtoken.secret authtoken.secret
+if [ -d "$ZT_IDENTITY_PATH" ]; then
+    echo '*** Using existing ZT identity from path $ZT_IDENTITY_PATH'
+
+    ln -s $ZT_IDENTITY_PATH/identity.public identity.public
+    ln -s $ZT_IDENTITY_PATH/identity.secret identity.secret
+    if [ -f  "$ZT_IDENTITY_PATH/authtoken.secret" ]; then
+        ln -s $ZT_IDENTITY_PATH/authtoken.secret authtoken.secret
+    fi
 fi
 popd
 
@@ -70,7 +73,7 @@ APP_NAME="controller-$(cat /var/lib/zerotier-one/identity.public | cut -d ':' -f
 
 echo "{
     \"settings\": {
-        \"controllerDbPath\": \"postgres:host=${ZT_DB_HOST} port=${ZT_DB_PORT} dbname=${ZT_DB_NAME} user=${ZT_DB_USER} password=${ZT_DB_PASSWORD} application_name=${APP_NAME} sslmode=prefer sslcert=${DB_CLIENT_CERT} sslkey=${DB_CLIENT_KEY} sslrootcert=${DB_SERVER_CA}\",
+        \"controllerDbPath\": \"${ZT_DB_TYPE}:host=${ZT_DB_HOST} port=${ZT_DB_PORT} dbname=${ZT_DB_NAME} user=${ZT_DB_USER} password=${ZT_DB_PASSWORD} application_name=${APP_NAME} sslmode=prefer sslcert=${DB_CLIENT_CERT} sslkey=${DB_CLIENT_KEY} sslrootcert=${DB_SERVER_CA}\",
         \"portMappingEnabled\": true,
         \"softwareUpdate\": \"disable\",
         \"interfacePrefixBlacklist\": [
@@ -80,6 +83,10 @@ echo "{
         \"lowBandwidthMode\": ${ZT_LB_MODE:-$DEFAULT_LB_MODE},
         \"ssoRedirectURL\": \"${ZT_SSO_REDIRECT_URL}\",
         \"allowManagementFrom\": [\"127.0.0.1\", \"::1\", \"10.0.0.0/8\"],
+        \"otel\": {
+            \"exporterEndpoint\": \"${ZT_EXPORTER_ENDPOINT}\",
+            \"exporterSampleRate\": ${ZT_EXPORTER_SAMPLE_RATE:-0}
+        },
         ${REDIS}
     }
 }    
@@ -98,6 +105,15 @@ else
 	    echo "Waiting for PostgreSQL...";
 	    sleep 2;
     done
+fi
+
+if [ "$ZT_DB_TYPE" == "cv2" ]; then
+    echo "Migrating database (if needed)..."
+    if [ -n "$DB_SERVER_CA" ]; then
+        /usr/local/bin/migrate -source file:///migrations -database "postgres://$ZT_DB_USER:$ZT_DB_PASSWORD@$ZT_DB_HOST:$ZT_DB_PORT/$ZT_DB_NAME?x-migrations-table=controller_migrations&sslmode=verify-full&sslrootcert=$DB_SERVER_CA&sslcert=$DB_CLIENT_CERT&sslkey=$DB_CLIENT_KEY" up  
+    else 
+        /usr/local/bin/migrate -source file:///migrations -database "postgres://$ZT_DB_USER:$ZT_DB_PASSWORD@$ZT_DB_HOST:$ZT_DB_PORT/$ZT_DB_NAME?x-migrations-table=controller_migrations&sslmode=disable" up
+    fi
 fi
 
 if [ -n "$ZT_TEMPORAL_HOST" ] && [ -n "$ZT_TEMPORAL_PORT" ]; then

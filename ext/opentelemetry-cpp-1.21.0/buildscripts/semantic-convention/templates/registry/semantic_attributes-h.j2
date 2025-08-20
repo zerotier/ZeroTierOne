@@ -1,0 +1,132 @@
+{#
+  Copyright The OpenTelemetry Authors
+  SPDX-License-Identifier: Apache-2.0
+
+  This file is:
+  - a Jinja template,
+  - used to generate semantic conventions,
+  - using weaver.
+
+  For doc on the template syntax:
+  https://jinja.palletsprojects.com/en/3.0.x/
+
+  For doc on the semantic conventions:
+  https://github.com/open-telemetry/semantic-conventions
+
+  For doc on weaver:
+  https://github.com/open-telemetry/weaver
+#}
+/*
+ * Copyright The OpenTelemetry Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * DO NOT EDIT, this is an Auto-generated file from:
+ * buildscripts/semantic-convention/templates/registry/semantic_attributes-h.j2
+ */
+{# ========================================================================== #}
+{#
+    DESIGN NOTES:
+    - Use the debug flag to dump the semantic convention data
+      in the generated output, to inspect it.
+#}
+{# ========================================================================== #}
+
+{% set debug = false %}
+
+{% set file_name = ctx.output + (ctx.root_namespace | snake_case) ~ "_attributes.h" %}
+{{ template.set_file_name(file_name) }}
+
+{% set attributes = ctx.attributes | list %}
+{% set enum_attributes = attributes | select("enum") | rejectattr("name", "in", ctx.excluded_attributes) | list %}
+
+{% macro attribute_namespace(ctx) %}
+{{ ctx.root_namespace | snake_case }}
+{% endmacro %}
+
+{% macro attribute_name(attribute) %}
+k{{ attribute.name | pascal_case }}
+{% endmacro %}
+
+{% macro attribute_type(attribute) %}
+{{ attribute.type | enum_type | map_text("cpp_types") }}
+{% endmacro %}
+
+{% macro enum_namespace_name(attribute) %}
+{{ attribute.name | pascal_case ~ "Values"}}
+{% endmacro %}
+
+{% macro enum_name(member) %}
+k{{ member.id | pascal_case }}
+{% endmacro %}
+
+{% set cpp_attribute_namespace = attribute_namespace(ctx) %}
+
+{# ========================================================================== #}
+
+#pragma once
+
+#include "opentelemetry/common/macros.h"
+#include "opentelemetry/version.h"
+
+OPENTELEMETRY_BEGIN_NAMESPACE
+namespace semconv
+{
+namespace {{ cpp_attribute_namespace -}}
+{
+
+{% for attribute in attributes %}
+    {% if debug %}
+// DEBUG: {{ attribute }}
+    {% endif %}
+    {% set cpp_attr_name = attribute_name(attribute) %}
+    {% set excluded = attribute.name in ctx.excluded_attributes %}
+    {% if excluded %}
+#if 0
+// Excluded attribute:
+    {% endif %}
+    {% if attribute is deprecated %}
+{{ [attribute.brief, "\n", "@deprecated", attribute.deprecated, "\n", attribute.note] | comment(ident=2) }}
+OPENTELEMETRY_DEPRECATED
+    {% else %}
+{{ [attribute.brief, "\n", attribute.note] | comment(ident=2) }}
+    {% endif %}
+static constexpr const char *{{cpp_attr_name}} = "{{attribute.name}}";
+    {% if excluded %}
+#endif
+    {% endif %}
+
+{% endfor %}
+
+{% for attribute in enum_attributes %}
+    {% set class_name = attribute.name | pascal_case ~ "Values" %}
+    {% set cpp_enum_name = enum_namespace_name(attribute) %}
+    {% set cpp_enum_type = attribute_type(attribute) %}
+    {% if debug %}
+// DEBUG: {{ attribute }}
+    {% endif %}
+namespace {{cpp_enum_name -}}
+{
+    {% for member in attribute.type.members %}
+        {% set member_name = enum_name(member) %}
+        {% if debug %}
+// DEBUG: {{ member }}
+        {% endif %}
+        {% if member is deprecated %}
+{{ [member.brief, "\n", "@deprecated", member.deprecated] | comment(ident=2) }}
+OPENTELEMETRY_DEPRECATED
+        {% else %}
+{{ member.brief | comment(ident=2) }}
+        {% endif %}
+static constexpr {{ cpp_enum_type }} {{ member_name }} = {{ member.value | print_member_value }};
+
+    {% endfor %}
+}
+
+{% endfor %}
+
+}
+}
+OPENTELEMETRY_END_NAMESPACE
+

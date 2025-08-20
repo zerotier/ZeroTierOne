@@ -1,0 +1,40 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+#
+# To use directly:
+# otelcol --config ...
+#
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        tls:
+          ca_file: ../cert/ca.pem
+          cert_file: ../cert/server_cert.pem
+          client_ca_file: ../cert/client_cert.pem
+          key_file: ../cert/server_cert-key.pem
+          min_version: "1.0"
+          max_version: "1.3"
+
+processors:
+  batch:
+  memory_limiter:
+    # 75% of maximum memory up to 4G
+    limit_mib: 1536
+    # 25% of limit up to 2G
+    spike_limit_mib: 512
+    check_interval: 5s
+
+exporters:
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [debug]

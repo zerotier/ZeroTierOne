@@ -1,0 +1,11 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+global:
+  scrape_interval: 5s
+  scrape_timeout: 2s
+  evaluation_interval: 5s
+scrape_configs:
+  - job_name: otel
+    static_configs:
+      - targets: ["localhost:9464"]

@@ -1,0 +1,55 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+FROM ubuntu:24.04@sha256:1e622c5f073b4f6bfad6632f2616c7f59ef256e96fe78bf6a595d1dc4376ac02
+
+RUN apt update && apt install -y \
+	build-essential \
+	ca-certificates \
+	wget \
+	cmake \
+	git \
+	sudo \
+	nano \
+	pkg-config \
+	ninja-build \
+	clang-format \
+	clang-tidy \
+	autoconf \
+	automake \
+	libtool \
+	python3-pip
+
+RUN pip install "conan==2.15.1" --break-system-packages
+
+ARG USER_UID=1000
+ARG USER_GID=1000
+ARG USER_NAME=devuser
+ENV USER_NAME=devuser
+ENV USER_UID=${USER_UID}
+ENV USER_GID=${USER_GID}
+ENV INSTALL_PACKAGES=
+ENV IS_CONTAINER_BUILD=true
+
+COPY ./.devcontainer/customize_container.sh /tmp/opentelemetry_cpp/devcontainer/customize_container.sh
+RUN /tmp/opentelemetry_cpp/devcontainer/customize_container.sh
+USER devuser
+
+RUN conan profile detect --force	
+
+ARG CONAN_FILE=conanfile_stable.txt
+ARG CONAN_BUILD_TYPE=Debug
+ARG CXX_STANDARD=17
+WORKDIR /home/devuser/conan
+COPY ./install/conan/ .
+
+RUN conan install ./${CONAN_FILE} --build=missing -s build_type=${CONAN_BUILD_TYPE}
+ENV CMAKE_TOOLCHAIN_FILE=/home/devuser/conan/build/${CONAN_BUILD_TYPE}/generators/conan_toolchain.cmake
+ENV CXX_STANDARD=${CXX_STANDARD}
+ENV BUILD_TYPE=${CONAN_BUILD_TYPE}
+ENV CONAN_FILE=${CONAN_FILE}
+
+WORKDIR  /workspaces/opentelemetry-cpp
+
+ENTRYPOINT []
+
+CMD ["/bin/bash"]

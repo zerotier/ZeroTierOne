@@ -11,81 +11,78 @@
  */
 /****/
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
+#include "BSDEthernetTap.hpp"
 
-#include <unistd.h>
-#include <signal.h>
+#include "../node/Constants.hpp"
+#include "../node/Mutex.hpp"
+#include "../node/Utils.hpp"
+#include "OSUtils.hpp"
 
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <sys/wait.h>
-#include <sys/select.h>
-#include <sys/cdefs.h>
-#include <sys/uio.h>
-#include <sys/param.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
+#include <algorithm>
 #include <arpa/inet.h>
-#include <net/if.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <ifaddrs.h>
+#include <map>
+#include <net/if.h>
 #include <net/if_arp.h>
 #include <net/if_dl.h>
 #include <net/if_media.h>
 #include <net/route.h>
+#include <netinet/in.h>
 #include <pthread_np.h>
-
 #include <sched.h>
-#include <string>
-#include <map>
 #include <set>
-#include <algorithm>
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <string>
+#include <sys/cdefs.h>
+#include <sys/ioctl.h>
+#include <sys/param.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <utility>
-
-#include "../node/Constants.hpp"
-#include "../node/Utils.hpp"
-#include "../node/Mutex.hpp"
-#include "OSUtils.hpp"
-#include "BSDEthernetTap.hpp"
 
 #define ZT_BASE32_CHARS "0123456789abcdefghijklmnopqrstuv"
 #define ZT_TAP_BUF_SIZE (1024 * 16)
 
 // ff:ff:ff:ff:ff:ff with no ADI
-static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff),0);
+static const ZeroTier::MulticastGroup _blindWildcardMulticastGroup(ZeroTier::MAC(0xff), 0);
 
 namespace ZeroTier {
 
 BSDEthernetTap::BSDEthernetTap(
-	const char *homePath,
+	const char* homePath,
 	unsigned int concurrency,
 	bool pinning,
-	const MAC &mac,
+	const MAC& mac,
 	unsigned int mtu,
 	unsigned int metric,
 	uint64_t nwid,
-	const char *friendlyName,
-	void (*handler)(void *,void *,uint64_t,const MAC &,const MAC &,unsigned int,unsigned int,const void *,unsigned int),
-	void *arg) :
-	_handler(handler),
-	_concurrency(concurrency),
-	_pinning(pinning),
-	_arg(arg),
-	_nwid(nwid),
-	_mtu(mtu),
-	_metric(metric),
-	_fd(0),
-	_enabled(true),
-	_lastIfAddrsUpdate(0)
+	const char* friendlyName,
+	void (*handler)(void*, void*, uint64_t, const MAC&, const MAC&, unsigned int, unsigned int, const void*, unsigned int),
+	void* arg)
+	: _handler(handler)
+	, _concurrency(concurrency)
+	, _pinning(pinning)
+	, _arg(arg)
+	, _nwid(nwid)
+	, _mtu(mtu)
+	, _metric(metric)
+	, _fd(0)
+	, _enabled(true)
+	, _lastIfAddrsUpdate(0)
 {
 	static Mutex globalTapCreateLock;
-	char devpath[64],ethaddr[64],mtustr[32],metstr[32],tmpdevname[32];
+	char devpath[64], ethaddr[64], mtustr[32], metstr[32], tmpdevname[32];
 
 	Mutex::Lock _gl(globalTapCreateLock);
 
@@ -108,43 +105,51 @@ BSDEthernetTap::BSDEthernetTap(
 	_dev.push_back(ZT_BASE32_CHARS[(unsigned long)(nwid & 0x1f)]);
 
 	std::vector<std::string> devFiles(OSUtils::listDirectory("/dev"));
-	for(int i=9993;i<(9993+128);++i) {
-		OSUtils::ztsnprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
-		OSUtils::ztsnprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
-		if (std::find(devFiles.begin(),devFiles.end(),std::string(tmpdevname)) == devFiles.end()) {
+	for (int i = 9993; i < (9993 + 128); ++i) {
+		OSUtils::ztsnprintf(tmpdevname, sizeof(tmpdevname), "tap%d", i);
+		OSUtils::ztsnprintf(devpath, sizeof(devpath), "/dev/%s", tmpdevname);
+		if (std::find(devFiles.begin(), devFiles.end(), std::string(tmpdevname)) == devFiles.end()) {
 			long cpid = (long)vfork();
 			if (cpid == 0) {
 #ifdef ZT_TRACE
 				fprintf(stderr, "DEBUG: ifconfig %s create" ZT_EOL_S, tmpdevname);
 #endif
-				::execl("/sbin/ifconfig","/sbin/ifconfig",tmpdevname,"create",(const char *)0);
+				::execl("/sbin/ifconfig", "/sbin/ifconfig", tmpdevname, "create", (const char*)0);
 				::_exit(-1);
-			} else if (cpid > 0) {
+			}
+			else if (cpid > 0) {
 				int exitcode = -1;
-				::waitpid(cpid,&exitcode,0);
-			} else throw std::runtime_error("fork() failed");
+				::waitpid(cpid, &exitcode, 0);
+			}
+			else
+				throw std::runtime_error("fork() failed");
 
 			struct stat stattmp;
-			if (!stat(devpath,&stattmp)) {
+			if (! stat(devpath, &stattmp)) {
 				cpid = (long)vfork();
 				if (cpid == 0) {
 #ifdef ZT_TRACE
 					fprintf(stderr, "DEBUG: ifconfig %s name %s" ZT_EOL_S, tmpdevname, _dev.c_str());
 #endif
-					::execl("/sbin/ifconfig","/sbin/ifconfig",tmpdevname,"name",_dev.c_str(),(const char *)0);
+					::execl("/sbin/ifconfig", "/sbin/ifconfig", tmpdevname, "name", _dev.c_str(), (const char*)0);
 					::_exit(-1);
-				} else if (cpid > 0) {
+				}
+				else if (cpid > 0) {
 					int exitcode = -1;
-					::waitpid(cpid,&exitcode,0);
+					::waitpid(cpid, &exitcode, 0);
 					if (exitcode)
 						throw std::runtime_error("ifconfig rename operation failed");
-				} else throw std::runtime_error("fork() failed");
+				}
+				else
+					throw std::runtime_error("fork() failed");
 
-				_fd = ::open(devpath,O_RDWR);
+				_fd = ::open(devpath, O_RDWR);
 				if (_fd > 0)
 					break;
-				else throw std::runtime_error("unable to open created tap device");
-			} else {
+				else
+					throw std::runtime_error("unable to open created tap device");
+			}
+			else {
 				throw std::runtime_error("cannot find /dev node for newly created tap device");
 			}
 		}
@@ -152,10 +157,10 @@ BSDEthernetTap::BSDEthernetTap(
 #else
 	/* Other BSDs like OpenBSD only have a limited number of tap devices that cannot be renamed */
 
-	for(int i=0;i<64;++i) {
-		OSUtils::ztsnprintf(tmpdevname,sizeof(tmpdevname),"tap%d",i);
-		OSUtils::ztsnprintf(devpath,sizeof(devpath),"/dev/%s",tmpdevname);
-		_fd = ::open(devpath,O_RDWR);
+	for (int i = 0; i < 64; ++i) {
+		OSUtils::ztsnprintf(tmpdevname, sizeof(tmpdevname), "tap%d", i);
+		OSUtils::ztsnprintf(devpath, sizeof(devpath), "/dev/%s", tmpdevname);
+		_fd = ::open(devpath, O_RDWR);
 		if (_fd > 0) {
 			_dev = tmpdevname;
 			break;
@@ -166,25 +171,26 @@ BSDEthernetTap::BSDEthernetTap(
 	if (_fd <= 0)
 		throw std::runtime_error("unable to open TAP device or no more devices available");
 
-	if (fcntl(_fd,F_SETFL,fcntl(_fd,F_GETFL) & ~O_NONBLOCK) == -1) {
+	if (fcntl(_fd, F_SETFL, fcntl(_fd, F_GETFL) & ~O_NONBLOCK) == -1) {
 		::close(_fd);
 		throw std::runtime_error("unable to set flags on file descriptor for TAP device");
 	}
 
 	// Configure MAC address and MTU, bring interface up
-	OSUtils::ztsnprintf(ethaddr,sizeof(ethaddr),"%.2x:%.2x:%.2x:%.2x:%.2x:%.2x",(int)mac[0],(int)mac[1],(int)mac[2],(int)mac[3],(int)mac[4],(int)mac[5]);
-	OSUtils::ztsnprintf(mtustr,sizeof(mtustr),"%u",_mtu);
-	OSUtils::ztsnprintf(metstr,sizeof(metstr),"%u",_metric);
+	OSUtils::ztsnprintf(ethaddr, sizeof(ethaddr), "%.2x:%.2x:%.2x:%.2x:%.2x:%.2x", (int)mac[0], (int)mac[1], (int)mac[2], (int)mac[3], (int)mac[4], (int)mac[5]);
+	OSUtils::ztsnprintf(mtustr, sizeof(mtustr), "%u", _mtu);
+	OSUtils::ztsnprintf(metstr, sizeof(metstr), "%u", _metric);
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 #ifdef ZT_TRACE
 		fprintf(stderr, "DEBUG: ifconfig %s lladdr %s mtu %s metric %s up" ZT_EOL_S, _dev.c_str(), ethaddr, mtustr, metstr);
 #endif
-		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"lladdr",ethaddr,"mtu",mtustr,"metric",metstr,"up",(const char *)0);
+		::execl("/sbin/ifconfig", "/sbin/ifconfig", _dev.c_str(), "lladdr", ethaddr, "mtu", mtustr, "metric", metstr, "up", (const char*)0);
 		::_exit(-1);
-	} else if (cpid > 0) {
+	}
+	else if (cpid > 0) {
 		int exitcode = -1;
-		::waitpid(cpid,&exitcode,0);
+		::waitpid(cpid, &exitcode, 0);
 		if (exitcode) {
 			::close(_fd);
 			throw std::runtime_error("ifconfig failure setting link-layer address and activating tap interface");
@@ -192,7 +198,7 @@ BSDEthernetTap::BSDEthernetTap(
 	}
 
 	// Set close-on-exec so that devices cannot persist if we fork/exec for update
-	fcntl(_fd,F_SETFD,fcntl(_fd,F_GETFD) | FD_CLOEXEC);
+	fcntl(_fd, F_SETFD, fcntl(_fd, F_GETFD) | FD_CLOEXEC);
 
 	::pipe(_shutdownSignalPipe);
 
@@ -201,23 +207,24 @@ BSDEthernetTap::BSDEthernetTap(
 
 BSDEthernetTap::~BSDEthernetTap()
 {
-	::write(_shutdownSignalPipe[1],"\0",1); // causes thread to exit
+	::write(_shutdownSignalPipe[1], "\0", 1);	// causes thread to exit
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
 	::close(_shutdownSignalPipe[1]);
 	long cpid = (long)vfork();
 	if (cpid == 0) {
 #ifdef ZT_TRACE
-			fprintf(stderr, "DEBUG: ifconfig %s destroy" ZT_EOL_S, _dev.c_str());
+		fprintf(stderr, "DEBUG: ifconfig %s destroy" ZT_EOL_S, _dev.c_str());
 #endif
-		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"destroy",(const char *)0);
+		::execl("/sbin/ifconfig", "/sbin/ifconfig", _dev.c_str(), "destroy", (const char*)0);
 		::_exit(-1);
-	} else if (cpid > 0) {
+	}
+	else if (cpid > 0) {
 		int exitcode = -1;
-		::waitpid(cpid,&exitcode,0);
+		::waitpid(cpid, &exitcode, 0);
 	}
 	Thread::join(_thread);
-	for (std::thread &t : _rxThreads) {
+	for (std::thread& t : _rxThreads) {
 		t.join();
 	}
 }
@@ -232,7 +239,7 @@ bool BSDEthernetTap::enabled() const
 	return _enabled;
 }
 
-static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
+static bool ___removeIp(const std::string& _dev, const InetAddress& ip)
 {
 	long cpid = (long)vfork();
 	if (cpid == 0) {
@@ -240,29 +247,30 @@ static bool ___removeIp(const std::string &_dev,const InetAddress &ip)
 #ifdef ZT_TRACE
 		fprintf(stderr, "DEBUG: ifconfig %s inet %s -alias" ZT_EOL_S, _dev.c_str(), ip.toIpString(ipbuf));
 #endif
-		execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"inet",ip.toIpString(ipbuf),"-alias",(const char *)0);
+		execl("/sbin/ifconfig", "/sbin/ifconfig", _dev.c_str(), "inet", ip.toIpString(ipbuf), "-alias", (const char*)0);
 		_exit(-1);
-	} else if (cpid > 0) {
+	}
+	else if (cpid > 0) {
 		int exitcode = -1;
-		waitpid(cpid,&exitcode,0);
+		waitpid(cpid, &exitcode, 0);
 		return (exitcode == 0);
 	}
-	return false; // never reached, make compiler shut up about return value
+	return false;	// never reached, make compiler shut up about return value
 }
 
-bool BSDEthernetTap::addIp(const InetAddress &ip)
+bool BSDEthernetTap::addIp(const InetAddress& ip)
 {
-	if (!ip)
+	if (! ip)
 		return false;
 
 	std::vector<InetAddress> allIps(ips());
-	if (std::find(allIps.begin(),allIps.end(),ip) != allIps.end())
-		return true; // IP/netmask already assigned
+	if (std::find(allIps.begin(), allIps.end(), ip) != allIps.end())
+		return true;   // IP/netmask already assigned
 
 	// Remove and reconfigure if address is the same but netmask is different
-	for(std::vector<InetAddress>::iterator i(allIps.begin());i!=allIps.end();++i) {
-		if ((i->ipsEqual(ip))&&(i->netmaskBits() != ip.netmaskBits())) {
-			if (___removeIp(_dev,*i))
+	for (std::vector<InetAddress>::iterator i(allIps.begin()); i != allIps.end(); ++i) {
+		if ((i->ipsEqual(ip)) && (i->netmaskBits() != ip.netmaskBits())) {
+			if (___removeIp(_dev, *i))
 				break;
 		}
 	}
@@ -273,23 +281,24 @@ bool BSDEthernetTap::addIp(const InetAddress &ip)
 #ifdef ZT_TRACE
 		fprintf(stderr, "DEBUG: ifconfig %s %s %s alias" ZT_EOL_S, _dev.c_str(), ip.isV4() ? "inet" : "inet6", ip.toString(tmp));
 #endif
-		::execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),ip.isV4() ? "inet" : "inet6",ip.toString(tmp),"alias",(const char *)0);
+		::execl("/sbin/ifconfig", "/sbin/ifconfig", _dev.c_str(), ip.isV4() ? "inet" : "inet6", ip.toString(tmp), "alias", (const char*)0);
 		::_exit(-1);
-	} else if (cpid > 0) {
+	}
+	else if (cpid > 0) {
 		int exitcode = -1;
-		::waitpid(cpid,&exitcode,0);
+		::waitpid(cpid, &exitcode, 0);
 		return (exitcode == 0);
 	}
 	return false;
 }
 
-bool BSDEthernetTap::removeIp(const InetAddress &ip)
+bool BSDEthernetTap::removeIp(const InetAddress& ip)
 {
-	if (!ip)
+	if (! ip)
 		return false;
 	std::vector<InetAddress> allIps(ips());
-	if (std::find(allIps.begin(),allIps.end(),ip) != allIps.end()) {
-		if (___removeIp(_dev,ip))
+	if (std::find(allIps.begin(), allIps.end(), ip) != allIps.end()) {
+		if (___removeIp(_dev, ip))
 			return true;
 	}
 	return false;
@@ -304,28 +313,28 @@ std::vector<InetAddress> BSDEthernetTap::ips() const
 	}
 	_lastIfAddrsUpdate = now;
 
-	struct ifaddrs *ifa = (struct ifaddrs *)0;
+	struct ifaddrs* ifa = (struct ifaddrs*)0;
 	if (getifaddrs(&ifa))
 		return std::vector<InetAddress>();
 
 	std::vector<InetAddress> r;
 
-	struct ifaddrs *p = ifa;
+	struct ifaddrs* p = ifa;
 	while (p) {
-		if ((!strcmp(p->ifa_name,_dev.c_str()))&&(p->ifa_addr)&&(p->ifa_netmask)&&(p->ifa_addr->sa_family == p->ifa_netmask->sa_family)) {
-			switch(p->ifa_addr->sa_family) {
+		if ((! strcmp(p->ifa_name, _dev.c_str())) && (p->ifa_addr) && (p->ifa_netmask) && (p->ifa_addr->sa_family == p->ifa_netmask->sa_family)) {
+			switch (p->ifa_addr->sa_family) {
 				case AF_INET: {
-					struct sockaddr_in *sin = (struct sockaddr_in *)p->ifa_addr;
-					struct sockaddr_in *nm = (struct sockaddr_in *)p->ifa_netmask;
-					r.push_back(InetAddress(&(sin->sin_addr.s_addr),4,Utils::countBits((uint32_t)nm->sin_addr.s_addr)));
-				}	break;
+					struct sockaddr_in* sin = (struct sockaddr_in*)p->ifa_addr;
+					struct sockaddr_in* nm = (struct sockaddr_in*)p->ifa_netmask;
+					r.push_back(InetAddress(&(sin->sin_addr.s_addr), 4, Utils::countBits((uint32_t)nm->sin_addr.s_addr)));
+				} break;
 				case AF_INET6: {
-					struct sockaddr_in6 *sin = (struct sockaddr_in6 *)p->ifa_addr;
-					struct sockaddr_in6 *nm = (struct sockaddr_in6 *)p->ifa_netmask;
+					struct sockaddr_in6* sin = (struct sockaddr_in6*)p->ifa_addr;
+					struct sockaddr_in6* nm = (struct sockaddr_in6*)p->ifa_netmask;
 					uint32_t b[4];
-					memcpy(b,nm->sin6_addr.s6_addr,sizeof(b));
-					r.push_back(InetAddress(sin->sin6_addr.s6_addr,16,Utils::countBits(b[0]) + Utils::countBits(b[1]) + Utils::countBits(b[2]) + Utils::countBits(b[3])));
-				}	break;
+					memcpy(b, nm->sin6_addr.s6_addr, sizeof(b));
+					r.push_back(InetAddress(sin->sin6_addr.s6_addr, 16, Utils::countBits(b[0]) + Utils::countBits(b[1]) + Utils::countBits(b[2]) + Utils::countBits(b[3])));
+				} break;
 			}
 		}
 		p = p->ifa_next;
@@ -334,24 +343,24 @@ std::vector<InetAddress> BSDEthernetTap::ips() const
 	if (ifa)
 		freeifaddrs(ifa);
 
-	std::sort(r.begin(),r.end());
-	std::unique(r.begin(),r.end());
+	std::sort(r.begin(), r.end());
+	std::unique(r.begin(), r.end());
 
 	_ifaddrs = r;
 
 	return r;
 }
 
-void BSDEthernetTap::put(const MAC &from,const MAC &to,unsigned int etherType,const void *data,unsigned int len)
+void BSDEthernetTap::put(const MAC& from, const MAC& to, unsigned int etherType, const void* data, unsigned int len)
 {
 	char putBuf[ZT_MAX_MTU + 64];
-	if ((_fd > 0)&&(len <= _mtu)&&(_enabled)) {
-		to.copyTo(putBuf,6);
-		from.copyTo(putBuf + 6,6);
-		*((uint16_t *)(putBuf + 12)) = htons((uint16_t)etherType);
-		memcpy(putBuf + 14,data,len);
+	if ((_fd > 0) && (len <= _mtu) && (_enabled)) {
+		to.copyTo(putBuf, 6);
+		from.copyTo(putBuf + 6, 6);
+		*((uint16_t*)(putBuf + 12)) = htons((uint16_t)etherType);
+		memcpy(putBuf + 14, data, len);
 		len += 14;
-		::write(_fd,putBuf,len);
+		::write(_fd, putBuf, len);
 	}
 }
 
@@ -360,44 +369,44 @@ std::string BSDEthernetTap::deviceName() const
 	return _dev;
 }
 
-void BSDEthernetTap::setFriendlyName(const char *friendlyName)
+void BSDEthernetTap::setFriendlyName(const char* friendlyName)
 {
 }
 
-void BSDEthernetTap::scanMulticastGroups(std::vector<MulticastGroup> &added,std::vector<MulticastGroup> &removed)
+void BSDEthernetTap::scanMulticastGroups(std::vector<MulticastGroup>& added, std::vector<MulticastGroup>& removed)
 {
 	std::vector<MulticastGroup> newGroups;
 
 #ifndef __OpenBSD__
-	struct ifmaddrs *ifmap = (struct ifmaddrs *)0;
-	if (!getifmaddrs(&ifmap)) {
-		struct ifmaddrs *p = ifmap;
+	struct ifmaddrs* ifmap = (struct ifmaddrs*)0;
+	if (! getifmaddrs(&ifmap)) {
+		struct ifmaddrs* p = ifmap;
 		while (p) {
 			if (p->ifma_addr->sa_family == AF_LINK) {
-				struct sockaddr_dl *in = (struct sockaddr_dl *)p->ifma_name;
-				struct sockaddr_dl *la = (struct sockaddr_dl *)p->ifma_addr;
-				if ((la->sdl_alen == 6)&&(in->sdl_nlen <= _dev.length())&&(!memcmp(_dev.data(),in->sdl_data,in->sdl_nlen)))
-					newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen,6),0));
+				struct sockaddr_dl* in = (struct sockaddr_dl*)p->ifma_name;
+				struct sockaddr_dl* la = (struct sockaddr_dl*)p->ifma_addr;
+				if ((la->sdl_alen == 6) && (in->sdl_nlen <= _dev.length()) && (! memcmp(_dev.data(), in->sdl_data, in->sdl_nlen)))
+					newGroups.push_back(MulticastGroup(MAC(la->sdl_data + la->sdl_nlen, 6), 0));
 			}
 			p = p->ifma_next;
 		}
 		freeifmaddrs(ifmap);
 	}
-#endif // __OpenBSD__
+#endif	 // __OpenBSD__
 
 	std::vector<InetAddress> allIps(ips());
-	for(std::vector<InetAddress>::iterator ip(allIps.begin());ip!=allIps.end();++ip)
+	for (std::vector<InetAddress>::iterator ip(allIps.begin()); ip != allIps.end(); ++ip)
 		newGroups.push_back(MulticastGroup::deriveMulticastGroupForAddressResolution(*ip));
 
-	std::sort(newGroups.begin(),newGroups.end());
-	std::unique(newGroups.begin(),newGroups.end());
+	std::sort(newGroups.begin(), newGroups.end());
+	std::unique(newGroups.begin(), newGroups.end());
 
-	for(std::vector<MulticastGroup>::iterator m(newGroups.begin());m!=newGroups.end();++m) {
-		if (!std::binary_search(_multicastGroups.begin(),_multicastGroups.end(),*m))
+	for (std::vector<MulticastGroup>::iterator m(newGroups.begin()); m != newGroups.end(); ++m) {
+		if (! std::binary_search(_multicastGroups.begin(), _multicastGroups.end(), *m))
 			added.push_back(*m);
 	}
-	for(std::vector<MulticastGroup>::iterator m(_multicastGroups.begin());m!=_multicastGroups.end();++m) {
-		if (!std::binary_search(newGroups.begin(),newGroups.end(),*m))
+	for (std::vector<MulticastGroup>::iterator m(_multicastGroups.begin()); m != _multicastGroups.end(); ++m) {
+		if (! std::binary_search(newGroups.begin(), newGroups.end(), *m))
 			removed.push_back(*m);
 	}
 
@@ -411,21 +420,21 @@ void BSDEthernetTap::setMtu(unsigned int mtu)
 		long cpid = (long)vfork();
 		if (cpid == 0) {
 			char tmp[64];
-			OSUtils::ztsnprintf(tmp,sizeof(tmp),"%u",mtu);
+			OSUtils::ztsnprintf(tmp, sizeof(tmp), "%u", mtu);
 #ifdef ZT_TRACE
 			fprintf(stderr, "DEBUG: ifconfig %s mtu %s" ZT_EOL_S, _dev.c_str(), tmp);
 #endif
-			execl("/sbin/ifconfig","/sbin/ifconfig",_dev.c_str(),"mtu",tmp,(const char *)0);
+			execl("/sbin/ifconfig", "/sbin/ifconfig", _dev.c_str(), "mtu", tmp, (const char*)0);
 			_exit(-1);
-		} else if (cpid > 0) {
+		}
+		else if (cpid > 0) {
 			int exitcode = -1;
-			waitpid(cpid,&exitcode,0);
+			waitpid(cpid, &exitcode, 0);
 		}
 	}
 }
 
-void BSDEthernetTap::threadMain()
-	throw()
+void BSDEthernetTap::threadMain() throw()
 {
 	// Wait for a moment after startup -- wait for Network to finish
 	// constructing itself.
@@ -436,7 +445,6 @@ void BSDEthernetTap::threadMain()
 
 	for (unsigned int i = 0; i < _concurrency; ++i) {
 		_rxThreads.push_back(std::thread([this, i, pinning] {
-
 			if (pinning) {
 				int pinCore = i % _concurrency;
 				fprintf(stderr, "Pinning thread %d to core %d\n", i, pinCore);
@@ -444,15 +452,14 @@ void BSDEthernetTap::threadMain()
 				cpu_set_t cpuset;
 				CPU_ZERO(&cpuset);
 				CPU_SET(pinCore, &cpuset);
-				//int rc = sched_setaffinity(self, sizeof(cpu_set_t), &cpuset);
+				// int rc = sched_setaffinity(self, sizeof(cpu_set_t), &cpuset);
 				int rc = pthread_setaffinity_np(self, sizeof(cpu_set_t), &cpuset);
-				if (rc != 0)
-				{
+				if (rc != 0) {
 					fprintf(stderr, "Failed to pin thread %d to core %d: %s\n", i, pinCore, strerror(errno));
 					exit(1);
 				}
 			}
-#endif // __OpenBSD__
+#endif	 // __OpenBSD__
 
 			uint8_t b[ZT_TAP_BUF_SIZE];
 			MAC to, from;
@@ -461,37 +468,38 @@ void BSDEthernetTap::threadMain()
 
 			FD_ZERO(&readfds);
 			FD_ZERO(&nullfds);
-			nfds = (int)std::max(_shutdownSignalPipe[0],_fd) + 1;
+			nfds = (int)std::max(_shutdownSignalPipe[0], _fd) + 1;
 
 			r = 0;
 
-			for(;;) {
-				FD_SET(_shutdownSignalPipe[0],&readfds);
-				FD_SET(_fd,&readfds);
-				select(nfds,&readfds,&nullfds,&nullfds,(struct timeval *)0);
+			for (;;) {
+				FD_SET(_shutdownSignalPipe[0], &readfds);
+				FD_SET(_fd, &readfds);
+				select(nfds, &readfds, &nullfds, &nullfds, (struct timeval*)0);
 
-				if (FD_ISSET(_shutdownSignalPipe[0],&readfds)) // writes to shutdown pipe terminate thread
+				if (FD_ISSET(_shutdownSignalPipe[0], &readfds))	  // writes to shutdown pipe terminate thread
 					break;
 
-				if (FD_ISSET(_fd,&readfds)) {
-					n = (int)::read(_fd,b + r,sizeof(b) - r);
+				if (FD_ISSET(_fd, &readfds)) {
+					n = (int)::read(_fd, b + r, sizeof(b) - r);
 					if (n < 0) {
-						if ((errno != EINTR)&&(errno != ETIMEDOUT))
+						if ((errno != EINTR) && (errno != ETIMEDOUT))
 							break;
-					} else {
+					}
+					else {
 						// Some tap drivers like to send the ethernet frame and the
 						// payload in two chunks, so handle that by accumulating
 						// data until we have at least a frame.
 						r += n;
 						if (r > 14) {
-							if (r > ((int)_mtu + 14)) // sanity check for weird TAP behavior on some platforms
+							if (r > ((int)_mtu + 14))	// sanity check for weird TAP behavior on some platforms
 								r = _mtu + 14;
 
 							if (_enabled) {
-								to.setTo(b,6);
-								from.setTo(b + 6,6);
-								unsigned int etherType = ntohs(((const uint16_t *)b)[6]);
-								_handler(_arg,(void *)0,_nwid,from,to,etherType,0,(const void *)(b + 14),r - 14);
+								to.setTo(b, 6);
+								from.setTo(b + 6, 6);
+								unsigned int etherType = ntohs(((const uint16_t*)b)[6]);
+								_handler(_arg, (void*)0, _nwid, from, to, etherType, 0, (const void*)(b + 14), r - 14);
 							}
 
 							r = 0;
@@ -502,7 +510,7 @@ void BSDEthernetTap::threadMain()
 #ifndef __OpenBSD__
 		}));
 	}
-#endif // __OpenBSD__
+#endif	 // __OpenBSD__
 }
 
-} // namespace ZeroTier
+}	// namespace ZeroTier

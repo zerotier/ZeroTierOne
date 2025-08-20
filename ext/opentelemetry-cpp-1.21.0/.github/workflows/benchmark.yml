@@ -1,0 +1,82 @@
+name: OpenTelemetry-cpp benchmarks
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  deployments: write
+
+jobs:
+  benchmark:
+    name: Run OpenTelemetry-cpp benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: 'recursive'
+      - name: Mount Bazel Cache
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        env:
+          cache-name: bazel_cache
+        with:
+          path: /home/runner/.cache/bazel
+          key: bazel_benchmark
+      - name: setup
+        run: |
+          sudo ./ci/setup_ci_environment.sh
+          sudo ./ci/install_bazelisk.sh
+      - name: Run benchmark
+        id: run_benchmarks
+        run: |
+          ./ci/do_ci.sh bazel.benchmark
+          mkdir -p benchmarks
+          mv api-benchmark_result.json benchmarks
+          mv sdk-benchmark_result.json benchmarks
+          mv exporters-benchmark_result.json benchmarks
+      - uses: actions/upload-artifact@6027e3dd177782cd8ab9af838c04fd81a07f1d47 # main March 2025
+        with:
+          name: benchmark_results
+          path: benchmarks
+  store_benchmark:
+    needs: benchmark
+    strategy:
+      matrix:
+        components: ["api", "sdk", "exporters"]
+    name: Store benchmark result
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # main March 2025
+        with:
+          name: benchmark_results
+          path: benchmarks
+      - name: Print json files
+        id: print_json
+        run: |
+          cat benchmarks/*
+      - name: Push benchmark result
+        uses: benchmark-action/github-action-benchmark@d48d326b4ca9ba73ca0cd0d59f108f9e02a381c7 # v1.20.4
+        with:
+          name: OpenTelemetry-cpp ${{ matrix.components }} Benchmark
+          tool: 'googlecpp'
+          output-file-path: benchmarks/${{ matrix.components }}-benchmark_result.json
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          auto-push: true
+          # Show alert with commit comment on detecting possible performance regression
+          alert-threshold: '200%'
+          comment-on-alert: true
+          fail-on-alert: false
+          gh-pages-branch: gh-pages
+          benchmark-data-dir-path: benchmarks

@@ -10,6 +10,8 @@
  * of this software will be governed by version 2.0 of the Apache License.
  */
 
+#![allow(clippy::uninlined_format_args, clippy::missing_safety_doc)]
+
 use std::ffi::CStr;
 use std::os::raw::c_char;
 
@@ -17,7 +19,7 @@ use crate::NetworkJoinedParams;
 use crate::SmeeClient;
 
 #[no_mangle]
-pub extern "C" fn smee_client_new(
+pub unsafe extern "C" fn smee_client_new(
     temporal_url: *const c_char,
     namespace: *const c_char,
     task_queue: *const c_char,
@@ -47,7 +49,7 @@ pub extern "C" fn smee_client_new(
 }
 
 #[no_mangle]
-pub extern "C" fn smee_client_delete(ptr: *mut SmeeClient) {
+pub unsafe extern "C" fn smee_client_delete(ptr: *mut SmeeClient) {
     if ptr.is_null() {
         return;
     }
@@ -60,7 +62,7 @@ pub extern "C" fn smee_client_delete(ptr: *mut SmeeClient) {
 }
 
 #[no_mangle]
-pub extern "C" fn smee_client_notify_network_joined(
+pub unsafe extern "C" fn smee_client_notify_network_joined(
     smee_instance: *mut SmeeClient,
     network_id: *const c_char,
     member_id: *const c_char,
@@ -85,7 +87,7 @@ pub extern "C" fn smee_client_notify_network_joined(
     match smee.notify_network_joined(params) {
         Ok(()) => true,
         Err(e) => {
-            println!("error notifying network joined: {0}", e.to_string());
+            println!("error notifying network joined: {0}", e);
             false
         }
     }

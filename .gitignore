@@ -140,3 +140,4 @@ __pycache__
 snap/.snapcraft
 tcp-proxy/tcp-proxy
 rustybits/target
+ext/installfiles/windows/*.back*.aip

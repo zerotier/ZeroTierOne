@@ -14,15 +14,15 @@
 #ifndef ZT_IDENTITY_HPP
 #define ZT_IDENTITY_HPP
 
+#include "Address.hpp"
+#include "Buffer.hpp"
+#include "Constants.hpp"
+#include "ECC.hpp"
+#include "SHA512.hpp"
+#include "Utils.hpp"
+
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "Constants.hpp"
-#include "Utils.hpp"
-#include "Address.hpp"
-#include "C25519.hpp"
-#include "Buffer.hpp"
-#include "SHA512.hpp"
 
 #define ZT_IDENTITY_STRING_BUFFER_LENGTH 384
 
@@ -38,56 +38,49 @@ namespace ZeroTier {
  * search for a different public key that duplicates an existing address. (See
  * code for deriveAddress() for this algorithm.)
  */
-class Identity
-{
-public:
-	Identity() :
-		_privateKey((C25519::Private *)0)
+class Identity {
+  public:
+	Identity() : _privateKey((ECC::Private*)0)
 	{
 	}
 
-	Identity(const Identity &id) :
-		_address(id._address),
-		_publicKey(id._publicKey),
-		_privateKey((id._privateKey) ? new C25519::Private(*(id._privateKey)) : (C25519::Private *)0)
+	Identity(const Identity& id) : _address(id._address), _publicKey(id._publicKey), _privateKey((id._privateKey) ? new ECC::Private(*(id._privateKey)) : (ECC::Private*)0)
 	{
 	}
 
-	Identity(const char *str) :
-		_privateKey((C25519::Private *)0)
+	Identity(const char* str) : _privateKey((ECC::Private*)0)
 	{
-		if (!fromString(str)) {
+		if (! fromString(str)) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 		}
 	}
 
-	template<unsigned int C>
-	Identity(const Buffer<C> &b,unsigned int startAt = 0) :
-		_privateKey((C25519::Private *)0)
+	template <unsigned int C> Identity(const Buffer<C>& b, unsigned int startAt = 0) : _privateKey((ECC::Private*)0)
 	{
-		deserialize(b,startAt);
+		deserialize(b, startAt);
 	}
 
 	~Identity()
 	{
 		if (_privateKey) {
-			Utils::burn(_privateKey,sizeof(C25519::Private));
+			Utils::burn(_privateKey, sizeof(ECC::Private));
 			delete _privateKey;
 		}
 	}
 
-	inline Identity &operator=(const Identity &id)
+	inline Identity& operator=(const Identity& id)
 	{
 		_address = id._address;
 		_publicKey = id._publicKey;
 		if (id._privateKey) {
-			if (!_privateKey) {
-				_privateKey = new C25519::Private();
+			if (! _privateKey) {
+				_privateKey = new ECC::Private();
 			}
 			*_privateKey = *(id._privateKey);
-		} else {
+		}
+		else {
 			delete _privateKey;
-			_privateKey = (C25519::Private *)0;
+			_privateKey = (ECC::Private*)0;
 		}
 		return *this;
 	}
@@ -109,18 +102,21 @@ public:
 	/**
 	 * @return True if this identity contains a private key
 	 */
-	inline bool hasPrivate() const { return (_privateKey != (C25519::Private *)0); }
+	inline bool hasPrivate() const
+	{
+		return (_privateKey != (ECC::Private*)0);
+	}
 
 	/**
 	 * Compute a SHA384 hash of this identity's address and public key(s).
-	 * 
+	 *
 	 * @param sha384buf Buffer with 48 bytes of space to receive hash
 	 */
-	inline void publicKeyHash(void *sha384buf) const
+	inline void publicKeyHash(void* sha384buf) const
 	{
 		uint8_t address[ZT_ADDRESS_LENGTH];
 		_address.copyTo(address, ZT_ADDRESS_LENGTH);
-		SHA384(sha384buf, address, ZT_ADDRESS_LENGTH, _publicKey.data, ZT_C25519_PUBLIC_KEY_LEN);
+		SHA384(sha384buf, address, ZT_ADDRESS_LENGTH, _publicKey.data, ZT_ECC_PUBLIC_KEY_SET_LEN);
 	}
 
 	/**
@@ -129,10 +125,10 @@ public:
 	 * @param sha Buffer to receive SHA512 (MUST be ZT_SHA512_DIGEST_LEN (64) bytes in length)
 	 * @return True on success, false if no private key
 	 */
-	inline bool sha512PrivateKey(void *sha) const
+	inline bool sha512PrivateKey(void* sha) const
 	{
 		if (_privateKey) {
-			SHA512(sha,_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
+			SHA512(sha, _privateKey->data, ZT_ECC_PRIVATE_KEY_SET_LEN);
 			return true;
 		}
 		return false;
@@ -144,10 +140,10 @@ public:
 	 * @param data Data to sign
 	 * @param len Length of data
 	 */
-	inline C25519::Signature sign(const void *data,unsigned int len) const
+	inline ECC::Signature sign(const void* data, unsigned int len) const
 	{
 		if (_privateKey) {
-			return C25519::sign(*_privateKey,_publicKey,data,len);
+			return ECC::sign(*_privateKey, _publicKey, data, len);
 		}
 		throw ZT_EXCEPTION_PRIVATE_KEY_REQUIRED;
 	}
@@ -161,12 +157,12 @@ public:
 	 * @param siglen Length of signature in bytes
 	 * @return True if signature validates and data integrity checks
 	 */
-	inline bool verify(const void *data,unsigned int len,const void *signature,unsigned int siglen) const
+	inline bool verify(const void* data, unsigned int len, const void* signature, unsigned int siglen) const
 	{
-		if (siglen != ZT_C25519_SIGNATURE_LEN) {
+		if (siglen != ZT_ECC_SIGNATURE_LEN) {
 			return false;
 		}
-		return C25519::verify(_publicKey,data,len,signature);
+		return ECC::verify(_publicKey, data, len, signature);
 	}
 
 	/**
@@ -177,9 +173,9 @@ public:
 	 * @param signature Signature
 	 * @return True if signature validates and data integrity checks
 	 */
-	inline bool verify(const void *data,unsigned int len,const C25519::Signature &signature) const
+	inline bool verify(const void* data, unsigned int len, const ECC::Signature& signature) const
 	{
-		return C25519::verify(_publicKey,data,len,signature);
+		return ECC::verify(_publicKey, data, len, signature);
 	}
 
 	/**
@@ -191,10 +187,10 @@ public:
 	 * @param key Result parameter to fill with key bytes
 	 * @return Was agreement successful?
 	 */
-	inline bool agree(const Identity &id,void *const key) const
+	inline bool agree(const Identity& id, void* const key) const
 	{
 		if (_privateKey) {
-			C25519::agree(*_privateKey,id._publicKey,key,ZT_SYMMETRIC_KEY_SIZE);
+			ECC::agree(*_privateKey, id._publicKey, key, ZT_SYMMETRIC_KEY_SIZE);
 			return true;
 		}
 		return false;
@@ -203,7 +199,10 @@ public:
 	/**
 	 * @return This identity's address
 	 */
-	inline const Address &address() const { return _address; }
+	inline const Address& address() const
+	{
+		return _address;
+	}
 
 	/**
 	 * Serialize this identity (binary)
@@ -212,16 +211,16 @@ public:
 	 * @param includePrivate If true, include private key component (if present) (default: false)
 	 * @throws std::out_of_range Buffer too small
 	 */
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b,bool includePrivate = false) const
+	template <unsigned int C> inline void serialize(Buffer<C>& b, bool includePrivate = false) const
 	{
 		_address.appendTo(b);
-		b.append((uint8_t)0); // C25519/Ed25519 identity type
-		b.append(_publicKey.data,ZT_C25519_PUBLIC_KEY_LEN);
-		if ((_privateKey)&&(includePrivate)) {
-			b.append((unsigned char)ZT_C25519_PRIVATE_KEY_LEN);
-			b.append(_privateKey->data,ZT_C25519_PRIVATE_KEY_LEN);
-		} else {
+		b.append((uint8_t)0);	// C25519/Ed25519 identity type
+		b.append(_publicKey.data, ZT_ECC_PUBLIC_KEY_SET_LEN);
+		if ((_privateKey) && (includePrivate)) {
+			b.append((unsigned char)ZT_ECC_PRIVATE_KEY_SET_LEN);
+			b.append(_privateKey->data, ZT_ECC_PRIVATE_KEY_SET_LEN);
+		}
+		else {
 			b.append((unsigned char)0);
 		}
 	}
@@ -238,32 +237,31 @@ public:
 	 * @throws std::out_of_range Serialized data invalid
 	 * @throws std::invalid_argument Serialized data invalid
 	 */
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	template <unsigned int C> inline unsigned int deserialize(const Buffer<C>& b, unsigned int startAt = 0)
 	{
 		delete _privateKey;
-		_privateKey = (C25519::Private *)0;
+		_privateKey = (ECC::Private*)0;
 
 		unsigned int p = startAt;
 
-		_address.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		_address.setTo(b.field(p, ZT_ADDRESS_LENGTH), ZT_ADDRESS_LENGTH);
 		p += ZT_ADDRESS_LENGTH;
 
 		if (b[p++] != 0) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_TYPE;
 		}
 
-		memcpy(_publicKey.data,b.field(p,ZT_C25519_PUBLIC_KEY_LEN),ZT_C25519_PUBLIC_KEY_LEN);
-		p += ZT_C25519_PUBLIC_KEY_LEN;
+		memcpy(_publicKey.data, b.field(p, ZT_ECC_PUBLIC_KEY_SET_LEN), ZT_ECC_PUBLIC_KEY_SET_LEN);
+		p += ZT_ECC_PUBLIC_KEY_SET_LEN;
 
 		unsigned int privateKeyLength = (unsigned int)b[p++];
 		if (privateKeyLength) {
-			if (privateKeyLength != ZT_C25519_PRIVATE_KEY_LEN) {
+			if (privateKeyLength != ZT_ECC_PRIVATE_KEY_SET_LEN) {
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 			}
-			_privateKey = new C25519::Private();
-			memcpy(_privateKey->data,b.field(p,ZT_C25519_PRIVATE_KEY_LEN),ZT_C25519_PRIVATE_KEY_LEN);
-			p += ZT_C25519_PRIVATE_KEY_LEN;
+			_privateKey = new ECC::Private();
+			memcpy(_privateKey->data, b.field(p, ZT_ECC_PRIVATE_KEY_SET_LEN), ZT_ECC_PRIVATE_KEY_SET_LEN);
+			p += ZT_ECC_PRIVATE_KEY_SET_LEN;
 		}
 
 		return (p - startAt);
@@ -276,7 +274,7 @@ public:
 	 * @param buf Buffer to store string
 	 * @return ASCII string representation of identity
 	 */
-	char *toString(bool includePrivate,char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
+	char* toString(bool includePrivate, char buf[ZT_IDENTITY_STRING_BUFFER_LENGTH]) const;
 
 	/**
 	 * Deserialize a human-friendly string
@@ -287,24 +285,28 @@ public:
 	 * @param str String to deserialize
 	 * @return True if deserialization appears successful
 	 */
-	bool fromString(const char *str);
+	bool fromString(const char* str);
 
 	/**
 	 * @return C25519 public key
 	 */
-	inline const C25519::Public &publicKey() const { return _publicKey; }
+	inline const ECC::Public& publicKey() const
+	{
+		return _publicKey;
+	}
 
 	/**
 	 * @return C25519 key pair (only returns valid pair if private key is present in this Identity object)
 	 */
-	inline const C25519::Pair privateKeyPair() const
+	inline const ECC::Pair privateKeyPair() const
 	{
-		C25519::Pair pair;
+		ECC::Pair pair;
 		pair.pub = _publicKey;
 		if (_privateKey) {
 			pair.priv = *_privateKey;
-		} else {
-			memset(pair.priv.data,0,ZT_C25519_PRIVATE_KEY_LEN);
+		}
+		else {
+			memset(pair.priv.data, 0, ZT_ECC_PRIVATE_KEY_SET_LEN);
 		}
 		return pair;
 	}
@@ -312,21 +314,42 @@ public:
 	/**
 	 * @return True if this identity contains something
 	 */
-	inline operator bool() const { return (_address); }
+	inline operator bool() const
+	{
+		return (_address);
+	}
 
-	inline bool operator==(const Identity &id) const { return ((_address == id._address)&&(memcmp(_publicKey.data,id._publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) == 0)); }
-	inline bool operator<(const Identity &id) const { return ((_address < id._address)||((_address == id._address)&&(memcmp(_publicKey.data,id._publicKey.data,ZT_C25519_PUBLIC_KEY_LEN) < 0))); }
-	inline bool operator!=(const Identity &id) const { return !(*this == id); }
-	inline bool operator>(const Identity &id) const { return (id < *this); }
-	inline bool operator<=(const Identity &id) const { return !(id < *this); }
-	inline bool operator>=(const Identity &id) const { return !(*this < id); }
+	inline bool operator==(const Identity& id) const
+	{
+		return ((_address == id._address) && (memcmp(_publicKey.data, id._publicKey.data, ZT_ECC_PUBLIC_KEY_SET_LEN) == 0));
+	}
+	inline bool operator<(const Identity& id) const
+	{
+		return ((_address < id._address) || ((_address == id._address) && (memcmp(_publicKey.data, id._publicKey.data, ZT_ECC_PUBLIC_KEY_SET_LEN) < 0)));
+	}
+	inline bool operator!=(const Identity& id) const
+	{
+		return ! (*this == id);
+	}
+	inline bool operator>(const Identity& id) const
+	{
+		return (id < *this);
+	}
+	inline bool operator<=(const Identity& id) const
+	{
+		return ! (id < *this);
+	}
+	inline bool operator>=(const Identity& id) const
+	{
+		return ! (*this < id);
+	}
 
-private:
+  private:
 	Address _address;
-	C25519::Public _publicKey;
-	C25519::Private *_privateKey;
+	ECC::Public _publicKey;
+	ECC::Private* _privateKey;
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

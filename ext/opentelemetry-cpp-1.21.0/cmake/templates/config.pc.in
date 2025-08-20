@@ -1,0 +1,15 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=@OPENTELEMETRY_PC_LIBDIR@
+includedir=@OPENTELEMETRY_PC_INCLUDEDIR@
+
+Name: @OPENTELEMETRY_PC_NAME@
+Description: @OPENTELEMETRY_PC_DESCRIPTION@
+Requires: @OPENTELEMETRY_PC_REQUIRES@
+Version: @OPENTELEMETRY_VERSION@
+
+Libs: -L${libdir} @OPENTELEMETRY_PC_LIBS@
+Cflags: -I${includedir} @OPENTELEMETRY_PC_CFLAGS@

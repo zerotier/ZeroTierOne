@@ -1,0 +1,52 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Ignore the following directories
+
+./.git/*
+./.github/*
+./third_party/benchmark/*
+./third_party/boost/*
+./third_party/googletest/*
+./third_party/ms-gsl/*
+./third_party/nlohmann-json/*
+./third_party/opentelemetry-proto/*
+./third_party/prometheus-cpp/*
+./tools/vcpkg/*
+./tools/ports/*
+
+# Third party code
+
+./api/include/opentelemetry/nostd/internal/absl/*
+./exporters/jaeger/thrift-gen/*
+./exporters/etw/include/opentelemetry/exporters/etw/TraceLoggingDynamic.h
+
+# Doc
+
+./docs/*
+
+## Ignore the following files patterns
+
+*.md
+*.rst
+*.png
+*.log
+*.patch
+*.json
+*.nuspec
+*.pem
+
+# Packaging
+*/CONTROL
+
+# LICENSE files
+*/LICENSE
+
+# Ignore the following misc files
+
+./.bazelignore
+./.bazelversion
+./docker/.gitignore
+.markdownlintignore
+./ci/toc.yml
+./ci/valgrind-suppressions

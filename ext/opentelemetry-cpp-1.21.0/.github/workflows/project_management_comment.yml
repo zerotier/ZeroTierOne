@@ -1,0 +1,28 @@
+
+name: Add comment
+on:
+  issues:
+    types:
+      - labeled
+permissions:
+  contents: read
+
+jobs:
+  add-comment:
+    if: github.event.label.name == 'help wanted'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - name: Add comment
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            This issue is available for anyone to work on. **Make sure to reference this issue in your pull request.**
+            :sparkles: Thank you for your contribution! :sparkles:

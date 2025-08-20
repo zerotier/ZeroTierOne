@@ -61,7 +61,7 @@ int crypto_sign(
 #endif
 
 #if 0
-void C25519::sign(const C25519::Private &myPrivate,const C25519::Public &myPublic,const void *msg,unsigned int len,void *signature)
+void ECC::sign(const ECC::Private &myPrivate,const ECC::Public &myPublic,const void *msg,unsigned int len,void *signature)
 {
   sc25519 sck, scs, scsk;
   ge25519 ger;

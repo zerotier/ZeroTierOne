@@ -13,6 +13,7 @@
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#include "node/ECC.hpp"
 #endif
 
 #include <stdio.h>
@@ -25,6 +26,7 @@
 #include "node/Constants.hpp"
 
 #ifdef __WINDOWS__
+// clang-format off
 #include <winsock2.h>
 #include <windows.h>
 #include <tchar.h>
@@ -39,6 +41,7 @@
 #include "windows/ZeroTierOne/ServiceInstaller.h"
 #include "windows/ZeroTierOne/ServiceBase.h"
 #include "windows/ZeroTierOne/ZeroTierOneService.h"
+// clang-format on
 #else
 #include <unistd.h>
 #include <pwd.h>
@@ -57,6 +60,7 @@
 #include <sys/socket.h>
 #include <ifaddrs.h>
 #include <sys/ioctl.h>
+#include "osdep/ExtOsdep.hpp"
 #ifndef ZT_NO_CAPABILITIES
 #include <linux/capability.h>
 #include <linux/securebits.h>
@@ -1552,9 +1556,9 @@ static int idtool(int argc,char **argv)
 			fprintf(stderr,"%s is not readable" ZT_EOL_S,argv[3]);
 			return 1;
 		}
-		C25519::Signature signature = id.sign(inf.data(),(unsigned int)inf.length());
+		ECC::Signature signature = id.sign(inf.data(),(unsigned int)inf.length());
 		char hexbuf[1024];
-		printf("%s",Utils::hex(signature.data,ZT_C25519_SIGNATURE_LEN,hexbuf));
+		printf("%s",Utils::hex(signature.data,ZT_ECC_SIGNATURE_LEN,hexbuf));
 	} else if (!strcmp(argv[1],"verify")) {
 		if (argc < 5) {
 			idtoolPrintHelp(stdout,argv[0]);
@@ -1602,14 +1606,14 @@ static int idtool(int argc,char **argv)
 				return 1;
 			}
 
-			C25519::Pair kp(C25519::generate());
+			ECC::Pair kp(ECC::generate());
 
 			char idtmp[4096];
 			nlohmann::json mj;
 			mj["objtype"] = "world";
 			mj["worldType"] = "moon";
-			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,ZT_C25519_PUBLIC_KEY_LEN,idtmp);
-			mj["signingKey_SECRET"] = Utils::hex(kp.priv.data,ZT_C25519_PRIVATE_KEY_LEN,idtmp);
+			mj["updatesMustBeSignedBy"] = mj["signingKey"] = Utils::hex(kp.pub.data,ZT_ECC_PUBLIC_KEY_SET_LEN,idtmp);
+			mj["signingKey_SECRET"] = Utils::hex(kp.priv.data,ZT_ECC_PRIVATE_KEY_SET_LEN,idtmp);
 			mj["id"] = id.address().toString(idtmp);
 			nlohmann::json seedj;
 			seedj["identity"] = id.toString(false,idtmp);
@@ -1646,11 +1650,11 @@ static int idtool(int argc,char **argv)
 				return 1;
 			}
 
-			C25519::Pair signingKey;
-			C25519::Public updatesMustBeSignedBy;
-			Utils::unhex(OSUtils::jsonString(mj["signingKey"],"").c_str(),signingKey.pub.data,ZT_C25519_PUBLIC_KEY_LEN);
-			Utils::unhex(OSUtils::jsonString(mj["signingKey_SECRET"],"").c_str(),signingKey.priv.data,ZT_C25519_PRIVATE_KEY_LEN);
-			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],"").c_str(),updatesMustBeSignedBy.data,ZT_C25519_PUBLIC_KEY_LEN);
+			ECC::Pair signingKey;
+			ECC::Public updatesMustBeSignedBy;
+			Utils::unhex(OSUtils::jsonString(mj["signingKey"],"").c_str(),signingKey.pub.data,ZT_ECC_PUBLIC_KEY_SET_LEN);
+			Utils::unhex(OSUtils::jsonString(mj["signingKey_SECRET"],"").c_str(),signingKey.priv.data,ZT_ECC_PRIVATE_KEY_SET_LEN);
+			Utils::unhex(OSUtils::jsonString(mj["updatesMustBeSignedBy"],"").c_str(),updatesMustBeSignedBy.data,ZT_ECC_PUBLIC_KEY_SET_LEN);
 
 			std::vector<World::Root> roots;
 			nlohmann::json &rootsj = mj["roots"];
@@ -2110,6 +2114,17 @@ int main(int argc,char **argv)
 	signal(SIGQUIT,&_sighandlerQuit);
 	signal(SIGINT,&_sighandlerQuit);
 
+#ifdef ZT_EXTOSDEP
+	int extosdepFd1 = -1;
+	int extosdepFd2 = -1;
+	for(int i=1;i<argc;++i) {
+		if (argv[i][0] != '-' || argv[i][1] != 'x') continue;
+		if (sscanf(argv[i] + 2, "%d,%d", &extosdepFd1, &extosdepFd2) == 2) break;
+		fprintf(stderr, "bad extosdepFd\n");
+		return 1;
+	}
+#endif // ZT_EXTOSDEP
+
 	/* Ensure that there are no inherited file descriptors open from a previous
 	 * incarnation. This is a hack to ensure that GitHub issue #61 or variants
 	 * of it do not return, and should not do anything otherwise bad. */
@@ -2117,8 +2132,12 @@ int main(int argc,char **argv)
 		int mfd = STDIN_FILENO;
 		if (STDOUT_FILENO > mfd) mfd = STDOUT_FILENO;
 		if (STDERR_FILENO > mfd) mfd = STDERR_FILENO;
-		for(int f=mfd+1;f<1024;++f)
+		for(int f=mfd+1;f<1024;++f) {
+#ifdef ZT_EXTOSDEP
+			if (f == extosdepFd1 || f == extosdepFd2) continue;
+#endif // ZT_EXTOSDEP
 			::close(f);
+		}
 	}
 
 	bool runAsDaemon = false;
@@ -2224,7 +2243,9 @@ int main(int argc,char **argv)
 						return 0;
 					} break;
 #endif // __WINDOWS__
-
+#ifdef ZT_EXTOSDEP
+				case 'x': break;
+#endif
 				case 'h':
 				case '?':
 				default:
@@ -2353,6 +2374,15 @@ int main(int argc,char **argv)
 		}
 	}
 #endif // __UNIX_LIKE__
+
+#ifdef ZT_EXTOSDEP
+	if (extosdepFd1 < 0) {
+		fprintf(stderr, "no extosdepFd specified\n");
+		OSUtils::rm(pidPath.c_str());
+		return 1;
+	}
+	ExtOsdep::init(extosdepFd1, extosdepFd2);
+#endif
 
 	_OneServiceRunner thr(argv[0],homeDir,port);
 	thr.threadMain();

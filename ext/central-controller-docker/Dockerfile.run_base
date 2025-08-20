@@ -1,15 +1,19 @@
-FROM ubuntu:jammy
+FROM debian:bookworm
+
+
 
 RUN apt update && apt upgrade -y
-
 RUN apt -y install \
-    netcat \
+    netcat-traditional \
     postgresql-client \
     postgresql-client-common \
     libjemalloc2 \
     libpq5 \
     curl \
     binutils \
-    linux-tools-gke \
     perf-tools-unstable \
-    google-perftools 
+    google-perftools \
+    gnupg \
+    libgrpc++1.51 \
+    libgrpc29 
+

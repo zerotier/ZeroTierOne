@@ -168,7 +168,7 @@
     <ClInclude Include="..\..\node\Array.hpp" />
     <ClInclude Include="..\..\node\AtomicCounter.hpp" />
     <ClInclude Include="..\..\node\Buffer.hpp" />
-    <ClInclude Include="..\..\node\C25519.hpp" />
+    <ClInclude Include="..\..\node\ECC.hpp" />
     <ClInclude Include="..\..\node\Capability.hpp" />
     <ClInclude Include="..\..\node\CertificateOfMembership.hpp" />
     <ClInclude Include="..\..\node\CertificateOfOwnership.hpp" />

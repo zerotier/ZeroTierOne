@@ -15,7 +15,6 @@ class WinFWHelper {
 	static void removeICMPRules(uint64_t nwid);
 	static void removeICMPRules();
 
-
   private:
 	static void _run(std::string cmd);
 	static void newICMPv4Rule(std::string address, uint64_t nwid);

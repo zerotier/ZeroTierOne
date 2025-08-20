@@ -1,0 +1,54 @@
+name: 'OpenTelemetry-cpp dependencies image'
+on:
+  schedule:
+    - cron: "0 3 * * 6"
+
+permissions:
+  contents: read
+
+jobs:
+  docker_image:
+    name: Docker Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+      with:
+        egress-policy: audit
+
+    -
+      name: checkout
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+    -
+      name: Set up QEMU
+      uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3.6.0
+    -
+      name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+    -
+      name: Build Image
+      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+      with:
+        builder: ${{ steps.buildx.outputs.name }}
+        context: ci/
+        file: ./docker/Dockerfile
+        build-args: BASE_IMAGE=ubuntu:latest
+        platforms: linux/amd64
+        # platforms: linux/amd64,linux/arm64
+        push: false
+        tags: otel-cpp-deps
+        load: true
+    -
+      name: Save Image
+      run: |
+        docker images
+        docker save -o /opt/otel-cpp-deps-debian.tar otel-cpp-deps
+    -
+      name: Upload Image
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: otel-cpp-deps
+        path: /opt/otel-cpp-deps-debian.tar
+        retention-days: 14

@@ -2,7 +2,7 @@ CORE_OBJS=\
 	node/AES.o \
 	node/AES_aesni.o \
 	node/AES_armcrypto.o \
-	node/C25519.o \
+	node/ECC.o \
 	node/Capability.o \
 	node/CertificateOfMembership.o \
 	node/CertificateOfOwnership.o \
@@ -39,7 +39,9 @@ ONE_OBJS=\
 	controller/DB.o \
 	controller/FileDB.o \
 	controller/LFDB.o \
-	controller/PostgreSQL.o \
+	controller/CtlUtil.o \
+	controller/CV1.o \
+	controller/CV2.o \
 	osdep/EthernetTap.o \
 	osdep/ManagedRoute.o \
 	osdep/Http.o \

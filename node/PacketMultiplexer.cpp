@@ -13,9 +13,9 @@
 
 #include "PacketMultiplexer.hpp"
 
+#include "Constants.hpp"
 #include "Node.hpp"
 #include "RuntimeEnvironment.hpp"
-#include "Constants.hpp"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -30,12 +30,12 @@ PacketMultiplexer::PacketMultiplexer(const RuntimeEnvironment* renv)
 void PacketMultiplexer::putFrame(void* tPtr, uint64_t nwid, void** nuptr, const MAC& source, const MAC& dest, unsigned int etherType, unsigned int vlanId, const void* data, unsigned int len, unsigned int flowId)
 {
 #if defined(__APPLE__) || defined(__OpenBSD__) || defined(__NetBSD__) || defined(__WINDOWS__)
-	RR->node->putFrame(tPtr,nwid,nuptr,source,dest,etherType,vlanId,(const void *)data,len);
+	RR->node->putFrame(tPtr, nwid, nuptr, source, dest, etherType, vlanId, (const void*)data, len);
 	return;
 #endif
 
-	if (!_enabled) {
-		RR->node->putFrame(tPtr,nwid,nuptr,source,dest,etherType,vlanId,(const void *)data,len);
+	if (! _enabled) {
+		RR->node->putFrame(tPtr, nwid, nuptr, source, dest, etherType, vlanId, (const void*)data, len);
 		return;
 	}
 

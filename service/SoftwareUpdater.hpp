@@ -14,20 +14,17 @@
 #ifndef ZT_SOFTWAREUPDATER_HPP
 #define ZT_SOFTWAREUPDATER_HPP
 
-#include <stdint.h>
-#include <stdio.h>
-
-#include <vector>
-#include <map>
-#include <string>
-#include <array>
-
 #include "../include/ZeroTierOne.h"
-
 #include "../node/Identity.hpp"
 #include "../node/Packet.hpp"
 
+#include <array>
+#include <map>
 #include <nlohmann/json.hpp>
+#include <stdint.h>
+#include <stdio.h>
+#include <string>
+#include <vector>
 
 /**
  * VERB_USER_MESSAGE type ID for software update messages
@@ -71,21 +68,21 @@
  */
 #define ZT_SOFTWARE_UPDATE_BIN_FILENAME "latest-update.exe"
 
-#define ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR "vMajor"
-#define ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR "vMinor"
+#define ZT_SOFTWARE_UPDATE_JSON_VERSION_MAJOR	 "vMajor"
+#define ZT_SOFTWARE_UPDATE_JSON_VERSION_MINOR	 "vMinor"
 #define ZT_SOFTWARE_UPDATE_JSON_VERSION_REVISION "vRev"
-#define ZT_SOFTWARE_UPDATE_JSON_VERSION_BUILD "vBuild"
-#define ZT_SOFTWARE_UPDATE_JSON_PLATFORM "platform"
-#define ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE "arch"
-#define ZT_SOFTWARE_UPDATE_JSON_VENDOR "vendor"
-#define ZT_SOFTWARE_UPDATE_JSON_CHANNEL "channel"
+#define ZT_SOFTWARE_UPDATE_JSON_VERSION_BUILD	 "vBuild"
+#define ZT_SOFTWARE_UPDATE_JSON_PLATFORM		 "platform"
+#define ZT_SOFTWARE_UPDATE_JSON_ARCHITECTURE	 "arch"
+#define ZT_SOFTWARE_UPDATE_JSON_VENDOR			 "vendor"
+#define ZT_SOFTWARE_UPDATE_JSON_CHANNEL			 "channel"
 #define ZT_SOFTWARE_UPDATE_JSON_EXPECT_SIGNED_BY "expectedSigner"
 #define ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNED_BY "signer"
 #define ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIGNATURE "signature"
-#define ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH "hash"
-#define ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE "size"
+#define ZT_SOFTWARE_UPDATE_JSON_UPDATE_HASH		 "hash"
+#define ZT_SOFTWARE_UPDATE_JSON_UPDATE_SIZE		 "size"
 #define ZT_SOFTWARE_UPDATE_JSON_UPDATE_EXEC_ARGS "execArgs"
-#define ZT_SOFTWARE_UPDATE_JSON_UPDATE_URL "url"
+#define ZT_SOFTWARE_UPDATE_JSON_UPDATE_URL		 "url"
 
 namespace ZeroTier {
 
@@ -94,14 +91,12 @@ class Node;
 /**
  * This class handles retrieving and executing updates, or serving them
  */
-class SoftwareUpdater
-{
-public:
+class SoftwareUpdater {
+  public:
 	/**
 	 * Each message begins with an 8-bit message verb
 	 */
-	enum MessageVerb
-	{
+	enum MessageVerb {
 		/**
 		 * Payload: JSON containing current system platform, version, etc.
 		 */
@@ -128,7 +123,7 @@ public:
 		VERB_DATA = 4
 	};
 
-	SoftwareUpdater(Node &node,const std::string &homePath);
+	SoftwareUpdater(Node& node, const std::string& homePath);
 	~SoftwareUpdater();
 
 	/**
@@ -145,7 +140,7 @@ public:
 	 * @param data Message payload
 	 * @param len Length of message
 	 */
-	void handleSoftwareUpdateUserMessage(uint64_t origin,const void *data,unsigned int len);
+	void handleSoftwareUpdateUserMessage(uint64_t origin, const void* data, unsigned int len);
 
 	/**
 	 * Check for updates and do other update-related housekeeping
@@ -159,7 +154,10 @@ public:
 	/**
 	 * @return Meta-data for downloaded update or NULL if none
 	 */
-	inline const nlohmann::json &pending() const { return _latestMeta; }
+	inline const nlohmann::json& pending() const
+	{
+		return _latestMeta;
+	}
 
 	/**
 	 * Apply any ready update now
@@ -174,31 +172,33 @@ public:
 	 *
 	 * @param channel 'release', 'beta', etc.
 	 */
-	inline void setChannel(const std::string &channel) { _channel = channel; }
+	inline void setChannel(const std::string& channel)
+	{
+		_channel = channel;
+	}
 
-private:
-	Node &_node;
+  private:
+	Node& _node;
 	uint64_t _lastCheckTime;
 	std::string _homePath;
 	std::string _channel;
-	FILE *_distLog;
+	FILE* _distLog;
 
 	// Offered software updates if we are an update host (we have update-dist.d and update hosting is enabled)
-	struct _D
-	{
+	struct _D {
 		nlohmann::json meta;
 		std::string bin;
 	};
-	std::map< std::array<uint8_t,16>,_D > _dist; // key is first 16 bytes of hash
+	std::map<std::array<uint8_t, 16>, _D> _dist;   // key is first 16 bytes of hash
 
 	nlohmann::json _latestMeta;
 	bool _latestValid;
 
 	std::string _download;
-	std::array<uint8_t,16> _downloadHashPrefix;
+	std::array<uint8_t, 16> _downloadHashPrefix;
 	unsigned long _downloadLength;
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

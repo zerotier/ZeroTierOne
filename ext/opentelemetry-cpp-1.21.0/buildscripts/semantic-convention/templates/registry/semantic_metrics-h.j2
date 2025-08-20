@@ -1,0 +1,228 @@
+{#
+  Copyright The OpenTelemetry Authors
+  SPDX-License-Identifier: Apache-2.0
+
+  This file is:
+  - a Jinja template,
+  - used to generate semantic conventions,
+  - using weaver.
+
+  For doc on the template syntax:
+  https://jinja.palletsprojects.com/en/3.0.x/
+
+  For doc on the semantic conventions:
+  https://github.com/open-telemetry/semantic-conventions
+
+  For doc on weaver:
+  https://github.com/open-telemetry/weaver
+#}
+/*
+ * Copyright The OpenTelemetry Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * DO NOT EDIT, this is an Auto-generated file from:
+ * buildscripts/semantic-convention/templates/registry/semantic_metrics-h.j2
+ */
+{# ========================================================================== #}
+{#
+    DESIGN NOTES:
+    - Use the debug flag to dump the semantic convention data
+      in the generated output, to inspect it.
+    - Some instruments are not supported in the SDK.
+      For these, we do not generate the code.
+#}
+{# ========================================================================== #}
+
+{% set debug = false %}
+
+{% set file_name = ctx.output + (ctx.root_namespace | snake_case) ~ "_metrics.h" %}
+{{ template.set_file_name(file_name) }}
+
+{% set metrics = ctx.metrics | list %}
+
+{% macro metric_namespace(ctx) %}
+{{ ctx.root_namespace | snake_case }}
+{% endmacro %}
+
+{% macro func_metric_name(metric) %}
+{{ metric.id | pascal_case }}
+{% endmacro %}
+
+{% macro var_metric_name(metric) %}
+k{{ metric.id | pascal_case }}
+{% endmacro %}
+
+{% macro descr_metric_name(metric) %}
+descr{{ metric.id | pascal_case }}
+{% endmacro %}
+
+{% macro unit_metric_name(metric) %}
+unit{{ metric.id | pascal_case }}
+{% endmacro %}
+
+{% macro sync_instrument_min_abi_version(metric) %}
+{{ metric.instrument | map_text("cpp_sync_min_abi_version") | trim }}
+{% endmacro %}
+
+{% macro sync_instrument_int64_type(metric) %}
+{{ metric.instrument | map_text("cpp_sync_instrument_to_int64_type") | trim }}
+{% endmacro %}
+
+{% macro sync_instrument_double_type(metric) %}
+{{ metric.instrument | map_text("cpp_sync_instrument_to_double_type") | trim }}
+{% endmacro %}
+
+{% macro sync_instrument_int64_factory(metric) %}
+{{ metric.instrument | map_text("cpp_sync_instrument_to_int64_factory") }}
+{% endmacro %}
+
+{% macro sync_instrument_double_factory(metric) %}
+{{ metric.instrument | map_text("cpp_sync_instrument_to_double_factory") }}
+{% endmacro %}
+
+{% macro async_instrument_min_abi_version(metric) %}
+{{ metric.instrument | map_text("cpp_async_min_abi_version") | trim }}
+{% endmacro %}
+
+{% macro async_instrument_type(metric) %}
+{{ metric.instrument | map_text("cpp_async_instrument_to_type") }}
+{% endmacro %}
+
+{% macro async_instrument_int64_factory(metric) %}
+{{ metric.instrument | map_text("cpp_async_instrument_to_int64_factory") }}
+{% endmacro %}
+
+{% macro async_instrument_double_factory(metric) %}
+{{ metric.instrument | map_text("cpp_async_instrument_to_double_factory") }}
+{% endmacro %}
+
+{% set cpp_metric_namespace = metric_namespace(ctx) %}
+
+{# ========================================================================== #}
+
+#pragma once
+
+#include "opentelemetry/common/macros.h"
+#include "opentelemetry/metrics/meter.h"
+#include "opentelemetry/version.h"
+
+OPENTELEMETRY_BEGIN_NAMESPACE
+namespace semconv
+{
+namespace {{ cpp_metric_namespace -}}
+{
+
+{% for metric in ctx.metrics %}
+    {% if debug %}
+// DEBUG: {{ metric }}
+    {% endif %}
+    {% set f_metric_name = func_metric_name(metric) %}
+    {% set v_metric_name = var_metric_name(metric) %}
+    {% set descr = descr_metric_name(metric) %}
+    {% set unit = unit_metric_name(metric) %}
+    {% set sync_min_abi_version = (sync_instrument_min_abi_version(metric)) %}
+    {% set async_min_abi_version = (async_instrument_min_abi_version(metric)) %}
+    {% set sync_int64_type = sync_instrument_int64_type(metric) %}
+    {% set sync_double_type = sync_instrument_double_type(metric) %}
+    {% set async_type = async_instrument_type(metric) %}
+    {% set sync_int64_factory = sync_instrument_int64_factory(metric) %}
+    {% set sync_double_factory = sync_instrument_double_factory(metric) %}
+    {% set async_int64_factory = async_instrument_int64_factory(metric) %}
+    {% set async_double_factory = async_instrument_double_factory(metric) %}
+    {% set excluded = metric.id in ctx.excluded_attributes %}
+    {% if excluded %}
+#if 0
+// Excluded metric:
+    {% endif %}
+    {% if metric is deprecated %}
+{{ [metric.brief, "\n", "@deprecated", metric.deprecated, "\n", metric.note, "\n", metric.instrument] | comment(ident=2) }}
+OPENTELEMETRY_DEPRECATED
+    {% else %}
+{{ [metric.brief, "\n", metric.note, "\n", metric.instrument] | comment(ident=2) }}
+    {% endif %}
+static constexpr const char *{{v_metric_name}} = "{{metric.metric_name}}";
+    {% if metric is deprecated %}
+OPENTELEMETRY_DEPRECATED
+    {% endif %}
+static constexpr const char *{{descr}} = "{{metric.brief}}";
+    {% if metric is deprecated %}
+OPENTELEMETRY_DEPRECATED
+    {% endif %}
+static constexpr const char *{{unit}} = "{{metric.unit}}";
+
+    {% if sync_min_abi_version|trim != "0" %}
+        {% if sync_min_abi_version|trim != "1" %}
+#if OPENTELEMETRY_ABI_VERSION_NO >= {{sync_min_abi_version}}
+        {% endif %}
+        {% if metric is deprecated %}
+OPENTELEMETRY_DEPRECATED
+        {% endif %}
+static inline nostd::unique_ptr<{{sync_int64_type-}}>
+CreateSyncInt64{{f_metric_name-}}(metrics::Meter *meter)
+{
+  return meter->{{sync_int64_factory}}(
+    {{v_metric_name}},
+    {{descr}},
+    {{unit}});
+}
+
+        {% if metric is deprecated %}
+OPENTELEMETRY_DEPRECATED
+        {% endif %}
+static inline nostd::unique_ptr<{{sync_double_type-}}>
+CreateSyncDouble{{f_metric_name-}}(metrics::Meter *meter)
+{
+  return meter->{{sync_double_factory}}(
+    {{v_metric_name}},
+    {{descr}},
+    {{unit}});
+}
+        {% if sync_min_abi_version|trim != "1" %}
+#endif /* OPENTELEMETRY_ABI_VERSION_NO */
+        {% endif %}
+    {% endif %}
+
+    {% if async_min_abi_version|trim != "0" %}
+        {% if async_min_abi_version|trim != "1" %}
+#if OPENTELEMETRY_ABI_VERSION_NO >= {{async_min_abi_version}}
+        {% endif %}
+        {% if metric is deprecated %}
+OPENTELEMETRY_DEPRECATED
+        {% endif %}
+static inline nostd::shared_ptr<{{async_type-}}>
+CreateAsyncInt64{{f_metric_name-}}(metrics::Meter *meter)
+{
+  return meter->{{async_int64_factory}}(
+    {{v_metric_name}},
+    {{descr}},
+    {{unit}});
+}
+
+        {% if metric is deprecated %}
+OPENTELEMETRY_DEPRECATED
+        {% endif %}
+static inline nostd::shared_ptr<{{async_type-}}>
+CreateAsyncDouble{{f_metric_name-}}(metrics::Meter *meter)
+{
+  return meter->{{async_double_factory}}(
+    {{v_metric_name}},
+    {{descr}},
+    {{unit}});
+}
+        {% if async_min_abi_version|trim != "1" %}
+#endif /* OPENTELEMETRY_ABI_VERSION_NO */
+        {% endif %}
+    {% endif %}
+
+    {% if excluded %}
+#endif /* 0 */
+    {% endif %}
+
+{% endfor %}
+
+}
+}
+OPENTELEMETRY_END_NAMESPACE
+

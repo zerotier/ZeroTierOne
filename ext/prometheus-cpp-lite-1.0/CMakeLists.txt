@@ -5,7 +5,7 @@ option(PROMETHEUS_BUILD_EXAMPLES "Build with examples" OFF)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
-if(WIN32) 
+if(WIN32)
 
   # it prevent create Debug/ and Release folders in Visual Studio
   foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
@@ -25,7 +25,7 @@ add_subdirectory("./core")
 
 add_subdirectory("./simpleapi")
 
-add_subdirectory("./3rdpatry/http-client-lite")
+add_subdirectory("./3rdparty/http-client-lite")
 
 if(PROMETHEUS_BUILD_EXAMPLES)
   add_subdirectory("./examples")

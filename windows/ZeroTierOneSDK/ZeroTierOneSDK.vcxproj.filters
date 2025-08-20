@@ -42,7 +42,7 @@
     <ClInclude Include="..\..\node\Buffer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\node\C25519.hpp">
+    <ClInclude Include="..\..\node\ECC.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\node\Capability.hpp">

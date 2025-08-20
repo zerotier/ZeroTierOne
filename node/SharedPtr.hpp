@@ -14,8 +14,8 @@
 #ifndef ZT_SHAREDPTR_HPP
 #define ZT_SHAREDPTR_HPP
 
-#include "Mutex.hpp"
 #include "AtomicCounter.hpp"
+#include "Mutex.hpp"
 
 namespace ZeroTier {
 
@@ -26,13 +26,18 @@ namespace ZeroTier {
  * counted must list this as a 'friend' and must have a private instance of
  * AtomicCounter called __refCount.
  */
-template<typename T>
-class SharedPtr
-{
-public:
-	SharedPtr() : _ptr((T *)0) {}
-	SharedPtr(T *obj) : _ptr(obj) { ++obj->__refCount; }
-	SharedPtr(const SharedPtr &sp) : _ptr(sp._getAndInc()) {}
+template <typename T> class SharedPtr {
+  public:
+	SharedPtr() : _ptr((T*)0)
+	{
+	}
+	SharedPtr(T* obj) : _ptr(obj)
+	{
+		++obj->__refCount;
+	}
+	SharedPtr(const SharedPtr& sp) : _ptr(sp._getAndInc())
+	{
+	}
 
 	~SharedPtr()
 	{
@@ -43,10 +48,10 @@ public:
 		}
 	}
 
-	inline SharedPtr &operator=(const SharedPtr &sp)
+	inline SharedPtr& operator=(const SharedPtr& sp)
 	{
 		if (_ptr != sp._ptr) {
-			T *p = sp._getAndInc();
+			T* p = sp._getAndInc();
 			if (_ptr) {
 				if (--_ptr->__refCount <= 0) {
 					delete _ptr;
@@ -65,7 +70,7 @@ public:
 	 *
 	 * @param ptr Naked pointer to assign
 	 */
-	inline void set(T *ptr)
+	inline void set(T* ptr)
 	{
 		zero();
 		++ptr->__refCount;
@@ -77,21 +82,33 @@ public:
 	 *
 	 * @param with Pointer to swap with
 	 */
-	inline void swap(SharedPtr &with)
+	inline void swap(SharedPtr& with)
 	{
-		T *tmp = _ptr;
+		T* tmp = _ptr;
 		_ptr = with._ptr;
 		with._ptr = tmp;
 	}
 
-	inline operator bool() const { return (_ptr != (T *)0); }
-	inline T &operator*() const { return *_ptr; }
-	inline T *operator->() const { return _ptr; }
+	inline operator bool() const
+	{
+		return (_ptr != (T*)0);
+	}
+	inline T& operator*() const
+	{
+		return *_ptr;
+	}
+	inline T* operator->() const
+	{
+		return _ptr;
+	}
 
 	/**
 	 * @return Raw pointer to held object
 	 */
-	inline T *ptr() const { return _ptr; }
+	inline T* ptr() const
+	{
+		return _ptr;
+	}
 
 	/**
 	 * Set this pointer to NULL
@@ -102,7 +119,7 @@ public:
 			if (--_ptr->__refCount <= 0) {
 				delete _ptr;
 			}
-			_ptr = (T *)0;
+			_ptr = (T*)0;
 		}
 	}
 
@@ -117,24 +134,42 @@ public:
 		return 0;
 	}
 
-	inline bool operator==(const SharedPtr &sp) const { return (_ptr == sp._ptr); }
-	inline bool operator!=(const SharedPtr &sp) const { return (_ptr != sp._ptr); }
-	inline bool operator>(const SharedPtr &sp) const { return (_ptr > sp._ptr); }
-	inline bool operator<(const SharedPtr &sp) const { return (_ptr < sp._ptr); }
-	inline bool operator>=(const SharedPtr &sp) const { return (_ptr >= sp._ptr); }
-	inline bool operator<=(const SharedPtr &sp) const { return (_ptr <= sp._ptr); }
+	inline bool operator==(const SharedPtr& sp) const
+	{
+		return (_ptr == sp._ptr);
+	}
+	inline bool operator!=(const SharedPtr& sp) const
+	{
+		return (_ptr != sp._ptr);
+	}
+	inline bool operator>(const SharedPtr& sp) const
+	{
+		return (_ptr > sp._ptr);
+	}
+	inline bool operator<(const SharedPtr& sp) const
+	{
+		return (_ptr < sp._ptr);
+	}
+	inline bool operator>=(const SharedPtr& sp) const
+	{
+		return (_ptr >= sp._ptr);
+	}
+	inline bool operator<=(const SharedPtr& sp) const
+	{
+		return (_ptr <= sp._ptr);
+	}
 
-private:
-	inline T *_getAndInc() const
+  private:
+	inline T* _getAndInc() const
 	{
 		if (_ptr) {
 			++_ptr->__refCount;
 		}
 		return _ptr;
 	}
-	T *_ptr;
+	T* _ptr;
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

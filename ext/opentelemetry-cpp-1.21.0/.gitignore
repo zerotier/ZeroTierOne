@@ -1,0 +1,84 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Ref. https://github.com/github/gitignore/blob/master/C%2B%2B.gitignore
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+*.pdb
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Bazel files
+MODULE.bazel.lock
+/bazel-*
+
+# Mac
+.DS_Store
+
+# Output directories
+/out
+/out.*
+# Indicator that the tools were deployed
+.buildtools
+
+# Temporary Bazel directories
+/bazel-*
+/plugin
+/build
+
+tags
+.cache/clangd/*
+
+# Temporary dir used when generating semconv
+buildscripts/semantic-convention/tmp-semconv/
+
+# Generated cert keys in functional tests
+functional/cert/ca.csr
+functional/cert/ca.pem
+functional/cert/ca-key.pem
+functional/cert/client_cert.csr
+functional/cert/client_cert.pem
+functional/cert/client_cert-key.pem
+functional/cert/server_cert.csr
+functional/cert/server_cert.pem
+functional/cert/server_cert-key.pem
+functional/cert/ca_b.csr
+functional/cert/ca_b.pem
+functional/cert/ca_b-key.pem
+functional/cert/client_cert_b.csr
+functional/cert/client_cert_b.pem
+functional/cert/client_cert_b-key.pem
+functional/cert/server_cert_b.csr
+functional/cert/server_cert_b.pem
+functional/cert/server_cert_b-key.pem
+functional/cert/unreadable.pem
+
+localinstall

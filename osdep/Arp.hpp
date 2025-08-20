@@ -14,13 +14,12 @@
 #ifndef ZT_ARP_HPP
 #define ZT_ARP_HPP
 
-#include <stdint.h>
-
-#include <utility>
-
 #include "../node/Constants.hpp"
 #include "../node/Hashtable.hpp"
 #include "../node/MAC.hpp"
+
+#include <stdint.h>
+#include <utility>
 
 /**
  * Maximum possible ARP length
@@ -67,9 +66,8 @@ namespace ZeroTier {
  * This class is not thread-safe and must be guarded if used in multi-threaded
  * code.
  */
-class Arp
-{
-public:
+class Arp {
+  public:
 	Arp();
 
 	/**
@@ -78,7 +76,7 @@ public:
 	 * @param mac Our local MAC address
 	 * @param ip IP in big-endian byte order (sin_addr.s_addr)
 	 */
-	void addLocal(uint32_t ip,const MAC &mac);
+	void addLocal(uint32_t ip, const MAC& mac);
 
 	/**
 	 * Delete a local IP entry or a cached ARP entry
@@ -103,7 +101,7 @@ public:
 	 * @param responseDest Destination of response, or set to null if no response
 	 * @return IP address learned or 0 if no new IPs in cache
 	 */
-	uint32_t processIncomingArp(const void *arp,unsigned int len,void *response,unsigned int &responseLen,MAC &responseDest);
+	uint32_t processIncomingArp(const void* arp, unsigned int len, void* response, unsigned int& responseLen, MAC& responseDest);
 
 	/**
 	 * Get the MAC corresponding to an IP, generating a query if needed
@@ -115,29 +113,30 @@ public:
 	 * MAC returned is non-null.
 	 *
 	 * @param localMac Local MAC address of host interface
-     * @param localIp Local IP address of host interface
+	 * @param localIp Local IP address of host interface
 	 * @param targetIp IP to look up
 	 * @param query Buffer for generated query -- MUST be a minimum of ZT_ARP_BUF_LENGTH in size
 	 * @param queryLen Length of generated query, or set to 0 if no query generated
 	 * @param queryDest Destination of query, or set to null if no query generated
 	 * @return MAC or 0 if no cached entry for this IP
 	 */
-	MAC query(const MAC &localMac,uint32_t localIp,uint32_t targetIp,void *query,unsigned int &queryLen,MAC &queryDest);
+	MAC query(const MAC& localMac, uint32_t localIp, uint32_t targetIp, void* query, unsigned int& queryLen, MAC& queryDest);
 
-private:
-	struct _ArpEntry
-	{
-		_ArpEntry() : lastQuerySent(0),lastResponseReceived(0),mac(),local(false) {}
-		uint64_t lastQuerySent; // Time last query was sent or 0 for local IP
-		uint64_t lastResponseReceived; // Time of last ARP response or 0 for local IP
-		MAC mac; // MAC address of device responsible for IP or null if not known yet
-		bool local; // True if this is a local ARP entry
+  private:
+	struct _ArpEntry {
+		_ArpEntry() : lastQuerySent(0), lastResponseReceived(0), mac(), local(false)
+		{
+		}
+		uint64_t lastQuerySent;			 // Time last query was sent or 0 for local IP
+		uint64_t lastResponseReceived;	 // Time of last ARP response or 0 for local IP
+		MAC mac;						 // MAC address of device responsible for IP or null if not known yet
+		bool local;						 // True if this is a local ARP entry
 	};
 
-	Hashtable< uint32_t,_ArpEntry > _cache;
+	Hashtable<uint32_t, _ArpEntry> _cache;
 	uint64_t _lastCleaned;
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

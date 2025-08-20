@@ -1,0 +1,37 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+ARG BASE_IMAGE=ubuntu:latest
+ARG CORES=${nproc}
+
+FROM ${BASE_IMAGE} as base
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y build-essential autoconf \
+    libtool pkg-config cmake git libssl-dev curl \
+	libcurl4-openssl-dev libgtest-dev libgmock-dev libbenchmark-dev
+
+WORKDIR /work
+RUN mkdir -p /opt/otel-cpp
+
+FROM base as grpc
+# install grpc, protobuf and abseil
+ARG GRPC_VERSION=1.43.2
+
+ADD setup_grpc.sh .
+RUN ./setup_grpc.sh  -i "/opt/otel-cpp" -v ${GRPC_VERSION}
+
+FROM scratch as final
+
+COPY --from=grpc /opt/otel-cpp /
+
+# how to use:
+#
+# docker create -ti --name deps otel-cpp-deps bash
+# docker cp deps:/ ./
+# docker rm -f deps
+#
+# or:
+#
+# COPY --from=otel-cpp-deps /usr

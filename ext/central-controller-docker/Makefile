@@ -10,7 +10,7 @@ buildx:
 	@echo docker buildx inspect --bootstrap
 
 controller-builder:	buildx
-	docker buildx build --no-cache --platform linux/amd64,linux/arm64 -t $(registry)/ctlbuild:latest -f Dockerfile.builder . --push
+	docker buildx build --no-cache --platform linux/amd64,linux/arm64 -t $(registry)/ctlbuild:$(shell date +"%Y-%m-%d") -f Dockerfile.builder . --push 
 
 controller-runbase: buildx
-	docker buildx build --no-cache --platform linux/amd64,linux/arm64 -t $(registry)/ctlrun:latest -f Dockerfile.run_base . --push
+	docker buildx build --no-cache --platform linux/amd64,linux/arm64 -t $(registry)/ctlrun:$(shell date +"%Y-%m-%d") -f Dockerfile.run_base . --push 

@@ -1,0 +1,77 @@
+
+name: cppcheck
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@0634a2670c59f64b4a01f0f96f84700a4088b9f0 # v2.12.0
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: 'recursive'
+
+      - name: Set up dependencies
+        run: |
+          sudo apt update -y
+          sudo apt install -y cppcheck
+
+      - name: Run cppcheck
+        run: |
+          cppcheck --version | tee cppcheck.log
+          cppcheck \
+            --force \
+            --enable=warning,performance,portability \
+            --inline-suppr \
+            --suppress=unknownMacro:exporters/etw/include/opentelemetry/exporters/etw/TraceLoggingDynamic.h \
+            --language=c++ \
+            --std=c++14 \
+            -I api/include \
+            -I exporters/elasticsearch/include \
+            -I exporters/etw/include \
+            -I exporters/memory/include \
+            -I exporters/ostream/include \
+            -I exporters/otlp/include \
+            -I exporters/prometheus/include \
+            -I exporters/zipkin/include \
+            -I ext/include \
+            -I opentracing-shim/include \
+            -I sdk/include \
+            -i build \
+            -i test \
+            -i third_party \
+            -j $(nproc) \
+            . 2>&1 | tee --append cppcheck.log
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: success() || failure()
+        with:
+          name: Logs (cppcheck)
+          path: ./cppcheck.log
+
+      - name: Count warnings
+        run: |
+          set +e
+          readonly WARNING_COUNT=`grep -c -E "\[.+\]" cppcheck.log`
+          echo "cppcheck reported ${WARNING_COUNT} warning(s)"
+          # Acceptable limit, to decrease over time down to 0
+          readonly WARNING_LIMIT=10
+          # FAIL the build if WARNING_COUNT > WARNING_LIMIT
+          if [ $WARNING_COUNT -gt $WARNING_LIMIT ] ; then
+            exit 1
+          # WARN in annotations if WARNING_COUNT > 0
+          elif [ $WARNING_COUNT -gt 0 ] ; then
+            echo "::warning::cppcheck reported ${WARNING_COUNT} warning(s)"
+          fi

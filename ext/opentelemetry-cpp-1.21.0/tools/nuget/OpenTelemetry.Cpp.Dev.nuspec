@@ -1,0 +1,24 @@
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>OpenTelemetry.Cpp.Dev</id>
+    <version>0.0.0</version>
+    <authors>OpenTelemetry Authors</authors>
+    <requireLicenseAcceptance>true</requireLicenseAcceptance>
+    <license type="expression">Apache-2.0</license>
+    <licenseUrl>https://licenses.nuget.org/Apache-2.0</licenseUrl>
+    <icon>opentelemetry-icon-color.png</icon>
+    <projectUrl>https://opentelemetry.io/</projectUrl>
+    <description>OpenTelemetry C++ SDK - Development snapshot</description>
+    <tags>Observability OpenTelemetry Monitoring Telemetry Tracing native C++ v140 v141 winapp dyn rt-dyn msvcstl windesktop</tags>
+    <repository type="git" url="http://github.com/open-telemetry/opentelemetry-cpp"/>
+    <dependencies>
+    </dependencies>
+  </metadata>
+  <files>
+      <file src="api\**\*.*" target="api" />
+      <file src="examples\**\*.*" target="examples" exclude=".vs\*.*" />
+      <file src="exporters\**\*.*" target="exporters" />
+      <file src="sdk\**\*.*" target="sdk" />
+      <file src="opentelemetry-icon-color.png" target="\" />
+  </files>
+</package>

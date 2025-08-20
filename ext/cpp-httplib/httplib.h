@@ -917,6 +917,8 @@ public:
 
   std::function<TaskQueue *(void)> new_task_queue;
 
+  bool routing(Request &req, Response &res, Stream &strm);
+
 protected:
   bool process_request(Stream &strm, bool close_connection,
                        bool &connection_closed,
@@ -949,7 +951,6 @@ private:
   int bind_internal(const std::string &host, int port, int socket_flags);
   bool listen_internal();
 
-  bool routing(Request &req, Response &res, Stream &strm);
   bool handle_file_request(const Request &req, Response &res,
                            bool head = false);
   bool dispatch_request(Request &req, Response &res,

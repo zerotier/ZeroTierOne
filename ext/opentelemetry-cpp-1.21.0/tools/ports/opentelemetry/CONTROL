@@ -1,0 +1,10 @@
+Source: opentelemetry
+Version: 0.0.1
+Homepage: https://github.com/open-telemetry/opentelemetry-cpp
+Description: OpenTelemetry C++ SDK
+
+Feature: stdlib
+Description: Build OpenTelemetry with Standard Library classes
+
+Feature: abseil
+Description: Build OpenTelemetry with Abseil classes

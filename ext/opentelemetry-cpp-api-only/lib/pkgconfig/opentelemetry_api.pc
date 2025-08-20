@@ -1,0 +1,15 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: OpenTelemetry API
+Description: A header-only library to support instrumentation with OpenTelemetry.
+Requires: 
+Version: 1.21.0
+
+Libs: -L${libdir} 
+Cflags: -I${includedir}  -DOPENTELEMETRY_ABI_VERSION_NO=1

@@ -1,5 +1,5 @@
 /*
- * Copyright (c)2019 ZeroTier, Inc.
+ * Copyright (c)2025 ZeroTier, Inc.
  *
  * Use of this software is governed by the Business Source License included
  * in the LICENSE.TXT file in the project's root directory.
@@ -11,186 +11,185 @@
  */
 /****/
 
-#include "DB.hpp"
-
 #ifdef ZT_CONTROLLER_USE_LIBPQ
 
-#ifndef ZT_CONTROLLER_LIBPQ_HPP
-#define ZT_CONTROLLER_LIBPQ_HPP
-
-#define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 4
+#ifndef ZT_CONTROLLER_POSTGRESQL_HPP
+#define ZT_CONTROLLER_POSTGRESQL_HPP
 
 #include "ConnectionPool.hpp"
-#include <pqxx/pqxx>
+#include "DB.hpp"
+#include "opentelemetry/trace/provider.h"
 
 #include <memory>
-#include <redis++/redis++.h>
+#include <nlohmann/json.hpp>
+#include <pqxx/pqxx>
 
-#include "../node/Metrics.hpp"
+namespace ZeroTier {
 
 extern "C" {
 typedef struct pg_conn PGconn;
 }
 
-namespace smeeclient {
-	struct SmeeClient;
-}
-
-namespace ZeroTier {
-
-struct RedisConfig;
-
-
 class PostgresConnection : public Connection {
-public:
-	virtual ~PostgresConnection() {
+  public:
+	virtual ~PostgresConnection()
+	{
 	}
 
 	std::shared_ptr<pqxx::connection> c;
 	int a;
 };
 
-
 class PostgresConnFactory : public ConnectionFactory {
-public:
-	PostgresConnFactory(std::string &connString) 
-		: m_connString(connString)
+  public:
+	PostgresConnFactory(std::string& connString) : m_connString(connString)
 	{
 	}
 
-	virtual std::shared_ptr<Connection> create() {
+	virtual std::shared_ptr<Connection> create()
+	{
 		Metrics::conn_counter++;
 		auto c = std::shared_ptr<PostgresConnection>(new PostgresConnection());
 		c->c = std::make_shared<pqxx::connection>(m_connString);
 		return std::static_pointer_cast<Connection>(c);
 	}
-private:
+
+  private:
 	std::string m_connString;
 };
 
-class PostgreSQL;
+template <typename T> class MemberNotificationReceiver : public pqxx::notification_receiver {
+  public:
+	MemberNotificationReceiver(T* p, pqxx::connection& c, const std::string& channel) : pqxx::notification_receiver(c, channel), _psql(p)
+	{
+		fprintf(stderr, "initialize MemberNotificationReceiver\n");
+	}
 
-class MemberNotificationReceiver : public pqxx::notification_receiver {
-public: 
-	MemberNotificationReceiver(PostgreSQL *p, pqxx::connection &c, const std::string &channel);
-	virtual ~MemberNotificationReceiver() {
+	virtual ~MemberNotificationReceiver()
+	{
 		fprintf(stderr, "MemberNotificationReceiver destroyed\n");
 	}
 
-	virtual void operator() (const std::string &payload, int backendPid);
-private:
-	PostgreSQL *_psql;
+	virtual void operator()(const std::string& payload, int backendPid)
+	{
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("db_member_notification");
+		auto span = tracer->StartSpan("db_member_notification::operator()");
+		auto scope = tracer->WithActiveSpan(span);
+		span->SetAttribute("payload", payload);
+		span->SetAttribute("psqlReady", _psql->isReady());
+
+		fprintf(stderr, "Member Notification received: %s\n", payload.c_str());
+		Metrics::pgsql_mem_notification++;
+		nlohmann::json tmp(nlohmann::json::parse(payload));
+		nlohmann::json& ov = tmp["old_val"];
+		nlohmann::json& nv = tmp["new_val"];
+		nlohmann::json oldConfig, newConfig;
+		if (ov.is_object())
+			oldConfig = ov;
+		if (nv.is_object())
+			newConfig = nv;
+
+		if (oldConfig.is_object() && newConfig.is_object()) {
+			_psql->save(newConfig, _psql->isReady());
+			fprintf(stderr, "payload sent\n");
+		}
+		else if (newConfig.is_object() && ! oldConfig.is_object()) {
+			// new member
+			Metrics::member_count++;
+			_psql->save(newConfig, _psql->isReady());
+			fprintf(stderr, "new member payload sent\n");
+		}
+		else if (! newConfig.is_object() && oldConfig.is_object()) {
+			// member delete
+			uint64_t networkId = OSUtils::jsonIntHex(oldConfig["nwid"], 0ULL);
+			uint64_t memberId = OSUtils::jsonIntHex(oldConfig["id"], 0ULL);
+			if (memberId && networkId) {
+				_psql->eraseMember(networkId, memberId);
+				fprintf(stderr, "member delete payload sent\n");
+			}
+		}
+	}
+
+  private:
+	T* _psql;
 };
 
-class NetworkNotificationReceiver : public pqxx::notification_receiver {
-public:
-	NetworkNotificationReceiver(PostgreSQL *p, pqxx::connection &c, const std::string &channel);
-	virtual ~NetworkNotificationReceiver() {
+template <typename T> class NetworkNotificationReceiver : public pqxx::notification_receiver {
+  public:
+	NetworkNotificationReceiver(T* p, pqxx::connection& c, const std::string& channel) : pqxx::notification_receiver(c, channel), _psql(p)
+	{
+		fprintf(stderr, "initialize NetworkrNotificationReceiver\n");
+	}
+
+	virtual ~NetworkNotificationReceiver()
+	{
 		fprintf(stderr, "NetworkNotificationReceiver destroyed\n");
 	};
 
-	virtual void operator() (const std::string &payload, int packend_pid);
-private:
-	PostgreSQL *_psql;
-};
-
-/**
- * A controller database driver that talks to PostgreSQL
- *
- * This is for use with ZeroTier Central.  Others are free to build and use it
- * but be aware that we might change it at any time.
- */
-class PostgreSQL : public DB
-{
-	friend class MemberNotificationReceiver;
-	friend class NetworkNotificationReceiver;
-public:
-	PostgreSQL(const Identity &myId, const char *path, int listenPort, RedisConfig *rc);
-	virtual ~PostgreSQL();
-
-	virtual bool waitForReady();
-	virtual bool isReady();
-	virtual bool save(nlohmann::json &record,bool notifyListeners);
-	virtual void eraseNetwork(const uint64_t networkId);
-	virtual void eraseMember(const uint64_t networkId, const uint64_t memberId);
-	virtual void nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress &physicalAddress);
-	virtual AuthInfo getSSOAuthInfo(const nlohmann::json &member, const std::string &redirectURL);
-
-protected:
-	struct _PairHasher
+	virtual void operator()(const std::string& payload, int packend_pid)
 	{
-		inline std::size_t operator()(const std::pair<uint64_t,uint64_t> &p) const { return (std::size_t)(p.first ^ p.second); }
-	};
-	virtual void _memberChanged(nlohmann::json &old,nlohmann::json &memberConfig,bool notifyListeners) {
-		DB::_memberChanged(old, memberConfig, notifyListeners);
+		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
+		auto tracer = provider->GetTracer("db_network_notification");
+		auto span = tracer->StartSpan("db_network_notification::operator()");
+		auto scope = tracer->WithActiveSpan(span);
+		span->SetAttribute("payload", payload);
+		span->SetAttribute("psqlReady", _psql->isReady());
+
+		fprintf(stderr, "Network Notification received: %s\n", payload.c_str());
+		Metrics::pgsql_net_notification++;
+		nlohmann::json tmp(nlohmann::json::parse(payload));
+
+		nlohmann::json& ov = tmp["old_val"];
+		nlohmann::json& nv = tmp["new_val"];
+		nlohmann::json oldConfig, newConfig;
+
+		if (ov.is_object())
+			oldConfig = ov;
+		if (nv.is_object())
+			newConfig = nv;
+
+		if (oldConfig.is_object() && newConfig.is_object()) {
+			std::string nwid = oldConfig["id"];
+			span->SetAttribute("action", "network_change");
+			span->SetAttribute("network_id", nwid);
+			_psql->save(newConfig, _psql->isReady());
+			fprintf(stderr, "payload sent\n");
+		}
+		else if (newConfig.is_object() && ! oldConfig.is_object()) {
+			std::string nwid = newConfig["id"];
+			span->SetAttribute("network_id", nwid);
+			span->SetAttribute("action", "new_network");
+			// new network
+			_psql->save(newConfig, _psql->isReady());
+			fprintf(stderr, "new network payload sent\n");
+		}
+		else if (! newConfig.is_object() && oldConfig.is_object()) {
+			// network delete
+			span->SetAttribute("action", "delete_network");
+			std::string nwid = oldConfig["id"];
+			span->SetAttribute("network_id", nwid);
+			uint64_t networkId = Utils::hexStrToU64(nwid.c_str());
+			span->SetAttribute("network_id_int", networkId);
+			if (networkId) {
+				_psql->eraseNetwork(networkId);
+				fprintf(stderr, "network delete payload sent\n");
+			}
+		}
 	}
 
-	virtual void _networkChanged(nlohmann::json &old,nlohmann::json &networkConfig,bool notifyListeners) {
-		DB::_networkChanged(old, networkConfig, notifyListeners);
-	}
-
-private:
-	void initializeNetworks();
-	void initializeMembers();
-	void heartbeat();
-	void membersDbWatcher();
-	void _membersWatcher_Postgres();
-	void networksDbWatcher();
-	void _networksWatcher_Postgres();
-
-	void _membersWatcher_Redis();
-	void _networksWatcher_Redis();
-
-	void commitThread();
-	void onlineNotificationThread();
-	void onlineNotification_Postgres();
-	void onlineNotification_Redis();
-	uint64_t _doRedisUpdate(sw::redis::Transaction &tx, std::string &controllerId,
-		std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > &lastOnline);
-
-	void configureSmee();
-	void notifyNewMember(const std::string &networkID, const std::string &memberID);
-
-	enum OverrideMode {
-		ALLOW_PGBOUNCER_OVERRIDE = 0,
-		NO_OVERRIDE = 1
-	};
-
-	std::shared_ptr<ConnectionPool<PostgresConnection> > _pool;
-
-	const Identity _myId;
-	const Address _myAddress;
-	std::string _myAddressStr;
-	std::string _connString;
-
-	BlockingQueue< std::pair<nlohmann::json,bool> > _commitQueue;
-
-	std::thread _heartbeatThread;
-	std::thread _membersDbWatcher;
-	std::thread _networksDbWatcher;
-	std::thread _commitThread[ZT_CENTRAL_CONTROLLER_COMMIT_THREADS];
-	std::thread _onlineNotificationThread;
-
-	std::unordered_map< std::pair<uint64_t,uint64_t>,std::pair<int64_t,InetAddress>,_PairHasher > _lastOnline;
-
-	mutable std::mutex _lastOnline_l;
-	mutable std::mutex _readyLock;
-	std::atomic<int> _ready, _connected, _run;
-	mutable volatile bool _waitNoticePrinted;
-
-	int _listenPort;
-	uint8_t _ssoPsk[48];
-
-	RedisConfig *_rc;
-	std::shared_ptr<sw::redis::Redis> _redis;
-	std::shared_ptr<sw::redis::RedisCluster> _cluster;
-    bool _redisMemberStatus;
-
-	smeeclient::SmeeClient *_smee;
+  private:
+	T* _psql;
 };
 
-} // namespace ZeroTier
+struct NodeOnlineRecord {
+	uint64_t lastSeen;
+	InetAddress physicalAddress;
+	std::string osArch;
+};
 
-#endif // ZT_CONTROLLER_LIBPQ_HPP
+}	// namespace ZeroTier
 
-#endif // ZT_CONTROLLER_USE_LIBPQ
+#endif	 // ZT_CONTROLLER_POSTGRESQL_HPP
+
+#endif	 // ZT_CONTROLLER_USE_LIBPQ

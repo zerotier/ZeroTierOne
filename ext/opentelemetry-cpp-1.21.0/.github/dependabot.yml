@@ -1,0 +1,13 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "GHA"
+
+  - package-ecosystem: "devcontainers"
+    directory: "/"
+    schedule:
+     interval: daily

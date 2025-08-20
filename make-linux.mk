@@ -16,8 +16,13 @@ DESTDIR?=
 EXTRA_DEPS?=
 
 include objects.mk
-ONE_OBJS+=osdep/LinuxEthernetTap.o
-ONE_OBJS+=osdep/LinuxNetLink.o
+ifeq ($(ZT_EXTOSDEP),1)
+	ONE_OBJS+=osdep/ExtOsdep.o
+	override DEFS += -DZT_EXTOSDEP
+else
+	ONE_OBJS+=osdep/LinuxEthernetTap.o
+	ONE_OBJS+=osdep/LinuxNetLink.o
+endif
 
 # for central controller buildsk
 TIMESTAMP=$(shell date +"%Y%m%d%H%M")
@@ -275,6 +280,10 @@ ifeq ($(CC_MACH),loongarch64)
 	override DEFS+=-DZT_NO_TYPE_PUNNING
 endif
 
+ifeq ($(ZT_EXTOSDEP), 1)
+	ZT_SSO_SUPPORTED=0
+endif
+
 # Fail if system architecture could not be determined
 ifeq ($(ZT_ARCHITECTURE),999)
 ERR=$(error FATAL: architecture could not be determined from $(CC) -dumpmachine: $(CC_MACH))
@@ -303,6 +312,17 @@ ifeq ($(ZT_SSO_SUPPORTED), 1)
 	endif
 endif
 
+OTEL_VERSION=1.21.0
+ifeq (${ZT_OTEL},1)
+	OTEL_INSTALL_DIR=ext/opentelemetry-cpp-${OTEL_VERSION}/localinstall
+	override DEFS+=-DZT_OPENTELEMETRY_ENABLED=1
+	INCLUDES+=-I${OTEL_INSTALL_DIR}/include
+	LDLIBS+=-L${OTEL_INSTALL_DIR}/lib -lopentelemetry_exporter_in_memory_metric -lopentelemetry_exporter_in_memory -lopentelemetry_exporter_ostream_logs -lopentelemetry_exporter_ostream_metrics -lopentelemetry_exporter_ostream_span -lopentelemetry_exporter_otlp_grpc  -lopentelemetry_exporter_otlp_grpc_client -lopentelemetry_exporter_otlp_grpc_log -lopentelemetry_exporter_otlp_grpc_metrics -lopentelemetry_otlp_recordable -lopentelemetry_common -lopentelemetry_trace -lopentelemetry_common -lopentelemetry_resources -lopentelemetry_logs -lopentelemetry_metrics -lopentelemetry_proto -lopentelemetry_proto_grpc -lopentelemetry_version -lprotobuf -lgrpc++
+else
+	OTEL_INSTALL_DIR=ext/opentelemetry-cpp-api-only
+	INCLUDES+=-I${OTEL_INSTALL_DIR}/include
+endif
+
 # Disable software updates by default on Linux since that is normally done with package management
 override DEFS+=-DZT_BUILD_PLATFORM=1 -DZT_BUILD_ARCHITECTURE=$(ZT_ARCHITECTURE) -DZT_SOFTWARE_UPDATE_DEFAULT="\"disable\""
 
@@ -323,7 +343,7 @@ endif
 ifeq ($(ZT_CONTROLLER),1)
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	override LDLIBS+=-Lext/libpqxx-7.7.3/install/ubuntu22.04/$(EXT_ARCH)/lib -lpqxx -lpq ext/hiredis-1.0.2/lib/ubuntu22.04/$(EXT_ARCH)/libhiredis.a ext/redis-plus-plus-1.3.3/install/ubuntu22.04/$(EXT_ARCH)/lib/libredis++.a -lssl -lcrypto
-	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_NO_PEER_METRICS
+	override DEFS+=-DZT_CONTROLLER_USE_LIBPQ -DZT_NO_PEER_METRICS -DZT_OPENTELEMETRY_ENABLED
 	override INCLUDES+=-I/usr/include/postgresql -Iext/libpqxx-7.7.3/install/ubuntu22.04/$(EXT_ARCH)/include -Iext/hiredis-1.0.2/include/ -Iext/redis-plus-plus-1.3.3/install/ubuntu22.04/$(EXT_ARCH)/include/sw/
 	ifeq ($(ZT_DEBUG),1)
 		override LDLIBS+=rustybits/target/debug/libsmeeclient.a
@@ -339,8 +359,12 @@ ifeq ($(ZT_ARCHITECTURE),3)
 		override CXXFLAGS+=-march=armv5t -mfloat-abi=soft -msoft-float -mno-unaligned-access -marm
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	else
-		override CFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
-		override CXXFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -fexceptions -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
+		ifeq ($(ZT_EXTOSDEP), 0)
+			override CFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
+			override CXXFLAGS+=-mfloat-abi=hard -march=armv6zk -marm -mfpu=vfp -fexceptions -mno-unaligned-access -mtp=cp15 -mcpu=arm1176jzf-s
+		else
+			override DEFS+=-DZT_NO_PEER_METRICS
+		endif
 		ZT_USE_ARM32_NEON_ASM_CRYPTO=0
 	endif
 endif
@@ -370,13 +394,13 @@ override LDFLAGS+=-Wl,-z,noexecstack
 all:	one
 
 .PHONY: one
-one: zerotier-one zerotier-idtool zerotier-cli
+one: otel zerotier-one zerotier-idtool zerotier-cli
 
 from_builder:	FORCE
 	ln -sf zerotier-one zerotier-idtool
 	ln -sf zerotier-one zerotier-cli
 
-zerotier-one: $(CORE_OBJS) $(ONE_OBJS) one.o
+zerotier-one: $(CORE_OBJS) $(ONE_OBJS) one.o ext/${OTEL_INSTALL_DIR}/include/opentelemetry/version.h
 	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o zerotier-one $(CORE_OBJS) $(ONE_OBJS) one.o $(LDLIBS)
 
 zerotier-idtool: zerotier-one
@@ -404,8 +428,19 @@ manpages:	FORCE
 
 doc:	manpages
 
+ifeq (${ZT_OTEL},1)
+otel:
+	cd ext/opentelemetry-cpp-1.21.0 && mkdir -p localinstall && cmake -B build -S . -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$(shell pwd)/ext/opentelemetry-cpp-1.21.0/localinstall -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DBUILD_TESTING=OFF -DOPENTELEMETRY_INSTALL=ON -DWITH_BENCHMARK=OFF -DWITH_EXAMPLES=OFF -DWITH_FUNC_TESTS=OFF -DUSE_THIRDPARTY_LIBRARIES=ON -DWITH_OTLP_GRPC=ON -DWITH_OTLP_HTTP=OFF -DWITH_PROMETHEUS=OFF
+	cd ext/opentelemetry-cpp-1.21.0/build && make -j4 install
+else
+otel:
+	@echo "OpenTelemetry exporter not enabled, skipping build."
+endif
+
+ext/${OTEL_INSTALL_DIR}/include/opentelemetry/version.h: otel
+
 clean: FORCE
-	rm -rf *.a *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules ext/misc/*.o debian/.debhelper debian/debhelper-build-stamp docker/zerotier-one rustybits/target
+	rm -rf *.a *.so *.o node/*.o controller/*.o osdep/*.o service/*.o ext/http-parser/*.o ext/miniupnpc/*.o ext/libnatpmp/*.o $(CORE_OBJS) $(ONE_OBJS) zerotier-one zerotier-idtool zerotier-cli zerotier-selftest build-* ZeroTierOneInstaller-* *.deb *.rpm .depend debian/files debian/zerotier-one*.debhelper debian/zerotier-one.substvars debian/*.log debian/zerotier-one doc/node_modules ext/misc/*.o debian/.debhelper debian/debhelper-build-stamp docker/zerotier-one rustybits/target ext/opentelemetry-cpp-${OTEL_VERSION}/localinstall ext/opentelemetry-cpp-${OTEL_VERSION}/build
 
 distclean:	clean
 
@@ -425,11 +460,15 @@ _buildx:
 	@echo docker buildx inspect --bootstrap
 
 central-controller:	FORCE
-	make -j4 ZT_CONTROLLER=1 one
+	make ZT_OTEL=1 otel && ZT_OTEL=1 make -j4 ZT_CONTROLLER=1  one
 
 central-controller-docker: _buildx FORCE
 	docker buildx build --platform linux/amd64,linux/arm64 --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP} -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` . --push
 	@echo Image: registry.zerotier.com/zerotier-central/ztcentral-controller:${TIMESTAMP}
+
+centralv2-controller-docker: _buildx FORCE
+	docker buildx build --platform linux/amd64,linux/arm64 --no-cache -t us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:$(shell git rev-parse --short HEAD) -f ext/central-controller-docker/Dockerfile --build-arg git_branch=`git name-rev --name-only HEAD` . --push
+	@echo Image: us-central1-docker.pkg.dev/zerotier-421eb9/docker-images/ztcentral-controller:$(shell git rev-parse --short HEAD)
 
 debug:	FORCE
 	make ZT_DEBUG=1 one

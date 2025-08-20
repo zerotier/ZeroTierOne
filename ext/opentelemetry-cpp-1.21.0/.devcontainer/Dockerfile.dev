@@ -1,0 +1,58 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+FROM otel/cpp_format_tools
+
+ARG USER_UID=1000
+ARG USER_GID=1000
+ARG INSTALL_PACKAGES=
+
+ARG CXX_STANDARD=17
+ARG CMAKE_VERSION=3.31.6
+ARG ABSEIL_CPP_VERSION=20230125.3
+ARG PROTOBUF_VERSION=23.3
+ARG GRPC_VERSION=v1.55.0
+
+ENV CXX_STANDARD=${CXX_STANDARD}
+ENV CMAKE_VERSION=${CMAKE_VERSION}
+ENV ABSEIL_CPP_VERSION=${ABSEIL_CPP_VERSION}
+ENV PROTOBUF_VERSION=${PROTOBUF_VERSION}
+ENV GRPC_VERSION=${GRPC_VERSION}
+
+COPY ci /opt/ci
+
+RUN apt update && apt install -y wget \
+	ninja-build \
+	libcurl4-openssl-dev \
+	clang-tidy \
+	shellcheck
+
+RUN cd /opt/ci && bash setup_cmake.sh
+RUN cd /opt/ci && bash setup_ci_environment.sh
+RUN cd /opt && bash ci/setup_googletest.sh \
+    && bash ci/install_abseil.sh \
+    && bash ci/install_protobuf.sh \
+    && bash ci/setup_grpc.sh -r $GRPC_VERSION -s $CXX_STANDARD -p protobuf -p abseil-cpp
+
+ADD https://github.com/bazelbuild/bazelisk/releases/download/v1.22.1/bazelisk-linux-amd64 /usr/local/bin
+	
+RUN git config --global core.autocrlf input \
+	&& chmod +x /usr/local/bin/bazelisk-linux-amd64
+
+ENV INSTALL_PACKAGES=${INSTALL_PACKAGES}
+ENV USER_NAME=devuser
+ENV USER_UID=${USER_UID}
+ENV USER_GID=${USER_GID}
+ENV IS_CONTAINER_BUILD=true
+
+COPY ./.devcontainer/customize_container.sh /tmp/opentelemetry_cpp/devcontainer/customize_container.sh
+RUN /tmp/opentelemetry_cpp/devcontainer/customize_container.sh
+RUN apt install -y npm && npm install -g markdownlint-cli@0.44.0
+
+USER devuser
+
+WORKDIR  /workspaces/opentelemetry-cpp
+
+ENTRYPOINT []
+
+CMD ["/bin/bash"]

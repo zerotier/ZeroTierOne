@@ -1,0 +1,8 @@
+<a class="sidebar-brand{% if logo %} centered{% endif %}" href="{{ pathto(master_doc) }}">
+  {% block brand_content %}
+  {% if not theme_sidebar_hide_name %}
+  <img class="sidebar-logo" style="width: 40%;" src="{{ pathto('_static/opentelemetry_logo.png', 1) }}" alt="Logo"/>
+  <span class="sidebar-brand-text" style="font-size: 100%; font-weight: bold; color: grey;">OpenTelemetry C++ {{ release }}</span>
+  {%- endif %}
+  {% endblock brand_content %}
+</a>`

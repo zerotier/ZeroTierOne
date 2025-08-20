@@ -1,0 +1,126 @@
+﻿{
+  "configurations": [
+    {
+      "name": "nostd-x64-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+        "inheritEnvironments": [
+          "msvc_x64_x64"
+        ],
+      "buildRoot": "${projectDir}\\out\\vs2019\\${name}",
+      "installRoot": "${projectDir}\\out\\vs2019\\${name}\\install",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "WITH_OTLP_GRPC",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_EXAMPLES",
+          "value": "true",
+          "type": "BOOL"
+        }
+      ]
+    },
+    {
+      "name": "nostd-x64-Release",
+      "generator": "Ninja",
+      "configurationType": "Release",
+        "inheritEnvironments": [
+          "msvc_x64_x64"
+        ],
+      "buildRoot": "${projectDir}\\out\\vs2019\\${name}",
+      "installRoot": "${projectDir}\\out\\vs2019\\${name}\\install",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "cmakeToolchain": "",
+      "variables": [
+        {
+          "name": "WITH_OTLP_GRPC",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_EXAMPLES",
+          "value": "true",
+          "type": "BOOL"
+        }
+      ]
+    },
+    {
+      "name": "stdlib-x64-Debug",
+      "generator": "Ninja",
+      "configurationType": "Debug",
+      "inheritEnvironments": [
+        "msvc_x64_x64"
+      ],
+      "buildRoot": "${projectDir}\\out\\vs2019\\${name}",
+      "installRoot": "${projectDir}\\out\\vs2019\\${name}\\install",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "variables": [
+        {
+          "name": "WITH_STL",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_OTLP_GRPC",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_EXAMPLES",
+          "value": "true",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_PROMETHEUS",
+          "value": "True",
+          "type": "BOOL"
+        }
+      ]
+    },
+    {
+      "name": "stdlib-x64-Release",
+      "generator": "Ninja",
+      "configurationType": "Release",
+      "inheritEnvironments": [
+        "msvc_x64_x64"
+      ],
+      "buildRoot": "${projectDir}\\out\\vs2019\\${name}",
+      "installRoot": "${projectDir}\\out\\vs2019\\${name}\\install",
+      "cmakeCommandArgs": "",
+      "buildCommandArgs": "",
+      "ctestCommandArgs": "",
+      "cmakeToolchain": "",
+      "variables": [
+        {
+          "name": "WITH_STL",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_OTLP_GRPC",
+          "value": "True",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_EXAMPLES",
+          "value": "true",
+          "type": "BOOL"
+        },
+        {
+          "name": "WITH_PROMETHEUS",
+          "value": "True",
+          "type": "BOOL"
+        }
+      ]
+    }
+  ]
+}

@@ -19,34 +19,32 @@
 // HACK! Will eventually use epoll() or something in Phy<> instead of select().
 // Also be sure to change ulimit -n and fs.file-max in /etc/sysctl.conf on relays.
 #if defined(__linux__) || defined(__LINUX__) || defined(__LINUX) || defined(LINUX)
-#include <linux/posix_types.h>
 #include <bits/types.h>
+#include <linux/posix_types.h>
 #undef __FD_SETSIZE
 #define __FD_SETSIZE 1048576
 #undef FD_SETSIZE
 #define FD_SETSIZE 1048576
 #endif
 
+#include "../node/Metrics.hpp"
+#include "../osdep/Phy.hpp"
+
+#include <algorithm>
+#include <map>
+#include <set>
+#include <signal.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-#include <stdint.h>
-#include <unistd.h>
-#include <signal.h>
-
-#include <map>
-#include <set>
 #include <string>
-#include <algorithm>
+#include <time.h>
+#include <unistd.h>
 #include <vector>
 
-#include "../osdep/Phy.hpp"
-
-#include "../node/Metrics.hpp"
-
 #define ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS 300
-#define ZT_TCP_PROXY_TCP_PORT 443
+#define ZT_TCP_PROXY_TCP_PORT					443
 
 using namespace ZeroTier;
 
@@ -88,89 +86,87 @@ using namespace ZeroTier;
  */
 
 struct TcpProxyService;
-struct TcpProxyService
-{
-	Phy<TcpProxyService *> *phy;
+struct TcpProxyService {
+	Phy<TcpProxyService*>* phy;
 	int udpPortCounter;
-	struct Client
-	{
+	struct Client {
 		char tcpReadBuf[131072];
 		char tcpWriteBuf[131072];
 		unsigned long tcpWritePtr;
 		unsigned long tcpReadPtr;
-		PhySocket *tcp;
-		PhySocket *udp;
+		PhySocket* tcp;
+		PhySocket* udp;
 		time_t lastActivity;
 		bool newVersion;
 	};
-	std::map< PhySocket *,Client > clients;
+	std::map<PhySocket*, Client> clients;
 
-	PhySocket *getUnusedUdp(void *uptr)
+	PhySocket* getUnusedUdp(void* uptr)
 	{
-		for(int i=0;i<65535;++i) {
+		for (int i = 0; i < 65535; ++i) {
 			++udpPortCounter;
 			if (udpPortCounter > 0xfffe)
 				udpPortCounter = 1024;
 			struct sockaddr_in laddr;
-			memset(&laddr,0,sizeof(struct sockaddr_in));
+			memset(&laddr, 0, sizeof(struct sockaddr_in));
 			laddr.sin_family = AF_INET;
 			laddr.sin_port = htons((uint16_t)udpPortCounter);
-			PhySocket *udp = phy->udpBind(reinterpret_cast<struct sockaddr *>(&laddr),uptr);
+			PhySocket* udp = phy->udpBind(reinterpret_cast<struct sockaddr*>(&laddr), uptr);
 			if (udp)
 				return udp;
 		}
-		return (PhySocket *)0;
+		return (PhySocket*)0;
 	}
 
-	void phyOnDatagram(PhySocket *sock,void **uptr,const struct sockaddr *localAddr,const struct sockaddr *from,void *data,unsigned long len)
+	void phyOnDatagram(PhySocket* sock, void** uptr, const struct sockaddr* localAddr, const struct sockaddr* from, void* data, unsigned long len)
 	{
-		if (!*uptr)
+		if (! *uptr)
 			return;
-		if ((from->sa_family == AF_INET)&&(len >= 16)&&(len < 2048)) {
-			Client &c = *((Client *)*uptr);
-			c.lastActivity = time((time_t *)0);
+		if ((from->sa_family == AF_INET) && (len >= 16) && (len < 2048)) {
+			Client& c = *((Client*)*uptr);
+			c.lastActivity = time((time_t*)0);
 
 			unsigned long mlen = len;
 			if (c.newVersion)
-				mlen += 7; // new clients get IP info
+				mlen += 7;	 // new clients get IP info
 
 			if ((c.tcpWritePtr + 5 + mlen) <= sizeof(c.tcpWriteBuf)) {
-				if (!c.tcpWritePtr)
-					phy->setNotifyWritable(c.tcp,true);
+				if (! c.tcpWritePtr)
+					phy->setNotifyWritable(c.tcp, true);
 
-				c.tcpWriteBuf[c.tcpWritePtr++] = 0x17; // look like TLS data
-				c.tcpWriteBuf[c.tcpWritePtr++] = 0x03; // look like TLS 1.2
-				c.tcpWriteBuf[c.tcpWritePtr++] = 0x03; // look like TLS 1.2
+				c.tcpWriteBuf[c.tcpWritePtr++] = 0x17;	 // look like TLS data
+				c.tcpWriteBuf[c.tcpWritePtr++] = 0x03;	 // look like TLS 1.2
+				c.tcpWriteBuf[c.tcpWritePtr++] = 0x03;	 // look like TLS 1.2
 
 				c.tcpWriteBuf[c.tcpWritePtr++] = (char)((mlen >> 8) & 0xff);
 				c.tcpWriteBuf[c.tcpWritePtr++] = (char)(mlen & 0xff);
 
 				if (c.newVersion) {
-					c.tcpWriteBuf[c.tcpWritePtr++] = (char)4; // IPv4
-					*((uint32_t *)(c.tcpWriteBuf + c.tcpWritePtr)) = ((const struct sockaddr_in *)from)->sin_addr.s_addr;
+					c.tcpWriteBuf[c.tcpWritePtr++] = (char)4;	// IPv4
+					*((uint32_t*)(c.tcpWriteBuf + c.tcpWritePtr)) = ((const struct sockaddr_in*)from)->sin_addr.s_addr;
 					c.tcpWritePtr += 4;
-					*((uint16_t *)(c.tcpWriteBuf + c.tcpWritePtr)) = ((const struct sockaddr_in *)from)->sin_port;
+					*((uint16_t*)(c.tcpWriteBuf + c.tcpWritePtr)) = ((const struct sockaddr_in*)from)->sin_port;
 					c.tcpWritePtr += 2;
 				}
 
-				for(unsigned long i=0;i<len;++i)
-					c.tcpWriteBuf[c.tcpWritePtr++] = ((const char *)data)[i];
+				for (unsigned long i = 0; i < len; ++i)
+					c.tcpWriteBuf[c.tcpWritePtr++] = ((const char*)data)[i];
 			}
 
-			printf("<< UDP %s:%d -> %.16llx\n",inet_ntoa(reinterpret_cast<const struct sockaddr_in *>(from)->sin_addr),(int)ntohs(reinterpret_cast<const struct sockaddr_in *>(from)->sin_port),(unsigned long long)&c);
+			printf("<< UDP %s:%d -> %.16llx\n", inet_ntoa(reinterpret_cast<const struct sockaddr_in*>(from)->sin_addr), (int)ntohs(reinterpret_cast<const struct sockaddr_in*>(from)->sin_port), (unsigned long long)&c);
 		}
 	}
 
-	void phyOnTcpConnect(PhySocket *sock,void **uptr,bool success)
+	void phyOnTcpConnect(PhySocket* sock, void** uptr, bool success)
 	{
 		// unused, we don't initiate outbound connections
 	}
 
-	void phyOnTcpAccept(PhySocket *sockL,PhySocket *sockN,void **uptrL,void **uptrN,const struct sockaddr *from)
+	void phyOnTcpAccept(PhySocket* sockL, PhySocket* sockN, void** uptrL, void** uptrN, const struct sockaddr* from)
 	{
-		Client &c = clients[sockN];
-		PhySocket *udp = getUnusedUdp((void *)&c);
-		if (!udp) {
+		Client& c = clients[sockN];
+		PhySocket* udp = getUnusedUdp((void*)&c);
+		if (! udp) {
 			phy->close(sockN);
 			clients.erase(sockN);
 			printf("** TCP rejected, no more UDP ports to assign\n");
@@ -180,135 +176,139 @@ struct TcpProxyService
 		c.tcpReadPtr = 0;
 		c.tcp = sockN;
 		c.udp = udp;
-		c.lastActivity = time((time_t *)0);
+		c.lastActivity = time((time_t*)0);
 		c.newVersion = false;
-		*uptrN = (void *)&c;
-		printf("<< TCP from %s -> %.16llx\n",inet_ntoa(reinterpret_cast<const struct sockaddr_in *>(from)->sin_addr),(unsigned long long)&c);
+		*uptrN = (void*)&c;
+		printf("<< TCP from %s -> %.16llx\n", inet_ntoa(reinterpret_cast<const struct sockaddr_in*>(from)->sin_addr), (unsigned long long)&c);
 	}
 
-	void phyOnTcpClose(PhySocket *sock,void **uptr)
+	void phyOnTcpClose(PhySocket* sock, void** uptr)
 	{
-		if (!*uptr)
+		if (! *uptr)
 			return;
-		Client &c = *((Client *)*uptr);
+		Client& c = *((Client*)*uptr);
 		phy->close(c.udp);
 		clients.erase(sock);
-		printf("** TCP %.16llx closed\n",(unsigned long long)*uptr);
+		printf("** TCP %.16llx closed\n", (unsigned long long)*uptr);
 	}
 
-	void phyOnTcpData(PhySocket *sock,void **uptr,void *data,unsigned long len)
+	void phyOnTcpData(PhySocket* sock, void** uptr, void* data, unsigned long len)
 	{
-		Client &c = *((Client *)*uptr);
-		c.lastActivity = time((time_t *)0);
+		Client& c = *((Client*)*uptr);
+		c.lastActivity = time((time_t*)0);
 
-		for(unsigned long i=0;i<len;++i) {
+		for (unsigned long i = 0; i < len; ++i) {
 			if (c.tcpReadPtr >= sizeof(c.tcpReadBuf)) {
 				phy->close(sock);
 				return;
 			}
-			c.tcpReadBuf[c.tcpReadPtr++] = ((const char *)data)[i];
+			c.tcpReadBuf[c.tcpReadPtr++] = ((const char*)data)[i];
 
 			if (c.tcpReadPtr >= 5) {
-				unsigned long mlen = ( ((((unsigned long)c.tcpReadBuf[3]) & 0xff) << 8) | (((unsigned long)c.tcpReadBuf[4]) & 0xff) );
+				unsigned long mlen = (((((unsigned long)c.tcpReadBuf[3]) & 0xff) << 8) | (((unsigned long)c.tcpReadBuf[4]) & 0xff));
 				if (c.tcpReadPtr >= (mlen + 5)) {
 					if (mlen == 4) {
 						// Right now just sending this means the client is 'new enough' for the IP header
 						c.newVersion = true;
-						printf("<< TCP %.16llx HELLO\n",(unsigned long long)*uptr);
-					} else if (mlen >= 7) {
-						char *payload = c.tcpReadBuf + 5;
+						printf("<< TCP %.16llx HELLO\n", (unsigned long long)*uptr);
+					}
+					else if (mlen >= 7) {
+						char* payload = c.tcpReadBuf + 5;
 						unsigned long payloadLen = mlen;
 
 						struct sockaddr_in dest;
-						memset(&dest,0,sizeof(dest));
+						memset(&dest, 0, sizeof(dest));
 						if (c.newVersion) {
 							if (*payload == (char)4) {
 								// New clients tell us where their packets go.
 								++payload;
 								dest.sin_family = AF_INET;
-								dest.sin_addr.s_addr = *((uint32_t *)payload);
+								dest.sin_addr.s_addr = *((uint32_t*)payload);
 								payload += 4;
-								dest.sin_port = *((uint16_t *)payload); // will be in network byte order already
+								dest.sin_port = *((uint16_t*)payload);	 // will be in network byte order already
 								payload += 2;
 								payloadLen -= 7;
 							}
-						} else {
+						}
+						else {
 							// For old clients we will just proxy everything to a local ZT instance. The
 							// fact that this will come from 127.0.0.1 will in turn prevent that instance
 							// from doing unite() with us. It'll just forward. There will not be many of
 							// these.
 							dest.sin_family = AF_INET;
-							dest.sin_addr.s_addr = htonl(0x7f000001); // 127.0.0.1
+							dest.sin_addr.s_addr = htonl(0x7f000001);	// 127.0.0.1
 							dest.sin_port = htons(9993);
 						}
 
 						// Note: we do not relay to privileged ports... just an abuse prevention rule.
-						if ((ntohs(dest.sin_port) > 1024)&&(payloadLen >= 16)) {
-							phy->udpSend(c.udp,(const struct sockaddr *)&dest,payload,payloadLen);
-							printf(">> TCP %.16llx to %s:%d\n",(unsigned long long)*uptr,inet_ntoa(dest.sin_addr),(int)ntohs(dest.sin_port));
+						if ((ntohs(dest.sin_port) > 1024) && (payloadLen >= 16)) {
+							phy->udpSend(c.udp, (const struct sockaddr*)&dest, payload, payloadLen);
+							printf(">> TCP %.16llx to %s:%d\n", (unsigned long long)*uptr, inet_ntoa(dest.sin_addr), (int)ntohs(dest.sin_port));
 						}
 					}
 
-					memmove(c.tcpReadBuf,c.tcpReadBuf + (mlen + 5),c.tcpReadPtr -= (mlen + 5));
+					memmove(c.tcpReadBuf, c.tcpReadBuf + (mlen + 5), c.tcpReadPtr -= (mlen + 5));
 				}
 			}
 		}
 	}
 
-	void phyOnTcpWritable(PhySocket *sock,void **uptr)
+	void phyOnTcpWritable(PhySocket* sock, void** uptr)
 	{
-		Client &c = *((Client *)*uptr);
+		Client& c = *((Client*)*uptr);
 		if (c.tcpWritePtr) {
-			long n = phy->streamSend(sock,c.tcpWriteBuf,c.tcpWritePtr);
+			long n = phy->streamSend(sock, c.tcpWriteBuf, c.tcpWritePtr);
 			if (n > 0) {
-				memmove(c.tcpWriteBuf,c.tcpWriteBuf + n,c.tcpWritePtr -= (unsigned long)n);
-				if (!c.tcpWritePtr)
-					phy->setNotifyWritable(sock,false);
+				memmove(c.tcpWriteBuf, c.tcpWriteBuf + n, c.tcpWritePtr -= (unsigned long)n);
+				if (! c.tcpWritePtr)
+					phy->setNotifyWritable(sock, false);
 			}
-		} else phy->setNotifyWritable(sock,false);
+		}
+		else
+			phy->setNotifyWritable(sock, false);
 	}
 
 	void doHousekeeping()
 	{
-		std::vector<PhySocket *> toClose;
-		time_t now = time((time_t *)0);
-		for(std::map< PhySocket *,Client >::iterator c(clients.begin());c!=clients.end();++c) {
+		std::vector<PhySocket*> toClose;
+		time_t now = time((time_t*)0);
+		for (std::map<PhySocket*, Client>::iterator c(clients.begin()); c != clients.end(); ++c) {
 			if ((now - c->second.lastActivity) >= ZT_TCP_PROXY_CONNECTION_TIMEOUT_SECONDS) {
 				toClose.push_back(c->first);
 				toClose.push_back(c->second.udp);
 			}
 		}
-		for(std::vector<PhySocket *>::iterator s(toClose.begin());s!=toClose.end();++s)
+		for (std::vector<PhySocket*>::iterator s(toClose.begin()); s != toClose.end(); ++s)
 			phy->close(*s);
 	}
 };
 
-int main(int argc,char **argv)
+int main(int argc, char** argv)
 {
-	signal(SIGPIPE,SIG_IGN);
-	signal(SIGHUP,SIG_IGN);
-	srand(time((time_t *)0));
+	signal(SIGPIPE, SIG_IGN);
+	signal(SIGHUP, SIG_IGN);
+	srand(time((time_t*)0));
 
 	TcpProxyService svc;
-	Phy<TcpProxyService *> phy(&svc,false,true);
+	Phy<TcpProxyService*> phy(&svc, false, true);
 	svc.phy = &phy;
 	svc.udpPortCounter = 1023;
 
 	{
 		struct sockaddr_in laddr;
-		memset(&laddr,0,sizeof(laddr));
+		memset(&laddr, 0, sizeof(laddr));
 		laddr.sin_family = AF_INET;
 		laddr.sin_port = htons(ZT_TCP_PROXY_TCP_PORT);
-		if (!phy.tcpListen((const struct sockaddr *)&laddr)) {
-			fprintf(stderr,"%s: fatal error: unable to bind TCP port %d\n",argv[0],ZT_TCP_PROXY_TCP_PORT);
+		if (! phy.tcpListen((const struct sockaddr*)&laddr)) {
+			fprintf(stderr, "%s: fatal error: unable to bind TCP port %d\n", argv[0], ZT_TCP_PROXY_TCP_PORT);
 			return 1;
 		}
 	}
 
-	time_t lastDidHousekeeping = time((time_t *)0);
-	for(;;) {
+	time_t lastDidHousekeeping = time((time_t*)0);
+	for (;;) {
 		phy.poll(120000);
-		time_t now = time((time_t *)0);
+		time_t now = time((time_t*)0);
 		if ((now - lastDidHousekeeping) > 120) {
 			lastDidHousekeeping = now;
 			svc.doHousekeeping();

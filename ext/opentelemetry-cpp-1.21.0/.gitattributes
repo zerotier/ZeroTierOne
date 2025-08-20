@@ -1,0 +1,47 @@
+##### Source code #####
+
+## C++ and C source files
+*.c                     text eol=lf diff=cpp
+*.h                     text eol=lf diff=cpp
+*.cc                    text eol=lf diff=cpp
+*.cpp                   text eol=lf diff=cpp
+*.cxx                   text eol=lf diff=cpp
+*.hpp                   text eol=lf diff=cpp
+
+## Python scripts
+*.py                    text eol=lf diff=python
+
+## Perl scripts/libraries/modules
+*.perl                  text eol=lf diff=perl
+*.pl                    text eol=lf diff=perl
+*.pm                    text eol=lf diff=perl
+
+## Shell scripts
+*.sh                    text eol=lf
+*.bash                  text eol=lf
+
+## Windows batch and PowerShell scripts
+*.bat                   text eol=crlf
+*.cmd                   text eol=crlf
+*.ps1                   text eol=crlf
+
+##### Other file types #####
+
+## Text files and documentation
+*.txt                   text
+README*                 text
+INSTALL*                text
+LICENSE*                text
+
+## Non-text documentation
+*.html                  text diff=html
+*.pdf                   binary
+*.rtf                   binary
+
+## git files
+.gitignore              text eol=lf
+.gitattributes          text eol=lf
+
+## bazel files
+WORKSPACE               text eol=lf
+BUILD                   text eol=lf

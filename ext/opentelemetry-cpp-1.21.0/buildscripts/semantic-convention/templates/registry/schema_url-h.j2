@@ -1,0 +1,48 @@
+{#
+  Copyright The OpenTelemetry Authors
+  SPDX-License-Identifier: Apache-2.0
+
+  This file is:
+  - a Jinja template,
+  - used to generate semantic conventions,
+  - using weaver.
+
+  For doc on the template syntax:
+  https://jinja.palletsprojects.com/en/3.0.x/
+
+  For doc on the semantic conventions:
+  https://github.com/open-telemetry/semantic-conventions
+
+  For doc on weaver:
+  https://github.com/open-telemetry/weaver
+#}
+/*
+ * Copyright The OpenTelemetry Authors
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * DO NOT EDIT, this is an Auto-generated file from:
+ * buildscripts/semantic-convention/templates/registry/schema_url-h.j2
+ */
+{# ========================================================================== #}
+
+{{ template.set_file_name("schema_url.h") }}
+
+{# ========================================================================== #}
+
+#pragma once
+
+#include "opentelemetry/common/macros.h"
+#include "opentelemetry/version.h"
+
+OPENTELEMETRY_BEGIN_NAMESPACE
+namespace semconv
+{
+/**
+ * The URL of the OpenTelemetry schema for these keys and values.
+ */
+static constexpr const char *kSchemaUrl = {{ params.schema_url | print_member_value }};
+}
+OPENTELEMETRY_END_NAMESPACE
+

@@ -1,0 +1,18 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package grpc_example;
+
+service Greeter {
+    rpc Greet(GreetRequest) returns (GreetResponse) {}
+}
+
+message GreetRequest {
+    string request = 1;
+}
+
+message GreetResponse {
+    string response = 1;
+}

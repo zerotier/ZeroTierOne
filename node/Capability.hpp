@@ -14,18 +14,18 @@
 #ifndef ZT_CAPABILITY_HPP
 #define ZT_CAPABILITY_HPP
 
+#include "../include/ZeroTierOne.h"
+#include "Address.hpp"
+#include "Buffer.hpp"
+#include "Constants.hpp"
+#include "Credential.hpp"
+#include "ECC.hpp"
+#include "Identity.hpp"
+#include "Utils.hpp"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "Constants.hpp"
-#include "Credential.hpp"
-#include "Address.hpp"
-#include "C25519.hpp"
-#include "Utils.hpp"
-#include "Buffer.hpp"
-#include "Identity.hpp"
-#include "../include/ZeroTierOne.h"
 
 namespace ZeroTier {
 
@@ -54,20 +54,17 @@ class RuntimeEnvironment;
  * handed off between nodes. Limited transferability of capabilities is
  * a feature of true capability based security.
  */
-class Capability : public Credential
-{
-public:
-	static inline Credential::Type credentialType() { return Credential::CREDENTIAL_TYPE_CAPABILITY; }
-
-	Capability() :
-		_nwid(0),
-		_ts(0),
-		_id(0),
-		_maxCustodyChainLength(0),
-		_ruleCount(0)
+class Capability : public Credential {
+  public:
+	static inline Credential::Type credentialType()
 	{
-		memset(_rules,0,sizeof(_rules));
-		memset(_custody,0,sizeof(_custody));
+		return Credential::CREDENTIAL_TYPE_CAPABILITY;
+	}
+
+	Capability() : _nwid(0), _ts(0), _id(0), _maxCustodyChainLength(0), _ruleCount(0)
+	{
+		memset(_rules, 0, sizeof(_rules));
+		memset(_custody, 0, sizeof(_custody));
 	}
 
 	/**
@@ -78,42 +75,57 @@ public:
 	 * @param rules Network flow rules for this capability
 	 * @param ruleCount Number of flow rules
 	 */
-	Capability(uint32_t id,uint64_t nwid,int64_t ts,unsigned int mccl,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount) :
-		_nwid(nwid),
-		_ts(ts),
-		_id(id),
-		_maxCustodyChainLength((mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1),
-		_ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES)
+	Capability(uint32_t id, uint64_t nwid, int64_t ts, unsigned int mccl, const ZT_VirtualNetworkRule* rules, unsigned int ruleCount)
+		: _nwid(nwid)
+		, _ts(ts)
+		, _id(id)
+		, _maxCustodyChainLength((mccl > 0) ? ((mccl < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) ? mccl : (unsigned int)ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) : 1)
+		, _ruleCount((ruleCount < ZT_MAX_CAPABILITY_RULES) ? ruleCount : ZT_MAX_CAPABILITY_RULES)
 	{
 		if (_ruleCount > 0) {
-			memcpy(_rules,rules,sizeof(ZT_VirtualNetworkRule) * _ruleCount);
+			memcpy(_rules, rules, sizeof(ZT_VirtualNetworkRule) * _ruleCount);
 		}
 	}
 
 	/**
 	 * @return Rules -- see ruleCount() for size of array
 	 */
-	inline const ZT_VirtualNetworkRule *rules() const { return _rules; }
+	inline const ZT_VirtualNetworkRule* rules() const
+	{
+		return _rules;
+	}
 
 	/**
 	 * @return Number of rules in rules()
 	 */
-	inline unsigned int ruleCount() const { return _ruleCount; }
+	inline unsigned int ruleCount() const
+	{
+		return _ruleCount;
+	}
 
 	/**
 	 * @return ID and evaluation order of this capability in network
 	 */
-	inline uint32_t id() const { return _id; }
+	inline uint32_t id() const
+	{
+		return _id;
+	}
 
 	/**
 	 * @return Network ID for which this capability was issued
 	 */
-	inline uint64_t networkId() const { return _nwid; }
+	inline uint64_t networkId() const
+	{
+		return _nwid;
+	}
 
 	/**
 	 * @return Timestamp
 	 */
-	inline int64_t timestamp() const { return _ts; }
+	inline int64_t timestamp() const
+	{
+		return _ts;
+	}
 
 	/**
 	 * @return Last 'to' address in chain of custody
@@ -121,10 +133,11 @@ public:
 	inline Address issuedTo() const
 	{
 		Address i2;
-		for(unsigned int i=0;i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH;++i) {
-			if (!_custody[i].to) {
+		for (unsigned int i = 0; i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH; ++i) {
+			if (! _custody[i].to) {
 				return i2;
-			} else {
+			}
+			else {
 				i2 = _custody[i].to;
 			}
 		}
@@ -144,20 +157,22 @@ public:
 	 * @param to Recipient of this signature
 	 * @return True if signature successful and chain of custody appended
 	 */
-	inline bool sign(const Identity &from,const Address &to)
+	inline bool sign(const Identity& from, const Address& to)
 	{
 		try {
-			for(unsigned int i=0;((i<_maxCustodyChainLength)&&(i<ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH));++i) {
-				if (!(_custody[i].to)) {
+			for (unsigned int i = 0; ((i < _maxCustodyChainLength) && (i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)); ++i) {
+				if (! (_custody[i].to)) {
 					Buffer<(sizeof(Capability) * 2)> tmp;
-					this->serialize(tmp,true);
+					this->serialize(tmp, true);
 					_custody[i].to = to;
 					_custody[i].from = from.address();
-					_custody[i].signature = from.sign(tmp.data(),tmp.size());
+					_custody[i].signature = from.sign(tmp.data(), tmp.size());
 					return true;
 				}
 			}
-		} catch ( ... ) {}
+		}
+		catch (...) {
+		}
 		return false;
 	}
 
@@ -167,17 +182,16 @@ public:
 	 * @param RR Runtime environment to provide for peer lookup, etc.
 	 * @return 0 == OK, 1 == waiting for WHOIS, -1 == BAD signature or chain
 	 */
-	int verify(const RuntimeEnvironment *RR,void *tPtr) const;
+	int verify(const RuntimeEnvironment* RR, void* tPtr) const;
 
-	template<unsigned int C>
-	static inline void serializeRules(Buffer<C> &b,const ZT_VirtualNetworkRule *rules,unsigned int ruleCount)
+	template <unsigned int C> static inline void serializeRules(Buffer<C>& b, const ZT_VirtualNetworkRule* rules, unsigned int ruleCount)
 	{
-		for(unsigned int i=0;i<ruleCount;++i) {
+		for (unsigned int i = 0; i < ruleCount; ++i) {
 			// Each rule consists of its 8-bit type followed by the size of that type's
 			// field followed by field data. The inclusion of the size will allow non-supported
 			// rules to be ignored but still parsed.
 			b.append((uint8_t)rules[i].t);
-			switch((ZT_VirtualNetworkRuleType)(rules[i].t & 0x3f)) {
+			switch ((ZT_VirtualNetworkRuleType)(rules[i].t & 0x3f)) {
 				default:
 					b.append((uint8_t)0);
 					break;
@@ -187,7 +201,7 @@ public:
 					b.append((uint8_t)14);
 					b.append((uint64_t)rules[i].v.fwd.address);
 					b.append((uint32_t)rules[i].v.fwd.flags);
-					b.append((uint16_t)rules[i].v.fwd.length); // unused for redirect
+					b.append((uint16_t)rules[i].v.fwd.length);	 // unused for redirect
 					break;
 				case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
@@ -209,18 +223,18 @@ public:
 				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
 					b.append((uint8_t)6);
-					b.append(rules[i].v.mac,6);
+					b.append(rules[i].v.mac, 6);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
 					b.append((uint8_t)5);
-					b.append(&(rules[i].v.ipv4.ip),4);
+					b.append(&(rules[i].v.ipv4.ip), 4);
 					b.append((uint8_t)rules[i].v.ipv4.mask);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
 					b.append((uint8_t)17);
-					b.append(rules[i].v.ipv6.ip,16);
+					b.append(rules[i].v.ipv6.ip, 16);
 					b.append((uint8_t)rules[i].v.ipv6.mask);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_TOS:
@@ -276,7 +290,7 @@ public:
 				case ZT_NETWORK_RULE_MATCH_INTEGER_RANGE:
 					b.append((uint8_t)19);
 					b.append((uint64_t)rules[i].v.intRange.start);
-					b.append((uint64_t)(rules[i].v.intRange.start + (uint64_t)rules[i].v.intRange.end)); // more future-proof
+					b.append((uint64_t)(rules[i].v.intRange.start + (uint64_t)rules[i].v.intRange.end));   // more future-proof
 					b.append((uint16_t)rules[i].v.intRange.idx);
 					b.append((uint8_t)rules[i].v.intRange.format);
 					break;
@@ -284,13 +298,12 @@ public:
 		}
 	}
 
-	template<unsigned int C>
-	static inline void deserializeRules(const Buffer<C> &b,unsigned int &p,ZT_VirtualNetworkRule *rules,unsigned int &ruleCount,const unsigned int maxRuleCount)
+	template <unsigned int C> static inline void deserializeRules(const Buffer<C>& b, unsigned int& p, ZT_VirtualNetworkRule* rules, unsigned int& ruleCount, const unsigned int maxRuleCount)
 	{
-		while ((ruleCount < maxRuleCount)&&(p < b.size())) {
+		while ((ruleCount < maxRuleCount) && (p < b.size())) {
 			rules[ruleCount].t = (uint8_t)b[p++];
 			const unsigned int fieldLen = (unsigned int)b[p++];
-			switch((ZT_VirtualNetworkRuleType)(rules[ruleCount].t & 0x3f)) {
+			switch ((ZT_VirtualNetworkRuleType)(rules[ruleCount].t & 0x3f)) {
 				default:
 					break;
 				case ZT_NETWORK_RULE_ACTION_TEE:
@@ -302,7 +315,7 @@ public:
 					break;
 				case ZT_NETWORK_RULE_MATCH_SOURCE_ZEROTIER_ADDRESS:
 				case ZT_NETWORK_RULE_MATCH_DEST_ZEROTIER_ADDRESS:
-					rules[ruleCount].v.zt = Address(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH).toInt();
+					rules[ruleCount].v.zt = Address(b.field(p, ZT_ADDRESS_LENGTH), ZT_ADDRESS_LENGTH).toInt();
 					break;
 				case ZT_NETWORK_RULE_MATCH_VLAN_ID:
 					rules[ruleCount].v.vlanId = b.template at<uint16_t>(p);
@@ -315,22 +328,22 @@ public:
 					break;
 				case ZT_NETWORK_RULE_MATCH_MAC_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_MAC_DEST:
-					memcpy(rules[ruleCount].v.mac,b.field(p,6),6);
+					memcpy(rules[ruleCount].v.mac, b.field(p, 6), 6);
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV4_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV4_DEST:
-					memcpy(&(rules[ruleCount].v.ipv4.ip),b.field(p,4),4);
+					memcpy(&(rules[ruleCount].v.ipv4.ip), b.field(p, 4), 4);
 					rules[ruleCount].v.ipv4.mask = (uint8_t)b[p + 4];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IPV6_SOURCE:
 				case ZT_NETWORK_RULE_MATCH_IPV6_DEST:
-					memcpy(rules[ruleCount].v.ipv6.ip,b.field(p,16),16);
+					memcpy(rules[ruleCount].v.ipv6.ip, b.field(p, 16), 16);
 					rules[ruleCount].v.ipv6.mask = (uint8_t)b[p + 16];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_TOS:
 					rules[ruleCount].v.ipTos.mask = (uint8_t)b[p];
-					rules[ruleCount].v.ipTos.value[0] = (uint8_t)b[p+1];
-					rules[ruleCount].v.ipTos.value[1] = (uint8_t)b[p+2];
+					rules[ruleCount].v.ipTos.value[0] = (uint8_t)b[p + 1];
+					rules[ruleCount].v.ipTos.value[1] = (uint8_t)b[p + 2];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_PROTOCOL:
 					rules[ruleCount].v.ipProtocol = (uint8_t)b[p];
@@ -340,8 +353,8 @@ public:
 					break;
 				case ZT_NETWORK_RULE_MATCH_ICMP:
 					rules[ruleCount].v.icmp.type = (uint8_t)b[p];
-					rules[ruleCount].v.icmp.code = (uint8_t)b[p+1];
-					rules[ruleCount].v.icmp.flags = (uint8_t)b[p+2];
+					rules[ruleCount].v.icmp.code = (uint8_t)b[p + 1];
+					rules[ruleCount].v.icmp.flags = (uint8_t)b[p + 2];
 					break;
 				case ZT_NETWORK_RULE_MATCH_IP_SOURCE_PORT_RANGE:
 				case ZT_NETWORK_RULE_MATCH_IP_DEST_PORT_RANGE:
@@ -380,8 +393,7 @@ public:
 		}
 	}
 
-	template<unsigned int C>
-	inline void serialize(Buffer<C> &b,const bool forSign = false) const
+	template <unsigned int C> inline void serialize(Buffer<C>& b, const bool forSign = false) const
 	{
 		if (forSign) {
 			b.append((uint64_t)0x7f7f7f7f7f7f7f7fULL);
@@ -393,19 +405,20 @@ public:
 		b.append(_id);
 
 		b.append((uint16_t)_ruleCount);
-		serializeRules(b,_rules,_ruleCount);
+		serializeRules(b, _rules, _ruleCount);
 		b.append((uint8_t)_maxCustodyChainLength);
 
-		if (!forSign) {
-			for(unsigned int i=0;;++i) {
-				if ((i < _maxCustodyChainLength)&&(i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)&&(_custody[i].to)) {
+		if (! forSign) {
+			for (unsigned int i = 0;; ++i) {
+				if ((i < _maxCustodyChainLength) && (i < ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH) && (_custody[i].to)) {
 					_custody[i].to.appendTo(b);
 					_custody[i].from.appendTo(b);
-					b.append((uint8_t)1); // 1 == Ed25519 signature
-					b.append((uint16_t)ZT_C25519_SIGNATURE_LEN); // length of signature
-					b.append(_custody[i].signature.data,ZT_C25519_SIGNATURE_LEN);
-				} else {
-					b.append((unsigned char)0,ZT_ADDRESS_LENGTH); // zero 'to' terminates chain
+					b.append((uint8_t)1);						// 1 == Ed25519 signature
+					b.append((uint16_t)ZT_ECC_SIGNATURE_LEN);	// length of signature
+					b.append(_custody[i].signature.data, ZT_ECC_SIGNATURE_LEN);
+				}
+				else {
+					b.append((unsigned char)0, ZT_ADDRESS_LENGTH);	 // zero 'to' terminates chain
 					break;
 				}
 			}
@@ -419,8 +432,7 @@ public:
 		}
 	}
 
-	template<unsigned int C>
-	inline unsigned int deserialize(const Buffer<C> &b,unsigned int startAt = 0)
+	template <unsigned int C> inline unsigned int deserialize(const Buffer<C>& b, unsigned int startAt = 0)
 	{
 		*this = Capability();
 
@@ -438,33 +450,34 @@ public:
 		if (rc > ZT_MAX_CAPABILITY_RULES) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 		}
-		deserializeRules(b,p,_rules,_ruleCount,rc);
+		deserializeRules(b, p, _rules, _ruleCount, rc);
 
 		_maxCustodyChainLength = (unsigned int)b[p++];
-		if ((_maxCustodyChainLength < 1)||(_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)) {
+		if ((_maxCustodyChainLength < 1) || (_maxCustodyChainLength > ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)) {
 			throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 		}
 
-		for(unsigned int i=0;;++i) {
-			const Address to(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+		for (unsigned int i = 0;; ++i) {
+			const Address to(b.field(p, ZT_ADDRESS_LENGTH), ZT_ADDRESS_LENGTH);
 			p += ZT_ADDRESS_LENGTH;
-			if (!to) {
+			if (! to) {
 				break;
 			}
-			if ((i >= _maxCustodyChainLength)||(i >= ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)) {
+			if ((i >= _maxCustodyChainLength) || (i >= ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH)) {
 				throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_OVERFLOW;
 			}
 			_custody[i].to = to;
-			_custody[i].from.setTo(b.field(p,ZT_ADDRESS_LENGTH),ZT_ADDRESS_LENGTH);
+			_custody[i].from.setTo(b.field(p, ZT_ADDRESS_LENGTH), ZT_ADDRESS_LENGTH);
 			p += ZT_ADDRESS_LENGTH;
 			if (b[p++] == 1) {
-				if (b.template at<uint16_t>(p) != ZT_C25519_SIGNATURE_LEN) {
+				if (b.template at<uint16_t>(p) != ZT_ECC_SIGNATURE_LEN) {
 					throw ZT_EXCEPTION_INVALID_SERIALIZED_DATA_INVALID_CRYPTOGRAPHIC_TOKEN;
 				}
 				p += 2;
-				memcpy(_custody[i].signature.data,b.field(p,ZT_C25519_SIGNATURE_LEN),ZT_C25519_SIGNATURE_LEN);
-				p += ZT_C25519_SIGNATURE_LEN;
-			} else {
+				memcpy(_custody[i].signature.data, b.field(p, ZT_ECC_SIGNATURE_LEN), ZT_ECC_SIGNATURE_LEN);
+				p += ZT_ECC_SIGNATURE_LEN;
+			}
+			else {
 				p += 2 + b.template at<uint16_t>(p);
 			}
 		}
@@ -478,12 +491,21 @@ public:
 	}
 
 	// Provides natural sort order by ID
-	inline bool operator<(const Capability &c) const { return (_id < c._id); }
+	inline bool operator<(const Capability& c) const
+	{
+		return (_id < c._id);
+	}
 
-	inline bool operator==(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) == 0); }
-	inline bool operator!=(const Capability &c) const { return (memcmp(this,&c,sizeof(Capability)) != 0); }
+	inline bool operator==(const Capability& c) const
+	{
+		return (memcmp(this, &c, sizeof(Capability)) == 0);
+	}
+	inline bool operator!=(const Capability& c) const
+	{
+		return (memcmp(this, &c, sizeof(Capability)) != 0);
+	}
 
-private:
+  private:
 	uint64_t _nwid;
 	int64_t _ts;
 	uint32_t _id;
@@ -496,10 +518,10 @@ private:
 	struct {
 		Address to;
 		Address from;
-		C25519::Signature signature;
+		ECC::Signature signature;
 	} _custody[ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH];
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

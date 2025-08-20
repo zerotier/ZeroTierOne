@@ -1,0 +1,156 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# This file is the main file for weaver,
+# used to generate semantic conventions,
+# for opentelemetry-cpp.
+#
+# For doc on weaver:
+# https://github.com/open-telemetry/weaver
+#
+# For doc on the semantic conventions:
+# https://github.com/open-telemetry/semantic-conventions
+#
+
+params:
+  # excluded namespaces will not be generated
+  excluded_namespaces: [ios, aspnetcore, signalr, android, dotnet, jvm, kestrel, v8js, veightjs, go, nodejs]
+
+  # excluded attributes will be commented out in the generated code
+  # this behavior is fully controlled by jinja templates
+  excluded_attributes: ["messaging.client_id"]
+
+  stable_package_name: opentelemetry.semconv
+
+  # "https://opentelemetry.io/schemas/<SEMCONV_VERSION_TAG>"
+  # this is provided from the command line
+  schema_url: ""
+
+templates:
+  - pattern: schema_url-h.j2
+    filter: .
+    application_mode: single
+  - pattern: semantic_attributes-h.j2
+    filter: >
+      semconv_grouped_attributes({
+        "exclude_root_namespace": $excluded_namespaces,
+        "stable_only": if $filter == "stable" then true else false end,
+      })
+      | map({
+          root_namespace: .root_namespace,
+          attributes: .attributes,
+          output: $output,
+          stable_package_name: $stable_package_name + ".attributes",
+          filter: $filter,
+          excluded_attributes: $excluded_attributes[]
+      })
+    application_mode: each
+  - pattern: semantic_metrics-h.j2
+    filter: >
+      semconv_grouped_metrics({
+        "exclude_root_namespace": $excluded_namespaces,
+        "stable_only": if $filter == "stable" then true else false end,
+      })
+      | map({
+        root_namespace: .root_namespace,
+        metrics: .metrics,
+        output: $output,
+        stable_package_name: $stable_package_name + ".metrics",
+        filter: $filter
+      })
+    application_mode: each
+
+text_maps:
+  cpp_types:
+    int: int
+    double: double
+    boolean: bool
+    string: const char *
+    string[]: const char *[]
+    template[string]: const char *
+    template[string[]]: const char *[]
+
+  # Minimum ABI_VERSION to support the feature:
+  # 0 - not supported
+  # 1 - supported in all versions
+  # 2 - supported in ABI_VERSION >= 2
+  cpp_sync_min_abi_version:
+    counter: 1
+    histogram: 1
+    updowncounter: 1
+    gauge: 2
+
+  cpp_sync_instrument_to_int64_type:
+    counter: metrics::Counter<uint64_t>
+    histogram: metrics::Histogram<uint64_t>
+    updowncounter: metrics::UpDownCounter<int64_t>
+    gauge: metrics::Gauge<int64_t>
+
+  cpp_sync_instrument_to_double_type:
+    counter: metrics::Counter<double>
+    histogram: metrics::Histogram<double>
+    updowncounter: metrics::UpDownCounter<double>
+    gauge: metrics::Gauge<double>
+
+  cpp_sync_instrument_to_int64_factory:
+    counter: CreateUInt64Counter
+    histogram: CreateUInt64Histogram
+    updowncounter: CreateInt64UpDownCounter
+    gauge: CreateInt64Gauge
+
+  cpp_sync_instrument_to_double_factory:
+    counter: CreateDoubleCounter
+    histogram: CreateDoubleHistogram
+    updowncounter: CreateDoubleUpDownCounter
+    gauge: CreateDoubleGauge
+
+  # Minimum ABI_VERSION to support the feature:
+  # 0 - not supported
+  # 1 - supported in all versions
+  # 2 - supported in ABI_VERSION >= 2
+  cpp_async_min_abi_version:
+    counter: 1
+    histogram: 0
+    updowncounter: 1
+    gauge: 1
+
+  cpp_async_instrument_to_type:
+    counter: metrics::ObservableInstrument
+    histogram: UNSUPPORTED
+    updowncounter: metrics::ObservableInstrument
+    gauge: metrics::ObservableInstrument
+
+  cpp_async_instrument_to_int64_factory:
+    counter: CreateInt64ObservableCounter
+    histogram: UNSUPPORTED
+    updowncounter: CreateInt64ObservableUpDownCounter
+    gauge: CreateInt64ObservableGauge
+
+  cpp_async_instrument_to_double_factory:
+    counter: CreateDoubleObservableCounter
+    histogram: UNSUPPORTED
+    updowncounter: CreateDoubleObservableUpDownCounter
+    gauge: CreateDoubleObservableGauge
+
+
+comment_formats:
+  cpp:
+    format: html
+    header: "/**"
+    prefix: "  "
+    footer: " */"
+    indent_type: Space
+    trim: true
+    remove_trailing_dots: false
+    enforce_trailing_dots: false
+    old_style_paragraph: true
+    omit_closing_li: false
+    inline_code_snippet: "@code {{code}} @endcode"
+    block_code_snippet: "@verbatim {{code}} @endverbatim"
+default_comment_format: cpp
+
+whitespace_control:
+  trim_blocks: true
+  lstrip_blocks: true
+  keep_trailing_newline: true
+

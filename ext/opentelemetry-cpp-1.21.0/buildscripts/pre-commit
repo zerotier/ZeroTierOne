@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+set -eo pipefail
+
+if [[ ! -w "$(pwd)/sdk/src/version/version.cc"  && ! -w "$(pwd)/api/include/opentelemetry/version.h" ]]; then
+    echo "Error: Version file(s) are not writable. Check permissions and try again."
+    exit 1
+fi
+
+# format: "v<MAJOR>.<MINOR>.<PATCH>-<PRERELEASE>+<BUILDMETADATA>-<NUMBER_OF_NEW_COMMITS>-g<LAST_COMMIT_HASH>"
+semver_regex="^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\-([0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*))?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?-([0-9]+)-g([0-9|a-z]+)$"
+git_tag=$(git describe --tags --long 2>/dev/null) || true
+if [[ ! -z $git_tag ]] && [[ $git_tag =~ $semver_regex ]]; then
+    major="${BASH_REMATCH[1]}"
+    minor="${BASH_REMATCH[2]}"
+    patch="${BASH_REMATCH[3]}"
+    pre_release="${BASH_REMATCH[5]}" #optional
+    build_metadata="${BASH_REMATCH[7]}" #optional
+    count_new_commits="${BASH_REMATCH[9]}"
+    latest_commit_hash="${BASH_REMATCH[10]}"
+    if [[ -z ${major} ]] || [[ -z ${minor} ]] || [[ -z ${patch} ]] || [[ -z ${count_new_commits} ]] || [[ -z ${latest_commit_hash} ]]; then
+        echo "Error: Incorrect tag format received. Exiting.."
+        exit 1
+    fi
+else
+    major=0 && minor=0 && patch=0 && pre_release="" && build_metadata="" && count_new_commits=0
+    latest_commit_hash="$(git rev-parse --short HEAD)"
+fi
+: ${pre_release:="NONE"} # use default string if not defined
+: ${build_metadata:="NONE"} # use default string if not defined
+latest_commit_hash=$(git rev-parse ${latest_commit_hash}) # get full hash from short
+
+if [[ -z ${latest_commit_hash} ]]; then
+    echo "Error: Incorrect short hash received. Exiting.."
+    exit 1
+fi
+
+short_version="${major}.${minor}.${patch}"
+full_version="${short_version}-${pre_release}-${build_metadata}"
+
+# Update api version.h
+sed -i "/^\#define OPENTELEMETRY_VERSION /c\#define OPENTELEMETRY_VERSION \"${short_version}\""  "$(pwd)/api/include/opentelemetry/version.h"
+sed -i "/^\#define OPENTELEMETRY_VERSION_MAJOR /c\#define OPENTELEMETRY_VERSION_MAJOR ${major}"  "$(pwd)/api/include/opentelemetry/version.h"
+sed -i "/^\#define OPENTELEMETRY_VERSION_MINOR /c\#define OPENTELEMETRY_VERSION_MINOR ${minor}"  "$(pwd)/api/include/opentelemetry/version.h"
+sed -i "/^\#define OPENTELEMETRY_VERSION_PATCH /c\#define OPENTELEMETRY_VERSION_PATCH ${patch}"  "$(pwd)/api/include/opentelemetry/version.h"
+git add "$(pwd)/api/include/opentelemetry/version.h"
+
+# Update sdk version.cc
+cat > "$(pwd)/sdk/src/version/version.cc" <<END
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Please DONOT touch this file.
+// Any changes done here would be overwritten by pre-commit git hook
+
+#include "opentelemetry/sdk/version/version.h"
+
+OPENTELEMETRY_BEGIN_NAMESPACE
+namespace sdk
+{
+namespace version
+{
+const int major_version    = ${major};
+const int minor_version    = ${minor};
+const int patch_version    = ${patch};
+const char *pre_release    = "${pre_release}";
+const char *build_metadata = "${build_metadata}";
+const char *short_version  = "${short_version}";
+const char *full_version   = "${full_version}";
+const char *build_date     = "$(date -u)";
+}  // namespace version
+}  // namespace sdk
+OPENTELEMETRY_END_NAMESPACE
+END
+git add "$(pwd)/sdk/src/version/version.cc"
+
+# Update documentation version
+sed -i "/^release =/crelease = \"${short_version}\""  "$(pwd)/docs/public/conf.py"
+git add "$(pwd)/docs/public/conf.py"

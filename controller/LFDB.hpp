@@ -16,19 +16,18 @@
 
 #include "DB.hpp"
 
+#include <atomic>
 #include <mutex>
 #include <string>
 #include <unordered_map>
-#include <atomic>
 
 namespace ZeroTier {
 
 /**
  * DB implementation for controller that stores data in LF
  */
-class LFDB : public DB
-{
-public:
+class LFDB : public DB {
+  public:
 	/**
 	 * @param myId This controller's identity
 	 * @param path Base path for ZeroTier node itself
@@ -38,44 +37,41 @@ public:
 	 * @param lfNodePort LF node http (not https) port
 	 * @param storeOnlineState If true, store online/offline state and IP info in LF (a lot of data, only for private networks!)
 	 */
-	LFDB(const Identity &myId,const char *path,const char *lfOwnerPrivate,const char *lfOwnerPublic,const char *lfNodeHost,int lfNodePort,bool storeOnlineState);
+	LFDB(const Identity& myId, const char* path, const char* lfOwnerPrivate, const char* lfOwnerPublic, const char* lfNodeHost, int lfNodePort, bool storeOnlineState);
 	virtual ~LFDB();
 
 	virtual bool waitForReady();
 	virtual bool isReady();
-	virtual bool save(nlohmann::json &record,bool notifyListeners);
+	virtual bool save(nlohmann::json& record, bool notifyListeners);
 	virtual void eraseNetwork(const uint64_t networkId);
-	virtual void eraseMember(const uint64_t networkId,const uint64_t memberId);
-	virtual void nodeIsOnline(const uint64_t networkId,const uint64_t memberId,const InetAddress &physicalAddress);
+	virtual void eraseMember(const uint64_t networkId, const uint64_t memberId);
+	virtual void nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress& physicalAddress);
+	virtual void nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress& physicalAddress, const char* osArch);
 
-protected:
+  protected:
 	const Identity _myId;
 
-	std::string _lfOwnerPrivate,_lfOwnerPublic;
+	std::string _lfOwnerPrivate, _lfOwnerPublic;
 	std::string _lfNodeHost;
 	int _lfNodePort;
 
-	struct _MemberState
-	{
-		_MemberState() :
-			lastOnlineAddress(),
-			lastOnlineTime(0),
-			dirty(false),
-			lastOnlineDirty(false) {}
+	struct _MemberState {
+		_MemberState() : lastOnlineAddress(), lastOnlineTime(0), dirty(false), lastOnlineDirty(false)
+		{
+		}
 		InetAddress lastOnlineAddress;
 		int64_t lastOnlineTime;
 		bool dirty;
 		bool lastOnlineDirty;
 	};
-	struct _NetworkState
-	{
-		_NetworkState() :
-			members(),
-			dirty(false) {}
-		std::unordered_map<uint64_t,_MemberState> members;
+	struct _NetworkState {
+		_NetworkState() : members(), dirty(false)
+		{
+		}
+		std::unordered_map<uint64_t, _MemberState> members;
 		bool dirty;
 	};
-	std::unordered_map<uint64_t,_NetworkState> _state;
+	std::unordered_map<uint64_t, _NetworkState> _state;
 	std::mutex _state_l;
 
 	std::atomic_bool _running;
@@ -84,6 +80,6 @@ protected:
 	bool _storeOnlineState;
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

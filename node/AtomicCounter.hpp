@@ -25,15 +25,17 @@ namespace ZeroTier {
 /**
  * Simple atomic counter supporting increment and decrement
  */
-class AtomicCounter
-{
-public:
-	AtomicCounter() { _v = 0; }
+class AtomicCounter {
+  public:
+	AtomicCounter()
+	{
+		_v = 0;
+	}
 
 	inline int load() const
 	{
 #ifdef __GNUC__
-		return __sync_or_and_fetch(const_cast<int *>(&_v),0);
+		return __sync_or_and_fetch(const_cast<int*>(&_v), 0);
 #else
 		return _v.load();
 #endif
@@ -42,7 +44,7 @@ public:
 	inline int operator++()
 	{
 #ifdef __GNUC__
-		return __sync_add_and_fetch(&_v,1);
+		return __sync_add_and_fetch(&_v, 1);
 #else
 		return ++_v;
 #endif
@@ -51,15 +53,20 @@ public:
 	inline int operator--()
 	{
 #ifdef __GNUC__
-		return __sync_sub_and_fetch(&_v,1);
+		return __sync_sub_and_fetch(&_v, 1);
 #else
 		return --_v;
 #endif
 	}
 
-private:
-	AtomicCounter(const AtomicCounter &) {}
-	const AtomicCounter &operator=(const AtomicCounter &) { return *this; }
+  private:
+	AtomicCounter(const AtomicCounter&)
+	{
+	}
+	const AtomicCounter& operator=(const AtomicCounter&)
+	{
+		return *this;
+	}
 
 #ifdef __GNUC__
 	int _v;
@@ -68,6 +75,6 @@ private:
 #endif
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

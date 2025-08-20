@@ -1,0 +1,41 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# bazel configurations for running tests under sanitizers.
+# Based on https://github.com/bazelment/trunk/blob/master/tools/bazel.rc
+
+# Enable automatic configs based on platform
+common --enable_platform_specific_config
+
+# Make globs that don't match anything fail
+common --incompatible_disallow_empty_glob
+
+# Needed by gRPC to build on some platforms.
+build --copt -DGRPC_BAZEL_BUILD
+
+# Workaround abseil libraries missing symbols
+build:windows --dynamic_mode=off
+
+# Set minimum supported C++ version
+build:macos --host_cxxopt=-std=c++14 --cxxopt=-std=c++14
+build:linux --host_cxxopt=-std=c++14 --cxxopt=-std=c++14
+build:windows --host_cxxopt=/std:c++14 --cxxopt=/std:c++14
+
+# --config=asan : Address Sanitizer.
+common:asan --copt -DADDRESS_SANITIZER
+common:asan --copt -fsanitize=address,bool,float-cast-overflow,integer-divide-by-zero,null,return,returns-nonnull-attribute,shift-exponent,signed-integer-overflow,unreachable,vla-bound
+common:asan --copt -fsanitize-address-use-after-scope
+common:asan --copt -fno-sanitize-recover=all
+common:asan --linkopt -fsanitize=address,bool,float-cast-overflow,integer-divide-by-zero,null,return,returns-nonnull-attribute,shift-exponent,signed-integer-overflow,unreachable,vla-bound
+common:asan --linkopt -fsanitize-address-use-after-scope
+common:asan --linkopt -fno-sanitize-recover=all
+common:asan --cc_output_directory_tag=asan
+
+# --config=tsan : Thread Sanitizer.
+common:tsan --copt -fsanitize=thread
+common:tsan --copt -DTHREAD_SANITIZER
+common:tsan --linkopt -fsanitize=thread
+common:tsan --cc_output_directory_tag=tsan
+# This is needed to address false positive problem with abseil.The same setting as gRPC
+# https://github.com/google/sanitizers/issues/953
+common:tsan --test_env=TSAN_OPTIONS=report_atomic_races=0

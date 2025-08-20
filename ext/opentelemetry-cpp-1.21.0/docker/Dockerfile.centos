@@ -1,0 +1,50 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+FROM centos:7
+
+ARG TOOLSET_VER=11
+
+RUN yum update -y && yum install -y centos-release-scl epel-release
+RUN yum install -y devtoolset-${TOOLSET_VER} \
+    cmake3 git \
+    openssl-devel \
+    libcurl-devel \
+    && source /opt/rh/devtoolset-${TOOLSET_VER}/enable
+
+RUN echo "source /opt/rh/devtoolset-${TOOLSET_VER}/enable" >> /etc/bashrc
+
+ARG GRPC_VERSION=v1.43.2
+
+# install gRPC
+RUN git clone --depth=1 -b $GRPC_VERSION  https://github.com/grpc/grpc.git \
+    && cd grpc && git submodule update --init \
+    && mkdir -p "third_party/abseil-cpp/build" && cd "third_party/abseil-cpp/build" \
+    && source /opt/rh/devtoolset-${TOOLSET_VER}/enable \
+    && cmake3 -DCMAKE_CXX_STANDARD=17 -DCMAKE_BUILD_TYPE=Release -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE .. \
+    && make -j${nproc} install && cd ../../.. \
+    && mkdir build && cd build \
+    && cmake3 \
+        -DCMAKE_CXX_STANDARD=17 \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DgRPC_INSTALL=ON \
+        -DgRPC_BUILD_TESTS=OFF \
+        -DgRPC_ABSL_PROVIDER=package \
+        -DgRPC_SSL_PROVIDER=package \
+        .. && \
+    make -j${nproc} install && make clean && ldconfig
+
+#install opentelemetry-cpp
+RUN git clone --depth=1 https://github.com/open-telemetry/opentelemetry-cpp.git \
+    && cd opentelemetry-cpp && git submodule update --init \
+    && mkdir -p build && cd build \
+    && source /opt/rh/devtoolset-${TOOLSET_VER}/enable \
+    && cmake3 \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=TRUE  \
+        -DWITH_ZIPKIN=ON \
+        -DBUILD_TESTING=OFF \
+        -DWITH_OTLP_GRPC=ON \
+        -DWITH_OTLP_HTTP=ON \
+        .. \
+    && make -j${nproc} install && ldconfig

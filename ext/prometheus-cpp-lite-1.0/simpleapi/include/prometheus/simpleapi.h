@@ -15,6 +15,17 @@
 #include <memory>
 #include <functional>
 #include <stdexcept>
+#include <stdint.h>
+
+#if UINTPTR_MAX == 0xffFFffFF
+// 32-bit
+typedef uint32_t metric_size;
+#elif UINTPTR_MAX == 0xffFFffFFffFFffFF
+// 64-bit
+typedef uint64_t metric_size;
+#else
+#error Unknown platform - does not look either like 32-bit or 64-bit
+#endif
 
 namespace prometheus {
   namespace simpleapi {
@@ -46,7 +57,7 @@ namespace prometheus {
 
     public:
 
-      using Metric = Counter<uint64_t>;
+      using Metric = Counter<metric_size>;
       using Family = Metric::Family;
 
     private:
@@ -82,7 +93,7 @@ namespace prometheus {
 
     public:
 
-      using Metric = Gauge<int64_t>;
+      using Metric = Gauge<metric_size>;
       using Family = Metric::Family;
 
     private:

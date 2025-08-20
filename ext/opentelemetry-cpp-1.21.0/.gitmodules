@@ -1,0 +1,39 @@
+[submodule "third_party/prometheus-cpp"]
+path = third_party/prometheus-cpp
+url = https://github.com/jupp0r/prometheus-cpp
+branch = master
+
+[submodule "tools/vcpkg"]
+path = tools/vcpkg
+url = https://github.com/Microsoft/vcpkg
+branch = master
+
+[submodule "third_party/ms-gsl"]
+path = third_party/ms-gsl
+url = https://github.com/microsoft/GSL
+branch = main
+
+[submodule "third_party/googletest"]
+path = third_party/googletest
+url = https://github.com/google/googletest
+branch = main
+
+[submodule "third_party/benchmark"]
+path = third_party/benchmark
+url = https://github.com/google/benchmark
+branch = main
+
+[submodule "third_party/opentelemetry-proto"]
+path = third_party/opentelemetry-proto
+url = https://github.com/open-telemetry/opentelemetry-proto
+branch = main
+
+[submodule "third_party/nlohmann-json"]
+path = third_party/nlohmann-json
+url = https://github.com/nlohmann/json
+branch = master
+
+[submodule "third_party/opentracing-cpp"]
+path = third_party/opentracing-cpp
+url = https://github.com/opentracing/opentracing-cpp.git
+branch = master

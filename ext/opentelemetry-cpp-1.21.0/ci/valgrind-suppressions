@@ -1,0 +1,15 @@
+{
+  <flakiness on gRPC initialization>
+  Memcheck:Leak
+  ...
+  fun:grpc_shutdown
+  ...
+}
+
+{
+  <flakiness on gRPC initialization>
+  Memcheck:Leak
+  ...
+  fun:grpc_init
+  ...
+}

@@ -14,12 +14,12 @@
 #ifndef ZT_RINGBUFFER_H
 #define ZT_RINGBUFFER_H
 
-#include <typeinfo>
-#include <cstdint>
-#include <stdlib.h>
-#include <memory.h>
 #include <algorithm>
+#include <cstdint>
 #include <math.h>
+#include <memory.h>
+#include <stdlib.h>
+#include <typeinfo>
 
 namespace ZeroTier {
 
@@ -34,28 +34,23 @@ namespace ZeroTier {
  * to reduce the complexity of code needed to interact with this type of buffer.
  */
 
-template <class T,size_t S>
-class RingBuffer
-{
-private:
+template <class T, size_t S> class RingBuffer {
+  private:
 	T buf[S];
 	size_t begin;
 	size_t end;
 	bool wrap;
 
-public:
-	RingBuffer() :
-		begin(0),
-		end(0),
-		wrap(false)
+  public:
+	RingBuffer() : begin(0), end(0), wrap(false)
 	{
-		memset(buf,0,sizeof(T)*S);
+		memset(buf, 0, sizeof(T) * S);
 	}
 
 	/**
 	 * @return A pointer to the underlying buffer
 	 */
-	inline T *get_buf()
+	inline T* get_buf()
 	{
 		return buf + begin;
 	}
@@ -87,7 +82,10 @@ public:
 	 * Fast erase, O(1).
 	 * Merely reset the buffer pointer, doesn't erase contents
 	 */
-	inline void reset() { consume(count()); }
+	inline void reset()
+	{
+		consume(count());
+	}
 
 	/**
 	 * adjust buffer index pointer as if we copied data out
@@ -116,7 +114,7 @@ public:
 	 * @param data Buffer that is to be written to the ring
 	 * @param n Number of elements to write to the buffer
 	 */
-	inline size_t write(const T * data, size_t n)
+	inline size_t write(const T* data, size_t n)
 	{
 		n = std::min(n, getFree());
 		if (n == 0) {
@@ -157,14 +155,17 @@ public:
 	/**
 	 * @return The most recently pushed element on the buffer
 	 */
-	inline T get_most_recent() { return *(buf + end); }
+	inline T get_most_recent()
+	{
+		return *(buf + end);
+	}
 
 	/**
 	 * @param dest Destination buffer
 	 * @param n Size (in terms of number of elements) of the destination buffer
 	 * @return Number of elements read from the buffer
 	 */
-	inline size_t read(T *dest,size_t n)
+	inline size_t read(T* dest, size_t n)
 	{
 		n = std::min(n, count());
 		if (n == 0) {
@@ -193,9 +194,11 @@ public:
 	{
 		if (end == begin) {
 			return wrap ? S : 0;
-		} else if (end > begin) {
+		}
+		else if (end > begin) {
 			return end - begin;
-		} else {
+		}
+		else {
 			return S + end - begin;
 		}
 	}
@@ -203,7 +206,10 @@ public:
 	/**
 	 * @return The number of slots that are unused in the buffer
 	 */
-	inline size_t getFree() { return S - count(); }
+	inline size_t getFree()
+	{
+		return S - count();
+	}
 
 	/**
 	 * @return The arithmetic mean of the contents of the buffer
@@ -213,7 +219,7 @@ public:
 		size_t iterator = begin;
 		float subtotal = 0;
 		size_t curr_cnt = count();
-		for (size_t i=0; i<curr_cnt; i++) {
+		for (size_t i = 0; i < curr_cnt; i++) {
 			iterator = (iterator + S - 1) % curr_cnt;
 			subtotal += (float)*(buf + iterator);
 		}
@@ -229,7 +235,7 @@ public:
 		size_t iterator = begin;
 		float subtotal = 0;
 		size_t curr_cnt = count();
-		for (size_t i=0; i<n; i++) {
+		for (size_t i = 0; i < n; i++) {
 			iterator = (iterator + S - 1) % curr_cnt;
 			subtotal += (float)*(buf + iterator);
 		}
@@ -244,7 +250,7 @@ public:
 		size_t iterator = begin;
 		float total = 0;
 		size_t curr_cnt = count();
-		for (size_t i=0; i<curr_cnt; i++) {
+		for (size_t i = 0; i < curr_cnt; i++) {
 			iterator = (iterator + S - 1) % curr_cnt;
 			total += (float)*(buf + iterator);
 		}
@@ -254,7 +260,10 @@ public:
 	/**
 	 * @return The sample standard deviation of element values
 	 */
-	inline float stddev() { return sqrt(variance()); }
+	inline float stddev()
+	{
+		return sqrt(variance());
+	}
 
 	/**
 	 * @return The variance of element values
@@ -265,10 +274,10 @@ public:
 		float cached_mean = mean();
 		size_t curr_cnt = count();
 		T sum_of_squared_deviations = 0;
-		for (size_t i=0; i<curr_cnt; i++) {
+		for (size_t i = 0; i < curr_cnt; i++) {
 			iterator = (iterator + S - 1) % curr_cnt;
 			float deviation = (buf[i] - cached_mean);
-			sum_of_squared_deviations += (T)(deviation*deviation);
+			sum_of_squared_deviations += (T)(deviation * deviation);
 		}
 		float variance = (float)sum_of_squared_deviations / (float)(S - 1);
 		return variance;
@@ -282,7 +291,7 @@ public:
 		size_t iterator = begin;
 		size_t zeros = 0;
 		size_t curr_cnt = count();
-		for (size_t i=0; i<curr_cnt; i++) {
+		for (size_t i = 0; i < curr_cnt; i++) {
 			iterator = (iterator + S - 1) % curr_cnt;
 			if (*(buf + iterator) == 0) {
 				zeros++;
@@ -300,7 +309,7 @@ public:
 		size_t iterator = begin;
 		size_t cnt = 0;
 		size_t curr_cnt = count();
-		for (size_t i=0; i<curr_cnt; i++) {
+		for (size_t i = 0; i < curr_cnt; i++) {
 			iterator = (iterator + S - 1) % curr_cnt;
 			if (*(buf + iterator) == value) {
 				cnt++;
@@ -329,6 +338,6 @@ public:
 	*/
 };
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
 #endif

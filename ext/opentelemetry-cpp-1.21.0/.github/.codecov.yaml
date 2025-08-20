@@ -1,0 +1,50 @@
+codecov:
+  require_ci_to_pass: false
+  max_report_age: off
+
+coverage:
+  precision: 2
+  round: up
+  range: "80...100"
+  status:
+    project:
+      default:
+        informational: true
+        target: auto
+        threshold: 10%
+    patch: false
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+
+# Relative file path fixing.
+# CI file paths must match Git file paths.
+# This fix removes the "/home/runner/" prefix
+# to coverage report file paths.
+fixes:
+  - "/home/runner/::"
+
+ignore:
+  - "docs/**/*"
+  - "docker/**/*"
+  - "examples/**/*"
+  - "bazel/**/*"
+  - "cmake/**/*"
+  - "buildscripts/**/*"
+  - "third_party/**/*"
+  - "test_common/**/*"
+  - "tools/**/*"
+  - ".vscode/**/*"
+  - ".github/**/*"
+  - "**/test/**/*"
+  - "**.md"

@@ -22,7 +22,7 @@
 /**
  * Minor version
  */
-#define ZEROTIER_ONE_VERSION_MINOR 14
+#define ZEROTIER_ONE_VERSION_MINOR 15
 
 /**
  * Revision
@@ -44,5 +44,10 @@
 #ifndef ZT_BUILD_PLATFORM
 #define ZT_BUILD_PLATFORM 0
 #endif
+
+#define _ZT_STR_HELPER(x)		 #x
+#define _ZT_STR(x)				 _ZT_STR_HELPER(x)
+#define ZEROTIER_ONE_VERSION_STR _ZT_STR(ZEROTIER_ONE_VERSION_MAJOR) "." _ZT_STR(ZEROTIER_ONE_VERSION_MINOR) "." _ZT_STR(ZEROTIER_ONE_VERSION_REVISION)
+#define ZEROTIER_ONE_NAME		 "zerotier-one"
 
 #endif

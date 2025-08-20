@@ -23,7 +23,17 @@ namespace prometheus {
   ///
   /// The class is thread-safe. No concurrent call to any API of this type causes
   /// a data race.
+  #include <stdint.h>
+
+  #if UINTPTR_MAX == 0xffFFffFF
+  // 32-bit
+  template <typename Value_ = uint32_t>
+  #elif UINTPTR_MAX == 0xffFFffFFffFFffFF
+  // 64-bit
   template <typename Value_ = uint64_t>
+  #else
+  #error Unknown platform - does not look either like 32-bit or 64-bit
+  #endif
   class Gauge : public Metric {
 
     std::atomic<Value_> value { 0 };

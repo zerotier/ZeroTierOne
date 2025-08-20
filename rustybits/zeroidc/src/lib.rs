@@ -10,6 +10,12 @@
  * of this software will be governed by version 2.0 of the Apache License.
  */
 
+#![allow(
+    clippy::uninlined_format_args,
+    clippy::missing_safety_doc,
+    clippy::option_map_unit_fn
+)]
+
 pub mod error;
 pub mod ext;
 
@@ -373,7 +379,7 @@ impl ZeroIDC {
                 return;
             }
 
-            let need_verifier = matches!(i.pkce_verifier, None);
+            let need_verifier = i.pkce_verifier.is_none();
 
             let csrf_diff = if let Some(csrf) = i.csrf_token.clone() {
                 *csrf.secret() != csrf_token

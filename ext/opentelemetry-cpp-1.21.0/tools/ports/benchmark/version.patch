@@ -1,0 +1,34 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1007254..47e4a1b 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -78,8 +78,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+ 
+ 
+ # Read the git tags to determine the project version
+-include(GetGitVersion)
+-get_git_version(GIT_VERSION)
++# include(GetGitVersion)
++# get_git_version(GIT_VERSION)
++set(GIT_VERSION 1.5.3)
+ 
+ # Tell the user what versions we are using
+ string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+" VERSION ${GIT_VERSION})
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 35d559e..e9dec6d 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -77,9 +77,13 @@ set(targets_export_name "${PROJECT_NAME}Targets")
+ set(namespace "${PROJECT_NAME}::")
+ 
+ include(CMakePackageConfigHelpers)
++# Avoid architecture compatibility check
++set(DOCTEST_SIZEOF_VOID_P ${CMAKE_SIZEOF_VOID_P})
++unset(CMAKE_SIZEOF_VOID_P)
+ write_basic_package_version_file(
+   "${version_config}" VERSION ${GENERIC_LIB_VERSION} COMPATIBILITY SameMajorVersion
+ )
++set(CMAKE_SIZEOF_VOID_P ${DOCTEST_SIZEOF_VOID_P})
+ 
+ configure_file("${PROJECT_SOURCE_DIR}/cmake/Config.cmake.in" "${project_config}" @ONLY)
+ configure_file("${PROJECT_SOURCE_DIR}/cmake/benchmark.pc.in" "${pkg_config}" @ONLY)

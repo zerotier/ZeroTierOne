@@ -1,0 +1,31 @@
+{
+  "build": {
+    "content": [
+      {
+        "files": [
+          "**.md",
+          "toc.yml"
+        ]
+      }
+    ],
+    "resource": [
+      {
+        "files": [
+          "api/**.h",
+          "api/**.cc",
+          "exporters/**.h",
+          "exporters/**.cc",
+          "sdk/**.h",
+          "sdk/**.cc"
+        ]
+      }
+    ],
+    "dest": "_site",
+    "globalMetadataFiles": [],
+    "fileMetadataFiles": [],
+    "noLangKeyword": false,
+    "keepFileLink": false,
+    "cleanupCacheHistory": true,
+    "disableGitFeatures": true
+  }
+}

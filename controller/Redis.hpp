@@ -5,11 +5,11 @@
 
 namespace ZeroTier {
 struct RedisConfig {
-    std::string hostname;
-    int port;
-    std::string password;
-    bool clusterMode;
+	std::string hostname;
+	int port;
+	std::string password;
+	bool clusterMode;
 };
-}
+}	// namespace ZeroTier
 
 #endif

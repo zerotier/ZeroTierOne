@@ -1,0 +1,25 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+#
+# MAINTAINER
+#
+# This file is used for the CMake build.
+#
+# When changing (add, upgrade, remove) dependencies
+# please update:
+# - the Bazel build, see file
+#   <root>/bazel/repository.bzl
+# - git submodule, see command
+#   git submodule status
+#
+
+gRPC=v1.49.2
+abseil=20240116.1
+benchmark=v1.8.3
+googletest=1.14.0
+ms-gsl=v3.1.0-67-g6f45293
+nlohmann-json=v3.12.0
+opentelemetry-proto=v1.6.0
+opentracing-cpp=v1.6.0
+prometheus-cpp=v1.3.0
+vcpkg=2024.02.14

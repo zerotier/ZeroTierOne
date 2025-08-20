@@ -1,0 +1,20 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Configured from opentelmetry-cpp/cmake/thirdparty-dependency-definitions.cmake.in
+
+#-----------------------------------------------------------------------
+# Third party dependencies supported by opentelemetry-cpp
+#    Dependencies will be found in this order when find_package(opentelemetry-cpp ...)  is called.
+#-----------------------------------------------------------------------
+set(OTEL_THIRDPARTY_DEPENDENCIES_SUPPORTED @OTEL_THIRDPARTY_DEPENDENCIES_SUPPORTED@)
+
+#-----------------------------------------------------------------------
+# Third party dependency versions used to build opentelemetry-cpp
+#-----------------------------------------------------------------------
+@OTEL_THIRDPARTY_DEPENDENCY_VERSIONS_BLOCK@
+
+#-----------------------------------------------------------------------
+# Set the find_dependecy search mode - empty is default. Options MODULE or CONFIG
+#-----------------------------------------------------------------------
+@OTEL_THIRDPARTY_DEPENDENCY_SEARCH_MODES_BLOCK@

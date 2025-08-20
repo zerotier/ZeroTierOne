@@ -1,0 +1,4 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+
+# Disables the default WORKSPACE when using bzlmod

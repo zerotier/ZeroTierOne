@@ -11,8 +11,8 @@
  */
 /****/
 
-#include "Constants.hpp"
 #include "AES.hpp"
+#include "Constants.hpp"
 
 #ifdef ZT_AES_AESNI
 
@@ -29,7 +29,8 @@ const __m128i s_sseSwapBytes = _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
 #ifdef __GNUC__
 __attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,pclmul")))
 #endif
-__m128i p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
+__m128i
+p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
 {
 	y = _mm_shuffle_epi8(y, s_sseSwapBytes);
 	__m128i t1 = _mm_clmulepi64_si128(h, y, 0x00);
@@ -55,7 +56,7 @@ __m128i p_gmacPCLMUL128(const __m128i h, __m128i y) noexcept
  * The performance gain can be significant but regular SSE is already so
  * fast it's highly unlikely to be a rate limiting factor except on massive
  * servers and network infrastructure stuff. */
-#if !defined(__WINDOWS__) && ((__GNUC__ >= 8) || (__clang_major__ >= 7))
+#if ! defined(__WINDOWS__) && ((__GNUC__ >= 8) || (__clang_major__ >= 7))
 
 #define ZT_AES_VAES512 1
 
@@ -80,12 +81,8 @@ void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 	const __m512i kk13 = _mm512_broadcast_i32x4(k[13]);
 	const __m512i kk14 = _mm512_broadcast_i32x4(k[14]);
 	do {
-		__m512i p0 = _mm512_loadu_si512(reinterpret_cast<const __m512i *>(in));
-		__m512i d0 = _mm512_set_epi64(
-			(long long)Utils::hton(c1 + 3ULL), (long long)c0,
-			(long long)Utils::hton(c1 + 2ULL), (long long)c0,
-			(long long)Utils::hton(c1 + 1ULL), (long long)c0,
-			(long long)Utils::hton(c1), (long long)c0);
+		__m512i p0 = _mm512_loadu_si512(reinterpret_cast<const __m512i*>(in));
+		__m512i d0 = _mm512_set_epi64((long long)Utils::hton(c1 + 3ULL), (long long)c0, (long long)Utils::hton(c1 + 2ULL), (long long)c0, (long long)Utils::hton(c1 + 1ULL), (long long)c0, (long long)Utils::hton(c1), (long long)c0);
 		c1 += 4;
 		in += 64;
 		len -= 64;
@@ -104,7 +101,7 @@ void p_aesCtrInnerVAES512(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 		d0 = _mm512_aesenc_epi128(d0, kk12);
 		d0 = _mm512_aesenc_epi128(d0, kk13);
 		d0 = _mm512_aesenclast_epi128(d0, kk14);
-		_mm512_storeu_si512(reinterpret_cast<__m512i *>(out), _mm512_xor_si512(p0, d0));
+		_mm512_storeu_si512(reinterpret_cast<__m512i*>(out), _mm512_xor_si512(p0, d0));
 		out += 64;
 	} while (likely(len >= 64));
 }
@@ -132,14 +129,10 @@ void p_aesCtrInnerVAES256(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 	const __m256i kk13 = _mm256_broadcastsi128_si256(k[13]);
 	const __m256i kk14 = _mm256_broadcastsi128_si256(k[14]);
 	do {
-		__m256i p0 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in));
-		__m256i p1 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(in + 32));
-		__m256i d0 = _mm256_set_epi64x(
-			(long long)Utils::hton(c1 + 1ULL), (long long)c0,
-			(long long)Utils::hton(c1), (long long)c0);
-		__m256i d1 = _mm256_set_epi64x(
-			(long long)Utils::hton(c1 + 3ULL), (long long)c0,
-			(long long)Utils::hton(c1 + 2ULL), (long long)c0);
+		__m256i p0 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(in));
+		__m256i p1 = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(in + 32));
+		__m256i d0 = _mm256_set_epi64x((long long)Utils::hton(c1 + 1ULL), (long long)c0, (long long)Utils::hton(c1), (long long)c0);
+		__m256i d1 = _mm256_set_epi64x((long long)Utils::hton(c1 + 3ULL), (long long)c0, (long long)Utils::hton(c1 + 2ULL), (long long)c0);
 		c1 += 4;
 		in += 64;
 		len -= 64;
@@ -173,18 +166,19 @@ void p_aesCtrInnerVAES256(unsigned int &len, const uint64_t c0, uint64_t &c1, co
 		d1 = _mm256_aesenc_epi128(d1, kk13);
 		d0 = _mm256_aesenclast_epi128(d0, kk14);
 		d1 = _mm256_aesenclast_epi128(d1, kk14);
-		_mm256_storeu_si256(reinterpret_cast<__m256i *>(out), _mm256_xor_si256(d0, p0));
-		_mm256_storeu_si256(reinterpret_cast<__m256i *>(out + 32), _mm256_xor_si256(d1, p1));
+		_mm256_storeu_si256(reinterpret_cast<__m256i*>(out), _mm256_xor_si256(d0, p0));
+		_mm256_storeu_si256(reinterpret_cast<__m256i*>(out + 32), _mm256_xor_si256(d1, p1));
 		out += 64;
 	} while (likely(len >= 64));
 }
 
-#endif // does compiler support AVX2 and AVX512 AES intrinsics?
+#endif	 // does compiler support AVX2 and AVX512 AES intrinsics?
 
 #ifdef __GNUC__
 __attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes,pclmul")))
 #endif
-__m128i p_init256_1_aesni(__m128i a, __m128i b) noexcept
+__m128i
+p_init256_1_aesni(__m128i a, __m128i b) noexcept
 {
 	__m128i x, y;
 	b = _mm_shuffle_epi32(b, 0xff);
@@ -201,7 +195,8 @@ __m128i p_init256_1_aesni(__m128i a, __m128i b) noexcept
 #ifdef __GNUC__
 __attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes,pclmul")))
 #endif
-__m128i p_init256_2_aesni(__m128i a, __m128i b) noexcept
+__m128i
+p_init256_2_aesni(__m128i a, __m128i b) noexcept
 {
 	__m128i x, y, z;
 	y = _mm_aeskeygenassist_si128(a, 0x00);
@@ -216,25 +211,25 @@ __m128i p_init256_2_aesni(__m128i a, __m128i b) noexcept
 	return x;
 }
 
-} // anonymous namespace
+}	// anonymous namespace
 
 #ifdef __GNUC__
 __attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,pclmul")))
 #endif
 void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
 {
-	__m128i y = _mm_loadu_si128(reinterpret_cast<const __m128i *>(_y));
+	__m128i y = _mm_loadu_si128(reinterpret_cast<const __m128i*>(_y));
 
 	// Handle anything left over from a previous run that wasn't a multiple of 16 bytes.
 	if (_rp) {
 		for (;;) {
-			if (!len) {
+			if (! len) {
 				return;
 			}
 			--len;
 			_r[_rp++] = *(in++);
 			if (_rp == 16) {
-				y = p_gmacPCLMUL128(_aes.p_k.ni.h[0], _mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<__m128i *>(_r))));
+				y = p_gmacPCLMUL128(_aes.p_k.ni.h[0], _mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<__m128i*>(_r))));
 				break;
 			}
 		}
@@ -250,17 +245,21 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
 		const __m128i hh2 = _aes.p_k.ni.h2[1];
 		const __m128i hhh2 = _aes.p_k.ni.h2[2];
 		const __m128i hhhh2 = _aes.p_k.ni.h2[3];
-		const uint8_t *const end64 = in + (len & ~((unsigned int)63));
+		const uint8_t* const end64 = in + (len & ~((unsigned int)63));
 		len &= 63U;
 		do {
-			__m128i d1 = _mm_shuffle_epi8(_mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<const __m128i *>(in))), sb);
-			__m128i d2 = _mm_shuffle_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 16)), sb);
-			__m128i d3 = _mm_shuffle_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 32)), sb);
-			__m128i d4 = _mm_shuffle_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 48)), sb);
+			__m128i d1 = _mm_shuffle_epi8(_mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<const __m128i*>(in))), sb);
+			__m128i d2 = _mm_shuffle_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 16)), sb);
+			__m128i d3 = _mm_shuffle_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 32)), sb);
+			__m128i d4 = _mm_shuffle_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 48)), sb);
 			in += 64;
 			__m128i a = _mm_xor_si128(_mm_xor_si128(_mm_clmulepi64_si128(hhhh, d1, 0x00), _mm_clmulepi64_si128(hhh, d2, 0x00)), _mm_xor_si128(_mm_clmulepi64_si128(hh, d3, 0x00), _mm_clmulepi64_si128(h, d4, 0x00)));
 			__m128i b = _mm_xor_si128(_mm_xor_si128(_mm_clmulepi64_si128(hhhh, d1, 0x11), _mm_clmulepi64_si128(hhh, d2, 0x11)), _mm_xor_si128(_mm_clmulepi64_si128(hh, d3, 0x11), _mm_clmulepi64_si128(h, d4, 0x11)));
-			__m128i c = _mm_xor_si128(_mm_xor_si128(_mm_xor_si128(_mm_clmulepi64_si128(hhhh2, _mm_xor_si128(_mm_shuffle_epi32(d1, 78), d1), 0x00), _mm_clmulepi64_si128(hhh2, _mm_xor_si128(_mm_shuffle_epi32(d2, 78), d2), 0x00)), _mm_xor_si128(_mm_clmulepi64_si128(hh2, _mm_xor_si128(_mm_shuffle_epi32(d3, 78), d3), 0x00), _mm_clmulepi64_si128(h2, _mm_xor_si128(_mm_shuffle_epi32(d4, 78), d4), 0x00))), _mm_xor_si128(a, b));
+			__m128i c = _mm_xor_si128(
+				_mm_xor_si128(
+					_mm_xor_si128(_mm_clmulepi64_si128(hhhh2, _mm_xor_si128(_mm_shuffle_epi32(d1, 78), d1), 0x00), _mm_clmulepi64_si128(hhh2, _mm_xor_si128(_mm_shuffle_epi32(d2, 78), d2), 0x00)),
+					_mm_xor_si128(_mm_clmulepi64_si128(hh2, _mm_xor_si128(_mm_shuffle_epi32(d3, 78), d3), 0x00), _mm_clmulepi64_si128(h2, _mm_xor_si128(_mm_shuffle_epi32(d4, 78), d4), 0x00))),
+				_mm_xor_si128(a, b));
 			a = _mm_xor_si128(_mm_slli_si128(c, 8), a);
 			b = _mm_xor_si128(_mm_srli_si128(c, 8), b);
 			c = _mm_srli_epi32(a, 31);
@@ -274,18 +273,18 @@ void AES::GMAC::p_aesNIUpdate(const uint8_t *in, unsigned int len) noexcept
 	}
 
 	while (len >= 16) {
-		y = p_gmacPCLMUL128(_aes.p_k.ni.h[0], _mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<const __m128i *>(in))));
+		y = p_gmacPCLMUL128(_aes.p_k.ni.h[0], _mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<const __m128i*>(in))));
 		in += 16;
 		len -= 16;
 	}
 
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(_y), y);
+	_mm_storeu_si128(reinterpret_cast<__m128i*>(_y), y);
 
 	// Any overflow is cached for a later run or finish().
 	for (unsigned int i = 0; i < len; ++i) {
 		_r[i] = in[i];
 	}
-	_rp = len; // len is always less than 16 here
+	_rp = len;	 // len is always less than 16 here
 }
 
 #ifdef __GNUC__
@@ -293,23 +292,23 @@ __attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,pclmul,aes")))
 #endif
 void AES::GMAC::p_aesNIFinish(uint8_t tag[16]) noexcept
 {
-	__m128i y = _mm_loadu_si128(reinterpret_cast<const __m128i *>(_y));
+	__m128i y = _mm_loadu_si128(reinterpret_cast<const __m128i*>(_y));
 
 	// Handle any remaining bytes, padding the last block with zeroes.
 	if (_rp) {
 		while (_rp < 16) {
 			_r[_rp++] = 0;
 		}
-		y = p_gmacPCLMUL128(_aes.p_k.ni.h[0], _mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<__m128i *>(_r))));
+		y = p_gmacPCLMUL128(_aes.p_k.ni.h[0], _mm_xor_si128(y, _mm_loadu_si128(reinterpret_cast<__m128i*>(_r))));
 	}
 
 	// Interleave encryption of IV with the final GHASH of y XOR (length * 8).
 	// Then XOR these together to get the final tag.
-	const __m128i *const k = _aes.p_k.ni.k;
+	const __m128i* const k = _aes.p_k.ni.k;
 	const __m128i h = _aes.p_k.ni.h[0];
 	y = _mm_xor_si128(y, _mm_set_epi64x(0LL, (long long)Utils::hton((uint64_t)_len << 3U)));
 	y = _mm_shuffle_epi8(y, s_sseSwapBytes);
-	__m128i encIV = _mm_xor_si128(_mm_loadu_si128(reinterpret_cast<const __m128i *>(_iv)), k[0]);
+	__m128i encIV = _mm_xor_si128(_mm_loadu_si128(reinterpret_cast<const __m128i*>(_iv)), k[0]);
 	__m128i t1 = _mm_clmulepi64_si128(h, y, 0x00);
 	__m128i t2 = _mm_clmulepi64_si128(h, y, 0x01);
 	__m128i t3 = _mm_clmulepi64_si128(h, y, 0x10);
@@ -359,7 +358,7 @@ void AES::GMAC::p_aesNIFinish(uint8_t tag[16]) noexcept
 	t4 = _mm_xor_si128(t4, t3);
 	encIV = _mm_aesenclast_si128(encIV, k[14]);
 	t4 = _mm_xor_si128(t4, t5);
-	_mm_storeu_si128(reinterpret_cast<__m128i *>(tag), _mm_xor_si128(_mm_shuffle_epi8(t4, s_sseSwapBytes), encIV));
+	_mm_storeu_si128(reinterpret_cast<__m128i*>(tag), _mm_xor_si128(_mm_shuffle_epi8(t4, s_sseSwapBytes), encIV));
 }
 
 #ifdef __GNUC__
@@ -370,7 +369,7 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 	const __m128i dd = _mm_set_epi64x(0, (long long)_ctr[0]);
 	uint64_t c1 = Utils::ntoh(_ctr[1]);
 
-	const __m128i *const k = _aes.p_k.ni.k;
+	const __m128i* const k = _aes.p_k.ni.k;
 	const __m128i k0 = k[0];
 	const __m128i k1 = k[1];
 	const __m128i k2 = k[2];
@@ -391,14 +390,14 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 	unsigned int totalLen = _len;
 	if ((totalLen & 15U)) {
 		for (;;) {
-			if (unlikely(!len)) {
+			if (unlikely(! len)) {
 				_ctr[1] = Utils::hton(c1);
 				_len = totalLen;
 				return;
 			}
 			--len;
 			out[totalLen++] = *(in++);
-			if (!(totalLen & 15U)) {
+			if (! (totalLen & 15U)) {
 				__m128i d0 = _mm_insert_epi64(dd, (long long)Utils::hton(c1++), 1);
 				d0 = _mm_xor_si128(d0, k0);
 				d0 = _mm_aesenc_si128(d0, k1);
@@ -411,7 +410,7 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 				d0 = _mm_aesenc_si128(d0, k8);
 				d0 = _mm_aesenc_si128(d0, k9);
 				d0 = _mm_aesenc_si128(d0, k10);
-				__m128i *const outblk = reinterpret_cast<__m128i *>(out + (totalLen - 16));
+				__m128i* const outblk = reinterpret_cast<__m128i*>(out + (totalLen - 16));
 				d0 = _mm_aesenc_si128(d0, k11);
 				const __m128i p0 = _mm_loadu_si128(outblk);
 				d0 = _mm_aesenc_si128(d0, k12);
@@ -427,26 +426,26 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 	_len = totalLen + len;
 
 	if (likely(len >= 64)) {
-
 #if defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
 		if (Utils::CPUID.vaes && (len >= 256)) {
 			if (Utils::CPUID.avx512f) {
 				p_aesCtrInnerVAES512(len, _ctr[0], c1, in, out, k);
-			} else {
+			}
+			else {
 				p_aesCtrInnerVAES256(len, _ctr[0], c1, in, out, k);
 			}
 			goto skip_conventional_aesni_64;
 		}
 #endif
 
-#if !defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
+#if ! defined(ZT_AES_VAES512) && defined(ZT_AES_VAES256)
 		if (Utils::CPUID.vaes && (len >= 256)) {
 			p_aesCtrInnerVAES256(len, _ctr[0], c1, in, out, k);
 			goto skip_conventional_aesni_64;
 		}
 #endif
 
-		const uint8_t *const eof64 = in + (len & ~((unsigned int)63));
+		const uint8_t* const eof64 = in + (len & ~((unsigned int)63));
 		len &= 63;
 		__m128i d0, d1, d2, d3;
 		do {
@@ -515,21 +514,20 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 			d1 = _mm_aesenc_si128(d1, k13);
 			d2 = _mm_aesenc_si128(d2, k13);
 			d3 = _mm_aesenc_si128(d3, k13);
-			d0 = _mm_xor_si128(_mm_aesenclast_si128(d0, k14), _mm_loadu_si128(reinterpret_cast<const __m128i *>(in)));
-			d1 = _mm_xor_si128(_mm_aesenclast_si128(d1, k14), _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 16)));
-			d2 = _mm_xor_si128(_mm_aesenclast_si128(d2, k14), _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 32)));
-			d3 = _mm_xor_si128(_mm_aesenclast_si128(d3, k14), _mm_loadu_si128(reinterpret_cast<const __m128i *>(in + 48)));
+			d0 = _mm_xor_si128(_mm_aesenclast_si128(d0, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in)));
+			d1 = _mm_xor_si128(_mm_aesenclast_si128(d1, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 16)));
+			d2 = _mm_xor_si128(_mm_aesenclast_si128(d2, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 32)));
+			d3 = _mm_xor_si128(_mm_aesenclast_si128(d3, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in + 48)));
 			in += 64;
-			_mm_storeu_si128(reinterpret_cast<__m128i *>(out), d0);
-			_mm_storeu_si128(reinterpret_cast<__m128i *>(out + 16), d1);
-			_mm_storeu_si128(reinterpret_cast<__m128i *>(out + 32), d2);
-			_mm_storeu_si128(reinterpret_cast<__m128i *>(out + 48), d3);
+			_mm_storeu_si128(reinterpret_cast<__m128i*>(out), d0);
+			_mm_storeu_si128(reinterpret_cast<__m128i*>(out + 16), d1);
+			_mm_storeu_si128(reinterpret_cast<__m128i*>(out + 32), d2);
+			_mm_storeu_si128(reinterpret_cast<__m128i*>(out + 48), d3);
 			out += 64;
 		} while (likely(in != eof64));
-
 	}
 
-	skip_conventional_aesni_64:
+skip_conventional_aesni_64:
 	while (len >= 16) {
 		__m128i d0 = _mm_insert_epi64(dd, (long long)Utils::hton(c1++), 1);
 		d0 = _mm_xor_si128(d0, k0);
@@ -546,7 +544,7 @@ void AES::CTR::p_aesNICrypt(const uint8_t *in, uint8_t *out, unsigned int len) n
 		d0 = _mm_aesenc_si128(d0, k11);
 		d0 = _mm_aesenc_si128(d0, k12);
 		d0 = _mm_aesenc_si128(d0, k13);
-		_mm_storeu_si128(reinterpret_cast<__m128i *>(out), _mm_xor_si128(_mm_aesenclast_si128(d0, k14), _mm_loadu_si128(reinterpret_cast<const __m128i *>(in))));
+		_mm_storeu_si128(reinterpret_cast<__m128i*>(out), _mm_xor_si128(_mm_aesenclast_si128(d0, k14), _mm_loadu_si128(reinterpret_cast<const __m128i*>(in))));
 		in += 16;
 		len -= 16;
 		out += 16;
@@ -568,8 +566,8 @@ __attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes,pclmul")))
 void AES::p_init_aesni(const uint8_t *key) noexcept
 {
 	__m128i t1, t2, k1, k2, k3, k4, k5, k6, k7, k8, k9, k10, k11, k12, k13;
-	p_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i *)key);
-	p_k.ni.k[1] = k1 = t2 = _mm_loadu_si128((const __m128i *)(key + 16));
+	p_k.ni.k[0] = t1 = _mm_loadu_si128((const __m128i*)key);
+	p_k.ni.k[1] = k1 = t2 = _mm_loadu_si128((const __m128i*)(key + 16));
 	p_k.ni.k[2] = k2 = t1 = p_init256_1_aesni(t1, _mm_aeskeygenassist_si128(t2, 0x01));
 	p_k.ni.k[3] = k3 = t2 = p_init256_2_aesni(t1, t2);
 	p_k.ni.k[4] = k4 = t1 = p_init256_1_aesni(t1, _mm_aeskeygenassist_si128(t2, 0x02));
@@ -597,7 +595,7 @@ void AES::p_init_aesni(const uint8_t *key) noexcept
 	p_k.ni.k[26] = _mm_aesimc_si128(k2);
 	p_k.ni.k[27] = _mm_aesimc_si128(k1);
 
-	__m128i h = p_k.ni.k[0]; // _mm_xor_si128(_mm_setzero_si128(),_k.ni.k[0]);
+	__m128i h = p_k.ni.k[0];   // _mm_xor_si128(_mm_setzero_si128(),_k.ni.k[0]);
 	h = _mm_aesenc_si128(h, k1);
 	h = _mm_aesenc_si128(h, k2);
 	h = _mm_aesenc_si128(h, k3);
@@ -631,7 +629,7 @@ __attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes,pclmul")))
 #endif
 void AES::p_encrypt_aesni(const void *const in, void *const out) const noexcept
 {
-	__m128i tmp = _mm_loadu_si128((const __m128i *)in);
+	__m128i tmp = _mm_loadu_si128((const __m128i*)in);
 	tmp = _mm_xor_si128(tmp, p_k.ni.k[0]);
 	tmp = _mm_aesenc_si128(tmp, p_k.ni.k[1]);
 	tmp = _mm_aesenc_si128(tmp, p_k.ni.k[2]);
@@ -646,7 +644,7 @@ void AES::p_encrypt_aesni(const void *const in, void *const out) const noexcept
 	tmp = _mm_aesenc_si128(tmp, p_k.ni.k[11]);
 	tmp = _mm_aesenc_si128(tmp, p_k.ni.k[12]);
 	tmp = _mm_aesenc_si128(tmp, p_k.ni.k[13]);
-	_mm_storeu_si128((__m128i *)out, _mm_aesenclast_si128(tmp, p_k.ni.k[14]));
+	_mm_storeu_si128((__m128i*)out, _mm_aesenclast_si128(tmp, p_k.ni.k[14]));
 }
 
 #ifdef __GNUC__
@@ -654,7 +652,7 @@ __attribute__((__target__("ssse3,sse4,sse4.1,sse4.2,aes,pclmul")))
 #endif
 void AES::p_decrypt_aesni(const void *in, void *out) const noexcept
 {
-	__m128i tmp = _mm_loadu_si128((const __m128i *)in);
+	__m128i tmp = _mm_loadu_si128((const __m128i*)in);
 	tmp = _mm_xor_si128(tmp, p_k.ni.k[14]);
 	tmp = _mm_aesdec_si128(tmp, p_k.ni.k[15]);
 	tmp = _mm_aesdec_si128(tmp, p_k.ni.k[16]);
@@ -669,9 +667,9 @@ void AES::p_decrypt_aesni(const void *in, void *out) const noexcept
 	tmp = _mm_aesdec_si128(tmp, p_k.ni.k[25]);
 	tmp = _mm_aesdec_si128(tmp, p_k.ni.k[26]);
 	tmp = _mm_aesdec_si128(tmp, p_k.ni.k[27]);
-	_mm_storeu_si128((__m128i *)out, _mm_aesdeclast_si128(tmp, p_k.ni.k[0]));
+	_mm_storeu_si128((__m128i*)out, _mm_aesdeclast_si128(tmp, p_k.ni.k[0]));
 }
 
-} // namespace ZeroTier
+}	// namespace ZeroTier
 
-#endif // ZT_AES_AESNI
+#endif	 // ZT_AES_AESNI
