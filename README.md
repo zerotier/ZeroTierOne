@@ -1,5 +1,6 @@
 ZeroTier - Global Area Networking
 ======
+language:|[Chinese](README-zh_CN.md)|[Englsih](README.md)|
 
 *This document is written for a software developer audience. For information on using ZeroTier, see the: [Website](https://www.zerotier.com), [Documentation Site](https://docs.zerotier.com), and [Discussion Forum](https://discuss.zerotier.com).*
 
