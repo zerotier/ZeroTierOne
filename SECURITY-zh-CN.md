@@ -33,7 +33,7 @@ ZeroTier 非常重视我们软件产品和服务的安全性，这包括通过�
 
 我们希望所有通信都使用英语。
 
-## security@zerotier.com PGP 密钥
+## security@zerotier.com PGP 密钥（公钥）
 
 ```
 -----BEGIN PGP PUBLIC KEY BLOCK-----
