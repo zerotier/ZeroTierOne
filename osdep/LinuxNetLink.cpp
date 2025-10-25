@@ -764,6 +764,7 @@ void LinuxNetLink::addRoute(const InetAddress& target, const InetAddress& via, c
 			memcpy(RTA_DATA(rtap), &((struct sockaddr_in6*)&src)->sin6_addr, sizeof(struct in6_addr));
 		}
 		req.rt.rtm_src_len = src.netmaskBits();
+		rtl += rtap->rta_len;
 	}
 
 	if (ifaceName != NULL) {
@@ -883,6 +884,7 @@ void LinuxNetLink::delRoute(const InetAddress& target, const InetAddress& via, c
 			memcpy(RTA_DATA(rtap), &((struct sockaddr_in6*)&src)->sin6_addr, sizeof(struct in6_addr));
 		}
 		req.rt.rtm_src_len = src.netmaskBits();
+		rtl += rtap->rta_len;
 	}
 
 	if (ifaceName != NULL) {
