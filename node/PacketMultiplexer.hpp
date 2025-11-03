@@ -44,15 +44,14 @@ class PacketMultiplexer {
 
 	std::vector<BlockingQueue<PacketRecord*>*> _rxPacketQueues;
 
-	unsigned int _concurrency;
+	unsigned int _concurrency = 0;
 	// pool
 	std::vector<PacketRecord*> _rxPacketVector;
 	std::vector<std::thread> _rxPacketThreads;
 	Mutex _rxPacketVector_m, _rxPacketThreads_m;
 
 	std::vector<std::thread> _rxThreads;
-	unsigned int _rxThreadCount;
-	bool _enabled;
+	bool _enabled = false;
 };
 
 }	// namespace ZeroTier
