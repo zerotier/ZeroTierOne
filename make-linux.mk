@@ -13,6 +13,7 @@ INCLUDES?=-Irustybits/target -isystem ext -Iext/prometheus-cpp-lite-1.0/core/inc
 DEFS?=
 LDLIBS?=
 DESTDIR?=
+SBINDIR?=$(DESTDIR)/usr/sbin
 EXTRA_DEPS?=
 
 include objects.mk
@@ -501,13 +502,13 @@ endif
 # lived here. Folks got scripts.
 
 install:	FORCE
-	mkdir -p $(DESTDIR)/usr/sbin
-	rm -f $(DESTDIR)/usr/sbin/zerotier-one
-	cp -f zerotier-one $(DESTDIR)/usr/sbin/zerotier-one
-	rm -f $(DESTDIR)/usr/sbin/zerotier-cli
-	rm -f $(DESTDIR)/usr/sbin/zerotier-idtool
-	ln -s zerotier-one $(DESTDIR)/usr/sbin/zerotier-cli
-	ln -s zerotier-one $(DESTDIR)/usr/sbin/zerotier-idtool
+	mkdir -p $(SBINDIR)
+	rm -f $(SBINDIR)/zerotier-one
+	cp -f zerotier-one $(SBINDIR)/zerotier-one
+	rm -f $(SBINDIR)/zerotier-cli
+	rm -f $(SBINDIR)/zerotier-idtool
+	ln -s zerotier-one $(SBINDIR)/zerotier-cli
+	ln -s zerotier-one $(SBINDIR)/zerotier-idtool
 	mkdir -p $(DESTDIR)/var/lib/zerotier-one
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
@@ -532,9 +533,9 @@ uninstall:	FORCE
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-one
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-cli
 	rm -f $(DESTDIR)/var/lib/zerotier-one/zerotier-idtool
-	rm -f $(DESTDIR)/usr/sbin/zerotier-cli
-	rm -f $(DESTDIR)/usr/sbin/zerotier-idtool
-	rm -f $(DESTDIR)/usr/sbin/zerotier-one
+	rm -f $(SBINDIR)/zerotier-cli
+	rm -f $(SBINDIR)/zerotier-idtool
+	rm -f $(SBINDIR)/zerotier-one
 	rm -rf $(DESTDIR)/var/lib/zerotier-one/iddb.d
 	rm -rf $(DESTDIR)/var/lib/zerotier-one/updates.d
 	rm -rf $(DESTDIR)/var/lib/zerotier-one/networks.d
