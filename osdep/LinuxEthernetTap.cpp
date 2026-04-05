@@ -17,6 +17,7 @@
 #include "../node/Dictionary.hpp"
 #include "../node/Mutex.hpp"
 #include "../node/Utils.hpp"
+#include "LinuxDNSHelper.hpp"
 #include "LinuxEthernetTap.hpp"
 #include "LinuxNetLink.hpp"
 #include "OSUtils.hpp"
@@ -358,6 +359,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 LinuxEthernetTap::~LinuxEthernetTap()
 {
 	_run = false;
+	LinuxDNSHelper::removeDNS(_dev.c_str());
 	(void)::write(_shutdownSignalPipe[1], "\0", 1);
 	::close(_fd);
 	::close(_shutdownSignalPipe[0]);
@@ -587,6 +589,11 @@ void LinuxEthernetTap::setMtu(unsigned int mtu)
 			close(sock);
 		}
 	}
+}
+
+void LinuxEthernetTap::setDns(const char* domain, const std::vector<InetAddress>& servers)
+{
+	LinuxDNSHelper::setDNS(_dev.c_str(), domain, servers);
 }
 
 }	// namespace ZeroTier

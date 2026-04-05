@@ -1,0 +1,13 @@
+// Allow the zerotier-one service user to configure per-interface DNS
+// via systemd-resolved. Required because zerotier-one drops root
+// privileges to the zerotier-one user while retaining network
+// capabilities, but systemd-resolved checks polkit (not capabilities)
+// for DNS configuration changes.
+polkit.addRule(function(action, subject) {
+    if ((action.id == "org.freedesktop.resolve1.set-dns-servers" ||
+         action.id == "org.freedesktop.resolve1.set-domains" ||
+         action.id == "org.freedesktop.resolve1.revert") &&
+        subject.user == "zerotier-one") {
+        return polkit.Result.YES;
+    }
+});

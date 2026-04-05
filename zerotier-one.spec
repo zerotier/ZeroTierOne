@@ -118,6 +118,8 @@ make ZT_USE_MINIUPNPC=1 %{?_smp_mflags} ZT_OFFICIAL=1 ZT_NONFREE=1 one
 make install DESTDIR=$RPM_BUILD_ROOT
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 cp %{getenv:PWD}/debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
+mkdir -p $RPM_BUILD_ROOT%{_sysconfdir}/polkit-1/rules.d
+cp %{getenv:PWD}/ext/installfiles/linux/zerotier-one-dns.rules $RPM_BUILD_ROOT%{_sysconfdir}/polkit-1/rules.d/49-zerotier-one-dns.rules
 %else
 rm -rf $RPM_BUILD_ROOT
 pushd %{getenv:PWD}
@@ -137,6 +139,7 @@ chmod 0755 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
 /etc/init.d/zerotier-one
 %else
 %{_unitdir}/%{name}.service
+%{_sysconfdir}/polkit-1/rules.d/49-zerotier-one-dns.rules
 %endif
 
 %post
