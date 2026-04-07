@@ -10,14 +10,69 @@
 
 #include "LinuxDNSHelper.hpp"
 
+#include <dirent.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <linux/capability.h>
+
+// Minimal PATH for subprocess execution, covering usr-merged and non-merged distros.
+#define ZT_SUBPROCESS_SAFE_PATH "/usr/bin:/bin:/usr/sbin:/sbin"
+
 namespace ZeroTier {
+
+namespace {
+
+// Same struct layout as one.cpp — avoids pulling in libcap
+struct _zt_cap_header_struct {
+	__u32 version;
+	int pid;
+};
+struct _zt_cap_data_struct {
+	__u32 effective;
+	__u32 permitted;
+	__u32 inheritable;
+};
+
+static void _dropAllCapabilities()
+{
+	::prctl(PR_CAP_AMBIENT, PR_CAP_AMBIENT_CLEAR_ALL, 0, 0, 0);
+	_zt_cap_header_struct hdr = { _LINUX_CAPABILITY_VERSION_1, 0 };
+	_zt_cap_data_struct data = { 0, 0, 0 };
+	::syscall(SYS_capset, &hdr, &data);
+}
+
+static void _closeExtraFDs(int minFd)
+{
+	// close_range() syscall directly for portability with older glibc.
+#ifdef SYS_close_range
+	if (::syscall(SYS_close_range, (unsigned int)minFd, ~0U, 0) == 0)
+		return;
+#endif
+	// Fallback: iterate /proc/self/fd (always available on systemd systems)
+	DIR* d = ::opendir("/proc/self/fd");
+	if (!d)
+		return;
+	int dirfd_val = ::dirfd(d);
+	struct dirent* de;
+	while ((de = ::readdir(d)) != nullptr) {
+		if (de->d_name[0] == '.')
+			continue;
+		int fd = ::atoi(de->d_name);
+		if (fd >= minFd && fd != dirfd_val)
+			::close(fd);
+	}
+	::closedir(d);
+}
+
+}	// anonymous namespace
 
 bool LinuxDNSHelper::isSystemdResolved()
 {
@@ -34,8 +89,14 @@ int LinuxDNSHelper::runResolvectl(const std::vector<std::string>& args)
 		return WIFEXITED(exitcode) ? WEXITSTATUS(exitcode) : -1;
 	}
 	else if (p == 0) {
-		::close(STDOUT_FILENO);
-		::close(STDERR_FILENO);
+		_dropAllCapabilities();
+		_closeExtraFDs(STDOUT_FILENO);
+
+		// resolvectl only needs D-Bus access to systemd-resolved; a minimal
+		// environment with a safe PATH is sufficient.
+		::clearenv();
+		::setenv("PATH", ZT_SUBPROCESS_SAFE_PATH, 1);
+
 		std::vector<const char*> argv;
 		argv.push_back("resolvectl");
 		for (size_t i = 0; i < args.size(); ++i) {
