@@ -397,7 +397,7 @@ override CXXFLAGS+=-fPIC -fPIE
 override LDFLAGS+=-Wl,-z,noexecstack
 
 .PHONY: all
-all:	one
+all:	one doc
 
 .PHONY: one
 one: otel zerotier-one zerotier-idtool zerotier-cli
