@@ -256,6 +256,18 @@ bool ExtOsdep::getBindAddrs(std::map<InetAddress, std::string>& ret)
 	return resp->result;
 }
 
+void ExtOsdep::configUpdate(uint64_t nwid, uint64_t revision)
+{
+	zt_eod_msg_configupdate msg;
+	memset(&msg, 0, sizeof(msg));
+	msg.cmd = ZT_EOD_MSG_CONFIGUPDATE;
+	msg.nwid = nwid;
+	msg.revision = revision;
+
+	Mutex::Lock l(eodMutex);
+	__eodSend(msg);
+}
+
 ExtOsdepTap::ExtOsdepTap(
 	const char* homePath,
 	const MAC& mac,
@@ -499,6 +511,7 @@ bool ExtOsdepTap::removeIp(const InetAddress& ip)
 	for (auto i = allIps.begin(); i != allIps.end(); ++i) {
 		if (*i == ip) {
 			doRemoveIp(*i);
+			allIps.erase(i);
 			return true;
 		}
 	}

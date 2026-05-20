@@ -3607,6 +3607,9 @@ class OneServiceImpl : public OneService {
 #endif
 					syncManagedStuff(n, true, true, true);
 					n.tap()->setMtu(nwc->mtu);
+#ifdef ZT_EXTOSDEP
+					ExtOsdep::configUpdate(nwid, (uint64_t)nwc->netconfRevision);
+#endif
 				}
 				else {
 					_nets.erase(nwid);
@@ -3619,6 +3622,9 @@ class OneServiceImpl : public OneService {
 				if (n.tap()) {	 // sanity check
 #if defined(__WINDOWS__) && ! defined(ZT_SDK)
 					std::string winInstanceId(((WindowsEthernetTap*)(n.tap().get()))->instanceId());
+#endif
+#ifdef ZT_EXTOSDEP
+					ExtOsdep::configUpdate(nwid, (uint64_t)n.config().netconfRevision);
 #endif
 					*nuptr = (void*)0;
 					n.tap().reset();
