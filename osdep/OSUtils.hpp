@@ -59,6 +59,9 @@ class OSUtils {
 	 * @param ... Format arguments
 	 * @throws std::length_error buf[] too short (buf[] will still be left null-terminated)
 	 */
+#ifdef __GNUC__
+	__attribute__((__format__(__printf__, 3, 4)))
+#endif
 	static unsigned int ztsnprintf(char* buf, unsigned int len, const char* fmt, ...);
 
 	/**

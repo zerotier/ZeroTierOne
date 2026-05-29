@@ -472,6 +472,10 @@ ZT_ResultCode Node::leave(uint64_t nwid, void** uptr, void* tptr)
 {
 	ZT_VirtualNetworkConfig ctmp;
 	void** nUserPtr = (void**)0;
+	// Keep a local SharedPtr to the network so we can call the destroy
+	// callback after releasing the lock, without leaving a window during
+	// which _networks still contains a destroyed-but-not-erased entry.
+	SharedPtr<Network> nwHold;
 	{
 		Mutex::Lock _l(_networks_m);
 		SharedPtr<Network>* nw = _networks.get(nwid);
@@ -485,16 +489,19 @@ ZT_ResultCode Node::leave(uint64_t nwid, void** uptr, void* tptr)
 		(*nw)->externalConfig(&ctmp);
 		(*nw)->destroy();
 		nUserPtr = (*nw)->userPtr();
+
+		// Move the SharedPtr out and erase the map entry atomically with
+		// destroy(), under the same lock. From here on _networks does not
+		// contain this nwid; a concurrent join() will construct fresh.
+		nwHold = *nw;
+		_networks.erase(nwid);
 	}
 
 	if (nUserPtr) {
 		RR->node->configureVirtualNetworkPort(tptr, nwid, nUserPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY, &ctmp);
 	}
 
-	{
-		Mutex::Lock _l(_networks_m);
-		_networks.erase(nwid);
-	}
+	// nwHold goes out of scope here, finally releasing the Network.
 
 	uint64_t tmp[2];
 	tmp[0] = nwid;

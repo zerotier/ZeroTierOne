@@ -160,7 +160,7 @@ InetAddress::IpScope InetAddress::ipScope() const
 
 void InetAddress::set(const void* ipBytes, unsigned int ipLen, unsigned int port)
 {
-	memset(this, 0, sizeof(InetAddress));
+	memset(static_cast<void*>(this), 0, sizeof(InetAddress));
 	if (ipLen == 4) {
 		uint32_t ipb[1];
 		memcpy(ipb, ipBytes, 4);
@@ -215,7 +215,7 @@ bool InetAddress::fromString(const char* ipSlashPort)
 {
 	char buf[64];
 
-	memset(this, 0, sizeof(InetAddress));
+	memset(static_cast<void*>(this), 0, sizeof(InetAddress));
 
 	if (! *ipSlashPort) {
 		return true;

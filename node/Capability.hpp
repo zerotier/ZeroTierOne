@@ -58,7 +58,6 @@ class Capability : public Credential {
 	Capability() : _nwid(0), _ts(0), _id(0), _maxCustodyChainLength(0), _ruleCount(0)
 	{
 		memset(_rules, 0, sizeof(_rules));
-		memset(_custody, 0, sizeof(_custody));
 	}
 
 	/**
@@ -513,7 +512,7 @@ class Capability : public Credential {
 		Address to;
 		Address from;
 		ECC::Signature signature;
-	} _custody[ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH];
+	} _custody[ZT_MAX_CAPABILITY_CUSTODY_CHAIN_LENGTH] = {};
 };
 
 }	// namespace ZeroTier

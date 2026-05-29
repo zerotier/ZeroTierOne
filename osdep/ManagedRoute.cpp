@@ -349,7 +349,13 @@ static bool _winRoute(bool del, const NET_LUID& interfaceLuid, const NET_IFINDEX
 	rtrow.Age = 0;
 	rtrow.Origin = NlroManual;
 	if (del) {
-		return (DeleteIpForwardEntry2(&rtrow) == NO_ERROR);
+		const NTSTATUS r = DeleteIpForwardEntry2(&rtrow);
+		// ERROR_NOT_FOUND means the route was already gone -- which is the
+		// state we wanted to achieve, so treat it as success rather than
+		// failure. Without this, ManagedRoute::remove() reports a stale
+		// route as un-removable and stops trying, leaving the daemon's
+		// internal _applied map out of sync with the Windows routing table.
+		return (r == NO_ERROR) || (r == ERROR_NOT_FOUND);
 	}
 	else {
 		NTSTATUS r = CreateIpForwardEntry2(&rtrow);
@@ -585,12 +591,15 @@ bool ManagedRoute::sync()
 #ifdef __WINDOWS__	 // --------------------------------------------------------
 
 	if ((! _applied.count(leftt)) || (! _winHasRoute(interfaceLuid, interfaceIndex, leftt, _via))) {
-		_applied[leftt] = false;   // boolean unused
-		_winRoute(false, interfaceLuid, interfaceIndex, leftt, _via);
+		// Check the return value of _winRoute on install.
+		if (_winRoute(false, interfaceLuid, interfaceIndex, leftt, _via)) {
+			_applied[leftt] = false;   // boolean unused
+		}
 	}
 	if ((rightt) && ((! _applied.count(rightt)) || (! _winHasRoute(interfaceLuid, interfaceIndex, rightt, _via)))) {
-		_applied[rightt] = false;	// boolean unused
-		_winRoute(false, interfaceLuid, interfaceIndex, rightt, _via);
+		if (_winRoute(false, interfaceLuid, interfaceIndex, rightt, _via)) {
+			_applied[rightt] = false;	// boolean unused
+		}
 	}
 
 #endif	 // __WINDOWS__ --------------------------------------------------------
@@ -638,7 +647,15 @@ void ManagedRoute::remove()
 #endif	 // __LINUX__ ----------------------------------------------------------
 
 #ifdef __WINDOWS__	 // --------------------------------------------------------
-		_winRoute(true, interfaceLuid, interfaceIndex, r->first, _via);
+		// Retry the delete a few times with short sleeps if it fails the first time.
+		if (! _winRoute(true, interfaceLuid, interfaceIndex, r->first, _via)) {
+			for (int attempt = 0; attempt < 4; ++attempt) {
+				Sleep(100);
+				if (_winRoute(true, interfaceLuid, interfaceIndex, r->first, _via)) {
+					break;
+				}
+			}
+		}
 #endif	 // __WINDOWS__ --------------------------------------------------------
 	}
 

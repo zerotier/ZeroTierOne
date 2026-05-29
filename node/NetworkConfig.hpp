@@ -80,7 +80,7 @@ namespace ZeroTier {
 
 // Dictionary capacity needed for max size network config
 #define ZT_NETWORKCONFIG_DICT_CAPACITY                                                                                                                                                                                                         \
-	(4096 + (sizeof(ZT_VirtualNetworkConfig)) + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS)                                              \
+	((4096 + 2048) + (sizeof(ZT_VirtualNetworkConfig)) + (sizeof(ZT_VirtualNetworkRule) * ZT_MAX_NETWORK_RULES) + (sizeof(Capability) * ZT_MAX_NETWORK_CAPABILITIES) + (sizeof(Tag) * ZT_MAX_NETWORK_TAGS)                                              \
 	 + (sizeof(CertificateOfOwnership) * ZT_MAX_CERTIFICATES_OF_OWNERSHIP))
 
 // Dictionary capacity needed for max size network meta-data
@@ -562,7 +562,7 @@ class NetworkConfig {
 	/**
 	 * Static IP assignments
 	 */
-	InetAddress staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES];
+	InetAddress staticIps[ZT_MAX_ZT_ASSIGNED_ADDRESSES] = {};
 
 	/**
 	 * Base network rules

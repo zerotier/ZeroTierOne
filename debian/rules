@@ -7,7 +7,7 @@ CXXFLAGS=-O3 -fstack-protector-strong
 	dh $@ --with systemd
 
 override_dh_auto_build:
-	make
+	make ZT_OFFICIAL=1 ZT_NONFREE=1 all
 
 override_dh_systemd_start:
 	dh_systemd_start --restart-after-upgrade

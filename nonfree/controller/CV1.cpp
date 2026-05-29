@@ -203,9 +203,7 @@ bool CV1::waitForReady()
 }
 
 bool CV1::isReady()
-{
-	return ((_ready == 2) && (_connected));
-}
+{ return ((_ready == 2) && (_connected)); }
 
 bool CV1::save(nlohmann::json& record, bool notifyListeners)
 {
@@ -339,9 +337,7 @@ void CV1::nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const 
 }
 
 void CV1::nodeIsOnline(const uint64_t networkId, const uint64_t memberId, const InetAddress& physicalAddress)
-{
-	this->nodeIsOnline(networkId, memberId, physicalAddress, "unknown/unknown");
-}
+{ this->nodeIsOnline(networkId, memberId, physicalAddress, "unknown/unknown"); }
 
 AuthInfo CV1::getSSOAuthInfo(const nlohmann::json& member, const std::string& redirectURL)
 {
@@ -383,22 +379,20 @@ AuthInfo CV1::getSSOAuthInfo(const nlohmann::json& member, const std::string& re
 		pqxx::row count = w.exec_params1("SELECT count(id) FROM ztc_member WHERE id = $1 AND network_id = $2 AND deleted = false", memberId, networkId);
 		if (count[0].as<int>() == 1) {
 			// get active nonce, if exists.
-			pqxx::result r = w.exec_params(
-				"SELECT nonce FROM ztc_sso_expiry "
-				"WHERE network_id = $1 AND member_id = $2 "
-				"AND ((NOW() AT TIME ZONE 'UTC') <= authentication_expiry_time) AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
-				networkId,
-				memberId);
+			pqxx::result r = w.exec_params("SELECT nonce FROM ztc_sso_expiry "
+										   "WHERE network_id = $1 AND member_id = $2 "
+										   "AND ((NOW() AT TIME ZONE 'UTC') <= authentication_expiry_time) AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
+										   networkId,
+										   memberId);
 
 			if (r.size() == 0) {
 				// no active nonce.
 				// find an unused nonce, if one exists.
-				pqxx::result r = w.exec_params(
-					"SELECT nonce FROM ztc_sso_expiry "
-					"WHERE network_id = $1 AND member_id = $2 "
-					"AND authentication_expiry_time IS NULL AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
-					networkId,
-					memberId);
+				pqxx::result r = w.exec_params("SELECT nonce FROM ztc_sso_expiry "
+											   "WHERE network_id = $1 AND member_id = $2 "
+											   "AND authentication_expiry_time IS NULL AND ((NOW() AT TIME ZONE 'UTC') <= nonce_expiration)",
+											   networkId,
+											   memberId);
 
 				if (r.size() == 1) {
 					// we have an existing nonce.  Use it
@@ -412,14 +406,13 @@ AuthInfo CV1::getSSOAuthInfo(const nlohmann::json& member, const std::string& re
 					Utils::hex(nonceBytes, sizeof(nonceBytes), nonceBuf);
 					nonce = std::string(nonceBuf);
 
-					pqxx::result ir = w.exec_params0(
-						"INSERT INTO ztc_sso_expiry "
-						"(nonce, nonce_expiration, network_id, member_id) VALUES "
-						"($1, TO_TIMESTAMP($2::double precision/1000), $3, $4)",
-						nonce,
-						OSUtils::now() + 300000,
-						networkId,
-						memberId);
+					pqxx::result ir = w.exec_params0("INSERT INTO ztc_sso_expiry "
+													 "(nonce, nonce_expiration, network_id, member_id) VALUES "
+													 "($1, TO_TIMESTAMP($2::double precision/1000), $3, $4)",
+													 nonce,
+													 OSUtils::now() + 300000,
+													 networkId,
+													 memberId);
 
 					w.commit();
 				}
@@ -439,17 +432,16 @@ AuthInfo CV1::getSSOAuthInfo(const nlohmann::json& member, const std::string& re
 				exit(7);
 			}
 
-			r = w.exec_params(
-				"SELECT oc.client_id, oc.authorization_endpoint, oc.issuer, oc.provider, oc.sso_impl_version "
-				"FROM ztc_network AS n "
-				"INNER JOIN ztc_org o "
-				"  ON o.owner_id = n.owner_id "
-				"LEFT OUTER JOIN ztc_network_oidc_config noc "
-				"  ON noc.network_id = n.id "
-				"LEFT OUTER JOIN ztc_oidc_config oc "
-				"  ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
-				"WHERE n.id = $1 AND n.sso_enabled = true",
-				networkId);
+			r = w.exec_params("SELECT oc.client_id, oc.authorization_endpoint, oc.issuer, oc.provider, oc.sso_impl_version "
+							  "FROM ztc_network AS n "
+							  "INNER JOIN ztc_org o "
+							  "  ON o.owner_id = n.owner_id "
+							  "LEFT OUTER JOIN ztc_network_oidc_config noc "
+							  "  ON noc.network_id = n.id "
+							  "LEFT OUTER JOIN ztc_oidc_config oc "
+							  "  ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
+							  "WHERE n.id = $1 AND n.sso_enabled = true",
+							  networkId);
 
 			std::string client_id = "";
 			std::string authorization_endpoint = "";
@@ -482,15 +474,14 @@ AuthInfo CV1::getSSOAuthInfo(const nlohmann::json& member, const std::string& re
 
 				if (info.version == 0) {
 					char url[2048] = { 0 };
-					OSUtils::ztsnprintf(
-						url,
-						sizeof(authenticationURL),
-						"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redirect_uri=%s&nonce=%s&state=%s&client_id=%s",
-						authorization_endpoint.c_str(),
-						url_encode(redirectURL).c_str(),
-						nonce.c_str(),
-						state_hex,
-						client_id.c_str());
+					OSUtils::ztsnprintf(url,
+										sizeof(authenticationURL),
+										"%s?response_type=id_token&response_mode=form_post&scope=openid+email+profile&redirect_uri=%s&nonce=%s&state=%s&client_id=%s",
+										authorization_endpoint.c_str(),
+										url_encode(redirectURL).c_str(),
+										nonce.c_str(),
+										state_hex,
+										client_id.c_str());
 					info.authenticationURL = std::string(url);
 				}
 				else if (info.version == 1) {
@@ -501,15 +492,14 @@ AuthInfo CV1::getSSOAuthInfo(const nlohmann::json& member, const std::string& re
 					info.ssoState = std::string(state_hex) + "_" + networkId;
 					info.centralAuthURL = redirectURL;
 #ifdef ZT_DEBUG
-					fprintf(
-						stderr,
-						"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\nprovider: %s\n",
-						info.ssoClientID.c_str(),
-						info.issuerURL.c_str(),
-						info.ssoNonce.c_str(),
-						info.ssoState.c_str(),
-						info.centralAuthURL.c_str(),
-						provider.c_str());
+					fprintf(stderr,
+							"ssoClientID: %s\nissuerURL: %s\nssoNonce: %s\nssoState: %s\ncentralAuthURL: %s\nprovider: %s\n",
+							info.ssoClientID.c_str(),
+							info.issuerURL.c_str(),
+							info.ssoNonce.c_str(),
+							info.ssoState.c_str(),
+							info.centralAuthURL.c_str(),
+							provider.c_str());
 #endif
 				}
 			}
@@ -558,26 +548,25 @@ void CV1::initializeNetworks()
 		std::unordered_set<std::string> networkSet;
 
 		char qbuf[2048] = { 0 };
-		sprintf(
-			qbuf,
-			"SELECT n.id, (EXTRACT(EPOCH FROM n.creation_time AT TIME ZONE 'UTC')*1000)::bigint as creation_time, n.capabilities, "
-			"n.enable_broadcast, (EXTRACT(EPOCH FROM n.last_modified AT TIME ZONE 'UTC')*1000)::bigint AS last_modified, n.mtu, n.multicast_limit, n.name, n.private, n.remote_trace_level, "
-			"n.remote_trace_target, n.revision, n.rules, n.tags, n.v4_assign_mode, n.v6_assign_mode, n.sso_enabled, (CASE WHEN n.sso_enabled THEN noc.client_id ELSE NULL END) as client_id, "
-			"(CASE WHEN n.sso_enabled THEN oc.authorization_endpoint ELSE NULL END) as authorization_endpoint, "
-			"(CASE WHEN n.sso_enabled THEN oc.provider ELSE NULL END) as provider, d.domain, d.servers, "
-			"ARRAY(SELECT CONCAT(host(ip_range_start),'|', host(ip_range_end)) FROM ztc_network_assignment_pool WHERE network_id = n.id) AS assignment_pool, "
-			"ARRAY(SELECT CONCAT(host(address),'/',bits::text,'|',COALESCE(host(via), 'NULL'))FROM ztc_network_route WHERE network_id = n.id) AS routes "
-			"FROM ztc_network n "
-			"LEFT OUTER JOIN ztc_org o "
-			" ON o.owner_id = n.owner_id "
-			"LEFT OUTER JOIN ztc_network_oidc_config noc "
-			"	ON noc.network_id = n.id "
-			"LEFT OUTER JOIN ztc_oidc_config oc "
-			"	ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
-			"LEFT OUTER JOIN ztc_network_dns d "
-			"	ON d.network_id = n.id "
-			"WHERE deleted = false AND controller_id = '%s'",
-			_myAddressStr.c_str());
+		sprintf(qbuf,
+				"SELECT n.id, (EXTRACT(EPOCH FROM n.creation_time AT TIME ZONE 'UTC')*1000)::bigint as creation_time, n.capabilities, "
+				"n.enable_broadcast, (EXTRACT(EPOCH FROM n.last_modified AT TIME ZONE 'UTC')*1000)::bigint AS last_modified, n.mtu, n.multicast_limit, n.name, n.private, n.remote_trace_level, "
+				"n.remote_trace_target, n.revision, n.rules, n.tags, n.v4_assign_mode, n.v6_assign_mode, n.sso_enabled, (CASE WHEN n.sso_enabled THEN noc.client_id ELSE NULL END) as client_id, "
+				"(CASE WHEN n.sso_enabled THEN oc.authorization_endpoint ELSE NULL END) as authorization_endpoint, "
+				"(CASE WHEN n.sso_enabled THEN oc.provider ELSE NULL END) as provider, d.domain, d.servers, "
+				"ARRAY(SELECT CONCAT(host(ip_range_start),'|', host(ip_range_end)) FROM ztc_network_assignment_pool WHERE network_id = n.id) AS assignment_pool, "
+				"ARRAY(SELECT CONCAT(host(address),'/',bits::text,'|',COALESCE(host(via), 'NULL'))FROM ztc_network_route WHERE network_id = n.id) AS routes "
+				"FROM ztc_network n "
+				"LEFT OUTER JOIN ztc_org o "
+				" ON o.owner_id = n.owner_id "
+				"LEFT OUTER JOIN ztc_network_oidc_config noc "
+				"	ON noc.network_id = n.id "
+				"LEFT OUTER JOIN ztc_oidc_config oc "
+				"	ON noc.client_id = oc.client_id AND oc.org_id = o.org_id "
+				"LEFT OUTER JOIN ztc_network_dns d "
+				"	ON d.network_id = n.id "
+				"WHERE deleted = false AND controller_id = '%s'",
+				_myAddressStr.c_str());
 		auto c = _pool->borrow();
 		auto c2 = _pool->borrow();
 		pqxx::work w { *c->c };
@@ -585,55 +574,54 @@ void CV1::initializeNetworks()
 		fprintf(stderr, "Load networks from psql...\n");
 		auto stream = pqxx::stream_from::query(w, qbuf);
 
-		std::tuple<
-			std::string	  // network ID
-			,
-			std::optional<int64_t>	 // creationTime
-			,
-			std::optional<std::string>	 // capabilities
-			,
-			std::optional<bool>	  // enableBroadcast
-			,
-			std::optional<uint64_t>	  // lastModified
-			,
-			std::optional<int>	 // mtu
-			,
-			std::optional<int>	 // multicastLimit
-			,
-			std::optional<std::string>	 // name
-			,
-			bool   // private
-			,
-			std::optional<int>	 // remoteTraceLevel
-			,
-			std::optional<std::string>	 // remoteTraceTarget
-			,
-			std::optional<uint64_t>	  // revision
-			,
-			std::optional<std::string>	 // rules
-			,
-			std::optional<std::string>	 // tags
-			,
-			std::optional<std::string>	 // v4AssignMode
-			,
-			std::optional<std::string>	 // v6AssignMode
-			,
-			std::optional<bool>	  // ssoEnabled
-			,
-			std::optional<std::string>	 // clientId
-			,
-			std::optional<std::string>	 // authorizationEndpoint
-			,
-			std::optional<std::string>	 // ssoProvider
-			,
-			std::optional<std::string>	 // domain
-			,
-			std::optional<std::string>	 // servers
-			,
-			std::string	  // assignmentPoolString
-			,
-			std::string	  // routeString
-			>
+		std::tuple<std::string	 // network ID
+				   ,
+				   std::optional<int64_t>	// creationTime
+				   ,
+				   std::optional<std::string>	// capabilities
+				   ,
+				   std::optional<bool>	 // enableBroadcast
+				   ,
+				   std::optional<uint64_t>	 // lastModified
+				   ,
+				   std::optional<int>	// mtu
+				   ,
+				   std::optional<int>	// multicastLimit
+				   ,
+				   std::optional<std::string>	// name
+				   ,
+				   bool	  // private
+				   ,
+				   std::optional<int>	// remoteTraceLevel
+				   ,
+				   std::optional<std::string>	// remoteTraceTarget
+				   ,
+				   std::optional<uint64_t>	 // revision
+				   ,
+				   std::optional<std::string>	// rules
+				   ,
+				   std::optional<std::string>	// tags
+				   ,
+				   std::optional<std::string>	// v4AssignMode
+				   ,
+				   std::optional<std::string>	// v6AssignMode
+				   ,
+				   std::optional<bool>	 // ssoEnabled
+				   ,
+				   std::optional<std::string>	// clientId
+				   ,
+				   std::optional<std::string>	// authorizationEndpoint
+				   ,
+				   std::optional<std::string>	// ssoProvider
+				   ,
+				   std::optional<std::string>	// domain
+				   ,
+				   std::optional<std::string>	// servers
+				   ,
+				   std::string	 // assignmentPoolString
+				   ,
+				   std::string	 // routeString
+				   >
 			row;
 
 		uint64_t count = 0;
@@ -872,31 +860,30 @@ void CV1::initializeMembers()
 		}
 
 		char qbuf[2048];
-		sprintf(
-			qbuf,
-			"SELECT m.id, m.network_id, m.active_bridge, m.authorized, m.capabilities, "
-			"(EXTRACT(EPOCH FROM m.creation_time AT TIME ZONE 'UTC')*1000)::bigint, m.identity, "
-			"(EXTRACT(EPOCH FROM m.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"(EXTRACT(EPOCH FROM m.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
-			"m.remote_trace_level, m.remote_trace_target, m.tags, m.v_major, m.v_minor, m.v_rev, m.v_proto, "
-			"m.no_auto_assign_ips, m.revision, m.sso_exempt, "
-			"(CASE WHEN n.sso_enabled = TRUE AND m.sso_exempt = FALSE THEN "
-			" ( "
-			"	SELECT (EXTRACT(EPOCH FROM e.authentication_expiry_time)*1000)::bigint "
-			"	FROM ztc_sso_expiry e "
-			"	INNER JOIN ztc_network n1 "
-			"	ON n1.id = e.network_id  AND n1.deleted = TRUE "
-			"	WHERE e.network_id = m.network_id AND e.member_id = m.id AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
-			"	ORDER BY e.authentication_expiry_time DESC LIMIT 1 "
-			" ) "
-			" ELSE NULL "
-			" END) AS authentication_expiry_time, "
-			"ARRAY(SELECT DISTINCT address FROM ztc_member_ip_assignment WHERE member_id = m.id AND network_id = m.network_id) AS assigned_addresses "
-			"FROM ztc_member m "
-			"INNER JOIN ztc_network n "
-			"	ON n.id = m.network_id "
-			"WHERE n.controller_id = '%s' AND n.deleted = FALSE AND m.deleted = FALSE",
-			_myAddressStr.c_str());
+		sprintf(qbuf,
+				"SELECT m.id, m.network_id, m.active_bridge, m.authorized, m.capabilities, "
+				"(EXTRACT(EPOCH FROM m.creation_time AT TIME ZONE 'UTC')*1000)::bigint, m.identity, "
+				"(EXTRACT(EPOCH FROM m.last_authorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
+				"(EXTRACT(EPOCH FROM m.last_deauthorized_time AT TIME ZONE 'UTC')*1000)::bigint, "
+				"m.remote_trace_level, m.remote_trace_target, m.tags, m.v_major, m.v_minor, m.v_rev, m.v_proto, "
+				"m.no_auto_assign_ips, m.revision, m.sso_exempt, "
+				"(CASE WHEN n.sso_enabled = TRUE AND m.sso_exempt = FALSE THEN "
+				" ( "
+				"	SELECT (EXTRACT(EPOCH FROM e.authentication_expiry_time)*1000)::bigint "
+				"	FROM ztc_sso_expiry e "
+				"	INNER JOIN ztc_network n1 "
+				"	ON n1.id = e.network_id  AND n1.deleted = TRUE "
+				"	WHERE e.network_id = m.network_id AND e.member_id = m.id AND n.sso_enabled = TRUE AND e.authentication_expiry_time IS NOT NULL "
+				"	ORDER BY e.authentication_expiry_time DESC LIMIT 1 "
+				" ) "
+				" ELSE NULL "
+				" END) AS authentication_expiry_time, "
+				"ARRAY(SELECT DISTINCT address FROM ztc_member_ip_assignment WHERE member_id = m.id AND network_id = m.network_id) AS assigned_addresses "
+				"FROM ztc_member m "
+				"INNER JOIN ztc_network n "
+				"	ON n.id = m.network_id "
+				"WHERE n.controller_id = '%s' AND n.deleted = FALSE AND m.deleted = FALSE",
+				_myAddressStr.c_str());
 		auto c = _pool->borrow();
 		auto c2 = _pool->borrow();
 		pqxx::work w { *c->c };
@@ -904,49 +891,48 @@ void CV1::initializeMembers()
 		fprintf(stderr, "Load members from psql...\n");
 		auto stream = pqxx::stream_from::query(w, qbuf);
 
-		std::tuple<
-			std::string	  // memberId
-			,
-			std::string	  // memberId
-			,
-			std::optional<bool>	  // activeBridge
-			,
-			std::optional<bool>	  // authorized
-			,
-			std::optional<std::string>	 // capabilities
-			,
-			std::optional<uint64_t>	  // creationTime
-			,
-			std::optional<std::string>	 // identity
-			,
-			std::optional<uint64_t>	  // lastAuthorizedTime
-			,
-			std::optional<uint64_t>	  // lastDeauthorizedTime
-			,
-			std::optional<int>	 // remoteTraceLevel
-			,
-			std::optional<std::string>	 // remoteTraceTarget
-			,
-			std::optional<std::string>	 // tags
-			,
-			std::optional<int>	 // vMajor
-			,
-			std::optional<int>	 // vMinor
-			,
-			std::optional<int>	 // vRev
-			,
-			std::optional<int>	 // vProto
-			,
-			std::optional<bool>	  // noAutoAssignIps
-			,
-			std::optional<uint64_t>	  // revision
-			,
-			std::optional<bool>	  // ssoExempt
-			,
-			std::optional<uint64_t>	  // authenticationExpiryTime
-			,
-			std::string	  // assignedAddresses
-			>
+		std::tuple<std::string	 // memberId
+				   ,
+				   std::string	 // memberId
+				   ,
+				   std::optional<bool>	 // activeBridge
+				   ,
+				   std::optional<bool>	 // authorized
+				   ,
+				   std::optional<std::string>	// capabilities
+				   ,
+				   std::optional<uint64_t>	 // creationTime
+				   ,
+				   std::optional<std::string>	// identity
+				   ,
+				   std::optional<uint64_t>	 // lastAuthorizedTime
+				   ,
+				   std::optional<uint64_t>	 // lastDeauthorizedTime
+				   ,
+				   std::optional<int>	// remoteTraceLevel
+				   ,
+				   std::optional<std::string>	// remoteTraceTarget
+				   ,
+				   std::optional<std::string>	// tags
+				   ,
+				   std::optional<int>	// vMajor
+				   ,
+				   std::optional<int>	// vMinor
+				   ,
+				   std::optional<int>	// vRev
+				   ,
+				   std::optional<int>	// vProto
+				   ,
+				   std::optional<bool>	 // noAutoAssignIps
+				   ,
+				   std::optional<uint64_t>	 // revision
+				   ,
+				   std::optional<bool>	 // ssoExempt
+				   ,
+				   std::optional<uint64_t>	 // authenticationExpiryTime
+				   ,
+				   std::string	 // assignedAddresses
+				   >
 			row;
 
 		uint64_t count = 0;
@@ -1130,22 +1116,22 @@ void CV1::heartbeat()
 			std::string build = std::to_string(ZEROTIER_ONE_VERSION_BUILD);
 			std::string now = std::to_string(ts);
 			std::string host_port = std::to_string(_listenPort);
+			std::string notification_transport = (_rc != NULL) ? "redis" : "postgres";
 			std::string use_redis = (_rc != NULL) ? "true" : "false";
 			std::string redis_mem_status = (_redisMemberStatus) ? "true" : "false";
 
 			try {
 				pqxx::work w { *c->c };
 
-				pqxx::result res = w.exec0(
-					"INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis, redis_member_status) "
-					"VALUES ("
-					+ w.quote(controllerId) + ", " + w.quote(hostname) + ", TO_TIMESTAMP(" + now + "::double precision/1000), " + w.quote(publicIdentity) + ", " + major + ", " + minor + ", " + rev + ", " + build + ", " + host_port + ", "
-					+ use_redis + ", " + redis_mem_status
-					+ ") "
-					  "ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
-					  "public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
-					  "v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_rev, host_port = EXCLUDED.host_port, "
-					  "use_redis = EXCLUDED.use_redis, redis_member_status = EXCLUDED.redis_member_status");
+				pqxx::result res = w.exec0("INSERT INTO ztc_controller (id, cluster_host, last_alive, public_identity, v_major, v_minor, v_rev, v_build, host_port, use_redis, notification_transport, redis_member_status) "
+										   "VALUES ("
+										   + w.quote(controllerId) + ", " + w.quote(hostname) + ", TO_TIMESTAMP(" + now + "::double precision/1000), " + w.quote(publicIdentity) + ", " + major + ", " + minor + ", " + rev + ", " + build
+										   + ", " + host_port + ", " + w.quote(use_redis) + ", " + w.quote(notification_transport) + ", " + redis_mem_status
+										   + ") "
+											 "ON CONFLICT (id) DO UPDATE SET cluster_host = EXCLUDED.cluster_host, last_alive = EXCLUDED.last_alive, "
+											 "public_identity = EXCLUDED.public_identity, v_major = EXCLUDED.v_major, v_minor = EXCLUDED.v_minor, "
+											 "v_rev = EXCLUDED.v_rev, v_build = EXCLUDED.v_build, host_port = EXCLUDED.host_port, "
+											 "use_redis = EXCLUDED.use_redis, notification_transport = EXCLUDED.notification_transport, redis_member_status = EXCLUDED.redis_member_status");
 				w.commit();
 			}
 			catch (std::exception& e) {
@@ -1462,58 +1448,56 @@ void CV1::commitThread()
 					if (membercount == 0) {
 						// new member
 						isNewMember = true;
-						pqxx::result res = w.exec_params0(
-							"INSERT INTO ztc_member (id, network_id, active_bridge, authorized, capabilities, "
-							"identity, last_authorized_time, last_deauthorized_time, no_auto_assign_ips, "
-							"remote_trace_level, remote_trace_target, revision, tags, v_major, v_minor, v_rev, v_proto) "
-							"VALUES ($1, $2, $3, $4, $5, $6, "
-							"TO_TIMESTAMP($7::double precision/1000), TO_TIMESTAMP($8::double precision/1000), "
-							"$9, $10, $11, $12, $13, $14, $15, $16, $17)",
-							memberId,
-							networkId,
-							(bool)config["activeBridge"],
-							(bool)config["authorized"],
-							OSUtils::jsonDump(config["capabilities"], -1),
-							OSUtils::jsonString(config["identity"], ""),
-							(uint64_t)config["lastAuthorizedTime"],
-							(uint64_t)config["lastDeauthorizedTime"],
-							(bool)config["noAutoAssignIps"],
-							(int)config["remoteTraceLevel"],
-							target,
-							(uint64_t)config["revision"],
-							OSUtils::jsonDump(config["tags"], -1),
-							(int)config["vMajor"],
-							(int)config["vMinor"],
-							(int)config["vRev"],
-							(int)config["vProto"]);
+						pqxx::result res = w.exec_params0("INSERT INTO ztc_member (id, network_id, active_bridge, authorized, capabilities, "
+														  "identity, last_authorized_time, last_deauthorized_time, no_auto_assign_ips, "
+														  "remote_trace_level, remote_trace_target, revision, tags, v_major, v_minor, v_rev, v_proto) "
+														  "VALUES ($1, $2, $3, $4, $5, $6, "
+														  "TO_TIMESTAMP($7::double precision/1000), TO_TIMESTAMP($8::double precision/1000), "
+														  "$9, $10, $11, $12, $13, $14, $15, $16, $17)",
+														  memberId,
+														  networkId,
+														  (bool)config["activeBridge"],
+														  (bool)config["authorized"],
+														  OSUtils::jsonDump(config["capabilities"], -1),
+														  OSUtils::jsonString(config["identity"], ""),
+														  (uint64_t)config["lastAuthorizedTime"],
+														  (uint64_t)config["lastDeauthorizedTime"],
+														  (bool)config["noAutoAssignIps"],
+														  (int)config["remoteTraceLevel"],
+														  target,
+														  (uint64_t)config["revision"],
+														  OSUtils::jsonDump(config["tags"], -1),
+														  (int)config["vMajor"],
+														  (int)config["vMinor"],
+														  (int)config["vRev"],
+														  (int)config["vProto"]);
 					}
 					else {
 						// existing member
-						pqxx::result res = w.exec_params0(
-							"UPDATE ztc_member "
-							"SET active_bridge = $3, authorized = $4, capabilities = $5, identity = $6, "
-							"last_authorized_time = TO_TIMESTAMP($7::double precision/1000), "
-							"last_deauthorized_time = TO_TIMESTAMP($8::double precision/1000), "
-							"no_auto_assign_ips = $9, remote_trace_level = $10, remote_trace_target= $11, "
-							"revision = $12, tags = $13, v_major = $14, v_minor = $15, v_rev = $16, v_proto = $17 "
-							"WHERE id = $1 AND network_id = $2",
-							memberId,
-							networkId,
-							(bool)config["activeBridge"],
-							(bool)config["authorized"],
-							OSUtils::jsonDump(config["capabilities"], -1),
-							OSUtils::jsonString(config["identity"], ""),
-							(uint64_t)config["lastAuthorizedTime"],
-							(uint64_t)config["lastDeauthorizedTime"],
-							(bool)config["noAutoAssignIps"],
-							(int)config["remoteTraceLevel"],
-							target,
-							(uint64_t)config["revision"],
-							OSUtils::jsonDump(config["tags"], -1),
-							(int)config["vMajor"],
-							(int)config["vMinor"],
-							(int)config["vRev"],
-							(int)config["vProto"]);
+						pqxx::result res = w.exec_params0("UPDATE ztc_member "
+														  "SET active_bridge = $3, authorized = $4, capabilities = $5, identity = $6, "
+														  "last_authorized_time = TO_TIMESTAMP($7::double precision/1000), "
+														  "last_deauthorized_time = TO_TIMESTAMP($8::double precision/1000), "
+														  "no_auto_assign_ips = $9, remote_trace_level = $10, remote_trace_target= $11, "
+														  "revision = $12, tags = $13, v_major = $14, v_minor = $15, v_rev = $16, v_proto = $17 "
+														  "WHERE id = $1 AND network_id = $2",
+														  memberId,
+														  networkId,
+														  (bool)config["activeBridge"],
+														  (bool)config["authorized"],
+														  OSUtils::jsonDump(config["capabilities"], -1),
+														  OSUtils::jsonString(config["identity"], ""),
+														  (uint64_t)config["lastAuthorizedTime"],
+														  (uint64_t)config["lastDeauthorizedTime"],
+														  (bool)config["noAutoAssignIps"],
+														  (int)config["remoteTraceLevel"],
+														  target,
+														  (uint64_t)config["revision"],
+														  OSUtils::jsonDump(config["tags"], -1),
+														  (int)config["vMajor"],
+														  (int)config["vMinor"],
+														  (int)config["vRev"],
+														  (int)config["vProto"]);
 					}
 
 					if (! isNewMember) {
@@ -1544,16 +1528,15 @@ void CV1::commitThread()
 					w.commit();
 
 					if (_smee != NULL && isNewMember) {
-						pqxx::row row = w.exec_params1(
-							"SELECT "
-							"	count(h.hook_id) "
-							"FROM "
-							"	ztc_hook h "
-							"	INNER JOIN ztc_org o ON o.org_id = h.org_id "
-							"   INNER JOIN ztc_network n ON n.owner_id = o.owner_id "
-							" WHERE "
-							"n.id = $1 ",
-							networkId);
+						pqxx::row row = w.exec_params1("SELECT "
+													   "	count(h.hook_id) "
+													   "FROM "
+													   "	ztc_hook h "
+													   "	INNER JOIN ztc_org o ON o.org_id = h.org_id "
+													   "   INNER JOIN ztc_network n ON n.owner_id = o.owner_id "
+													   " WHERE "
+													   "n.id = $1 ",
+													   networkId);
 						int64_t hookCount = row[0].as<int64_t>();
 						if (hookCount > 0) {
 							notifyNewMember(networkId, memberId);
@@ -1605,41 +1588,40 @@ void CV1::commitThread()
 					// the owner_id to the "first" global admin in the user DB if the record
 					// did not previously exist. If the record already exists owner_id is left
 					// unchanged, so owner_id should be left out of the update clause.
-					pqxx::result res = w.exec_params0(
-						"INSERT INTO ztc_network (id, creation_time, owner_id, controller_id, capabilities, enable_broadcast, "
-						"last_modified, mtu, multicast_limit, name, private, "
-						"remote_trace_level, remote_trace_target, rules, rules_source, "
-						"tags, v4_assign_mode, v6_assign_mode, sso_enabled) VALUES ("
-						"$1, TO_TIMESTAMP($5::double precision/1000), "
-						"(SELECT user_id AS owner_id FROM ztc_global_permissions WHERE authorize = true AND del = true AND modify = true AND read = true LIMIT 1),"
-						"$2, $3, $4, TO_TIMESTAMP($5::double precision/1000), "
-						"$6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) "
-						"ON CONFLICT (id) DO UPDATE set controller_id = EXCLUDED.controller_id, "
-						"capabilities = EXCLUDED.capabilities, enable_broadcast = EXCLUDED.enable_broadcast, "
-						"last_modified = EXCLUDED.last_modified, mtu = EXCLUDED.mtu, "
-						"multicast_limit = EXCLUDED.multicast_limit, name = EXCLUDED.name, "
-						"private = EXCLUDED.private, remote_trace_level = EXCLUDED.remote_trace_level, "
-						"remote_trace_target = EXCLUDED.remote_trace_target, rules = EXCLUDED.rules, "
-						"rules_source = EXCLUDED.rules_source, tags = EXCLUDED.tags, "
-						"v4_assign_mode = EXCLUDED.v4_assign_mode, v6_assign_mode = EXCLUDED.v6_assign_mode, "
-						"sso_enabled = EXCLUDED.sso_enabled",
-						id,
-						_myAddressStr,
-						OSUtils::jsonDump(config["capabilities"], -1),
-						(bool)config["enableBroadcast"],
-						OSUtils::now(),
-						(int)config["mtu"],
-						(int)config["multicastLimit"],
-						OSUtils::jsonString(config["name"], ""),
-						(bool)config["private"],
-						(int)config["remoteTraceLevel"],
-						remoteTraceTarget,
-						OSUtils::jsonDump(config["rules"], -1),
-						rulesSource,
-						OSUtils::jsonDump(config["tags"], -1),
-						OSUtils::jsonDump(config["v4AssignMode"], -1),
-						OSUtils::jsonDump(config["v6AssignMode"], -1),
-						OSUtils::jsonBool(config["ssoEnabled"], false));
+					pqxx::result res = w.exec_params0("INSERT INTO ztc_network (id, creation_time, owner_id, controller_id, capabilities, enable_broadcast, "
+													  "last_modified, mtu, multicast_limit, name, private, "
+													  "remote_trace_level, remote_trace_target, rules, rules_source, "
+													  "tags, v4_assign_mode, v6_assign_mode, sso_enabled) VALUES ("
+													  "$1, TO_TIMESTAMP($5::double precision/1000), "
+													  "(SELECT user_id AS owner_id FROM ztc_global_permissions WHERE authorize = true AND del = true AND modify = true AND read = true LIMIT 1),"
+													  "$2, $3, $4, TO_TIMESTAMP($5::double precision/1000), "
+													  "$6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) "
+													  "ON CONFLICT (id) DO UPDATE set controller_id = EXCLUDED.controller_id, "
+													  "capabilities = EXCLUDED.capabilities, enable_broadcast = EXCLUDED.enable_broadcast, "
+													  "last_modified = EXCLUDED.last_modified, mtu = EXCLUDED.mtu, "
+													  "multicast_limit = EXCLUDED.multicast_limit, name = EXCLUDED.name, "
+													  "private = EXCLUDED.private, remote_trace_level = EXCLUDED.remote_trace_level, "
+													  "remote_trace_target = EXCLUDED.remote_trace_target, rules = EXCLUDED.rules, "
+													  "rules_source = EXCLUDED.rules_source, tags = EXCLUDED.tags, "
+													  "v4_assign_mode = EXCLUDED.v4_assign_mode, v6_assign_mode = EXCLUDED.v6_assign_mode, "
+													  "sso_enabled = EXCLUDED.sso_enabled",
+													  id,
+													  _myAddressStr,
+													  OSUtils::jsonDump(config["capabilities"], -1),
+													  (bool)config["enableBroadcast"],
+													  OSUtils::now(),
+													  (int)config["mtu"],
+													  (int)config["multicastLimit"],
+													  OSUtils::jsonString(config["name"], ""),
+													  (bool)config["private"],
+													  (int)config["remoteTraceLevel"],
+													  remoteTraceTarget,
+													  OSUtils::jsonDump(config["rules"], -1),
+													  rulesSource,
+													  OSUtils::jsonDump(config["tags"], -1),
+													  OSUtils::jsonDump(config["v4AssignMode"], -1),
+													  OSUtils::jsonDump(config["v6AssignMode"], -1),
+													  OSUtils::jsonBool(config["ssoEnabled"], false));
 
 					res = w.exec_params0("DELETE FROM ztc_network_assignment_pool WHERE network_id = $1", 0);
 
@@ -1649,12 +1631,11 @@ void CV1::commitThread()
 						std::string start = (*i)["ipRangeStart"];
 						std::string end = (*i)["ipRangeEnd"];
 
-						res = w.exec_params0(
-							"INSERT INTO ztc_network_assignment_pool (network_id, ip_range_start, ip_range_end) "
-							"VALUES ($1, $2, $3)",
-							id,
-							start,
-							end);
+						res = w.exec_params0("INSERT INTO ztc_network_assignment_pool (network_id, ip_range_start, ip_range_end) "
+											 "VALUES ($1, $2, $3)",
+											 id,
+											 start,
+											 end);
 					}
 
 					res = w.exec_params0("DELETE FROM ztc_network_route WHERE network_id = $1", id);
