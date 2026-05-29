@@ -133,9 +133,6 @@ template <typename HANDLER_PTR_TYPE> class Phy {
 	};
 
 	struct PhySocketImpl {
-		PhySocketImpl()
-		{
-		}
 		PhySocketType type;
 		ZT_PHY_SOCKFD_TYPE sock;
 		void* uptr;	  // user-settable pointer

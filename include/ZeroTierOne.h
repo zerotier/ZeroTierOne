@@ -135,7 +135,7 @@ extern "C" {
 /**
  * Maximum number of "specialists" on a network -- bridges, relays, etc.
  */
-#define ZT_MAX_NETWORK_SPECIALISTS 256
+#define ZT_MAX_NETWORK_SPECIALISTS 512
 
 /**
  * Maximum number of multicast group subscriptions per network

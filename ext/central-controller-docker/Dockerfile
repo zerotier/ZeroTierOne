@@ -3,8 +3,8 @@ FROM registry.zerotier.com/zerotier/ctlbuild:2025-07-14 AS builder
 ADD . /ZeroTierOne
 RUN export PATH=$PATH:~/.cargo/bin && cd ZeroTierOne && make clean && make central-controller -j8
 
-FROM golang:bookworm AS go_base
-RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+FROM golang:1.24.1-bookworm AS go_base
+RUN GONOSUMDB=* GOFLAGS='-p=1' go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
 FROM registry.zerotier.com/zerotier/ctlrun:2025-07-14 AS run_base
 COPY --from=builder /ZeroTierOne/zerotier-one /usr/local/bin/zerotier-one

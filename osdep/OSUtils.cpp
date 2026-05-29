@@ -115,21 +115,13 @@ std::vector<std::string> OSUtils::listDirectory(const char* path, bool includeDi
 		FindClose(hFind);
 	}
 #else
-	struct dirent de;
 	struct dirent* dptr;
 	DIR* d = opendir(path);
 	if (! d)
 		return r;
-	dptr = (struct dirent*)0;
-	for (;;) {
-		if (readdir_r(d, &de, &dptr))
-			break;
-		if (dptr) {
-			if ((strcmp(dptr->d_name, ".")) && (strcmp(dptr->d_name, "..")) && ((dptr->d_type != DT_DIR) || (includeDirectories)))
-				r.push_back(std::string(dptr->d_name));
-		}
-		else
-			break;
+	while ((dptr = readdir(d)) != nullptr) {
+		if ((strcmp(dptr->d_name, ".")) && (strcmp(dptr->d_name, "..")) && ((dptr->d_type != DT_DIR) || (includeDirectories)))
+			r.push_back(std::string(dptr->d_name));
 	}
 	closedir(d);
 #endif
@@ -165,31 +157,23 @@ long OSUtils::cleanDirectory(const char* path, const int64_t olderThan)
 		FindClose(hFind);
 	}
 #else
-	struct dirent de;
 	struct dirent* dptr;
 	struct stat st;
 	char tmp[4096];
 	DIR* d = opendir(path);
 	if (! d)
 		return -1;
-	dptr = (struct dirent*)0;
-	for (;;) {
-		if (readdir_r(d, &de, &dptr))
-			break;
-		if (dptr) {
-			if ((strcmp(dptr->d_name, ".")) && (strcmp(dptr->d_name, "..")) && (dptr->d_type == DT_REG)) {
-				ztsnprintf(tmp, sizeof(tmp), "%s/%s", path, dptr->d_name);
-				if (stat(tmp, &st) == 0) {
-					int64_t mt = (int64_t)(st.st_mtime);
-					if ((mt > 0) && ((mt * 1000) < olderThan)) {
-						if (unlink(tmp) == 0)
-							++cleaned;
-					}
+	while ((dptr = readdir(d)) != nullptr) {
+		if ((strcmp(dptr->d_name, ".")) && (strcmp(dptr->d_name, "..")) && (dptr->d_type == DT_REG)) {
+			ztsnprintf(tmp, sizeof(tmp), "%s/%s", path, dptr->d_name);
+			if (stat(tmp, &st) == 0) {
+				int64_t mt = (int64_t)(st.st_mtime);
+				if ((mt > 0) && ((mt * 1000) < olderThan)) {
+					if (unlink(tmp) == 0)
+						++cleaned;
 				}
 			}
 		}
-		else
-			break;
 	}
 	closedir(d);
 #endif
@@ -219,17 +203,11 @@ bool OSUtils::rmDashRf(const char* path)
 	}
 	return (RemoveDirectoryA(path) != FALSE);
 #else
-	struct dirent de;
 	struct dirent* dptr;
 	DIR* d = opendir(path);
 	if (! d)
 		return true;
-	dptr = (struct dirent*)0;
-	for (;;) {
-		if (readdir_r(d, &de, &dptr) != 0)
-			break;
-		if (! dptr)
-			break;
+	while ((dptr = readdir(d)) != nullptr) {
 		if ((strcmp(dptr->d_name, ".") != 0) && (strcmp(dptr->d_name, "..") != 0) && (strlen(dptr->d_name) > 0)) {
 			std::string p(path);
 			p.push_back(ZT_PATH_SEPARATOR);
@@ -580,7 +558,7 @@ std::string OSUtils::jsonString(const nlohmann::json& jv, const char* dfl)
 		}
 		else if (jv.is_number()) {
 			char tmp[64];
-			ztsnprintf(tmp, sizeof(tmp), "%llu", (uint64_t)jv);
+			ztsnprintf(tmp, sizeof(tmp), "%llu", static_cast<unsigned long long>(jv));
 			return tmp;
 		}
 		else if (jv.is_boolean()) {

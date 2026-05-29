@@ -91,6 +91,7 @@ debian/zerotier-one*.debhelper
 debian/*.log
 debian/zerotier-one.substvars
 root-watcher/config.json
+build/
 
 # Java/Android/JNI build droppings
 java/obj/
@@ -105,6 +106,7 @@ windows/WinUI/obj/
 windows/WinUI/bin/
 windows/ZeroTierOne/Debug/
 /ext/installfiles/windows/chocolatey/zerotier-one/*.nupkg
+
 
 # Miscellaneous mac/Xcode droppings
 .Trashes
@@ -141,3 +143,6 @@ __pycache__
 *.pyc
 *_source.tar.bz2
 snap/.snapcraft
+
+# local Claude configurations
+.claude/*.local.*

@@ -74,15 +74,15 @@ struct InetAddress : public sockaddr_storage {
 
 	InetAddress()
 	{
-		memset(this, 0, sizeof(InetAddress));
+		memset(static_cast<void*>(this), 0, sizeof(InetAddress));
 	}
 	InetAddress(const InetAddress& a)
 	{
-		memcpy(this, &a, sizeof(InetAddress));
+		memcpy(static_cast<void*>(this), &a, sizeof(InetAddress));
 	}
 	InetAddress(const InetAddress* a)
 	{
-		memcpy(this, a, sizeof(InetAddress));
+		memcpy(static_cast<void*>(this), a, sizeof(InetAddress));
 	}
 	InetAddress(const struct sockaddr_storage& ss)
 	{
@@ -132,7 +132,7 @@ struct InetAddress : public sockaddr_storage {
 	inline InetAddress& operator=(const InetAddress& a)
 	{
 		if (&a != this) {
-			memcpy(this, &a, sizeof(InetAddress));
+			memcpy(static_cast<void*>(this), &a, sizeof(InetAddress));
 		}
 		return *this;
 	}
@@ -140,7 +140,7 @@ struct InetAddress : public sockaddr_storage {
 	inline InetAddress& operator=(const InetAddress* a)
 	{
 		if (a != this) {
-			memcpy(this, a, sizeof(InetAddress));
+			memcpy(static_cast<void*>(this), a, sizeof(InetAddress));
 		}
 		return *this;
 	}
@@ -148,7 +148,7 @@ struct InetAddress : public sockaddr_storage {
 	inline InetAddress& operator=(const struct sockaddr_storage& ss)
 	{
 		if (reinterpret_cast<const InetAddress*>(&ss) != this) {
-			memcpy(this, &ss, sizeof(InetAddress));
+			memcpy(static_cast<void*>(this), &ss, sizeof(InetAddress));
 		}
 		return *this;
 	}
@@ -156,7 +156,7 @@ struct InetAddress : public sockaddr_storage {
 	inline InetAddress& operator=(const struct sockaddr_storage* ss)
 	{
 		if (reinterpret_cast<const InetAddress*>(ss) != this) {
-			memcpy(this, ss, sizeof(InetAddress));
+			memcpy(static_cast<void*>(this), ss, sizeof(InetAddress));
 		}
 		return *this;
 	}
@@ -164,8 +164,8 @@ struct InetAddress : public sockaddr_storage {
 	inline InetAddress& operator=(const struct sockaddr_in& sa)
 	{
 		if (reinterpret_cast<const InetAddress*>(&sa) != this) {
-			memset(this, 0, sizeof(InetAddress));
-			memcpy(this, &sa, sizeof(struct sockaddr_in));
+			memset(static_cast<void*>(this), 0, sizeof(InetAddress));
+			memcpy(static_cast<void*>(this), &sa, sizeof(struct sockaddr_in));
 		}
 		return *this;
 	}
@@ -173,8 +173,8 @@ struct InetAddress : public sockaddr_storage {
 	inline InetAddress& operator=(const struct sockaddr_in* sa)
 	{
 		if (reinterpret_cast<const InetAddress*>(sa) != this) {
-			memset(this, 0, sizeof(InetAddress));
-			memcpy(this, sa, sizeof(struct sockaddr_in));
+			memset(static_cast<void*>(this), 0, sizeof(InetAddress));
+			memcpy(static_cast<void*>(this), sa, sizeof(struct sockaddr_in));
 		}
 		return *this;
 	}
@@ -182,8 +182,8 @@ struct InetAddress : public sockaddr_storage {
 	inline InetAddress& operator=(const struct sockaddr_in6& sa)
 	{
 		if (reinterpret_cast<const InetAddress*>(&sa) != this) {
-			memset(this, 0, sizeof(InetAddress));
-			memcpy(this, &sa, sizeof(struct sockaddr_in6));
+			memset(static_cast<void*>(this), 0, sizeof(InetAddress));
+			memcpy(static_cast<void*>(this), &sa, sizeof(struct sockaddr_in6));
 		}
 		return *this;
 	}
@@ -191,8 +191,8 @@ struct InetAddress : public sockaddr_storage {
 	inline InetAddress& operator=(const struct sockaddr_in6* sa)
 	{
 		if (reinterpret_cast<const InetAddress*>(sa) != this) {
-			memset(this, 0, sizeof(InetAddress));
-			memcpy(this, sa, sizeof(struct sockaddr_in6));
+			memset(static_cast<void*>(this), 0, sizeof(InetAddress));
+			memcpy(static_cast<void*>(this), sa, sizeof(struct sockaddr_in6));
 		}
 		return *this;
 	}
@@ -200,13 +200,13 @@ struct InetAddress : public sockaddr_storage {
 	inline InetAddress& operator=(const struct sockaddr& sa)
 	{
 		if (reinterpret_cast<const InetAddress*>(&sa) != this) {
-			memset(this, 0, sizeof(InetAddress));
+			memset(static_cast<void*>(this), 0, sizeof(InetAddress));
 			switch (sa.sa_family) {
 				case AF_INET:
-					memcpy(this, &sa, sizeof(struct sockaddr_in));
+					memcpy(static_cast<void*>(this), &sa, sizeof(struct sockaddr_in));
 					break;
 				case AF_INET6:
-					memcpy(this, &sa, sizeof(struct sockaddr_in6));
+					memcpy(static_cast<void*>(this), &sa, sizeof(struct sockaddr_in6));
 					break;
 			}
 		}
@@ -216,13 +216,13 @@ struct InetAddress : public sockaddr_storage {
 	inline InetAddress& operator=(const struct sockaddr* sa)
 	{
 		if (reinterpret_cast<const InetAddress*>(sa) != this) {
-			memset(this, 0, sizeof(InetAddress));
+			memset(static_cast<void*>(this), 0, sizeof(InetAddress));
 			switch (sa->sa_family) {
 				case AF_INET:
-					memcpy(this, sa, sizeof(struct sockaddr_in));
+					memcpy(static_cast<void*>(this), sa, sizeof(struct sockaddr_in));
 					break;
 				case AF_INET6:
-					memcpy(this, sa, sizeof(struct sockaddr_in6));
+					memcpy(static_cast<void*>(this), sa, sizeof(struct sockaddr_in6));
 					break;
 			}
 		}
@@ -513,7 +513,7 @@ struct InetAddress : public sockaddr_storage {
 	 */
 	inline void zero()
 	{
-		memset(this, 0, sizeof(InetAddress));
+		memset(static_cast<void*>(this), 0, sizeof(InetAddress));
 	}
 
 	/**
@@ -635,7 +635,7 @@ struct InetAddress : public sockaddr_storage {
 
 	template <unsigned int C> inline unsigned int deserialize(const Buffer<C>& b, unsigned int startAt = 0)
 	{
-		memset(this, 0, sizeof(InetAddress));
+		memset(static_cast<void*>(this), 0, sizeof(InetAddress));
 		unsigned int p = startAt;
 		switch (b[p++]) {
 			case 0:

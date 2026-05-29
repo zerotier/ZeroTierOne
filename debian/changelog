@@ -1,3 +1,15 @@
+zerotier-one (1.16.2) unstable; urgency=medium
+
+  * See RELEASE-NOTES.md for release notes.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Wed, 27 May 2026 01:00:00 -0700
+
+zerotier-one (1.16.0-2) unstable; urgency=medium
+
+  * Fix build settings to include controller.
+
+ -- Adam Ierymenko <adam.ierymenko@zerotier.com>  Thu, 12 Sep 2025 01:00:00 -0700
+
 zerotier-one (1.16.0) unstable; urgency=medium
 
   * See RELEASE-NOTES.md for release notes.

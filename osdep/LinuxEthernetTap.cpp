@@ -135,7 +135,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	// Make sure Linux netlink is initialized.
 	(void)LinuxNetLink::getInstance();
 
-	OSUtils::ztsnprintf(nwids, sizeof(nwids), "%.16llx", nwid);
+	OSUtils::ztsnprintf(nwids, sizeof(nwids), "%.16llx", static_cast<unsigned long long>(nwid));
 
 	_fd = ::open("/dev/net/tun", O_RDWR);
 	if (_fd <= 0) {

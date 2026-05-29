@@ -115,22 +115,6 @@ template <typename C> static void* ___zt_threadMain(void* instance)
  */
 class Thread {
   public:
-	Thread()
-	{
-		memset(this, 0, sizeof(Thread));
-	}
-
-	Thread(const Thread& t)
-	{
-		memcpy(this, &t, sizeof(Thread));
-	}
-
-	inline Thread& operator=(const Thread& t)
-	{
-		memcpy(this, &t, sizeof(Thread));
-		return *this;
-	}
-
 	/**
 	 * Start a new thread
 	 *
@@ -185,8 +169,8 @@ class Thread {
 	}
 
   private:
-	pthread_t _tid;
-	volatile bool _started;
+	pthread_t _tid{};
+	volatile bool _started = false;
 };
 
 }	// namespace ZeroTier

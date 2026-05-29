@@ -12,26 +12,25 @@ jobs:
         git config --global core.autocrlf input
 
     - name: checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
     - name: Install Rust
-      uses: actions-rs/toolchain@v1
+      uses: dtolnay/rust-toolchain@stable
       with:
         toolchain: stable
-        target: x86_64-unknown-linux-gnu
-        override: true
+        targets: x86_64-unknown-linux-gnu
         components: rustfmt, clippy
 
     - name: Set up cargo cache
       uses: Swatinem/rust-cache@v2
       continue-on-error: false
       with:
-        key: ${{ runner.os }}-cargo-${{ hashFiles('zeroidc//Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-${{ hashFiles('rustybits//Cargo.lock') }}
         shared-key: ${{ runner.os }}-cargo-
         workspaces: |
-          zeroidc/
+          rustybits/
 
     - name: validate-1m-linux
       env:

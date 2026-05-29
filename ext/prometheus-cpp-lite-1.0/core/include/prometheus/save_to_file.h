@@ -50,6 +50,16 @@ namespace prometheus {
   public:
     SaveToFile() = default;
 
+    void stop() {
+      must_die = true;
+      worker_thread.join();
+    }
+
+    void restart() {
+      must_die = false;
+      worker_thread = std::thread(&SaveToFile::worker_function, this);
+    }
+
     ~SaveToFile() {
       must_die = true;
       worker_thread.join();

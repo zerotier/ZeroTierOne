@@ -479,15 +479,11 @@ class Network {
 	int64_t _lastConfigUpdate;
 
 	struct _IncomingConfigChunk {
-		_IncomingConfigChunk()
-		{
-			memset(this, 0, sizeof(_IncomingConfigChunk));
-		}
-		uint64_t ts;
-		uint64_t updateId;
-		uint64_t haveChunkIds[ZT_NETWORK_MAX_UPDATE_CHUNKS];
-		unsigned long haveChunks;
-		unsigned long haveBytes;
+		uint64_t ts = 0;
+		uint64_t updateId = 0;
+		uint64_t haveChunkIds[ZT_NETWORK_MAX_UPDATE_CHUNKS]{};
+		unsigned long haveChunks = 0;
+		unsigned long haveBytes = 0;
 		Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> data;
 	};
 	_IncomingConfigChunk _incomingConfigChunks[ZT_NETWORK_MAX_INCOMING_UPDATES];

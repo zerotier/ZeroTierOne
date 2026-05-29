@@ -1,6 +1,21 @@
 ZeroTier Release Notes
 ======
 
+## 2026-05-20 -- Version 1.16.2
+ 
+  * Fixed line endings for the zttap300.inf for the Windows ARM x64 install.
+  * Internal updates to the central controller (CV1) including schema changes and a multi-architecture Docker build pipeline.
+  * Increased `ZT_MAX_NETWORK_SPECIALISTS` from 256 to 512 to accommodate users with large networks that exceeded the previous limit. The network config dictionary capacity was raised correspondingly.
+  * Resolved intermittent multi-minute delays when leaving one network and joining another under Windows.
+  * Compiler warning cleanup across the codebase, covering GCC 14, Clang 18, and Clang 21.
+
+## 2025-12-22 -- Version 1.16.1
+ 
+  * Metrics collection is now disabled by default. It can be enabled via the `enableMetrics` setting in `local.conf`.
+  * Fix for an issue where metrics were not being recorded while running in daemon mode.
+  * Fix debug dumpfile being written to the root directory.
+  * Minor bug fixes in Mac and BSD tun/tap code.
+
 ## 2025-08-21 -- Version 1.16.0
 
   * License Changes

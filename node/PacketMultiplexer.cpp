@@ -67,7 +67,6 @@ void PacketMultiplexer::setUpPostDecodeReceiveThreads(unsigned int concurrency, 
 #endif
 	_enabled = true;
 	_concurrency = concurrency;
-	bool _enablePinning = cpuPinningEnabled;
 
 	for (unsigned int i = 0; i < _concurrency; ++i) {
 		fprintf(stderr, "Reserved queue for thread %d\n", i);
@@ -76,7 +75,7 @@ void PacketMultiplexer::setUpPostDecodeReceiveThreads(unsigned int concurrency, 
 
 	// Each thread picks from its own queue to feed into the core
 	for (unsigned int i = 0; i < _concurrency; ++i) {
-		_rxThreads.push_back(std::thread([this, i, _enablePinning]() {
+		_rxThreads.push_back(std::thread([this, i]() {
 			fprintf(stderr, "Created post-decode packet ingestion thread %d\n", i);
 
 			PacketRecord* packet = nullptr;

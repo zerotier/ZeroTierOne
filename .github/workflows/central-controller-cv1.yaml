@@ -1,0 +1,67 @@
+name: Central Controller CV1 Build and Push
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  central_controller:
+    name: Central Controller CV1 Build
+    strategy:
+      matrix:
+        runner: [gha-runner-x64, gha-runner-arm64]
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: Docker Auth
+        run: echo "${{ secrets.PORTUS_PW }}" | docker login registry.zerotier.com -u ${{ secrets.PORTUS_USER }} --password-stdin
+
+      - name: Get branch name and sanitize
+        id: branch
+        run: |
+          BRANCH_NAME="${GITHUB_REF##*/}"
+          SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
+          echo "branch_name=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Get short git commit SHA
+        id: sha
+        run: |
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
+
+      - name: Build & Push Docker Image
+        run: |
+          docker build --provenance false --no-cache -t registry.zerotier.com/zerotier-central/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-${{ runner.arch }} -f ext/central-controller-docker/Dockerfile . --push
+
+  multi-arch-docker:
+    runs-on: gha-runner-x64
+    needs: central_controller
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Docker Auth
+        run: echo "${{ secrets.PORTUS_PW }}" | docker login registry.zerotier.com -u ${{ secrets.PORTUS_USER }} --password-stdin
+
+      - name: Get branch name and sanitize
+        id: branch
+        run: |
+          BRANCH_NAME="${GITHUB_REF##*/}"
+          SANITIZED_BRANCH="${BRANCH_NAME//\//-}"
+          echo "branch_name=$SANITIZED_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Get short git commit SHA
+        id: sha
+        run: |
+          calculatedSha=$(git rev-parse --short ${{ github.sha }})
+          echo "COMMIT_SHORT_SHA=$calculatedSha" >> $GITHUB_ENV
+
+      - name: Create and push multi-arch manifest
+        run: |
+          docker manifest create registry.zerotier.com/zerotier-central/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }} \
+            --amend registry.zerotier.com/zerotier-central/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-X64 \
+            --amend registry.zerotier.com/zerotier-central/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}-ARM64
+          docker manifest push registry.zerotier.com/zerotier-central/ztcentral-controller:${{ env.COMMIT_SHORT_SHA }}-${{ steps.branch.outputs.branch_name }}

@@ -275,7 +275,9 @@ void LinuxNetLink::_routeAdded(struct nlmsghdr* nlp)
 	char gws[40] = { 0 };
 	char srcs[40] = { 0 };
 	char ifs[16] = { 0 };
+#ifdef ZT_NETLINK_TRACE
 	char ms[24] = { 0 };
+#endif
 
 	struct rtmsg* rtp = (struct rtmsg*)NLMSG_DATA(nlp);
 	struct rtattr* rtap = (struct rtattr*)RTM_RTA(rtp);
@@ -361,7 +363,9 @@ void LinuxNetLink::_routeDeleted(struct nlmsghdr* nlp)
 	char gws[40] = { 0 };
 	char srcs[40] = { 0 };
 	char ifs[16] = { 0 };
+#ifdef ZT_NETLINK_TRACE
 	char ms[24] = { 0 };
+#endif
 
 	struct rtmsg* rtp = (struct rtmsg*)NLMSG_DATA(nlp);
 	struct rtattr* rtap = (struct rtattr*)RTM_RTA(rtp);
