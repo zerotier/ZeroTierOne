@@ -73,11 +73,18 @@ endif
 ifeq ($(ZT_SANITIZE),1)
 	override DEFS+=-fsanitize=address -DASAN_OPTIONS=symbolize=1
 endif
+ZT_CARGO_FLAGS=$(CARGO_BUILD_FLAGS)
+
+ifeq ($(strip $(RUST_HOST_SYS)),)
+	# not set — do nothing
+else
+	ZT_CARGO_FLAGS += --target $(RUST_HOST_SYS)
+endif
+
 ifeq ($(ZT_DEBUG),1)
 	override CFLAGS+=-Wall -Wno-deprecated -g -O -pthread $(INCLUDES) $(DEFS)
 	override CXXFLAGS+=-Wall -Wno-deprecated -g -O -std=c++17 -pthread $(INCLUDES) $(DEFS)
 	ZT_TRACE=1
-	ZT_CARGO_FLAGS=
 	# The following line enables optimization for the crypto code, since
 	# C25519 in particular is almost UNUSABLE in -O0 even on a 3ghz box!
 node/Salsa20.o node/SHA512.o node/C25519.o node/Poly1305.o: CXXFLAGS=-Wall -O2 -g -pthread $(INCLUDES) $(DEFS)
@@ -87,7 +94,7 @@ else
 	CXXFLAGS?=-O3 -fstack-protector
 	override CXXFLAGS+=-Wall -Wno-deprecated -std=c++17 -pthread $(INCLUDES) -DNDEBUG $(DEFS)
 	LDFLAGS?=-pie -Wl,-z,relro,-z,now
-	ZT_CARGO_FLAGS=--release
+	ZT_CARGO_FLAGS+=--release
 endif
 
 ifeq ($(ZT_QNAP), 1)
@@ -311,9 +318,9 @@ ifeq ($(ZT_SSO_SUPPORTED), 1)
 	ifeq ($(ZT_EMBEDDED),)
 		override DEFS+=-DZT_SSO_SUPPORTED=1
 		ifeq ($(ZT_DEBUG),1)
-			LDLIBS+=rustybits/target/debug/libzeroidc.a -ldl -lssl -lcrypto
+			LDLIBS+=rustybits/target/$(RUST_HOST_SYS)/debug/libzeroidc.a -ldl -lssl -lcrypto
 		else
-			LDLIBS+=rustybits/target/release/libzeroidc.a -ldl -lssl -lcrypto
+			LDLIBS+=rustybits/target/$(RUST_HOST_SYS)/release/libzeroidc.a -ldl -lssl -lcrypto
 		endif
 	endif
 endif
