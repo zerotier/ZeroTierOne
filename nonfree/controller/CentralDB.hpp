@@ -7,7 +7,7 @@
 #ifndef ZT_CONTROLLER_CENTRAL_DB_HPP
 #define ZT_CONTROLLER_CENTRAL_DB_HPP
 
-#define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 4
+#define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 8
 
 // Max times a change is re-queued after a failed DB write before it is dropped.
 // Stopgap durability: the PubSub message was already acked at enqueue time, so a

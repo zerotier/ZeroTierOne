@@ -51,7 +51,10 @@ using json = nlohmann::json;
 // Cap on the request queue for controller-initiated re-requests (pushes), which fan
 // out to every online member on a network change. Beyond this they're dropped (the
 // member picks up the change on its next poll) to bound memory under churn.
-#define ZT_CONTROLLER_MAX_QUEUED_REREQUESTS 16384
+// Hard safety backstop on the request-queue depth. Per-member de-dup (see request()) keeps the
+// real depth ~= the online-member count; this only bounds pathological overflow. ~1.3 KB/entry,
+// so 262144 ~= 340 MB worst case (well within the pod memory limit).
+#define ZT_CONTROLLER_MAX_QUEUED_REREQUESTS 262144
 
 namespace ZeroTier {
 
@@ -740,14 +743,26 @@ void EmbeddedNetworkController::request(
 		}
 		ms.lastRequestTime = now;
 	}
-	else {
-		// Controller-initiated re-request (push). These fan out to every online member
-		// on a network change, so cap the backlog and drop on overflow rather than
-		// growing the queue without bound — the member will still pick up the change on
-		// its next periodic poll. Member-initiated requests (requestPacketId != 0) are
-		// always queued; they're already rate-limited per member above.
-		if (_queue.size() >= ZT_CONTROLLER_MAX_QUEUED_REREQUESTS) {
-			return;
+
+	// Hard backstop on total depth (see the constant). Both a controller-initiated re-request
+	// (a network-change fan-out to every online member) and a member-initiated reconnect herd
+	// can enqueue faster than the worker threads drain; over the backstop we drop (the member
+	// re-requests on its next poll; a controller push re-applies later).
+	if (_queue.size() >= ZT_CONTROLLER_MAX_QUEUED_REREQUESTS) {
+		return;
+	}
+
+	// De-dup: keep at most one pending request per (network, member) in the queue. Member
+	// requests were previously only per-member rate-limited (1s), so a reconnect herd across
+	// ~24k members each re-requesting ~1x/sec while the backlog drained stacked ~20+ duplicate
+	// _RQEntry per member -- ~500k entries (~600 MB) and an OOM. De-duping bounds the real depth
+	// to roughly the online-member count; nothing is lost because the queued request reads fresh
+	// config when a worker processes it, and the key is cleared on dequeue so a change arriving
+	// mid-process still re-queues.
+	{
+		std::lock_guard<std::mutex> l(_pendingRequests_l);
+		if (! _pendingRequests.insert(_MemberStatusKey(nwid, identity.address().toInt())).second) {
+			return;	  // a request for this member is already queued
 		}
 	}
 
@@ -2512,6 +2527,13 @@ void EmbeddedNetworkController::_startThreads()
 				else if (timedWaitResult == BlockingQueue<_RQEntry*>::OK) {
 					idleIterations = 0;
 					if (qe) {
+						// Clear the de-dup mark now that this entry is dequeued, so a fresh request
+						// for the same member (e.g. a config change arriving while we process it) can
+						// queue again instead of being deduped away.
+						{
+							std::lock_guard<std::mutex> l(_pendingRequests_l);
+							_pendingRequests.erase(_MemberStatusKey(qe->nwid, qe->identity.address().toInt()));
+						}
 						try {
 							_request(qe->nwid, qe->fromAddr, qe->requestPacketId, qe->identity, qe->metaData);
 							processedCount++;

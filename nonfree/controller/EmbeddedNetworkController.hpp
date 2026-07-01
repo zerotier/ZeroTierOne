@@ -26,6 +26,7 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace ZeroTier {
@@ -156,6 +157,12 @@ class EmbeddedNetworkController
 
 	std::unordered_map<_MemberStatusKey, _MemberStatus, _MemberStatusHash> _memberStatus;
 	std::mutex _memberStatus_l;
+
+	// At-most-one queued config request per (network, member): a reconnect herd (or a member
+	// re-requesting while an earlier request is still queued) would otherwise stack duplicate
+	// _RQEntry (each ~1 KB). Inserted in request(), erased when a worker dequeues the entry.
+	std::unordered_set<_MemberStatusKey, _MemberStatusHash> _pendingRequests;
+	std::mutex _pendingRequests_l;
 
 	std::set<std::pair<int64_t, _MemberStatusKey> > _expiringSoon;
 	std::mutex _expiringSoon_l;
