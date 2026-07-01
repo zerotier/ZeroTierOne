@@ -9,10 +9,10 @@
 
 #define ZT_CENTRAL_CONTROLLER_COMMIT_THREADS 8
 
-// Max times a change is re-queued after a failed DB write before it is dropped.
-// Stopgap durability: the PubSub message was already acked at enqueue time, so a
-// dropped commit would otherwise be lost.  Re-queuing rides out transient DB
-// outages (e.g. an AlloyDB maintenance restart) at the cost of in-memory buffering.
+// Max times an INTERNAL (non-PubSub) write is re-queued after a failed DB write before it is
+// dropped. PubSub-sourced changes are acked/nacked after the commit (ack-after-commit): a failed
+// write nacks so Pub/Sub redelivers, and the subscription's dead-letter policy bounds retries --
+// so this cap governs only internal writes, which have no redelivery and are buffered in memory.
 #define ZT_CENTRAL_CONTROLLER_MAX_COMMIT_RETRIES 100
 
 #include "../../node/Metrics.hpp"

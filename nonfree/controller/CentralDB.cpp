@@ -1162,11 +1162,11 @@ void CentralDB::heartbeat()
 
 void CentralDB::_requeueFailedCommit(_queueItem& qitem)
 {
-	// The PubSub message that produced this change was already acked when it was
-	// enqueued, so a failed DB write would otherwise be lost.  Re-queue it (with
-	// capped backoff) so transient failures -- e.g. an AlloyDB maintenance restart
-	// -- are retried rather than dropped.  A genuinely poison item is dropped after
-	// a bounded number of attempts so it can't spin a commit thread forever.
+	// Reached only for INTERNAL (non-PubSub) writes -- items carrying a delivery completion are
+	// nacked for redelivery by _finishCommit instead. Internal writes have no redelivery, so
+	// re-queue them (with capped backoff) to ride out transient DB failures (e.g. an AlloyDB
+	// maintenance restart) rather than dropping them. A genuinely poison item is dropped after a
+	// bounded number of attempts so it can't spin a commit thread forever.
 	if (_run != 1) {
 		// shutting down -- don't requeue
 		return;
