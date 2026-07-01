@@ -109,7 +109,7 @@ class CentralDB : public DB {
 	std::string _connString;
 
 	struct _queueItem {
-		_queueItem() : jsonData(), notifyListeners(false), traceContext(), retryCount(0)
+		_queueItem() : jsonData(), notifyListeners(false), traceContext(), retryCount(0), completion()
 		{
 		}
 
@@ -121,12 +121,24 @@ class CentralDB : public DB {
 		bool notifyListeners;
 		std::map<std::string, std::string> traceContext;
 		int retryCount;
+		// Deferred ack for the delivery mechanism (PubSub). Null for internal writes
+		// (no delivery message) and for backends without redelivery semantics. When set,
+		// the commit thread completes it (ack on success, nack on transient failure)
+		// instead of re-queuing -- Pub/Sub's own redelivery replaces _requeueFailedCommit.
+		std::shared_ptr<NotificationCompletion> completion;
 	};
 	BlockingQueue<_queueItem> _commitQueue;
 
 	// Re-queue a change whose DB write failed, with capped backoff, until it
 	// succeeds or ZT_CENTRAL_CONTROLLER_MAX_COMMIT_RETRIES attempts is reached.
+	// Used only for items with no delivery completion (internal writes); items that
+	// carry one are nacked for redelivery instead (see _finishCommit).
 	void _requeueFailedCommit(_queueItem& qitem);
+
+	// Resolve a commit-queue item's outcome exactly once: if it carries a delivery
+	// completion (PubSub), ack on Ok/PermanentFailure or nack on TransientFailure;
+	// otherwise fall back to _requeueFailedCommit on TransientFailure (internal writes).
+	void _finishCommit(_queueItem& qitem, NotificationResult result);
 
 	std::thread _heartbeatThread;
 	std::shared_ptr<NotificationListener> _membersDbWatcher;

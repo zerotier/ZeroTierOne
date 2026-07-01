@@ -43,6 +43,26 @@ using Attrs = std::vector<std::pair<std::string, std::string> >;
 using Item = std::pair<std::string, Attrs>;
 using ItemStream = std::vector<Item>;
 
+namespace ZeroTier {
+
+// Per-thread hand-off backing setPendingCompletion()/takePendingCompletion() (declared in
+// NotificationListener.hpp). The PubSub subscriber callback sets it around its synchronous
+// onNotification() call; the commit-queue enqueue path (save/eraseNetwork/eraseMember) takes
+// it when it defers work, moving ownership into the _queueItem so the commit thread can ack.
+static thread_local std::shared_ptr<NotificationCompletion> t_pendingCompletion;
+
+void setPendingCompletion(std::shared_ptr<NotificationCompletion> completion)
+{
+	t_pendingCompletion = std::move(completion);
+}
+
+std::shared_ptr<NotificationCompletion> takePendingCompletion()
+{
+	return std::move(t_pendingCompletion);	 // a moved-from shared_ptr is left empty
+}
+
+}	// namespace ZeroTier
+
 CentralDB::CentralDB(const Identity& myId,
 					 const char* connString,
 					 int listenPort,
@@ -306,6 +326,9 @@ bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 					_queueItem qi;
 					qi.jsonData = record;
 					qi.notifyListeners = notifyListeners;
+					// Take the deferred ack (if any) so the commit thread acks/nacks this change
+					// only after the DB write; null for internal (non-PubSub) callers.
+					qi.completion = takePendingCompletion();
 					OtelCarrier<std::map<std::string, std::string> > carrier(qi.traceContext);
 					auto current_ctx = opentelemetry::context::RuntimeContext::GetCurrent();
 					auto propagator =
@@ -331,6 +354,9 @@ bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 					_queueItem qi;
 					qi.jsonData = record;
 					qi.notifyListeners = notifyListeners;
+					// Take the deferred ack (if any) so the commit thread acks/nacks this change
+					// only after the DB write; null for internal (non-PubSub) callers.
+					qi.completion = takePendingCompletion();
 					OtelCarrier<std::map<std::string, std::string> > carrier(qi.traceContext);
 					auto current_ctx = opentelemetry::context::RuntimeContext::GetCurrent();
 					auto propagator =
@@ -375,6 +401,7 @@ void CentralDB::eraseNetwork(const uint64_t networkId)
 	qi.jsonData["id"] = tmp2;
 	qi.jsonData["objtype"] = "_delete_network";
 	qi.notifyListeners = true;
+	qi.completion = takePendingCompletion();
 	OtelCarrier<std::map<std::string, std::string> > carrier(qi.traceContext);
 	auto current_ctx = opentelemetry::context::RuntimeContext::GetCurrent();
 	auto propagator = opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
@@ -403,6 +430,7 @@ void CentralDB::eraseMember(const uint64_t networkId, const uint64_t memberId)
 	qi.jsonData["id"] = memberIdStr;
 	qi.jsonData["objtype"] = "_delete_member";
 	qi.notifyListeners = true;
+	qi.completion = takePendingCompletion();
 	OtelCarrier<std::map<std::string, std::string> > carrier(qi.traceContext);
 	auto current_ctx = opentelemetry::context::RuntimeContext::GetCurrent();
 	auto propagator = opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
@@ -1167,6 +1195,23 @@ void CentralDB::_requeueFailedCommit(_queueItem& qitem)
 	_commitQueue.post(qitem);
 }
 
+void CentralDB::_finishCommit(_queueItem& qitem, NotificationResult result)
+{
+	if (qitem.completion) {
+		// Delivery-backed (PubSub): ack on success / not-applicable, nack to redeliver on a
+		// transient failure. This replaces re-queuing for these items -- Pub/Sub's own
+		// redelivery handles retries, and a persistently failing message is routed to the
+		// dead-letter topic by the subscription policy rather than dropped in-memory.
+		qitem.completion->complete(result);
+		return;
+	}
+	// Internal write (no delivery message): keep the in-memory retry path for transient
+	// failures; nothing to do on success.
+	if (result == NotificationResult::TransientFailure) {
+		_requeueFailedCommit(qitem);
+	}
+}
+
 void CentralDB::commitThread()
 {
 	ZTC_LOG("commitThread start\n");
@@ -1188,6 +1233,7 @@ void CentralDB::commitThread()
 
 			if (! qitem.jsonData.is_object()) {
 				ZTC_LOG("commitThread tick: skipping non-object queue item\n");
+				_finishCommit(qitem, NotificationResult::Ok);
 				continue;
 			}
 
@@ -1213,13 +1259,13 @@ void CentralDB::commitThread()
 			}
 			catch (std::exception& e) {
 				ZTC_LOG("ERROR: %s\n", e.what());
-				_requeueFailedCommit(qitem);
+				_finishCommit(qitem, NotificationResult::TransientFailure);
 				continue;
 			}
 
 			if (! c) {
 				ZTC_LOG("Error getting database connection\n");
-				_requeueFailedCommit(qitem);
+				_finishCommit(qitem, NotificationResult::TransientFailure);
 				continue;
 			}
 
@@ -1261,6 +1307,9 @@ void CentralDB::commitThread()
 							ZTC_LOG("network %s does not exist.  skipping member upsert\n", networkId.c_str());
 							w.abort();
 							_pool->unborrow(c);
+							// Change intentionally not applied (network absent, or a non-owning
+							// change source): ack so the message isn't redelivered.
+							_finishCommit(qitem, NotificationResult::Ok);
 							continue;
 						}
 
@@ -1281,6 +1330,9 @@ void CentralDB::commitThread()
 							// the frontend, don't apply the change.
 							w.abort();
 							_pool->unborrow(c);
+							// Change intentionally not applied (network absent, or a non-owning
+							// change source): ack so the message isn't redelivered.
+							_finishCommit(qitem, NotificationResult::Ok);
 							continue;
 						}
 
@@ -1436,6 +1488,9 @@ void CentralDB::commitThread()
 							// the frontend, don't apply the change.
 							w.abort();
 							_pool->unborrow(c);
+							// Change intentionally not applied (network absent, or a non-owning
+							// change source): ack so the message isn't redelivered.
+							_finishCommit(qitem, NotificationResult::Ok);
 							continue;
 						}
 
@@ -1617,11 +1672,12 @@ void CentralDB::commitThread()
 			_pool->unborrow(c);
 			c.reset();
 
-			// Re-queue on a failed DB write so the (already-acked) change isn't lost.
-			// Done after the connection is returned so we never sleep holding one.
-			if (commitFailed) {
-				_requeueFailedCommit(qitem);
-			}
+			// Resolve the item after the DB write, once the connection is returned (so we
+			// never sleep holding one): ack a PubSub-backed change on success / nack on a
+			// transient failure to redeliver, or re-queue an internal write. This replaces
+			// the old unconditional re-queue -- with ack-after-commit the change is no longer
+			// acked at enqueue time, so a failed write is redelivered rather than lost.
+			_finishCommit(qitem, commitFailed ? NotificationResult::TransientFailure : NotificationResult::Ok);
 		}
 	}
 

@@ -23,6 +23,7 @@
 #include <google/cloud/pubsub/admin/subscription_admin_connection.h>
 #include <google/cloud/pubsub/admin/topic_admin_client.h>
 #include <google/cloud/pubsub/message.h>
+#include <google/cloud/pubsub/options.h>
 #include <google/cloud/pubsub/subscriber.h>
 #include <google/cloud/pubsub/subscription.h>
 #include <google/cloud/pubsub/topic.h>
@@ -35,6 +36,36 @@ namespace ZeroTier {
 
 nlohmann::json toJson(const pbmessages::NetworkChange_Network& nc, pbmessages::NetworkChange_ChangeSource source);
 nlohmann::json toJson(const pbmessages::MemberChange_Member& mc, pbmessages::MemberChange_ChangeSource source);
+
+namespace {
+// Defers a PubSub message's ack/nack until its DB commit completes. Created in the subscriber
+// callback holding the moved-in AckHandler, handed off (as a shared_ptr<NotificationCompletion>)
+// onto the commit-queue item, and completed by the commit thread after the write -- so an
+// un-committed change is redelivered rather than acked-then-lost. Safe to complete exactly once
+// from whichever thread finishes first.
+class PubSubAckCompletion : public NotificationCompletion {
+  public:
+	explicit PubSubAckCompletion(pubsub::AckHandler handler) : _handler(std::move(handler))
+	{
+	}
+	void complete(NotificationResult result) override
+	{
+		if (_done.test_and_set()) {
+			return;	  // ack/nack exactly once
+		}
+		if (result == NotificationResult::TransientFailure) {
+			std::move(_handler).nack();	  // retryable -> redeliver
+		}
+		else {
+			std::move(_handler).ack();	 // Ok / PermanentFailure -> ack (drop on permanent)
+		}
+	}
+
+  private:
+	pubsub::AckHandler _handler;
+	std::atomic_flag _done = ATOMIC_FLAG_INIT;
+};
+}	// namespace
 
 PubSubListener::PubSubListener(std::string controller_id, std::string project, std::string topic)
 	: _controller_id(controller_id)
@@ -60,9 +91,19 @@ PubSubListener::PubSubListener(std::string controller_id, std::string project, s
 		create_gcp_pubsub_subscription_if_needed(_project, _subscription_id, _topic, _controller_id);
 	}
 
-	_subscriber = std::make_shared<pubsub::Subscriber>(
-		pubsub::MakeSubscriberConnection(*_subscription),
-		google::cloud::Options {}.set<google::cloud::OpenTelemetryTracingOption>(true));
+	_subscriber = std::make_shared<pubsub::Subscriber>(pubsub::MakeSubscriberConnection(
+		*_subscription,
+		google::cloud::Options {}
+			.set<google::cloud::OpenTelemetryTracingOption>(true)
+			// Cap the client-side flow-control window. google-cloud-cpp defaults to 1000
+			// outstanding messages / 100 MiB per subscriber; with three controller
+			// subscribers that is up to ~300 MiB of un-acked messages buffered in-process
+			// during a change burst. A smaller window bounds that, and together with
+			// ack-after-commit it also bounds how many uncommitted changes can pile up.
+			// Flow-control options belong on MakeSubscriberConnection (the SubscriberOptionList
+			// consumer), not on the Subscriber constructor.
+			.set<pubsub::MaxOutstandingMessagesOption>(200)
+			.set<pubsub::MaxOutstandingBytesOption>(16 * 1024 * 1024)));
 
 	_run = true;
 	_subscriberThread = std::thread(&PubSubListener::subscribe, this);
@@ -104,6 +145,11 @@ void PubSubListener::subscribe()
 
 			auto session = _subscriber->Subscribe([this](pubsub::Message const& m, pubsub::AckHandler h) {
 				_lastMessageTime.store(std::chrono::steady_clock::now());
+				// Defer the ack until the change is durably committed: hand ownership of the
+				// AckHandler to a completion that the DB's commit thread resolves. If the write is
+				// a no-op, never reaches the commit queue, or is handled synchronously (SSO), we
+				// complete it ourselves below with onNotification's reported outcome.
+				setPendingCompletion(std::make_shared<PubSubAckCompletion>(std::move(h)));
 				// Default to transient: if anything throws before onNotification reports an
 				// outcome, redeliver rather than silently dropping the change.
 				NotificationResult result = NotificationResult::TransientFailure;
@@ -168,11 +214,12 @@ void PubSubListener::subscribe()
 					result = NotificationResult::PermanentFailure;
 				}
 
-				if (result == NotificationResult::TransientFailure) {
-					std::move(h).nack();
-				}
-				else {
-					std::move(h).ack();
+				// If onNotification enqueued async DB work it took the pending completion (the
+				// commit thread acks/nacks after the write). Otherwise -- a no-op, a
+				// parse/validation failure, or a synchronous handler -- complete it now with the
+				// outcome onNotification reported.
+				if (auto completion = takePendingCompletion()) {
+					completion->complete(result);
 				}
 				return true;
 			});
