@@ -30,7 +30,7 @@
 namespace ZeroTier {
 struct RedisConfig;
 struct ControllerConfig;
-struct ControllerChangeNotifier;
+class ControllerChangeNotifier;
 class PubSubWriter;
 
 class CentralDB : public DB {

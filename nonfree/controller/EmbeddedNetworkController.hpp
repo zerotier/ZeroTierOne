@@ -34,7 +34,7 @@ class Node;
 struct RedisConfig;
 
 #ifdef ZT1_CENTRAL_CONTROLLER
-class ControllerConfig;
+struct ControllerConfig;
 #endif
 
 class EmbeddedNetworkController
