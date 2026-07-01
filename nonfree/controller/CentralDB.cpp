@@ -1293,24 +1293,22 @@ void CentralDB::commitThread()
 							target = config["remoteTraceTarget"].get<std::string>();
 						}
 
-						// get network and the frontend it is assigned to
-						// if network does not exist, skip member update
-						pqxx::row nwrow =
-							w.exec("SELECT COUNT(id), frontend FROM networks_ctl WHERE id = $1 GROUP BY frontend",
-								   pqxx::params { networkId })
-								.one_row();
-						int nwcount = nwrow[0].as<int>();
-						std::string frontend = nwrow[1].as<std::string>();
-
-						if (nwcount != 1) {
+						// Get the network's frontend. If the network doesn't exist, this member change
+						// isn't applicable -- it arrived before the network's create (an ordering race)
+						// or after its delete -- so ack-drop it. Treating the absence as a retryable
+						// failure would poison-pill it into repeated redeliveries + a DLQ entry. Use a
+						// plain result + empty() check, not one_row(): a missing network returns zero
+						// rows, which one_row() throws on -> the wrong (retry) path.
+						pqxx::result nwres =
+							w.exec("SELECT frontend FROM networks_ctl WHERE id = $1", pqxx::params { networkId });
+						if (nwres.empty()) {
 							ZTC_LOG("network %s does not exist.  skipping member upsert\n", networkId.c_str());
 							w.abort();
 							_pool->unborrow(c);
-							// Change intentionally not applied (network absent, or a non-owning
-							// change source): ack so the message isn't redelivered.
 							_finishCommit(qitem, NotificationResult::Ok);
 							continue;
 						}
+						std::string frontend = nwres[0][0].as<std::optional<std::string> >().value_or("");
 
 						pqxx::row mrow =
 							w.exec("SELECT COUNT(device_id) FROM network_memberships_ctl WHERE device_id = $1 "
