@@ -467,8 +467,11 @@ void DB::_networkChanged(nlohmann::json& old, nlohmann::json& networkConfig, boo
 	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 	auto tracer = provider->GetTracer("db");
 	auto span = tracer->StartSpan("db::_networkChanged");
-	span->SetAttribute("old_network_config", old.dump());
-	span->SetAttribute("network_config", networkConfig.dump());
+	// The full network config is intentionally NOT attached to this span.
+	// old.dump()/networkConfig.dump() serialize the entire (potentially multi-hundred-KB)
+	// config on every network change; carrying that on sampled spans is a large, low-value
+	// memory cost, and it was being built even for un-sampled NoopSpans. The config is always
+	// available in the DB if it's ever needed for debugging.
 	span->SetAttribute("notify_listeners", notifyListeners);
 	auto scope = tracer->WithActiveSpan(span);
 
