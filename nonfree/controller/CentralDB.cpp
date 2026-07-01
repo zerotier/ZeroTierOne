@@ -940,7 +940,6 @@ void CentralDB::initializeMembers()
 				   >
 			row;
 
-		auto tmp = std::chrono::high_resolution_clock::now();
 		uint64_t count = 0;
 		uint64_t total = 0;
 		while (stream >> row) {

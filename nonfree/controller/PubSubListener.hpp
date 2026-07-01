@@ -30,7 +30,7 @@ class PubSubListener : public NotificationListener {
 	PubSubListener(std::string controller_id, std::string project, std::string topic);
 	virtual ~PubSubListener();
 
-	virtual NotificationResult onNotification(const std::string& payload) = 0;
+	virtual NotificationResult onNotification(const std::string& payload) override = 0;
 
 	// Stop and join the subscriber thread. Must be called from the most-derived
 	// destructor (before its members are torn down) so an in-flight callback can't
