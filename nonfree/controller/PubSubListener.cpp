@@ -219,7 +219,22 @@ void PubSubListener::subscribe()
 				// parse/validation failure, or a synchronous handler -- complete it now with the
 				// outcome onNotification reported.
 				if (auto completion = takePendingCompletion()) {
-					completion->complete(result);
+					// Guard the ack/nack: an exception escaping this subscriber callback can tear
+					// down the pull session. On a throwing path ack()/nack() has already consumed
+					// the handler, so there's nothing to retry here -- just don't let it propagate.
+					try {
+						completion->complete(result);
+					}
+					catch (const std::exception& e) {
+						ZTC_LOG(
+							"PubSubListener: ack/nack failed (message_id=%s): %s\n", m.message_id().c_str(),
+							e.what());
+					}
+					catch (...) {
+						ZTC_LOG(
+							"PubSubListener: ack/nack failed (message_id=%s); unknown exception\n",
+							m.message_id().c_str());
+					}
 				}
 				return true;
 			});
