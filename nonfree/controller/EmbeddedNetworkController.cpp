@@ -759,21 +759,32 @@ void EmbeddedNetworkController::request(
 	// to roughly the online-member count; nothing is lost because the queued request reads fresh
 	// config when a worker processes it, and the key is cleared on dequeue so a change arriving
 	// mid-process still re-queues.
+	const _MemberStatusKey rqKey(nwid, identity.address().toInt());
 	{
 		std::lock_guard<std::mutex> l(_pendingRequests_l);
-		if (! _pendingRequests.insert(_MemberStatusKey(nwid, identity.address().toInt())).second) {
+		if (! _pendingRequests.insert(rqKey).second) {
 			return;	  // a request for this member is already queued
 		}
 	}
 
-	_RQEntry* qe = new _RQEntry;
-	qe->nwid = nwid;
-	qe->requestPacketId = requestPacketId;
-	qe->fromAddr = fromAddr;
-	qe->identity = identity;
-	qe->metaData = metaData;
-	qe->type = _RQEntry::RQENTRY_TYPE_REQUEST;
-	_queue.post(qe);
+	// The member is now marked pending, and that mark is only cleared when a worker dequeues the
+	// entry. If we fail to enqueue after this point (allocation/copy/post throwing), erase the
+	// mark so the member isn't permanently deduped away and starved until the process restarts.
+	try {
+		std::unique_ptr<_RQEntry> qe(new _RQEntry);
+		qe->nwid = nwid;
+		qe->requestPacketId = requestPacketId;
+		qe->fromAddr = fromAddr;
+		qe->identity = identity;
+		qe->metaData = metaData;
+		qe->type = _RQEntry::RQENTRY_TYPE_REQUEST;
+		_queue.post(qe.get());
+		qe.release();	 // ownership handed to _queue; the worker deletes it
+	}
+	catch (...) {
+		std::lock_guard<std::mutex> l(_pendingRequests_l);
+		_pendingRequests.erase(rqKey);
+	}
 }
 
 std::string EmbeddedNetworkController::networkUpdateFromPostData(uint64_t networkID, const std::string& body)
