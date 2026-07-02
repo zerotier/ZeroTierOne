@@ -29,6 +29,19 @@ networkChangeFromJson(std::string controllerID, const nlohmann::json& oldNetwork
 pbmessages::MemberChange*
 memberChangeFromJson(std::string controllerID, const nlohmann::json& oldMember, const nlohmann::json& newMember);
 
+namespace {
+// Safe const field lookup. Returns a reference to j[key], or to a shared null
+// json when key is absent (or j is not an object). Avoids the undefined
+// behavior of nlohmann's const operator[] on a missing key, whose only guard
+// (JSON_ASSERT) is compiled out in release/NDEBUG builds.
+const nlohmann::json& jfield(const nlohmann::json& j, const char* key)
+{
+	static const nlohmann::json kNull;
+	auto it = j.find(key);	 // find() is safe even when j is not an object
+	return (it != j.end()) ? *it : kNull;
+}
+}	// namespace
+
 PubSubWriter::PubSubWriter(std::string project, std::string topic, std::string controller_id)
 	: _controller_id(controller_id)
 	, _project(project)
@@ -228,37 +241,37 @@ pbmessages::NetworkChange_Network* networkFromJson(const nlohmann::json& j)
 
 	pbmessages::NetworkChange_Network* n = new pbmessages::NetworkChange_Network();
 	try {
-		n->set_network_id(OSUtils::jsonString(j["id"], ""));
-		n->set_name(OSUtils::jsonString(j["name"], ""));
+		n->set_network_id(OSUtils::jsonString(jfield(j, "id"), ""));
+		n->set_name(OSUtils::jsonString(jfield(j, "name"), ""));
 		n->set_capabilities(OSUtils::jsonDump(j.value("capabilities", "[]"), -1));
-		n->set_creation_time(OSUtils::jsonInt(j["creationTime"], 0));
-		n->set_enable_broadcast(OSUtils::jsonBool(j["enableBroadcast"], false));
+		n->set_creation_time(OSUtils::jsonInt(jfield(j, "creationTime"), 0));
+		n->set_enable_broadcast(OSUtils::jsonBool(jfield(j, "enableBroadcast"), false));
 
-		for (const auto& p : j["ipAssignmentPools"]) {
+		for (const auto& p : jfield(j, "ipAssignmentPools")) {
 			if (p.is_object()) {
 				auto pool = n->add_assignment_pools();
-				pool->set_start_ip(OSUtils::jsonString(p["ipRangeStart"], ""));
-				pool->set_end_ip(OSUtils::jsonString(p["ipRangeEnd"], ""));
+				pool->set_start_ip(OSUtils::jsonString(jfield(p, "ipRangeStart"), ""));
+				pool->set_end_ip(OSUtils::jsonString(jfield(p, "ipRangeEnd"), ""));
 			}
 		}
 
-		n->set_mtu(OSUtils::jsonInt(j["mtu"], 2800));
-		n->set_multicast_limit(OSUtils::jsonInt(j["multicastLimit"], 32));
-		n->set_is_private(OSUtils::jsonBool(j["private"], true));
-		n->set_remote_trace_level(OSUtils::jsonInt(j["remoteTraceLevel"], 0));
-		n->set_remote_trace_target(OSUtils::jsonString(j["remoteTraceTarget"], ""));
-		n->set_revision(OSUtils::jsonInt(j["revision"], 0));
+		n->set_mtu(OSUtils::jsonInt(jfield(j, "mtu"), 2800));
+		n->set_multicast_limit(OSUtils::jsonInt(jfield(j, "multicastLimit"), 32));
+		n->set_is_private(OSUtils::jsonBool(jfield(j, "private"), true));
+		n->set_remote_trace_level(OSUtils::jsonInt(jfield(j, "remoteTraceLevel"), 0));
+		n->set_remote_trace_target(OSUtils::jsonString(jfield(j, "remoteTraceTarget"), ""));
+		n->set_revision(OSUtils::jsonInt(jfield(j, "revision"), 0));
 
-		for (const auto& p : j["routes"]) {
+		for (const auto& p : jfield(j, "routes")) {
 			if (p.is_object()) {
 				auto r = n->add_routes();
-				r->set_target(OSUtils::jsonString(p["target"], ""));
-				r->set_via(OSUtils::jsonString(p["via"], ""));
+				r->set_target(OSUtils::jsonString(jfield(p, "target"), ""));
+				r->set_via(OSUtils::jsonString(jfield(p, "via"), ""));
 			}
 		}
 		std::string rules;
-		if (j["rules"].is_array()) {
-			rules = OSUtils::jsonDump(j["rules"], -1);
+		if (jfield(j, "rules").is_array()) {
+			rules = OSUtils::jsonDump(jfield(j, "rules"), -1);
 		}
 		else {
 			rules = "[]";
@@ -266,8 +279,8 @@ pbmessages::NetworkChange_Network* networkFromJson(const nlohmann::json& j)
 		n->set_rules(rules);
 
 		std::string tags;
-		if (j["tags"].is_array()) {
-			tags = OSUtils::jsonDump(j["tags"], -1);
+		if (jfield(j, "tags").is_array()) {
+			tags = OSUtils::jsonDump(jfield(j, "tags"), -1);
 		}
 		else {
 			tags = "[]";
@@ -275,22 +288,22 @@ pbmessages::NetworkChange_Network* networkFromJson(const nlohmann::json& j)
 		n->set_tags(tags);
 
 		pbmessages::NetworkChange_IPV4AssignMode* v4am = new pbmessages::NetworkChange_IPV4AssignMode();
-		if (j["v4AssignMode"].is_object()) {
-			nlohmann::json am = j["v4AssignMode"];
+		if (jfield(j, "v4AssignMode").is_object()) {
+			nlohmann::json am = jfield(j, "v4AssignMode");
 			v4am->set_zt(OSUtils::jsonBool(am["zt"], false));
 		}
 		n->set_allocated_ipv4_assign_mode(v4am);
 
 		pbmessages::NetworkChange_IPV6AssignMode* v6am = new pbmessages::NetworkChange_IPV6AssignMode();
-		if (j["v6AssignMode"].is_object()) {
-			nlohmann::json am = j["v6AssignMode"];
+		if (jfield(j, "v6AssignMode").is_object()) {
+			nlohmann::json am = jfield(j, "v6AssignMode");
 			v6am->set_zt(OSUtils::jsonBool(am["zt"], false));
 			v6am->set_six_plane(OSUtils::jsonBool(am["6plane"], false));
 			v6am->set_rfc4193(OSUtils::jsonBool(am["rfc4193"], false));
 		}
 		n->set_allocated_ipv6_assign_mode(v6am);
 
-		nlohmann::json jdns = j["dns"];
+		nlohmann::json jdns = jfield(j, "dns");
 		if (jdns.is_object()) {
 			pbmessages::NetworkChange_DNS* dns = new pbmessages::NetworkChange_DNS();
 			dns->set_domain(jdns.value("domain", ""));
@@ -303,14 +316,14 @@ pbmessages::NetworkChange_Network* networkFromJson(const nlohmann::json& j)
 			n->set_allocated_dns(dns);
 		}
 
-		n->set_sso_enabled(OSUtils::jsonBool(j["ssoEnabled"], false));
-		nlohmann::json ssocfg = j["ssoConfig"];
+		n->set_sso_enabled(OSUtils::jsonBool(jfield(j, "ssoEnabled"), false));
+		nlohmann::json ssocfg = jfield(j, "ssoConfig");
 		if (ssocfg.is_object()) {
 			n->set_sso_client_id(OSUtils::jsonString(ssocfg["ssoClientId"], ""));
 			n->set_sso_linked_id(OSUtils::jsonString(ssocfg["ssoLinkedId"], ""));
 		}
 
-		n->set_rules_source(OSUtils::jsonString(j["rulesSource"], ""));
+		n->set_rules_source(OSUtils::jsonString(jfield(j, "rulesSource"), ""));
 	}
 	catch (const std::exception& e) {
 		ZTC_LOG("Exception parsing network JSON: %s\n", e.what());
@@ -346,12 +359,12 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 
 	pbmessages::MemberChange_Member* m = new pbmessages::MemberChange_Member();
 	try {
-		m->set_network_id(OSUtils::jsonString(j["nwid"], ""));
-		m->set_device_id(OSUtils::jsonString(j["id"], ""));
-		m->set_identity(OSUtils::jsonString(j["identity"], ""));
-		m->set_authorized(OSUtils::jsonBool(j["authorized"], false));
-		if (j["ipAssignments"].is_array()) {
-			for (const auto& addr : j["ipAssignments"]) {
+		m->set_network_id(OSUtils::jsonString(jfield(j, "nwid"), ""));
+		m->set_device_id(OSUtils::jsonString(jfield(j, "id"), ""));
+		m->set_identity(OSUtils::jsonString(jfield(j, "identity"), ""));
+		m->set_authorized(OSUtils::jsonBool(jfield(j, "authorized"), false));
+		if (jfield(j, "ipAssignments").is_array()) {
+			for (const auto& addr : jfield(j, "ipAssignments")) {
 				if (addr.is_string()) {
 					auto a = m->add_ip_assignments();
 					std::string address = addr.get<std::string>();
@@ -359,9 +372,9 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 				}
 			}
 		}
-		m->set_active_bridge(OSUtils::jsonBool(j["activeBridge"], false));
-		if (j["tags"].is_array()) {
-			nlohmann::json tags = j["tags"];
+		m->set_active_bridge(OSUtils::jsonBool(jfield(j, "activeBridge"), false));
+		if (jfield(j, "tags").is_array()) {
+			nlohmann::json tags = jfield(j, "tags");
 			std::string tagsStr = OSUtils::jsonDump(tags, -1);
 			m->set_tags(tagsStr);
 		}
@@ -370,8 +383,8 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 			std::string tagsStr = OSUtils::jsonDump(tags, -1);
 			m->set_tags(tagsStr);
 		}
-		if (j["capabilities"].is_array()) {
-			nlohmann::json caps = j["capabilities"];
+		if (jfield(j, "capabilities").is_array()) {
+			nlohmann::json caps = jfield(j, "capabilities");
 			std::string capsStr = OSUtils::jsonDump(caps, -1);
 			m->set_capabilities(capsStr);
 		}
@@ -380,21 +393,21 @@ pbmessages::MemberChange_Member* memberFromJson(const nlohmann::json& j)
 			std::string capsStr = OSUtils::jsonDump(caps, -1);
 			m->set_capabilities(capsStr);
 		}
-		m->set_creation_time(OSUtils::jsonInt(j["creationTime"], 0));
-		m->set_no_auto_assign_ips(OSUtils::jsonBool(j["noAutoAssignIps"], false));
-		m->set_revision(OSUtils::jsonInt(j["revision"], 0));
-		m->set_last_authorized_time(OSUtils::jsonInt(j["lastAuthorizedTime"], 0));
-		m->set_last_deauthorized_time(OSUtils::jsonInt(j["lastDeauthorizedTime"], 0));
-		m->set_last_authorized_credential_type(OSUtils::jsonString(j["lastAuthorizedCredentialType"], ""));
-		m->set_last_authorized_credential(OSUtils::jsonString(j["lastAuthorizedCredential"], ""));
-		m->set_version_major(OSUtils::jsonInt(j["vMajor"], 0));
-		m->set_version_minor(OSUtils::jsonInt(j["vMinor"], 0));
-		m->set_version_rev(OSUtils::jsonInt(j["vRev"], 0));
-		m->set_version_protocol(OSUtils::jsonInt(j["vProto"], 0));
-		m->set_remote_trace_level(OSUtils::jsonInt(j["remoteTraceLevel"], 0));
-		m->set_remote_trace_target(OSUtils::jsonString(j["remoteTraceTarget"], ""));
-		m->set_sso_exempt(OSUtils::jsonBool(j["ssoExempt"], false));
-		m->set_auth_expiry_time(OSUtils::jsonInt(j["authenticationExpiryTime"], 0));
+		m->set_creation_time(OSUtils::jsonInt(jfield(j, "creationTime"), 0));
+		m->set_no_auto_assign_ips(OSUtils::jsonBool(jfield(j, "noAutoAssignIps"), false));
+		m->set_revision(OSUtils::jsonInt(jfield(j, "revision"), 0));
+		m->set_last_authorized_time(OSUtils::jsonInt(jfield(j, "lastAuthorizedTime"), 0));
+		m->set_last_deauthorized_time(OSUtils::jsonInt(jfield(j, "lastDeauthorizedTime"), 0));
+		m->set_last_authorized_credential_type(OSUtils::jsonString(jfield(j, "lastAuthorizedCredentialType"), ""));
+		m->set_last_authorized_credential(OSUtils::jsonString(jfield(j, "lastAuthorizedCredential"), ""));
+		m->set_version_major(OSUtils::jsonInt(jfield(j, "vMajor"), 0));
+		m->set_version_minor(OSUtils::jsonInt(jfield(j, "vMinor"), 0));
+		m->set_version_rev(OSUtils::jsonInt(jfield(j, "vRev"), 0));
+		m->set_version_protocol(OSUtils::jsonInt(jfield(j, "vProto"), 0));
+		m->set_remote_trace_level(OSUtils::jsonInt(jfield(j, "remoteTraceLevel"), 0));
+		m->set_remote_trace_target(OSUtils::jsonString(jfield(j, "remoteTraceTarget"), ""));
+		m->set_sso_exempt(OSUtils::jsonBool(jfield(j, "ssoExempt"), false));
+		m->set_auth_expiry_time(OSUtils::jsonInt(jfield(j, "authenticationExpiryTime"), 0));
 	}
 	catch (const std::exception& e) {
 		ZTC_LOG("Exception parsing member JSON: %s\n", e.what());

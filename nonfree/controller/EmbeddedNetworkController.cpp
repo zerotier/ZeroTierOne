@@ -53,8 +53,8 @@ using json = nlohmann::json;
 // member picks up the change on its next poll) to bound memory under churn.
 // Hard safety backstop on the request-queue depth. Per-member de-dup (see request()) keeps the
 // real depth ~= the online-member count; this only bounds pathological overflow. ~1.3 KB/entry,
-// so 262144 ~= 340 MB worst case (well within the pod memory limit).
-#define ZT_CONTROLLER_MAX_QUEUED_REREQUESTS 262144
+// so 2097152 ~= 2.6 GB worst case (well within the pod memory limit).
+#define ZT_CONTROLLER_MAX_QUEUED_REREQUESTS 2097152
 
 namespace ZeroTier {
 
@@ -2516,7 +2516,12 @@ void EmbeddedNetworkController::_startThreads()
 	if (! _threads.empty()) {
 		return;
 	}
+#ifdef ZT1_CENTRAL_CONTROLLER
+    // Ensure central controllers have at least 8 threads running to process network config requests
+    const long hwc = std::max((long)std::thread::hardware_concurrency(), (long)8);
+#else
 	const long hwc = std::max((long)std::thread::hardware_concurrency(), (long)1);
+#endif
 	for (long t = 0; t < hwc; ++t) {
 		_threads.emplace_back([this, t]() {
 			Metrics::network_config_request_threads++;
