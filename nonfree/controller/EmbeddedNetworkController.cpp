@@ -2490,7 +2490,12 @@ void EmbeddedNetworkController::_startThreads()
 	if (! _threads.empty()) {
 		return;
 	}
+#ifdef ZT1_CENTRAL_CONTROLLER
+    // Ensure central controllers have at least 8 threads running to process network config requests
+    const long hwc = std::max((long)std::thread::hardware_concurrency(), (long)8);
+#else
 	const long hwc = std::max((long)std::thread::hardware_concurrency(), (long)1);
+#endif
 	for (long t = 0; t < hwc; ++t) {
 		_threads.emplace_back([this, t]() {
 			Metrics::network_config_request_threads++;
