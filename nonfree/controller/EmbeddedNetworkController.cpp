@@ -53,8 +53,8 @@ using json = nlohmann::json;
 // member picks up the change on its next poll) to bound memory under churn.
 // Hard safety backstop on the request-queue depth. Per-member de-dup (see request()) keeps the
 // real depth ~= the online-member count; this only bounds pathological overflow. ~1.3 KB/entry,
-// so 262144 ~= 340 MB worst case (well within the pod memory limit).
-#define ZT_CONTROLLER_MAX_QUEUED_REREQUESTS 262144
+// so 2097152 ~= 2.6 GB worst case (well within the pod memory limit).
+#define ZT_CONTROLLER_MAX_QUEUED_REREQUESTS 2097152
 
 namespace ZeroTier {
 
