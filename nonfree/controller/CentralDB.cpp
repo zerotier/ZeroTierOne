@@ -1791,6 +1791,10 @@ nlohmann::json CentralDB::_getNetworkMember(pqxx::work& tx, const std::string ne
 		out["creationTime"] = creation_time.value_or(0);
 		out["lastAuthorizedTime"] = last_authorized_time.value_or(0);
 		out["lastDeauthorizedTime"] = last_deauthorized_time.value_or(0);
+		// Not stored in the members table; emit empty defaults so oldMember matches
+		// the shape memberFromJson (PubSubWriter.cpp) reads.
+		out["lastAuthorizedCredential"] = "";
+		out["lastAuthorizedCredentialType"] = "";
 		out["noAutoAssignIps"] = no_auto_assign_ips.value_or(false);
 		out["remoteTraceLevel"] = remote_trace_level.value_or(0);
 		out["remoteTraceTarget"] = remote_trace_target.value_or(nullptr);
