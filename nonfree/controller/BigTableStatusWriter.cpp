@@ -9,8 +9,10 @@
 #include "CtlUtil.hpp"
 #include "PubSubWriter.hpp"
 
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <deque>
 #include <functional>
 #include <google/cloud/bigtable/mutations.h>
 #include <google/cloud/bigtable/row.h>
@@ -42,12 +44,13 @@ static const int64_t kCacheEntryTtlMs = 24LL * 60 * 60 * 1000;	// 24 hours
 static const int64_t kEvictionIntervalMs = 60LL * 60 * 1000;	// sweep at most hourly
 // Bigtable's MutateRows API rejects requests containing more than 100,000
 // mutations (SetCells) total, and google-cloud-cpp sends a BulkMutation as a
-// single request -- it never splits by mutation count.  Each row here adds up
-// to 5 SetCells, so a cold node_info cache (e.g. the first flush after a
-// restart) can push one batch far past the limit.  Flush in chunks
-// comfortably under the limit.
-static const size_t kMaxMutationsPerBulk = 25000;
-static const size_t kMaxMutationsPerRow = 5;	// 3 node_info + 1 ip + 1 last_seen
+// single request -- it never splits by mutation count.  Rather than one big
+// batch per cycle, send small batches (500 rows x <=5 SetCells each, far below
+// the limit) and keep several in flight at once: small requests spread load
+// across tablet servers and a slow tablet only stalls its own batch, while the
+// parallel window keeps the total flush time low.
+static const size_t kRowsPerBatch = 500;
+static const size_t kMaxParallelBatches = 8;
 
 BigTableStatusWriter::BigTableStatusWriter(
 	const std::string& project_id,
@@ -120,35 +123,44 @@ void BigTableStatusWriter::writePending()
 	const int64_t nowMs = OSUtils::now();
 	const std::hash<std::string> hasher;
 
-	cbt::BulkMutation bulk;
-	// Row-key hash for each row in the current chunk, aligned with bulk's indices,
-	// so a failed mutation can invalidate its cache entry
-	// (FailedMutation::original_index() is relative to the chunk's BulkApply).
-	std::vector<uint64_t> bulkRowHashes;
-	bulkRowHashes.reserve(toWrite.size());
-	size_t bulkMutationCount = 0;	// SetCells accumulated in the current chunk
-	size_t chunkStart = 0;			// index into toWrite of the current chunk's first entry
+	// One small AsyncBulkApply per kRowsPerBatch rows, with up to
+	// kMaxParallelBatches in flight at once.  The connection's background
+	// threads only fulfill the futures; results are always processed on this
+	// thread, so _lastNodeInfo and the re-queue list need no extra locking.
+	struct InFlightBatch {
+		google::cloud::future<std::vector<cbt::FailedMutation>> result;
+		// Row-key hash per row, aligned with the batch's indices, so a failed
+		// mutation can invalidate its cache entry
+		// (FailedMutation::original_index() is relative to this batch's request).
+		std::vector<uint64_t> rowHashes;
+		size_t entryStart;	// index into toWrite of this batch's first entry
+		size_t entryCount;
+		size_t mutationCount;
+	};
+	std::deque<InFlightBatch> inFlight;
+	// Entries whose batch outcome is unknown (the write threw); re-queued for
+	// the next cycle in a single call once every batch has been drained.
+	std::vector<PendingStatusEntry> toRequeue;
+	size_t totalFailures = 0;
 
-	// Flush the accumulated chunk.  Per-mutation failures are logged and their
-	// cache entries dropped.  If BulkApply throws, the chunk's outcome is unknown:
-	// invalidate its cache entries and re-queue the not-yet-written tail of
-	// toWrite, then return false so the caller aborts (earlier chunks were
-	// already applied, so they are not re-queued).
-	auto flushChunk = [&]() -> bool {
-		if (bulk.size() == 0) {
-			return true;
-		}
-		ZTC_LOG("Applying %zu rows (%zu mutations) to BigTable\n", bulk.size(), bulkMutationCount);
+	// Wait for a batch's result and handle it.  Per-mutation failures are
+	// logged and their cache entries dropped.  If the write threw, the batch's
+	// outcome is unknown: invalidate its cache entries and collect its entries
+	// for re-queueing.  Other batches are unaffected either way.
+	auto processBatch = [&](InFlightBatch& batch) {
 		try {
-			std::vector<cbt::FailedMutation> failures = _table->BulkApply(std::move(bulk));
-			ZTC_LOG("BigTable write completed with %zu failures\n", failures.size());
+			std::vector<cbt::FailedMutation> failures = batch.result.get();
+			ZTC_LOG(
+				"BigTable batch of %zu rows (%zu mutations) completed with %zu failures\n", batch.rowHashes.size(),
+				batch.mutationCount, failures.size());
+			totalFailures += failures.size();
 			for (auto const& r : failures) {
 				std::cerr << ::ZeroTier::controllerLogId() << " Error writing to BigTable: " << r.status() << "\n";
 				// Drop the cache entry for any failed row so its node_info is rewritten
 				// next cycle rather than being assumed durably written.
 				const int idx = r.original_index();
-				if (idx >= 0 && static_cast<size_t>(idx) < bulkRowHashes.size()) {
-					_lastNodeInfo.erase(bulkRowHashes[idx]);
+				if (idx >= 0 && static_cast<size_t>(idx) < batch.rowHashes.size()) {
+					_lastNodeInfo.erase(batch.rowHashes[idx]);
 				}
 			}
 		}
@@ -156,95 +168,107 @@ void BigTableStatusWriter::writePending()
 			ZTC_LOG("Exception writing to BigTable: %s\n", e.what());
 			span->SetAttribute("error", e.what());
 			span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
-			// The chunk's outcome is unknown, so clear the rows it covered to force a
+			// The batch's outcome is unknown, so clear the rows it covered to force a
 			// node_info rewrite next cycle rather than trusting an optimistic update.
-			for (uint64_t keyHash : bulkRowHashes) {
+			for (uint64_t keyHash : batch.rowHashes) {
 				_lastNodeInfo.erase(keyHash);
 			}
-			// Don't drop the unwritten entries -- re-queue this chunk and everything
-			// after it for the next cycle.
-			std::vector<PendingStatusEntry> tail(
-				std::make_move_iterator(toWrite.begin() + static_cast<std::ptrdiff_t>(chunkStart)),
-				std::make_move_iterator(toWrite.end()));
-			requeuePendingStatus(_pending, _lock, std::move(tail), "BigTableStatusWriter");
-			return false;
+			// Don't drop the batch -- collect its entries for the next cycle.
+			toRequeue.insert(
+				toRequeue.end(), std::make_move_iterator(toWrite.begin() + static_cast<std::ptrdiff_t>(batch.entryStart)),
+				std::make_move_iterator(
+					toWrite.begin() + static_cast<std::ptrdiff_t>(batch.entryStart + batch.entryCount)));
 		}
-		bulk = cbt::BulkMutation();
-		bulkRowHashes.clear();
-		bulkMutationCount = 0;
-		return true;
 	};
 
-	for (size_t i = 0; i < toWrite.size(); ++i) {
-		const auto& entry = toWrite[i];
+	ZTC_LOG("Applying %zu rows to BigTable in batches of %zu\n", toWrite.size(), kRowsPerBatch);
 
-		// Flush first if this row could push the chunk past the cap.  Uses the
-		// worst-case per-row count and runs before any _lastNodeInfo access for
-		// this row, so a failed flush never strands an optimistic cache update
-		// for a row that was never sent.
-		if (bulkMutationCount + kMaxMutationsPerRow > kMaxMutationsPerBulk) {
-			if (! flushChunk()) {
-				return;
+	for (size_t batchStart = 0; batchStart < toWrite.size(); batchStart += kRowsPerBatch) {
+		const size_t batchEnd = std::min(batchStart + kRowsPerBatch, toWrite.size());
+
+		cbt::BulkMutation bulk;
+		InFlightBatch batch;
+		batch.entryStart = batchStart;
+		batch.entryCount = batchEnd - batchStart;
+		batch.mutationCount = 0;
+		batch.rowHashes.reserve(batch.entryCount);
+
+		for (size_t i = batchStart; i < batchEnd; ++i) {
+			const auto& entry = toWrite[i];
+
+			std::string row_key = entry.network_id + "#" + entry.node_id;
+			const uint64_t keyHash = hasher(row_key);
+
+			// Use the member's last-seen time (epoch ms) as the explicit cell timestamp for
+			// every cell in this row.  With a server-set timestamp each SetCell lands at a
+			// fresh server clock value, so re-applying the same mutation creates a *new* cell
+			// version instead of overwriting -- non-idempotent, and google-cloud-cpp won't
+			// retry such writes.  A deterministic timestamp makes a re-applied update an exact
+			// overwrite (idempotent + safely retriable).  Bigtable cell timestamps are
+			// millisecond-granular, so last_seen (already ms) aligns exactly; it's also
+			// monotonic per member, so a later check-in always reads as the newest version.
+			// It also makes duplicate rows racing across parallel batches order-independent.
+			const std::chrono::milliseconds cellTs(entry.last_seen);
+
+			cbt::SingleRowMutation m(row_key);
+			size_t rowMutations = 0;
+
+			// node_info (os/arch/version) changes rarely.  Write it only when our
+			// last-written value for this row differs, or hasn't been refreshed in a
+			// while -- no read RPC, the controller is the sole writer of node_info.
+			const uint64_t valueHash = hasher(entry.os + "|" + entry.arch + "|" + entry.version);
+			auto it = _lastNodeInfo.find(keyHash);
+			const bool writeNodeInfo = (it == _lastNodeInfo.end()) || (it->second.valueHash != valueHash)
+				|| ((nowMs - it->second.lastWrittenMs) > kNodeInfoRefreshMs);
+
+			if (writeNodeInfo) {
+				m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, osColumn, cellTs, entry.os));
+				m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, archColumn, cellTs, entry.arch));
+				m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, versionColumn, cellTs, entry.version));
+				rowMutations += 3;
+				_lastNodeInfo[keyHash] = NodeInfoState { valueHash, nowMs, nowMs };
 			}
-			chunkStart = i;
-		}
+			else {
+				it->second.lastSeenMs = nowMs;
+			}
 
-		std::string row_key = entry.network_id + "#" + entry.node_id;
-		const uint64_t keyHash = hasher(row_key);
-
-		// Use the member's last-seen time (epoch ms) as the explicit cell timestamp for
-		// every cell in this row.  With a server-set timestamp each SetCell lands at a
-		// fresh server clock value, so re-applying the same mutation creates a *new* cell
-		// version instead of overwriting -- non-idempotent, and google-cloud-cpp won't
-		// retry such writes.  A deterministic timestamp makes a re-applied update an exact
-		// overwrite (idempotent + safely retriable).  Bigtable cell timestamps are
-		// millisecond-granular, so last_seen (already ms) aligns exactly; it's also
-		// monotonic per member, so a later check-in always reads as the newest version.
-		const std::chrono::milliseconds cellTs(entry.last_seen);
-
-		cbt::SingleRowMutation m(row_key);
-		size_t rowMutations = 0;
-
-		// node_info (os/arch/version) changes rarely.  Write it only when our
-		// last-written value for this row differs, or hasn't been refreshed in a
-		// while -- no read RPC, the controller is the sole writer of node_info.
-		const uint64_t valueHash = hasher(entry.os + "|" + entry.arch + "|" + entry.version);
-		auto it = _lastNodeInfo.find(keyHash);
-		const bool writeNodeInfo = (it == _lastNodeInfo.end()) || (it->second.valueHash != valueHash)
-			|| ((nowMs - it->second.lastWrittenMs) > kNodeInfoRefreshMs);
-
-		if (writeNodeInfo) {
-			m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, osColumn, cellTs, entry.os));
-			m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, archColumn, cellTs, entry.arch));
-			m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, versionColumn, cellTs, entry.version));
-			rowMutations += 3;
-			_lastNodeInfo[keyHash] = NodeInfoState { valueHash, nowMs, nowMs };
-		}
-		else {
-			it->second.lastSeenMs = nowMs;
-		}
-
-		// check_in (ip + last_seen) changes every cycle, so it's always written.
-		char buf[64] = { 0 };
-		std::string addressStr = entry.address.toString(buf);
-		if (entry.address.ss_family == AF_INET) {
-			m.emplace_back(cbt::SetCell(checkInColumnFamily, ipv4Column, cellTs, std::move(addressStr)));
+			// check_in (ip + last_seen) changes every cycle, so it's always written.
+			char buf[64] = { 0 };
+			std::string addressStr = entry.address.toString(buf);
+			if (entry.address.ss_family == AF_INET) {
+				m.emplace_back(cbt::SetCell(checkInColumnFamily, ipv4Column, cellTs, std::move(addressStr)));
+				rowMutations++;
+			}
+			else if (entry.address.ss_family == AF_INET6) {
+				m.emplace_back(cbt::SetCell(checkInColumnFamily, ipv6Column, cellTs, std::move(addressStr)));
+				rowMutations++;
+			}
+			m.emplace_back(cbt::SetCell(checkInColumnFamily, lastSeenColumn, cellTs, entry.last_seen));
 			rowMutations++;
-		}
-		else if (entry.address.ss_family == AF_INET6) {
-			m.emplace_back(cbt::SetCell(checkInColumnFamily, ipv6Column, cellTs, std::move(addressStr)));
-			rowMutations++;
-		}
-		m.emplace_back(cbt::SetCell(checkInColumnFamily, lastSeenColumn, cellTs, entry.last_seen));
-		rowMutations++;
 
-		bulk.emplace_back(m);
-		bulkRowHashes.push_back(keyHash);
-		bulkMutationCount += rowMutations;
+			bulk.emplace_back(m);
+			batch.rowHashes.push_back(keyHash);
+			batch.mutationCount += rowMutations;
+		}
+
+		// Keep at most kMaxParallelBatches in flight: before launching another,
+		// wait for the oldest and handle its result.
+		if (inFlight.size() >= kMaxParallelBatches) {
+			processBatch(inFlight.front());
+			inFlight.pop_front();
+		}
+		batch.result = _table->AsyncBulkApply(std::move(bulk));
+		inFlight.push_back(std::move(batch));
 	}
 
-	if (! flushChunk()) {
-		return;
+	while (! inFlight.empty()) {
+		processBatch(inFlight.front());
+		inFlight.pop_front();
+	}
+
+	ZTC_LOG("BigTable write completed with %zu failures\n", totalFailures);
+	if (! toRequeue.empty()) {
+		requeuePendingStatus(_pending, _lock, std::move(toRequeue), "BigTableStatusWriter");
 	}
 
 	// Periodically evict rows we haven't seen lately so the cache tracks the
