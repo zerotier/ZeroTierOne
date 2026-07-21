@@ -143,6 +143,7 @@ void BigTableStatusWriter::writePending()
 		std::vector<cbt::FailedMutation> failures;
 		bool threw = false;
 		std::string error;
+		int64_t durationMs = 0;
 	};
 	std::vector<WriteBatch> batches;
 	batches.reserve((toWrite.size() + kRowsPerBatch - 1) / kRowsPerBatch);
@@ -225,6 +226,7 @@ void BigTableStatusWriter::writePending()
 		workers.emplace_back([this, &batches, &nextBatch]() {
 			for (size_t i = nextBatch.fetch_add(1); i < batches.size(); i = nextBatch.fetch_add(1)) {
 				WriteBatch& b = batches[i];
+				const auto start = std::chrono::steady_clock::now();
 				try {
 					b.failures = _table->BulkApply(std::move(b.bulk));
 				}
@@ -232,6 +234,9 @@ void BigTableStatusWriter::writePending()
 					b.threw = true;
 					b.error = e.what();
 				}
+				b.durationMs =
+					std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - start)
+						.count();
 			}
 		});
 	}
@@ -251,7 +256,7 @@ void BigTableStatusWriter::writePending()
 			// The batch's outcome is unknown, so clear the rows it covered to force a
 			// node_info rewrite next cycle rather than trusting an optimistic update,
 			// and re-queue all of its entries.
-			ZTC_LOG("Exception writing to BigTable: %s\n", batch.error.c_str());
+			ZTC_LOG("Exception writing to BigTable after %lld ms: %s\n", (long long)batch.durationMs, batch.error.c_str());
 			span->SetAttribute("error", batch.error);
 			span->SetStatus(opentelemetry::trace::StatusCode::kError, batch.error);
 			for (uint64_t keyHash : batch.rowHashes) {
@@ -264,8 +269,8 @@ void BigTableStatusWriter::writePending()
 			continue;
 		}
 		ZTC_LOG(
-			"BigTable batch of %zu rows (%zu mutations) completed with %zu failures\n", batch.rowHashes.size(),
-			batch.mutationCount, batch.failures.size());
+			"BigTable batch of %zu rows (%zu mutations) completed with %zu failures in %lld ms\n",
+			batch.rowHashes.size(), batch.mutationCount, batch.failures.size(), (long long)batch.durationMs);
 		totalFailures += batch.failures.size();
 		for (auto const& r : batch.failures) {
 			std::cerr << ::ZeroTier::controllerLogId() << " Error writing to BigTable: " << r.status() << "\n";
