@@ -10,10 +10,12 @@
 #include "PubSubWriter.hpp"
 
 #include <chrono>
+#include <cstddef>
 #include <functional>
 #include <google/cloud/bigtable/mutations.h>
 #include <google/cloud/bigtable/row.h>
 #include <google/cloud/bigtable/table.h>
+#include <iterator>
 #include <opentelemetry/trace/provider.h>
 
 namespace cbt = google::cloud::bigtable;
@@ -38,6 +40,14 @@ static const int64_t kNodeInfoRefreshMs = 6LL * 24 * 60 * 60 * 1000;	// 6 days
 // offline), so the cache tracks the active set rather than every node ever seen.
 static const int64_t kCacheEntryTtlMs = 24LL * 60 * 60 * 1000;	// 24 hours
 static const int64_t kEvictionIntervalMs = 60LL * 60 * 1000;	// sweep at most hourly
+// Bigtable's MutateRows API rejects requests containing more than 100,000
+// mutations (SetCells) total, and google-cloud-cpp sends a BulkMutation as a
+// single request -- it never splits by mutation count.  Each row here adds up
+// to 5 SetCells, so a cold node_info cache (e.g. the first flush after a
+// restart) can push one batch far past the limit.  Flush in chunks
+// comfortably under the limit.
+static const size_t kMaxMutationsPerBulk = 25000;
+static const size_t kMaxMutationsPerRow = 5;	// 3 node_info + 1 ip + 1 last_seen
 
 BigTableStatusWriter::BigTableStatusWriter(
 	const std::string& project_id,
@@ -111,12 +121,74 @@ void BigTableStatusWriter::writePending()
 	const std::hash<std::string> hasher;
 
 	cbt::BulkMutation bulk;
-	// Row-key hash for each mutation, aligned with bulk's indices, so a failed
-	// mutation can invalidate its cache entry (FailedMutation::original_index()).
+	// Row-key hash for each row in the current chunk, aligned with bulk's indices,
+	// so a failed mutation can invalidate its cache entry
+	// (FailedMutation::original_index() is relative to the chunk's BulkApply).
 	std::vector<uint64_t> bulkRowHashes;
 	bulkRowHashes.reserve(toWrite.size());
+	size_t bulkMutationCount = 0;	// SetCells accumulated in the current chunk
+	size_t chunkStart = 0;			// index into toWrite of the current chunk's first entry
 
-	for (const auto& entry : toWrite) {
+	// Flush the accumulated chunk.  Per-mutation failures are logged and their
+	// cache entries dropped.  If BulkApply throws, the chunk's outcome is unknown:
+	// invalidate its cache entries and re-queue the not-yet-written tail of
+	// toWrite, then return false so the caller aborts (earlier chunks were
+	// already applied, so they are not re-queued).
+	auto flushChunk = [&]() -> bool {
+		if (bulk.size() == 0) {
+			return true;
+		}
+		ZTC_LOG("Applying %zu rows (%zu mutations) to BigTable\n", bulk.size(), bulkMutationCount);
+		try {
+			std::vector<cbt::FailedMutation> failures = _table->BulkApply(std::move(bulk));
+			ZTC_LOG("BigTable write completed with %zu failures\n", failures.size());
+			for (auto const& r : failures) {
+				std::cerr << ::ZeroTier::controllerLogId() << " Error writing to BigTable: " << r.status() << "\n";
+				// Drop the cache entry for any failed row so its node_info is rewritten
+				// next cycle rather than being assumed durably written.
+				const int idx = r.original_index();
+				if (idx >= 0 && static_cast<size_t>(idx) < bulkRowHashes.size()) {
+					_lastNodeInfo.erase(bulkRowHashes[idx]);
+				}
+			}
+		}
+		catch (const std::exception& e) {
+			ZTC_LOG("Exception writing to BigTable: %s\n", e.what());
+			span->SetAttribute("error", e.what());
+			span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
+			// The chunk's outcome is unknown, so clear the rows it covered to force a
+			// node_info rewrite next cycle rather than trusting an optimistic update.
+			for (uint64_t keyHash : bulkRowHashes) {
+				_lastNodeInfo.erase(keyHash);
+			}
+			// Don't drop the unwritten entries -- re-queue this chunk and everything
+			// after it for the next cycle.
+			std::vector<PendingStatusEntry> tail(
+				std::make_move_iterator(toWrite.begin() + static_cast<std::ptrdiff_t>(chunkStart)),
+				std::make_move_iterator(toWrite.end()));
+			requeuePendingStatus(_pending, _lock, std::move(tail), "BigTableStatusWriter");
+			return false;
+		}
+		bulk = cbt::BulkMutation();
+		bulkRowHashes.clear();
+		bulkMutationCount = 0;
+		return true;
+	};
+
+	for (size_t i = 0; i < toWrite.size(); ++i) {
+		const auto& entry = toWrite[i];
+
+		// Flush first if this row could push the chunk past the cap.  Uses the
+		// worst-case per-row count and runs before any _lastNodeInfo access for
+		// this row, so a failed flush never strands an optimistic cache update
+		// for a row that was never sent.
+		if (bulkMutationCount + kMaxMutationsPerRow > kMaxMutationsPerBulk) {
+			if (! flushChunk()) {
+				return;
+			}
+			chunkStart = i;
+		}
+
 		std::string row_key = entry.network_id + "#" + entry.node_id;
 		const uint64_t keyHash = hasher(row_key);
 
@@ -131,6 +203,7 @@ void BigTableStatusWriter::writePending()
 		const std::chrono::milliseconds cellTs(entry.last_seen);
 
 		cbt::SingleRowMutation m(row_key);
+		size_t rowMutations = 0;
 
 		// node_info (os/arch/version) changes rarely.  Write it only when our
 		// last-written value for this row differs, or hasn't been refreshed in a
@@ -144,6 +217,7 @@ void BigTableStatusWriter::writePending()
 			m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, osColumn, cellTs, entry.os));
 			m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, archColumn, cellTs, entry.arch));
 			m.emplace_back(cbt::SetCell(nodeInfoColumnFamily, versionColumn, cellTs, entry.version));
+			rowMutations += 3;
 			_lastNodeInfo[keyHash] = NodeInfoState { valueHash, nowMs, nowMs };
 		}
 		else {
@@ -155,42 +229,21 @@ void BigTableStatusWriter::writePending()
 		std::string addressStr = entry.address.toString(buf);
 		if (entry.address.ss_family == AF_INET) {
 			m.emplace_back(cbt::SetCell(checkInColumnFamily, ipv4Column, cellTs, std::move(addressStr)));
+			rowMutations++;
 		}
 		else if (entry.address.ss_family == AF_INET6) {
 			m.emplace_back(cbt::SetCell(checkInColumnFamily, ipv6Column, cellTs, std::move(addressStr)));
+			rowMutations++;
 		}
 		m.emplace_back(cbt::SetCell(checkInColumnFamily, lastSeenColumn, cellTs, entry.last_seen));
+		rowMutations++;
 
 		bulk.emplace_back(m);
 		bulkRowHashes.push_back(keyHash);
+		bulkMutationCount += rowMutations;
 	}
 
-	ZTC_LOG("Applying %zu mutations to BigTable\n", bulk.size());
-
-	try {
-		std::vector<cbt::FailedMutation> failures = _table->BulkApply(std::move(bulk));
-		ZTC_LOG("BigTable write completed with %zu failures\n", failures.size());
-		for (auto const& r : failures) {
-			std::cerr << ::ZeroTier::controllerLogId() << " Error writing to BigTable: " << r.status() << "\n";
-			// Drop the cache entry for any failed row so its node_info is rewritten
-			// next cycle rather than being assumed durably written.
-			const int idx = r.original_index();
-			if (idx >= 0 && static_cast<size_t>(idx) < bulkRowHashes.size()) {
-				_lastNodeInfo.erase(bulkRowHashes[idx]);
-			}
-		}
-	}
-	catch (const std::exception& e) {
-		ZTC_LOG("Exception writing to BigTable: %s\n", e.what());
-		span->SetAttribute("error", e.what());
-		span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
-		// The batch's outcome is unknown, so clear the rows it covered to force a
-		// node_info rewrite next cycle rather than trusting an optimistic update.
-		for (uint64_t keyHash : bulkRowHashes) {
-			_lastNodeInfo.erase(keyHash);
-		}
-		// Don't drop the batch — re-queue it for the next cycle.
-		requeuePendingStatus(_pending, _lock, std::move(toWrite), "BigTableStatusWriter");
+	if (! flushChunk()) {
 		return;
 	}
 
