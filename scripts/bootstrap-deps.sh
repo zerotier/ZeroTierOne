@@ -79,6 +79,7 @@ else
             -DWITH_BENCHMARK=OFF -DWITH_EXAMPLES=OFF -DWITH_FUNC_TESTS=OFF \
             -DUSE_THIRDPARTY_LIBRARIES=OFF \
             -DWITH_ABSEIL=ON \
+            -DWITH_API_ONLY=OFF \
             -DWITH_OTLP_GRPC=ON -DWITH_OTLP_HTTP=ON -DWITH_PROMETHEUS=OFF
     else
         # Header-only API only (default): quick, no SDK/exporters, no abseil/protobuf/grpc.
