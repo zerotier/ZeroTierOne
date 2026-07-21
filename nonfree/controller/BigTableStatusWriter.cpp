@@ -10,15 +10,17 @@
 #include "PubSubWriter.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cstddef>
-#include <deque>
 #include <functional>
 #include <google/cloud/bigtable/mutations.h>
 #include <google/cloud/bigtable/row.h>
 #include <google/cloud/bigtable/table.h>
+#include <google/cloud/status.h>
 #include <iterator>
 #include <opentelemetry/trace/provider.h>
+#include <thread>
 
 namespace cbt = google::cloud::bigtable;
 
@@ -44,13 +46,14 @@ static const int64_t kCacheEntryTtlMs = 24LL * 60 * 60 * 1000;	// 24 hours
 static const int64_t kEvictionIntervalMs = 60LL * 60 * 1000;	// sweep at most hourly
 // Bigtable's MutateRows API rejects requests containing more than 100,000
 // mutations (SetCells) total, and google-cloud-cpp sends a BulkMutation as a
-// single request -- it never splits by mutation count.  Rather than one big
-// batch per cycle, send small batches (500 rows x <=5 SetCells each, far below
-// the limit) and keep several in flight at once: small requests spread load
-// across tablet servers and a slow tablet only stalls its own batch, while the
-// parallel window keeps the total flush time low.
+// single request -- it never splits by mutation count.  Send small batches
+// (500 rows x <=5 SetCells each, far below the limit) from a small pool of
+// worker threads.  Each worker uses the *synchronous* BulkApply on purpose:
+// the async client path makes progress only on the connection's shared
+// background event threads, which stall for tens of seconds at a time in this
+// environment, while a sync call is driven entirely by its own thread.
 static const size_t kRowsPerBatch = 500;
-static const size_t kMaxParallelBatches = 8;
+static const size_t kWriterThreads = 8;
 
 BigTableStatusWriter::BigTableStatusWriter(
 	const std::string& project_id,
@@ -123,74 +126,33 @@ void BigTableStatusWriter::writePending()
 	const int64_t nowMs = OSUtils::now();
 	const std::hash<std::string> hasher;
 
-	// One small AsyncBulkApply per kRowsPerBatch rows, with up to
-	// kMaxParallelBatches in flight at once.  The connection's background
-	// threads only fulfill the futures; results are always processed on this
-	// thread, so _lastNodeInfo and the re-queue list need no extra locking.
-	struct InFlightBatch {
-		google::cloud::future<std::vector<cbt::FailedMutation>> result;
+	// Build every batch on this thread first (all _lastNodeInfo reads and
+	// updates stay here, lock-free), then fan the RPCs out to worker threads.
+	// Workers only perform the RPC and record its outcome; the results --
+	// cache invalidation, re-queueing, logging -- are processed back on this
+	// thread after the workers are joined.
+	struct WriteBatch {
+		cbt::BulkMutation bulk;
 		// Row-key hash per row, aligned with the batch's indices, so a failed
 		// mutation can invalidate its cache entry
 		// (FailedMutation::original_index() is relative to this batch's request).
 		std::vector<uint64_t> rowHashes;
-		size_t entryStart;	// index into toWrite of this batch's first entry
-		size_t entryCount;
-		size_t mutationCount;
+		size_t entryStart = 0;	 // index into toWrite of this batch's first entry
+		size_t entryCount = 0;
+		size_t mutationCount = 0;
+		std::vector<cbt::FailedMutation> failures;
+		bool threw = false;
+		std::string error;
 	};
-	std::deque<InFlightBatch> inFlight;
-	// Entries whose batch outcome is unknown (the write threw); re-queued for
-	// the next cycle in a single call once every batch has been drained.
-	std::vector<PendingStatusEntry> toRequeue;
-	size_t totalFailures = 0;
-
-	// Wait for a batch's result and handle it.  Per-mutation failures are
-	// logged and their cache entries dropped.  If the write threw, the batch's
-	// outcome is unknown: invalidate its cache entries and collect its entries
-	// for re-queueing.  Other batches are unaffected either way.
-	auto processBatch = [&](InFlightBatch& batch) {
-		try {
-			std::vector<cbt::FailedMutation> failures = batch.result.get();
-			ZTC_LOG(
-				"BigTable batch of %zu rows (%zu mutations) completed with %zu failures\n", batch.rowHashes.size(),
-				batch.mutationCount, failures.size());
-			totalFailures += failures.size();
-			for (auto const& r : failures) {
-				std::cerr << ::ZeroTier::controllerLogId() << " Error writing to BigTable: " << r.status() << "\n";
-				// Drop the cache entry for any failed row so its node_info is rewritten
-				// next cycle rather than being assumed durably written.
-				const int idx = r.original_index();
-				if (idx >= 0 && static_cast<size_t>(idx) < batch.rowHashes.size()) {
-					_lastNodeInfo.erase(batch.rowHashes[idx]);
-				}
-			}
-		}
-		catch (const std::exception& e) {
-			ZTC_LOG("Exception writing to BigTable: %s\n", e.what());
-			span->SetAttribute("error", e.what());
-			span->SetStatus(opentelemetry::trace::StatusCode::kError, e.what());
-			// The batch's outcome is unknown, so clear the rows it covered to force a
-			// node_info rewrite next cycle rather than trusting an optimistic update.
-			for (uint64_t keyHash : batch.rowHashes) {
-				_lastNodeInfo.erase(keyHash);
-			}
-			// Don't drop the batch -- collect its entries for the next cycle.
-			toRequeue.insert(
-				toRequeue.end(), std::make_move_iterator(toWrite.begin() + static_cast<std::ptrdiff_t>(batch.entryStart)),
-				std::make_move_iterator(
-					toWrite.begin() + static_cast<std::ptrdiff_t>(batch.entryStart + batch.entryCount)));
-		}
-	};
-
-	ZTC_LOG("Applying %zu rows to BigTable in batches of %zu\n", toWrite.size(), kRowsPerBatch);
+	std::vector<WriteBatch> batches;
+	batches.reserve((toWrite.size() + kRowsPerBatch - 1) / kRowsPerBatch);
 
 	for (size_t batchStart = 0; batchStart < toWrite.size(); batchStart += kRowsPerBatch) {
 		const size_t batchEnd = std::min(batchStart + kRowsPerBatch, toWrite.size());
 
-		cbt::BulkMutation bulk;
-		InFlightBatch batch;
+		WriteBatch batch;
 		batch.entryStart = batchStart;
 		batch.entryCount = batchEnd - batchStart;
-		batch.mutationCount = 0;
 		batch.rowHashes.reserve(batch.entryCount);
 
 		for (size_t i = batchStart; i < batchEnd; ++i) {
@@ -246,28 +208,86 @@ void BigTableStatusWriter::writePending()
 			m.emplace_back(cbt::SetCell(checkInColumnFamily, lastSeenColumn, cellTs, entry.last_seen));
 			rowMutations++;
 
-			bulk.emplace_back(m);
+			batch.bulk.emplace_back(m);
 			batch.rowHashes.push_back(keyHash);
 			batch.mutationCount += rowMutations;
 		}
 
-		// Keep at most kMaxParallelBatches in flight: before launching another,
-		// wait for the oldest and handle its result.
-		if (inFlight.size() >= kMaxParallelBatches) {
-			processBatch(inFlight.front());
-			inFlight.pop_front();
-		}
-		batch.result = _table->AsyncBulkApply(std::move(bulk));
-		inFlight.push_back(std::move(batch));
+		batches.push_back(std::move(batch));
 	}
 
-	while (! inFlight.empty()) {
-		processBatch(inFlight.front());
-		inFlight.pop_front();
+	ZTC_LOG("Applying %zu rows to BigTable in %zu batches of up to %zu\n", toWrite.size(), batches.size(), kRowsPerBatch);
+
+	std::atomic<size_t> nextBatch { 0 };
+	std::vector<std::thread> workers;
+	workers.reserve(std::min(kWriterThreads, batches.size()));
+	for (size_t t = 0; t < std::min(kWriterThreads, batches.size()); ++t) {
+		workers.emplace_back([this, &batches, &nextBatch]() {
+			for (size_t i = nextBatch.fetch_add(1); i < batches.size(); i = nextBatch.fetch_add(1)) {
+				WriteBatch& b = batches[i];
+				try {
+					b.failures = _table->BulkApply(std::move(b.bulk));
+				}
+				catch (const std::exception& e) {
+					b.threw = true;
+					b.error = e.what();
+				}
+			}
+		});
+	}
+	for (auto& w : workers) {
+		w.join();
+	}
+
+	// Failed entries are re-queued for the next cycle rather than dropped: the
+	// deterministic cell timestamps make replays idempotent and
+	// requeuePendingStatus caps the backlog.  This covers transient
+	// per-mutation failures (expired auth tokens, UNAVAILABLE, ...) that the
+	// client does not retry internally.
+	std::vector<PendingStatusEntry> toRequeue;
+	size_t totalFailures = 0;
+	for (WriteBatch& batch : batches) {
+		if (batch.threw) {
+			// The batch's outcome is unknown, so clear the rows it covered to force a
+			// node_info rewrite next cycle rather than trusting an optimistic update,
+			// and re-queue all of its entries.
+			ZTC_LOG("Exception writing to BigTable: %s\n", batch.error.c_str());
+			span->SetAttribute("error", batch.error);
+			span->SetStatus(opentelemetry::trace::StatusCode::kError, batch.error);
+			for (uint64_t keyHash : batch.rowHashes) {
+				_lastNodeInfo.erase(keyHash);
+			}
+			toRequeue.insert(
+				toRequeue.end(), std::make_move_iterator(toWrite.begin() + static_cast<std::ptrdiff_t>(batch.entryStart)),
+				std::make_move_iterator(
+					toWrite.begin() + static_cast<std::ptrdiff_t>(batch.entryStart + batch.entryCount)));
+			continue;
+		}
+		ZTC_LOG(
+			"BigTable batch of %zu rows (%zu mutations) completed with %zu failures\n", batch.rowHashes.size(),
+			batch.mutationCount, batch.failures.size());
+		totalFailures += batch.failures.size();
+		for (auto const& r : batch.failures) {
+			std::cerr << ::ZeroTier::controllerLogId() << " Error writing to BigTable: " << r.status() << "\n";
+			const int idx = r.original_index();
+			if (idx < 0 || static_cast<size_t>(idx) >= batch.rowHashes.size()) {
+				continue;
+			}
+			// Drop the cache entry for any failed row so its node_info is rewritten
+			// next cycle rather than being assumed durably written.
+			_lastNodeInfo.erase(batch.rowHashes[idx]);
+			// Re-queue the failed entry unless the server called it malformed --
+			// batches are far below the request limits, so INVALID_ARGUMENT here
+			// means the row itself is unprocessable and would just loop forever.
+			if (r.status().code() != google::cloud::StatusCode::kInvalidArgument) {
+				toRequeue.push_back(std::move(toWrite[batch.entryStart + static_cast<size_t>(idx)]));
+			}
+		}
 	}
 
 	ZTC_LOG("BigTable write completed with %zu failures\n", totalFailures);
 	if (! toRequeue.empty()) {
+		ZTC_LOG("BigTableStatusWriter: re-queueing %zu entries for retry next cycle\n", toRequeue.size());
 		requeuePendingStatus(_pending, _lock, std::move(toRequeue), "BigTableStatusWriter");
 	}
 
