@@ -34,6 +34,7 @@
 #define ZT_EOD_MSG_ADDROUTERESP		17
 #define ZT_EOD_MSG_DELROUTE			18
 #define ZT_EOD_MSG_DELROUTERESP		19
+#define ZT_EOD_MSG_CONFIGUPDATE		20
 
 struct zt_eod_msg_addtap {
 	unsigned char cmd;
@@ -105,6 +106,12 @@ struct zt_eod_msg_route {
 	unsigned char src[16];
 } __attribute__((packed));
 
+struct zt_eod_msg_configupdate {
+	unsigned char cmd;
+	uint64_t nwid;
+	uint64_t revision;
+} __attribute__((packed));
+
 struct zt_eod_mgmt_req {
 	uint32_t method;
 	uint32_t pathlen;
@@ -144,6 +151,7 @@ class ExtOsdep {
 
 	static void routeAddDel(bool, const InetAddress& target, const InetAddress& via, const InetAddress& src, const char* ifaceName);
 	static bool getBindAddrs(std::map<InetAddress, std::string>&);
+	static void configUpdate(uint64_t nwid, uint64_t revision);
 
 	static bool mgmtRecv(void* cookie, void* data, unsigned long len, std::function<unsigned(unsigned, const std::string&, const std::string&, std::string&)>);
 	static bool mgmtWritable(void*);
