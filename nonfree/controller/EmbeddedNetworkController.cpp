@@ -1824,6 +1824,7 @@ void EmbeddedNetworkController::_request(
 		return;
 	}
 	const bool newMember = ((! member.is_object()) || (member.empty()));
+	bool identityLearned = false;
 	DB::initMember(member);
 	_MemberStatusKey msk(nwid, identity.address().toInt());
 #ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
@@ -1866,6 +1867,7 @@ void EmbeddedNetworkController::_request(
 			// If we do not yet know this member's identity, learn it.
 			char idtmp[1024];
 			member["identity"] = identity.toString(false, idtmp);
+			identityLearned = true;
 		}
 #ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 		b4.stop();
@@ -1977,8 +1979,15 @@ void EmbeddedNetworkController::_request(
 					nwid, requestPacketId, identity.address(), NetworkController::NC_ERROR_AUTHENTICATION_REQUIRED,
 					authInfo.data(), authInfo.sizeBytes());
 			}
-			DB::cleanMember(member);
-			_db.save(member, true);
+			// Persist only when this request actually created state (first sighting or
+			// a just-learned identity). Re-saving the full record on every SSO-pending
+			// request writes a stale snapshot that can overwrite a fresher concurrent
+			// change (e.g. an authorize arriving via PubSub), and generates constant
+			// commit/echo churn for idle-but-unauthenticated members.
+			if (newMember || identityLearned) {
+				DB::cleanMember(member);
+				_db.save(member, true);
+			}
 #ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 			b6.stop();
 #endif
@@ -2026,8 +2035,14 @@ void EmbeddedNetworkController::_request(
 	}
 	else {
 		// If they are not authorized, STOP!
-		DB::cleanMember(member);
-		_db.save(member, true);
+		// Persist only when this request created state (first sighting / identity just
+		// learned). The old unconditional save wrote a full stale snapshot per denied
+		// request, which could race with and overwrite a concurrent authorize arriving
+		// via PubSub -- last-writer-wins with a stale writer.
+		if (newMember || identityLearned) {
+			DB::cleanMember(member);
+			_db.save(member, true);
+		}
 		_sender->ncSendError(
 			nwid, requestPacketId, identity.address(), NetworkController::NC_ERROR_ACCESS_DENIED, nullptr, 0);
 #ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
@@ -2525,8 +2540,10 @@ void EmbeddedNetworkController::_request(
 	c10++;
 	b10.start();
 #endif
-	member["change_source"] = "controller";
+	// cleanMember first: it strips any inherited change_source (provenance of the
+	// previous write); the explicit controller tag set after must survive.
 	DB::cleanMember(member);
+	member["change_source"] = "controller";
 	_db.save(member, true);
 #ifdef CENTRAL_CONTROLLER_REQUEST_BENCHMARK
 	b10.stop();

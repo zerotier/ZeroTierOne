@@ -343,6 +343,12 @@ bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 					modified = true;
 				}
 			}
+			else {
+				// Correct to skip (0 is never a valid id) but must never be silent:
+				// a malformed inbound message would otherwise vanish untraceably.
+				ZTC_LOG("WARNING: dropping network save with invalid id '%s'\n",
+						OSUtils::jsonString(record["id"], "?").c_str());
+			}
 		}
 		else if (objtype == "member") {
 			auto span = tracer->StartSpan("CentralDB::save::member");
@@ -373,9 +379,16 @@ bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 					// fprintf(stderr, "no change\n");
 				}
 			}
+			else {
+				// Correct to skip (0 is never a valid member/network id) but must never
+				// be silent -- this is the one path where a delivered-and-acked change
+				// could otherwise vanish with no trace.
+				ZTC_LOG("WARNING: dropping member save with invalid ids: nwid='%s' id='%s'\n",
+						OSUtils::jsonString(record["nwid"], "?").c_str(), OSUtils::jsonString(record["id"], "?").c_str());
+			}
 		}
 		else {
-			ZTC_LOG("uhh waaat\n");
+			ZTC_LOG("WARNING: dropping save with unknown objtype '%s'\n", objtype.c_str());
 		}
 	}
 	catch (std::exception& e) {
@@ -1220,8 +1233,10 @@ void CentralDB::_requeueFailedCommit(_queueItem& qitem)
 		return;
 	}
 	if (qitem.retryCount >= ZT_CENTRAL_CONTROLLER_MAX_COMMIT_RETRIES) {
-		ZTC_LOG("ERROR: dropping %s change after %d failed commit attempts\n",
-				OSUtils::jsonString(qitem.jsonData["objtype"], "?").c_str(), qitem.retryCount);
+		ZTC_LOG("ERROR: dropping %s change for nwid=%s id=%s after %d failed commit attempts\n",
+				OSUtils::jsonString(qitem.jsonData["objtype"], "?").c_str(),
+				OSUtils::jsonString(qitem.jsonData["nwid"], "-").c_str(),
+				OSUtils::jsonString(qitem.jsonData["id"], "-").c_str(), qitem.retryCount);
 		return;
 	}
 	++qitem.retryCount;
@@ -1336,21 +1351,22 @@ void CentralDB::commitThread(unsigned int idx)
 							target = config["remoteTraceTarget"].get<std::string>();
 						}
 
-						// get network and the frontend it is assigned to
-						// if network does not exist, skip member update
-						pqxx::row nwrow =
-							w.exec("SELECT COUNT(id), frontend FROM networks_ctl WHERE id = $1 GROUP BY frontend",
-								   pqxx::params { networkId })
-								.one_row();
-						int nwcount = nwrow[0].as<int>();
-						std::string frontend = nwrow[1].as<std::string>();
-
-						if (nwcount != 1) {
-							ZTC_LOG("network %s does not exist.  skipping member upsert\n", networkId.c_str());
+						// Get the network's frontend. id is the PK, so this returns at most one
+						// row: present ⇒ the network exists, empty ⇒ it doesn't (a permanent
+						// condition -- e.g. nodes still join-looping a deleted network -- so skip
+						// cleanly rather than throw; the old COUNT+GROUP BY+one_row() form threw
+						// on zero rows, turning every such item into a 100-attempt retry storm
+						// that occupied the commit threads). NULL frontend reads as "".
+						pqxx::result nwres =
+							w.exec("SELECT frontend FROM networks_ctl WHERE id = $1", pqxx::params { networkId });
+						if (nwres.empty()) {
+							ZTC_LOG("network %s does not exist; skipping member upsert for %s-%s\n", networkId.c_str(),
+									networkId.c_str(), memberId.c_str());
 							w.abort();
 							_pool->unborrow(c);
 							continue;
 						}
+						std::string frontend = nwres[0][0].as<std::optional<std::string> >().value_or("");
 
 						pqxx::row mrow =
 							w.exec("SELECT COUNT(device_id) FROM network_memberships_ctl WHERE device_id = $1 "
@@ -1367,6 +1383,9 @@ void CentralDB::commitThread(unsigned int idx)
 						if (! isNewMember && change_source != "controller" && frontend != change_source) {
 							// if it is not a new member and the change source is not the controller and doesn't match
 							// the frontend, don't apply the change.
+							ZTC_LOG("WARNING: dropping member change %s-%s: change_source '%s' does not match network "
+									"frontend '%s'\n",
+									networkId.c_str(), memberId.c_str(), change_source.c_str(), frontend.c_str());
 							w.abort();
 							_pool->unborrow(c);
 							continue;
@@ -1522,6 +1541,9 @@ void CentralDB::commitThread(unsigned int idx)
 						if (! isNewNetwork && change_source != "controller" && frontend != change_source) {
 							// if it is not a new network and the change source is not the controller and doesn't match
 							// the frontend, don't apply the change.
+							ZTC_LOG("WARNING: dropping network change %s: change_source '%s' does not match network "
+									"frontend '%s'\n",
+									id.c_str(), change_source.c_str(), frontend.c_str());
 							w.abort();
 							_pool->unborrow(c);
 							continue;

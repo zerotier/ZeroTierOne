@@ -163,6 +163,12 @@ void DB::cleanMember(nlohmann::json& member)
 	member.erase("lastRequestMetaData");
 	member.erase("authenticationURL");		  // computed
 	member.erase("authenticationClientID");	  // computed
+	// Provenance of the PREVIOUS write, not of this one. A record read from the
+	// cache can carry the frontend's change_source (e.g. "cv1"); a controller save
+	// that inherits it is mis-attributed downstream -- CentralDB skips the
+	// controller->Central echo for non-controller sources, silently desyncing the
+	// frontend. Saves that don't set change_source default to "controller".
+	member.erase("change_source");
 }
 
 DB::DB()

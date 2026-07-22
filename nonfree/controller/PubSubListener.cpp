@@ -266,12 +266,12 @@ NotificationResult PubSubNetworkListener::onNotification(const std::string& payl
 		nlohmann::json oldConfig, newConfig;
 
 		if (nc.has_old()) {
-			ZTC_LOG("has old network config\n");
+			ZTC_LOG("network change: has old config for %s\n", nc.old().network_id().c_str());
 			oldConfig = toJson(nc.old(), nc.change_source());
 		}
 
 		if (nc.has_new_()) {
-			ZTC_LOG("has new network config\n");
+			ZTC_LOG("network change: has new config for %s\n", nc.new_().network_id().c_str());
 			newConfig = toJson(nc.new_(), nc.change_source());
 		}
 
@@ -379,12 +379,14 @@ NotificationResult PubSubMemberListener::onNotification(const std::string& paylo
 		nlohmann::json oldConfig, newConfig;
 
 		if (mc.has_old()) {
-			ZTC_LOG("has old member config\n");
+			ZTC_LOG("member change: has old config for %s-%s\n", mc.old().network_id().c_str(),
+					mc.old().device_id().c_str());
 			oldConfig = toJson(mc.old(), mc.change_source());
 		}
 
 		if (mc.has_new_()) {
-			ZTC_LOG("has new member config\n");
+			ZTC_LOG("member change: has new config for %s-%s\n", mc.new_().network_id().c_str(),
+					mc.new_().device_id().c_str());
 			newConfig = toJson(mc.new_(), mc.change_source());
 		}
 
