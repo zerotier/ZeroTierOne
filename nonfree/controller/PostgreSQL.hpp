@@ -42,9 +42,40 @@ class PostgresConnection : public Connection {
 	int a;
 };
 
+// Add client-side liveness/timeout parameters to a libpq connection string unless
+// the operator already set them. Without these a connection whose peer silently
+// vanishes (AlloyDB failover, network partition) blocks its thread in a socket read
+// indefinitely; with them the call fails within a bounded time and the normal
+// error/retry paths take over. Handles both key/value conninfo and postgres:// URIs.
+inline std::string hardenPostgresConnString(std::string cs)
+{
+	const bool isUri = (cs.rfind("postgres://", 0) == 0) || (cs.rfind("postgresql://", 0) == 0);
+	auto add = [&cs, isUri](const char* key, const char* kvForm, const char* uriForm) {
+		if (cs.find(key) != std::string::npos)
+			return;
+		if (isUri) {
+			cs += (cs.find('?') == std::string::npos) ? "?" : "&";
+			cs += uriForm;
+		}
+		else {
+			cs += " ";
+			cs += kvForm;
+		}
+	};
+	add("connect_timeout", "connect_timeout=10", "connect_timeout=10");
+	add("keepalives", "keepalives=1 keepalives_idle=30 keepalives_interval=10 keepalives_count=3",
+		"keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=3");
+	// Bounds transmit-side hangs (peer never ACKs) at the TCP layer; milliseconds.
+	add("tcp_user_timeout", "tcp_user_timeout=30000", "tcp_user_timeout=30000");
+	// Server-side per-statement ceiling; generous enough for the initialize* bulk loads.
+	add("statement_timeout", "options='-c statement_timeout=120000'",
+		"options=-c%20statement_timeout%3D120000");
+	return cs;
+}
+
 class PostgresConnFactory : public ConnectionFactory {
   public:
-	PostgresConnFactory(std::string& connString) : m_connString(connString)
+	PostgresConnFactory(std::string& connString) : m_connString(hardenPostgresConnString(connString))
 	{
 	}
 

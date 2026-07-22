@@ -15,6 +15,19 @@
 // outages (e.g. an AlloyDB maintenance restart) at the cost of in-memory buffering.
 #define ZT_CENTRAL_CONTROLLER_MAX_COMMIT_RETRIES 100
 
+// Commit-thread liveness watchdog thresholds. A commit thread that stops making
+// progress (historically: wedged on a lock cycle in the change-notification
+// fan-out) turns the controller into a zombie that keeps acking PubSub messages
+// into a queue nothing drains. heartbeat() warns past the first threshold and
+// aborts the process past the second so the orchestrator restarts it.
+#define ZT_CENTRAL_CONTROLLER_COMMIT_STALL_WARN_MS 60000
+#define ZT_CENTRAL_CONTROLLER_COMMIT_STALL_ABORT_MS 300000
+
+// Above this commit-queue depth the PubSub listeners nack instead of enqueueing:
+// the backlog is beyond prompt drainage and an acked-but-uncommitted change is
+// lost if the process dies. Redelivery retries once the queue recovers.
+#define ZT_CENTRAL_CONTROLLER_COMMIT_QUEUE_NACK_DEPTH 50000
+
 #include "../../node/Metrics.hpp"
 #include "ConnectionPool.hpp"
 #include "DB.hpp"
@@ -22,6 +35,7 @@
 #include "PostgreSQL.hpp"
 #include "StatusWriter.hpp"
 
+#include <atomic>
 #include <condition_variable>
 #include <memory>
 #include <pqxx/pqxx>
@@ -57,6 +71,7 @@ class CentralDB : public DB {
 
 	virtual bool waitForReady();
 	virtual bool isReady();
+	virtual bool commitPipelineHealthy();
 	virtual bool save(nlohmann::json& record, bool notifyListeners);
 	virtual void eraseNetwork(const uint64_t networkId);
 	virtual void eraseMember(const uint64_t networkId, const uint64_t memberId);
@@ -87,7 +102,7 @@ class CentralDB : public DB {
 	void initializeMembers();
 	void heartbeat();
 
-	void commitThread();
+	void commitThread(unsigned int idx);
 	void onlineNotificationThread();
 
 	nlohmann::json _getNetworkMember(pqxx::work& tx, const std::string networkID, const std::string memberID);
@@ -109,7 +124,7 @@ class CentralDB : public DB {
 	std::string _connString;
 
 	struct _queueItem {
-		_queueItem() : jsonData(), notifyListeners(false), traceContext(), retryCount(0)
+		_queueItem() : jsonData(), notifyListeners(false), traceContext(), retryCount(0), enqueuedAt(0)
 		{
 		}
 
@@ -121,6 +136,9 @@ class CentralDB : public DB {
 		bool notifyListeners;
 		std::map<std::string, std::string> traceContext;
 		int retryCount;
+		// First-enqueue time; retries keep the original so the commit-latency gauge
+		// reflects the full enqueue-to-commit delay.
+		int64_t enqueuedAt;
 	};
 	BlockingQueue<_queueItem> _commitQueue;
 
@@ -136,6 +154,9 @@ class CentralDB : public DB {
 	std::shared_ptr<NotificationListener> _ssoAuthListener;
 	std::shared_ptr<PubSubWriter> _ssoNonceWriter;
 	std::thread _commitThread[ZT_CENTRAL_CONTROLLER_COMMIT_THREADS];
+	// Per-commit-thread last-progress timestamps for the liveness watchdog in
+	// heartbeat(). Stamped every loop pass (idle timeouts included).
+	std::atomic<int64_t> _commitThreadLastActive[ZT_CENTRAL_CONTROLLER_COMMIT_THREADS];
 	std::thread _onlineNotificationThread;
 
 	std::unordered_map<std::pair<uint64_t, uint64_t>, NodeOnlineRecord, _PairHasher> _lastOnline;

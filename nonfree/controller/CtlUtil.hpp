@@ -20,6 +20,10 @@ const char* _timestr();
 void setControllerLogId(const std::string& id);
 const char* controllerLogId();
 
+// Name the calling thread so /proc wait-channel and stack dumps can identify the
+// controller's thread pools. Linux limits names to 15 characters.
+void setCurrentThreadName(const char* name);
+
 std::vector<std::string> split(std::string str, char delim);
 
 std::string url_encode(const std::string& value);

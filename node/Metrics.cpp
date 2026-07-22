@@ -144,6 +144,8 @@ prometheus::simpleapi::counter_metric_t pgsql_mem_notification { "controller_pgs
 prometheus::simpleapi::counter_metric_t pgsql_net_notification { "controller_pgsql_network_notifications_received", "number of network change notifications received via pgsql NOTIFY" };
 prometheus::simpleapi::counter_metric_t pgsql_node_checkin { "controller_pgsql_node_checkin_count", "number of node check-ins (pgsql)" };
 prometheus::simpleapi::counter_metric_t pgsql_commit_ticks { "controller_pgsql_commit_ticks", "number of commit ticks run (pgsql)" };
+prometheus::simpleapi::gauge_metric_t db_commit_queue_size { "controller_db_commit_queue", "number of entries in the controller db commit queue" };
+prometheus::simpleapi::gauge_metric_t db_commit_latency_ms { "controller_db_commit_latency_ms", "milliseconds between enqueue and commit for the most recently dequeued db change" };
 prometheus::simpleapi::counter_metric_t db_get_sso_info { "controller_db_get_sso_info", "counter" };
 
 prometheus::simpleapi::counter_metric_t redis_mem_notification { "controller_redis_member_notifications_received", "number of member change notifications received via redis" };

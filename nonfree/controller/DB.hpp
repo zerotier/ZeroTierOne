@@ -94,6 +94,15 @@ class DB {
 	virtual bool waitForReady() = 0;
 	virtual bool isReady() = 0;
 
+	// Whether the backend can promptly and durably apply changes handed to save().
+	// Backends with an async commit pipeline override this so message listeners can
+	// defer (nack for redelivery) instead of acknowledging changes into a stalled or
+	// drowning queue, where they would be lost if the process died or wedged.
+	virtual bool commitPipelineHealthy()
+	{
+		return true;
+	}
+
 	inline bool hasNetwork(const uint64_t networkId) const
 	{
 		std::shared_lock<std::shared_mutex> l(_networks_l);
@@ -138,6 +147,18 @@ class DB {
 	{
 		std::unique_lock<std::shared_mutex> l(_changeListeners_l);
 		_changeListeners.push_back(listener);
+	}
+
+	// Snapshot the listener list so callbacks can be invoked without holding
+	// _changeListeners_l. Listener callbacks fan out into the controller (mirror
+	// saves, netconf re-requests) and must never run under this lock: one blocked
+	// callback would otherwise wedge every thread that needs to notify, which is
+	// how the whole commit pipeline froze in prod. Listeners are only ever added,
+	// so the snapshotted pointers stay valid.
+	inline std::vector<DB::ChangeListener*> _listenersSnapshot() const
+	{
+		std::shared_lock<std::shared_mutex> l(_changeListeners_l);
+		return _changeListeners;
 	}
 
 	virtual void _memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool notifyListeners);

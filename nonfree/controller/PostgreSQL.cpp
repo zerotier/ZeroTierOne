@@ -81,6 +81,7 @@ void PostgresMemberListener::reconnect()
 
 void PostgresMemberListener::listen()
 {
+	setCurrentThreadName("ctl-pg-member");
 	while (_run) {
 		// await_notification dispatches into onNotification, which can throw on a
 		// malformed payload; libpqxx propagates that out here. An exception escaping
@@ -215,6 +216,7 @@ void PostgresNetworkListener::reconnect()
 
 void PostgresNetworkListener::listen()
 {
+	setCurrentThreadName("ctl-pg-network");
 	while (_run) {
 		// See PostgresMemberListener::listen — an exception escaping this thread would
 		// terminate the controller, so everything must be caught here; a broken

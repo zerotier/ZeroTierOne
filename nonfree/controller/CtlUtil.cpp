@@ -4,6 +4,8 @@
 
 #include "CtlUtil.hpp"
 
+#include <pthread.h>
+
 namespace ZeroTier {
 
 // Defined unconditionally (outside ZT_CONTROLLER_USE_LIBPQ): the always-compiled controller
@@ -16,6 +18,18 @@ void setControllerLogId(const std::string& id)
 
 const char* controllerLogId()
 { return s_controllerLogId.empty() ? "----------" : s_controllerLogId.c_str(); }
+
+void setCurrentThreadName(const char* name)
+{
+	// Linux truncates at 15 chars + NUL; keep names within that.
+#if defined(__APPLE__)
+	pthread_setname_np(name);
+#elif defined(__linux__)
+	pthread_setname_np(pthread_self(), name);
+#else
+	(void)name;
+#endif
+}
 
 }	// namespace ZeroTier
 

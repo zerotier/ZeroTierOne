@@ -97,6 +97,7 @@ PubSubListener::~PubSubListener()
 
 void PubSubListener::subscribe()
 {
+	setCurrentThreadName("ctl-pubsub-sub");
 	while (_run) {
 		try {
 			ZTC_LOG("PubSubListener::subscribe: starting session for subscription %s\n", _subscription_id.c_str());
@@ -240,6 +241,14 @@ NotificationResult PubSubNetworkListener::onNotification(const std::string& payl
 	auto span = tracer->StartSpan("PubSubNetworkListener::onNotification");
 	auto scope = tracer->WithActiveSpan(span);
 
+	// See PubSubMemberListener::onNotification -- don't ack into an unhealthy
+	// commit pipeline.
+	if (! _db->commitPipelineHealthy()) {
+		ZTC_LOG("PubSubNetworkListener: commit pipeline stalled or over depth limit; nacking for redelivery\n");
+		span->SetStatus(opentelemetry::trace::StatusCode::kError, "commit pipeline unhealthy; redeliver");
+		return NotificationResult::TransientFailure;
+	}
+
 	pbmessages::NetworkChange nc;
 	if (! nc.ParseFromString(payload)) {
 		ZTC_LOG("Failed to parse NetworkChange protobuf message\n");
@@ -335,6 +344,16 @@ NotificationResult PubSubMemberListener::onNotification(const std::string& paylo
 	auto tracer = provider->GetTracer("PubSubMemberListener");
 	auto span = tracer->StartSpan("PubSubMemberListener::onNotification");
 	auto scope = tracer->WithActiveSpan(span);
+
+	// Never ack a change into a stalled or drowning commit pipeline -- save() only
+	// enqueues, so an ack here is a promise the commit threads may not keep. Nack
+	// for redelivery instead; the message applies once the pipeline recovers (or
+	// after the liveness watchdog restarts the process).
+	if (! _db->commitPipelineHealthy()) {
+		ZTC_LOG("PubSubMemberListener: commit pipeline stalled or over depth limit; nacking for redelivery\n");
+		span->SetStatus(opentelemetry::trace::StatusCode::kError, "commit pipeline unhealthy; redeliver");
+		return NotificationResult::TransientFailure;
+	}
 
 	pbmessages::MemberChange mc;
 	if (! mc.ParseFromString(payload)) {

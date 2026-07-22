@@ -1658,12 +1658,34 @@ void EmbeddedNetworkController::onNetworkUpdate(const void* db, uint64_t network
 	auto span = tracer->StartSpan("embedded_controller::onNetworkUpdate");
 	auto scope = tracer->WithActiveSpan(span);
 
-	// Send an update to all members of the network that are online
+	// Send an update to all members of the network that are online.
+	//
+	// Collect the targets first and re-request with _memberStatus_l released. This
+	// callback runs on the DB commit threads (via _memberChanged), and both the
+	// netconf workers and request() itself need _memberStatus_l -- holding it
+	// across a full-network fan-out stalls them, and any stall here freezes the
+	// commit pipeline behind the notification locks.
 	const int64_t now = OSUtils::now();
-	std::lock_guard<std::mutex> l(_memberStatus_l);
-	for (auto i = _memberStatus.begin(); i != _memberStatus.end(); ++i) {
-		if ((i->first.networkId == networkId) && (i->second.online(now)) && (i->second.lastRequestMetaData))
-			request(networkId, InetAddress(), 0, i->second.identity, i->second.lastRequestMetaData);
+	std::vector<_MemberStatusKey> targets;
+	{
+		std::lock_guard<std::mutex> l(_memberStatus_l);
+		for (auto i = _memberStatus.begin(); i != _memberStatus.end(); ++i) {
+			if ((i->first.networkId == networkId) && (i->second.online(now)) && (i->second.lastRequestMetaData))
+				targets.push_back(i->first);
+		}
+	}
+	for (auto k = targets.begin(); k != targets.end(); ++k) {
+		Identity id;
+		std::unique_ptr<Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> > md;
+		{
+			std::lock_guard<std::mutex> l(_memberStatus_l);
+			auto ms = _memberStatus.find(*k);
+			if ((ms == _memberStatus.end()) || (! ms->second.online(now)) || (! ms->second.lastRequestMetaData))
+				continue;
+			id = ms->second.identity;
+			md.reset(new Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>(ms->second.lastRequestMetaData));
+		}
+		request(networkId, InetAddress(), 0, id, *md);
 	}
 }
 
@@ -1678,12 +1700,23 @@ void EmbeddedNetworkController::onNetworkMemberUpdate(
 	auto span = tracer->StartSpan("embedded_controller::onNetworkMemberUpdate");
 	auto scope = tracer->WithActiveSpan(span);
 
-	// Push update to member if online
+	// Push update to member if online. Copy what request() needs and call it with
+	// _memberStatus_l released -- this runs on the DB commit threads and must not
+	// hold member-status locks across the netconf machinery. find() instead of
+	// operator[] so members we have never heard from don't get empty entries.
 	try {
-		std::lock_guard<std::mutex> l(_memberStatus_l);
-		_MemberStatus& ms = _memberStatus[_MemberStatusKey(networkId, memberId)];
-		if ((ms.online(OSUtils::now())) && (ms.lastRequestMetaData))
-			request(networkId, InetAddress(), 0, ms.identity, ms.lastRequestMetaData);
+		Identity id;
+		std::unique_ptr<Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY> > md;
+		{
+			std::lock_guard<std::mutex> l(_memberStatus_l);
+			auto ms = _memberStatus.find(_MemberStatusKey(networkId, memberId));
+			if ((ms != _memberStatus.end()) && (ms->second.online(OSUtils::now())) && (ms->second.lastRequestMetaData)) {
+				id = ms->second.identity;
+				md.reset(new Dictionary<ZT_NETWORKCONFIG_METADATA_DICT_CAPACITY>(ms->second.lastRequestMetaData));
+			}
+		}
+		if (md)
+			request(networkId, InetAddress(), 0, id, *md);
 	}
 	catch (...) {
 	}
@@ -1701,14 +1734,20 @@ void EmbeddedNetworkController::onNetworkMemberDeauthorize(const void* db, uint6
 		(uint32_t)_node->prng(), networkId, 0, now, ZT_REVOCATION_FLAG_FAST_PROPAGATE, Address(memberId),
 		Revocation::CREDENTIAL_TYPE_COM);
 	rev.sign(_signingId);
+	// Collect the online members under the lock, then send revocations with it
+	// released: ncSendRevocation goes through the node core and wire I/O, and this
+	// callback runs on the DB commit threads.
+	std::vector<Address> online;
 	{
 		std::lock_guard<std::mutex> l(_memberStatus_l);
 		for (auto i = _memberStatus.begin(); i != _memberStatus.end(); ++i) {
-			if ((i->first.networkId == networkId) && (i->second.online(now))) {
-				_node->ncSendRevocation(Address(i->first.nodeId), rev);
-				// fprintf(stderr, "  Sent revocation to %.10llx\n", i->first.nodeId);
-			}
+			if ((i->first.networkId == networkId) && (i->second.online(now)))
+				online.push_back(Address(i->first.nodeId));
 		}
+	}
+	for (auto a = online.begin(); a != online.end(); ++a) {
+		_node->ncSendRevocation(*a, rev);
+		// fprintf(stderr, "  Sent revocation to %.10llx\n", a->toInt());
 	}
 }
 
@@ -2524,6 +2563,7 @@ void EmbeddedNetworkController::_startThreads()
 #endif
 	for (long t = 0; t < hwc; ++t) {
 		_threads.emplace_back([this, t]() {
+			setCurrentThreadName("ctl-netconf");
 			Metrics::network_config_request_threads++;
 			uint64_t processedCount = 0;
 			uint64_t idleIterations = 0;
@@ -2578,6 +2618,7 @@ void EmbeddedNetworkController::_startThreads()
 
 void EmbeddedNetworkController::_ssoExpiryThread()
 {
+	setCurrentThreadName("ctl-sso-expiry");
 	while (_ssoExpiryRunning) {
 		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 		auto tracer = provider->GetTracer("embedded_network_controller");

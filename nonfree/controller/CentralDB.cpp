@@ -232,7 +232,8 @@ CentralDB::CentralDB(const Identity& myId,
 
 	// start background threads
 	for (int i = 0; i < ZT_CENTRAL_CONTROLLER_COMMIT_THREADS; ++i) {
-		_commitThread[i] = std::thread(&CentralDB::commitThread, this);
+		_commitThreadLastActive[i].store(0, std::memory_order_relaxed);
+		_commitThread[i] = std::thread(&CentralDB::commitThread, this, (unsigned int)i);
 	}
 	_onlineNotificationThread = std::thread(&CentralDB::onlineNotificationThread, this);
 }
@@ -279,6 +280,26 @@ bool CentralDB::waitForReady()
 bool CentralDB::isReady()
 { return ((_ready == 2) && (_connected)); }
 
+bool CentralDB::commitPipelineHealthy()
+{
+	// Unhealthy when a commit thread has stopped making progress (a wedged thread
+	// means changes it holds -- and, given the shared notification locks, soon the
+	// whole pipeline -- will never commit) or when the queue is too deep to drain
+	// promptly. The PubSub listeners nack in either case so changes are redelivered
+	// instead of acked into a queue that may never apply them.
+	if (_commitQueue.size() >= (size_t)ZT_CENTRAL_CONTROLLER_COMMIT_QUEUE_NACK_DEPTH) {
+		return false;
+	}
+	const int64_t now = OSUtils::now();
+	for (int i = 0; i < ZT_CENTRAL_CONTROLLER_COMMIT_THREADS; ++i) {
+		const int64_t last = _commitThreadLastActive[i].load(std::memory_order_relaxed);
+		if ((last > 0) && ((now - last) > ZT_CENTRAL_CONTROLLER_COMMIT_STALL_WARN_MS)) {
+			return false;
+		}
+	}
+	return true;
+}
+
 bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 {
 	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
@@ -311,6 +332,7 @@ bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 					auto propagator =
 						opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
 					propagator->Inject(carrier, current_ctx);
+					qi.enqueuedAt = OSUtils::now();
 					_commitQueue.post(qi);
 					modified = true;
 				}
@@ -336,6 +358,7 @@ bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 					auto propagator =
 						opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
 					propagator->Inject(carrier, current_ctx);
+					qi.enqueuedAt = OSUtils::now();
 					_commitQueue.post(qi);
 
 					modified = true;
@@ -379,6 +402,7 @@ void CentralDB::eraseNetwork(const uint64_t networkId)
 	auto current_ctx = opentelemetry::context::RuntimeContext::GetCurrent();
 	auto propagator = opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
 	propagator->Inject(carrier, current_ctx);
+	qi.enqueuedAt = OSUtils::now();
 	_commitQueue.post(qi);
 	// The commit thread fires _networkChanged once with the real (cached) old config when
 	// it processes the _delete_network item, so we don't notify here — doing so would
@@ -407,6 +431,7 @@ void CentralDB::eraseMember(const uint64_t networkId, const uint64_t memberId)
 	auto current_ctx = opentelemetry::context::RuntimeContext::GetCurrent();
 	auto propagator = opentelemetry::context::propagation::GlobalTextMapPropagator::GetGlobalPropagator();
 	propagator->Inject(carrier, current_ctx);
+	qi.enqueuedAt = OSUtils::now();
 	_commitQueue.post(qi);
 	// The commit thread fires _memberChanged once with the real (cached) old config when
 	// it processes the _delete_member item, so we don't notify here — doing so would
@@ -1055,6 +1080,7 @@ void CentralDB::initializeMembers()
 
 void CentralDB::heartbeat()
 {
+	setCurrentThreadName("ctl-heartbeat");
 	char publicId[1024];
 	char hostnameTmp[1024];
 	_myId.toString(false, publicId);
@@ -1127,6 +1153,32 @@ void CentralDB::heartbeat()
 			ZTC_LOG("ERROR: Redis error in heartbeat thread: %s\n", e.what());
 		}
 
+		// Commit-pipeline liveness watchdog. A commit thread that stops making
+		// progress is wedged (historically: a lock cycle in the change-notification
+		// fan-out) and the process becomes a zombie that keeps acking PubSub
+		// messages into a queue nothing drains. Restarting is the only safe
+		// recovery, so log loudly and abort; the orchestrator brings up a fresh pod
+		// that reloads state from the DB.
+		{
+			const int64_t wdNow = OSUtils::now();
+			for (int i = 0; i < ZT_CENTRAL_CONTROLLER_COMMIT_THREADS; ++i) {
+				const int64_t last = _commitThreadLastActive[i].load(std::memory_order_relaxed);
+				if (last <= 0)
+					continue;
+				const int64_t stalled = wdNow - last;
+				if (stalled > ZT_CENTRAL_CONTROLLER_COMMIT_STALL_ABORT_MS) {
+					ZTC_LOG("FATAL: commit thread %d has made no progress in %lld ms (commit queue depth %llu); "
+							"aborting so the controller restarts instead of silently dropping changes\n",
+							i, (long long)stalled, (unsigned long long)_commitQueue.size());
+					abort();
+				}
+				else if (stalled > ZT_CENTRAL_CONTROLLER_COMMIT_STALL_WARN_MS) {
+					ZTC_LOG("WARNING: commit thread %d has made no progress in %lld ms (commit queue depth %llu)\n", i,
+							(long long)stalled, (unsigned long long)_commitQueue.size());
+				}
+			}
+		}
+
 		span->End();
 		std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
@@ -1167,11 +1219,24 @@ void CentralDB::_requeueFailedCommit(_queueItem& qitem)
 	_commitQueue.post(qitem);
 }
 
-void CentralDB::commitThread()
+void CentralDB::commitThread(unsigned int idx)
 {
+	setCurrentThreadName("ctl-commit");
 	ZTC_LOG("commitThread start\n");
 	_queueItem qitem;
-	while (_commitQueue.get(qitem) && (_run == 1)) {
+	while (_run == 1) {
+		// Stamp progress on every pass -- idle timeouts included -- so the watchdog
+		// in heartbeat() can tell a wedged thread from a quiet one.
+		_commitThreadLastActive[idx].store(OSUtils::now(), std::memory_order_relaxed);
+		Metrics::db_commit_queue_size = _commitQueue.size();
+		const BlockingQueue<_queueItem>::TimedWaitResult wr = _commitQueue.get(qitem, 1000);
+		if (wr == BlockingQueue<_queueItem>::STOP)
+			break;
+		if (wr == BlockingQueue<_queueItem>::TIMED_OUT)
+			continue;
+		_commitThreadLastActive[idx].store(OSUtils::now(), std::memory_order_relaxed);
+		if (qitem.enqueuedAt > 0)
+			Metrics::db_commit_latency_ms = OSUtils::now() - qitem.enqueuedAt;
 		auto provider = opentelemetry::trace::Provider::GetTracerProvider();
 		auto tracer = provider->GetTracer("CentralDB");
 
@@ -1630,6 +1695,7 @@ void CentralDB::commitThread()
 
 void CentralDB::onlineNotificationThread()
 {
+	setCurrentThreadName("ctl-online");
 	waitForReady();
 	while (_run == 1) {
 		{

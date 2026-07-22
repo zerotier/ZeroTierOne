@@ -4,6 +4,7 @@
 
 #include "DBMirrorSet.hpp"
 
+#include "CtlUtil.hpp"
 #include "opentelemetry/trace/provider.h"
 
 namespace ZeroTier {
@@ -11,6 +12,7 @@ namespace ZeroTier {
 DBMirrorSet::DBMirrorSet(DB::ChangeListener* listener) : _listener(listener), _running(true), _syncCheckerThread(), _dbs(), _dbs_l()
 {
 	_syncCheckerThread = std::thread([this]() {
+		setCurrentThreadName("ctl-dbsync");
 		for (;;) {
 			for (int i = 0; i < 120; ++i) {	  // 1 minute delay between checks
 				if (! _running)
@@ -230,7 +232,7 @@ bool DBMirrorSet::save(nlohmann::json& record, bool notifyListeners)
 
 	std::vector<std::shared_ptr<DB> > dbs;
 	{
-		std::unique_lock<std::shared_mutex> l(_dbs_l);
+		std::shared_lock<std::shared_mutex> l(_dbs_l);
 		dbs = _dbs;
 	}
 	if (notifyListeners) {
@@ -258,8 +260,12 @@ void DBMirrorSet::eraseNetwork(const uint64_t networkId)
 	char networkIdStr[17];
 	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
 
-	std::unique_lock<std::shared_mutex> l(_dbs_l);
-	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
+	std::vector<std::shared_ptr<DB> > dbs;
+	{
+		std::shared_lock<std::shared_mutex> l(_dbs_l);
+		dbs = _dbs;
+	}
+	for (auto d = dbs.begin(); d != dbs.end(); ++d) {
 		(*d)->eraseNetwork(networkId);
 	}
 }
@@ -275,8 +281,12 @@ void DBMirrorSet::eraseMember(const uint64_t networkId, const uint64_t memberId)
 	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
 	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
 
-	std::unique_lock<std::shared_mutex> l(_dbs_l);
-	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
+	std::vector<std::shared_ptr<DB> > dbs;
+	{
+		std::shared_lock<std::shared_mutex> l(_dbs_l);
+		dbs = _dbs;
+	}
+	for (auto d = dbs.begin(); d != dbs.end(); ++d) {
 		(*d)->eraseMember(networkId, memberId);
 	}
 }
@@ -315,9 +325,17 @@ void DBMirrorSet::onNetworkUpdate(const void* db, uint64_t networkId, const nloh
 	char networkIdStr[17];
 	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
 
+	// Snapshot the db list and call save()/the listener with _dbs_l released.
+	// This runs on the DB commit threads; holding _dbs_l (a writer lock) across
+	// the fan-out blocks every reader (netconf gets/saves) and, if the listener
+	// callback ever stalls, freezes the whole commit pipeline.
 	nlohmann::json record(network);
-	std::unique_lock<std::shared_mutex> l(_dbs_l);
-	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
+	std::vector<std::shared_ptr<DB> > dbs;
+	{
+		std::shared_lock<std::shared_mutex> l(_dbs_l);
+		dbs = _dbs;
+	}
+	for (auto d = dbs.begin(); d != dbs.end(); ++d) {
 		if (d->get() != db) {
 			(*d)->save(record, false);
 		}
@@ -336,9 +354,14 @@ void DBMirrorSet::onNetworkMemberUpdate(const void* db, uint64_t networkId, uint
 	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
 	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
 
+	// Same pattern as onNetworkUpdate: fan out with _dbs_l released.
 	nlohmann::json record(member);
-	std::unique_lock<std::shared_mutex> l(_dbs_l);
-	for (auto d = _dbs.begin(); d != _dbs.end(); ++d) {
+	std::vector<std::shared_ptr<DB> > dbs;
+	{
+		std::shared_lock<std::shared_mutex> l(_dbs_l);
+		dbs = _dbs;
+	}
+	for (auto d = dbs.begin(); d != dbs.end(); ++d) {
 		if (d->get() != db) {
 			(*d)->save(record, false);
 		}

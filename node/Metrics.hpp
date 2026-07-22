@@ -142,6 +142,8 @@ extern prometheus::simpleapi::counter_metric_t pgsql_mem_notification;
 extern prometheus::simpleapi::counter_metric_t pgsql_net_notification;
 extern prometheus::simpleapi::counter_metric_t pgsql_node_checkin;
 extern prometheus::simpleapi::counter_metric_t pgsql_commit_ticks;
+extern prometheus::simpleapi::gauge_metric_t db_commit_queue_size;
+extern prometheus::simpleapi::gauge_metric_t db_commit_latency_ms;
 extern prometheus::simpleapi::counter_metric_t db_get_sso_info;
 
 extern prometheus::simpleapi::counter_metric_t redis_mem_notification;
