@@ -104,7 +104,12 @@ void DB::initMember(nlohmann::json& member)
 	if (! member.count("noAutoAssignIps"))
 		member["noAutoAssignIps"] = false;
 	if (! member.count("revision"))
-		member["revision"] = 0ULL;
+		// Start at 1 (matching Central's ztc_member.revision DEFAULT 1) so the first
+		// save() bumps to 2 and the resulting echo passes Central's strictly-less-than
+		// revision guard against a manually created row's default of 1. With 0 here the
+		// first echo carried 1 and 1 < 1 never applied -- identity/revision for manually
+		// created members never synced back to Central.
+		member["revision"] = 1ULL;
 	if (! member.count("lastDeauthorizedTime"))
 		member["lastDeauthorizedTime"] = 0ULL;
 	if (! member.count("lastAuthorizedTime"))
