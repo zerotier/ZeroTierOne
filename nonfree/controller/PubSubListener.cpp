@@ -242,9 +242,14 @@ NotificationResult PubSubNetworkListener::onNotification(const std::string& payl
 	auto scope = tracer->WithActiveSpan(span);
 
 	// See PubSubMemberListener::onNotification -- don't ack into an unhealthy
-	// commit pipeline.
+	// commit pipeline. Log rate-limited.
 	if (! _db->commitPipelineHealthy()) {
-		ZTC_LOG("PubSubNetworkListener: commit pipeline stalled or over depth limit; nacking for redelivery\n");
+		static std::atomic<int64_t> lastLog(0);
+		const int64_t now = OSUtils::now();
+		int64_t prev = lastLog.load(std::memory_order_relaxed);
+		if (((now - prev) > 5000) && lastLog.compare_exchange_strong(prev, now)) {
+			ZTC_LOG("PubSubNetworkListener: commit pipeline stalled or over depth limit; nacking for redelivery\n");
+		}
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, "commit pipeline unhealthy; redeliver");
 		return NotificationResult::TransientFailure;
 	}
@@ -348,9 +353,15 @@ NotificationResult PubSubMemberListener::onNotification(const std::string& paylo
 	// Never ack a change into a stalled or drowning commit pipeline -- save() only
 	// enqueues, so an ack here is a promise the commit threads may not keep. Nack
 	// for redelivery instead; the message applies once the pipeline recovers (or
-	// after the liveness watchdog restarts the process).
+	// after the liveness watchdog restarts the process). Log rate-limited: during a
+	// stall every redelivery attempt comes back through here.
 	if (! _db->commitPipelineHealthy()) {
-		ZTC_LOG("PubSubMemberListener: commit pipeline stalled or over depth limit; nacking for redelivery\n");
+		static std::atomic<int64_t> lastLog(0);
+		const int64_t now = OSUtils::now();
+		int64_t prev = lastLog.load(std::memory_order_relaxed);
+		if (((now - prev) > 5000) && lastLog.compare_exchange_strong(prev, now)) {
+			ZTC_LOG("PubSubMemberListener: commit pipeline stalled or over depth limit; nacking for redelivery\n");
+		}
 		span->SetStatus(opentelemetry::trace::StatusCode::kError, "commit pipeline unhealthy; redeliver");
 		return NotificationResult::TransientFailure;
 	}

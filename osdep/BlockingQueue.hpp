@@ -103,11 +103,16 @@ template <class T> class BlockingQueue {
 		}
 		value = q.front();
 		q.pop();
+		gc.notify_all();   // keep postLimit() producers unblocked, same as the untimed get()
 		return OK;
 	}
 
 	inline size_t size() const
 	{
+		// Locked: size() is read from other threads (queue-depth gauges, commit
+		// pipeline health checks) and an unlocked read of std::queue races with
+		// concurrent push/pop.
+		std::lock_guard<std::mutex> lock(m);
 		return q.size();
 	}
 

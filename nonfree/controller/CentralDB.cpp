@@ -128,6 +128,13 @@ CentralDB::CentralDB(const Identity& myId,
 	ZTC_LOG("NOTICE: PostgreSQL waiting for initial data download..." ZT_EOL_S);
 	_waitNoticePrinted = true;
 
+	// Zero the watchdog stamps before ANY thread that reads them starts (the
+	// heartbeat thread and the PubSub listeners below both do) -- default-constructed
+	// atomics are indeterminate in C++17.
+	for (int i = 0; i < ZT_CENTRAL_CONTROLLER_COMMIT_THREADS; ++i) {
+		_commitThreadLastActive[i].store(0, std::memory_order_relaxed);
+	}
+
 	initializeNetworks();
 	initializeMembers();
 
@@ -232,7 +239,6 @@ CentralDB::CentralDB(const Identity& myId,
 
 	// start background threads
 	for (int i = 0; i < ZT_CENTRAL_CONTROLLER_COMMIT_THREADS; ++i) {
-		_commitThreadLastActive[i].store(0, std::memory_order_relaxed);
 		_commitThread[i] = std::thread(&CentralDB::commitThread, this, (unsigned int)i);
 	}
 	_onlineNotificationThread = std::thread(&CentralDB::onlineNotificationThread, this);
@@ -1159,23 +1165,40 @@ void CentralDB::heartbeat()
 		// messages into a queue nothing drains. Restarting is the only safe
 		// recovery, so log loudly and abort; the orchestrator brings up a fresh pod
 		// that reloads state from the DB.
+		//
+		// Abort only when EVERY started commit thread is past the threshold (the
+		// incident signature: a pipeline-wide freeze) so a single legitimately slow
+		// item -- e.g. the member-deauthorize fan-out of a huge network deletion --
+		// can't kill a controller whose other threads are still draining. A single
+		// thread holding one item hostage far past that (3x) is never legitimate
+		// and also aborts.
 		{
 			const int64_t wdNow = OSUtils::now();
+			int started = 0;
+			int overAbort = 0;
+			int64_t maxStalled = 0;
 			for (int i = 0; i < ZT_CENTRAL_CONTROLLER_COMMIT_THREADS; ++i) {
 				const int64_t last = _commitThreadLastActive[i].load(std::memory_order_relaxed);
 				if (last <= 0)
 					continue;
+				++started;
 				const int64_t stalled = wdNow - last;
-				if (stalled > ZT_CENTRAL_CONTROLLER_COMMIT_STALL_ABORT_MS) {
-					ZTC_LOG("FATAL: commit thread %d has made no progress in %lld ms (commit queue depth %llu); "
-							"aborting so the controller restarts instead of silently dropping changes\n",
-							i, (long long)stalled, (unsigned long long)_commitQueue.size());
-					abort();
-				}
-				else if (stalled > ZT_CENTRAL_CONTROLLER_COMMIT_STALL_WARN_MS) {
+				if (stalled > maxStalled)
+					maxStalled = stalled;
+				if (stalled > ZT_CENTRAL_CONTROLLER_COMMIT_STALL_ABORT_MS)
+					++overAbort;
+				if (stalled > ZT_CENTRAL_CONTROLLER_COMMIT_STALL_WARN_MS) {
 					ZTC_LOG("WARNING: commit thread %d has made no progress in %lld ms (commit queue depth %llu)\n", i,
 							(long long)stalled, (unsigned long long)_commitQueue.size());
 				}
+			}
+			if ((started > 0)
+				&& ((overAbort == started) || (maxStalled > (3LL * ZT_CENTRAL_CONTROLLER_COMMIT_STALL_ABORT_MS)))) {
+				ZTC_LOG("FATAL: commit pipeline wedged (%d/%d threads stalled past %d ms, worst %lld ms, queue depth "
+						"%llu); aborting so the controller restarts instead of silently dropping changes\n",
+						overAbort, started, ZT_CENTRAL_CONTROLLER_COMMIT_STALL_ABORT_MS, (long long)maxStalled,
+						(unsigned long long)_commitQueue.size());
+				abort();
 			}
 		}
 

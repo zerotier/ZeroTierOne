@@ -2,9 +2,18 @@
  * See LICENSE.txt in nonfree/
  */
 
+// The two-argument pthread_setname_np is glibc's GNU extension; the strict
+// -std=c++17 make build doesn't define _GNU_SOURCE for us (the CMake build's
+// gnu++17 does). Must precede every include.
+#if defined(__linux__) && ! defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
+
 #include "CtlUtil.hpp"
 
+#ifndef _WIN32
 #include <pthread.h>
+#endif
 
 namespace ZeroTier {
 

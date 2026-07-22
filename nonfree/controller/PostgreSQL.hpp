@@ -67,9 +67,12 @@ inline std::string hardenPostgresConnString(std::string cs)
 		"keepalives=1&keepalives_idle=30&keepalives_interval=10&keepalives_count=3");
 	// Bounds transmit-side hangs (peer never ACKs) at the TCP layer; milliseconds.
 	add("tcp_user_timeout", "tcp_user_timeout=30000", "tcp_user_timeout=30000");
-	// Server-side per-statement ceiling; generous enough for the initialize* bulk loads.
-	add("statement_timeout", "options='-c statement_timeout=120000'",
-		"options=-c%20statement_timeout%3D120000");
+	// Deliberately NO statement_timeout here: it would also cap the startup bulk
+	// loads (initializeNetworks/initializeMembers stream the full data set in one
+	// COPY, and a timeout there exits the process -> crash loop on a slow/degraded
+	// DB). Dead-peer hangs -- the incident class -- are covered by the keepalive and
+	// TCP settings above; slow-but-alive statements surface via the commit-thread
+	// watchdog instead.
 	return cs;
 }
 
