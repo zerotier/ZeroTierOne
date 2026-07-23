@@ -1066,10 +1066,10 @@ void WindowsEthernetTap::threadMain() throw()
 					ipnr.InterfaceLuid.Value = _deviceLuid.Value;
 					ipnr.PhysicalAddress[0] = _mac[0] ^ 0x10;	// just make something up that's consistent and not part of this net
 					ipnr.PhysicalAddress[1] = 0x00;
-					ipnr.PhysicalAddress[2] = (UCHAR)((_deviceGuid.Data1 >> 24) & 0xff);
-					ipnr.PhysicalAddress[3] = (UCHAR)((_deviceGuid.Data1 >> 16) & 0xff);
-					ipnr.PhysicalAddress[4] = (UCHAR)((_deviceGuid.Data1 >> 8) & 0xff);
-					ipnr.PhysicalAddress[5] = (UCHAR)(_deviceGuid.Data1 & 0xff);
+					ipnr.PhysicalAddress[2] = (UCHAR)((_nwid >> 24) & 0xff);
+					ipnr.PhysicalAddress[3] = (UCHAR)((_nwid >> 16) & 0xff);
+					ipnr.PhysicalAddress[4] = (UCHAR)((_nwid >> 8) & 0xff);
+					ipnr.PhysicalAddress[5] = (UCHAR)(_nwid & 0xff);
 					ipnr.PhysicalAddressLength = 6;
 					ipnr.State = NlnsPermanent;
 					ipnr.IsRouter = 1;
