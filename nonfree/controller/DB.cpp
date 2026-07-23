@@ -19,11 +19,6 @@ namespace ZeroTier {
 
 void DB::initNetwork(nlohmann::json& network)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::initNetwork");
-	auto scope = tracer->WithActiveSpan(span);
-
 	if (! network.count("private"))
 		network["private"] = true;
 	if (! network.count("creationTime"))
@@ -82,11 +77,6 @@ void DB::initNetwork(nlohmann::json& network)
 
 void DB::initMember(nlohmann::json& member)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::initMember");
-	auto scope = tracer->WithActiveSpan(span);
-
 	if (! member.count("authorized"))
 		member["authorized"] = false;
 	if (! member.count("ssoExempt"))
@@ -137,11 +127,6 @@ void DB::initMember(nlohmann::json& member)
 
 void DB::cleanNetwork(nlohmann::json& network)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::cleanNetwork");
-	auto scope = tracer->WithActiveSpan(span);
-
 	network.erase("clock");
 	network.erase("authorizedMemberCount");
 	network.erase("activeMemberCount");
@@ -151,11 +136,6 @@ void DB::cleanNetwork(nlohmann::json& network)
 
 void DB::cleanMember(nlohmann::json& member)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::cleanMember");
-	auto scope = tracer->WithActiveSpan(span);
-
 	member.erase("clock");
 	member.erase("physicalAddr");
 	member.erase("recentLog");
@@ -180,14 +160,6 @@ DB::~DB()
 
 bool DB::get(const uint64_t networkId, nlohmann::json& network)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::getNetwork");
-	auto scope = tracer->WithActiveSpan(span);
-	char networkIdStr[32];
-	memset(networkIdStr, 0, sizeof(networkIdStr));
-	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
-
 	waitForReady();
 	Metrics::db_get_network++;
 	std::shared_ptr<_Network> nw;
@@ -207,17 +179,6 @@ bool DB::get(const uint64_t networkId, nlohmann::json& network)
 
 bool DB::get(const uint64_t networkId, nlohmann::json& network, const uint64_t memberId, nlohmann::json& member)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::getNetworkAndMember");
-	auto scope = tracer->WithActiveSpan(span);
-	char networkIdStr[32];
-	memset(networkIdStr, 0, sizeof(networkIdStr));
-	char memberIdStr[32];
-	memset(memberIdStr, 0, sizeof(memberIdStr));
-	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
-	span->SetAttribute("member_id", Utils::hex(networkId, memberIdStr));
-
 	waitForReady();
 	Metrics::db_get_network_and_member++;
 	std::shared_ptr<_Network> nw;
@@ -246,17 +207,6 @@ bool DB::get(
 	nlohmann::json& member,
 	NetworkSummaryInfo& info)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::getNetworkAndMemberAndSummary");
-	auto scope = tracer->WithActiveSpan(span);
-	char networkIdStr[32];
-	memset(networkIdStr, 0, sizeof(networkIdStr));
-	char memberIdStr[32];
-	memset(memberIdStr, 0, sizeof(memberIdStr));
-	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
-	span->SetAttribute("member_id", Utils::hex(memberId, memberIdStr));
-
 	waitForReady();
 	Metrics::db_get_network_and_member_and_summary++;
 	std::shared_ptr<_Network> nw;
@@ -282,14 +232,6 @@ bool DB::get(
 
 bool DB::get(const uint64_t networkId, nlohmann::json& network, std::vector<nlohmann::json>& members)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::getNetworkAndMembers");
-	auto scope = tracer->WithActiveSpan(span);
-	char networkIdStr[32];
-	memset(networkIdStr, 0, sizeof(networkIdStr));
-	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
-
 	waitForReady();
 	Metrics::db_get_member_list++;
 	std::shared_ptr<_Network> nw;
@@ -312,11 +254,6 @@ bool DB::get(const uint64_t networkId, nlohmann::json& network, std::vector<nloh
 
 void DB::networks(std::set<uint64_t>& networks)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::networks");
-	auto scope = tracer->WithActiveSpan(span);
-
 	waitForReady();
 	Metrics::db_get_network_list++;
 	std::shared_lock<std::shared_mutex> l(_networks_l);
@@ -326,11 +263,6 @@ void DB::networks(std::set<uint64_t>& networks)
 
 void DB::_memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool notifyListeners)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::_memberChanged");
-	auto scope = tracer->WithActiveSpan(span);
-
 	Metrics::db_member_change++;
 	uint64_t memberId = 0;
 	uint64_t networkId = 0;
@@ -475,14 +407,6 @@ void DB::_memberChanged(nlohmann::json& old, nlohmann::json& memberConfig, bool 
 
 void DB::_networkChanged(nlohmann::json& old, nlohmann::json& networkConfig, bool notifyListeners)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::_networkChanged");
-	span->SetAttribute("old_network_config", old.dump());
-	span->SetAttribute("network_config", networkConfig.dump());
-	span->SetAttribute("notify_listeners", notifyListeners);
-	auto scope = tracer->WithActiveSpan(span);
-
 	Metrics::db_network_change++;
 	if (notifyListeners) {
 		if (old.is_object() && old.contains("id") && networkConfig.is_object() && networkConfig.contains("id")) {
@@ -557,11 +481,6 @@ void DB::_networkChanged(nlohmann::json& old, nlohmann::json& networkConfig, boo
 
 void DB::_fillSummaryInfo(const std::shared_ptr<_Network>& nw, NetworkSummaryInfo& info)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("db");
-	auto span = tracer->StartSpan("db::_fillSummaryInfo");
-	auto scope = tracer->WithActiveSpan(span);
-
 	for (auto ab = nw->activeBridgeMembers.begin(); ab != nw->activeBridgeMembers.end(); ++ab)
 		info.activeBridges.push_back(Address(*ab));
 	std::sort(info.activeBridges.begin(), info.activeBridges.end());

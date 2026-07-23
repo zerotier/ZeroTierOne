@@ -308,11 +308,6 @@ bool CentralDB::commitPipelineHealthy()
 
 bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("CentralDB");
-	auto span = tracer->StartSpan("CentralDB::save");
-	auto scope = tracer->WithActiveSpan(span);
-
 	bool modified = false;
 	try {
 		if (! record.is_object()) {
@@ -321,9 +316,6 @@ bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 		}
 		const std::string objtype = OSUtils::jsonString(record["objtype"], "");
 		if (objtype == "network") {
-			auto span = tracer->StartSpan("CentralDB::save::network");
-			auto scope = tracer->WithActiveSpan(span);
-
 			const uint64_t nwid = OSUtils::jsonIntHex(record["id"], 0ULL);
 			if (nwid) {
 				nlohmann::json old;
@@ -351,9 +343,6 @@ bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 			}
 		}
 		else if (objtype == "member") {
-			auto span = tracer->StartSpan("CentralDB::save::member");
-			auto scope = tracer->WithActiveSpan(span);
-
 			const uint64_t nwid = OSUtils::jsonIntHex(record["nwid"], 0ULL);
 			const uint64_t id = OSUtils::jsonIntHex(record["id"], 0ULL);
 			if ((id) && (nwid)) {
@@ -402,13 +391,6 @@ bool CentralDB::save(nlohmann::json& record, bool notifyListeners)
 
 void CentralDB::eraseNetwork(const uint64_t networkId)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("CentralDB");
-	auto span = tracer->StartSpan("CentralDB::eraseNetwork");
-	auto scope = tracer->WithActiveSpan(span);
-	char networkIdStr[17];
-	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
-
 	char tmp2[24];
 	waitForReady();
 	Utils::hex(networkId, tmp2);
@@ -430,14 +412,10 @@ void CentralDB::eraseNetwork(const uint64_t networkId)
 
 void CentralDB::eraseMember(const uint64_t networkId, const uint64_t memberId)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("CentralDB");
-	auto span = tracer->StartSpan("CentralDB::eraseMember");
-	auto scope = tracer->WithActiveSpan(span);
 	char networkIdStr[17];
 	char memberIdStr[11];
-	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
-	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
+	Utils::hex(networkId, networkIdStr);
+	Utils::hex10(memberId, memberIdStr);
 
 	waitForReady();
 
@@ -462,20 +440,9 @@ void CentralDB::nodeIsOnline(const uint64_t networkId,
 							 const InetAddress& physicalAddress,
 							 const char* osArch)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("CentralDB");
-	auto span = tracer->StartSpan("CentralDB::nodeIsOnline");
-	auto scope = tracer->WithActiveSpan(span);
-	char networkIdStr[17];
-	char memberIdStr[11];
-	char ipStr[INET6_ADDRSTRLEN];
 	// osArch may be NULL (public virtual taking a raw const char*); guard so the
-	// SetAttribute / std::string construction below can't hit UB on the hot heartbeat path.
+	// std::string construction below can't hit UB on the hot heartbeat path.
 	const char* oa = osArch ? osArch : "unknown/unknown";
-	span->SetAttribute("network_id", Utils::hex(networkId, networkIdStr));
-	span->SetAttribute("member_id", Utils::hex10(memberId, memberIdStr));
-	span->SetAttribute("physical_address", physicalAddress.toString(ipStr));
-	span->SetAttribute("os_arch", oa);
 
 	std::lock_guard<std::mutex> l(_lastOnline_l);
 	NodeOnlineRecord& i = _lastOnline[std::pair<uint64_t, uint64_t>(networkId, memberId)];

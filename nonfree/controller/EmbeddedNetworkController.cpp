@@ -262,11 +262,6 @@ static json _renderRule(ZT_VirtualNetworkRule& rule)
 
 static bool _parseRule(json& r, ZT_VirtualNetworkRule& rule)
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("embedded_controller");
-	auto span = tracer->StartSpan("embedded_controller::parseRule");
-	auto scope = tracer->WithActiveSpan(span);
-
 	if (! r.is_object())
 		return false;
 
@@ -2563,11 +2558,6 @@ void EmbeddedNetworkController::_request(
 
 void EmbeddedNetworkController::_startThreads()
 {
-	auto provider = opentelemetry::trace::Provider::GetTracerProvider();
-	auto tracer = provider->GetTracer("embedded_network_controller");
-	auto span = tracer->StartSpan("embedded_network_controller::_startThreads");
-	auto scope = tracer->WithActiveSpan(span);
-
 	std::lock_guard<std::mutex> l(_threads_l);
 	if (! _threads.empty()) {
 		return;
