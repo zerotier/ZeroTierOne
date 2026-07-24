@@ -115,13 +115,13 @@ make ZT_USE_MINIUPNPC=1 %{?_smp_mflags} ZT_OFFICIAL=1 ZT_NONFREE=1 one
 
 %install
 %if "%{?dist}" != ".el6"
-make install DESTDIR=$RPM_BUILD_ROOT
+make install DESTDIR=$RPM_BUILD_ROOT SBINDIR=$RPM_BUILD_ROOT%{_sbindir}
 mkdir -p $RPM_BUILD_ROOT%{_unitdir}
 cp %{getenv:PWD}/debian/zerotier-one.service $RPM_BUILD_ROOT%{_unitdir}/%{name}.service
 %else
 rm -rf $RPM_BUILD_ROOT
 pushd %{getenv:PWD}
-make install DESTDIR=$RPM_BUILD_ROOT
+make install DESTDIR=$RPM_BUILD_ROOT SBINDIR=$RPM_BUILD_ROOT%{_sbindir}
 popd
 mkdir -p $RPM_BUILD_ROOT/etc/init.d
 cp %{getenv:PWD}/ext/installfiles/linux/zerotier-one.init.rhel6 $RPM_BUILD_ROOT/etc/init.d/zerotier-one
