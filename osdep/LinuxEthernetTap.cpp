@@ -26,6 +26,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fstream>
 #include <ifaddrs.h>
 #include <linux/if.h>
 #include <linux/if_addr.h>
@@ -524,32 +525,30 @@ void LinuxEthernetTap::setFriendlyName(const char* friendlyName)
 
 void LinuxEthernetTap::scanMulticastGroups(std::vector<MulticastGroup>& added, std::vector<MulticastGroup>& removed)
 {
-	char *ptr, *ptr2;
-	unsigned char mac[6];
 	std::vector<MulticastGroup> newGroups;
 
-	int fd = ::open("/proc/net/dev_mcast", O_RDONLY);
-	if (fd > 0) {
-		char buf[131072];
-		int n = (int)::read(fd, buf, sizeof(buf));
-		if ((n > 0) && (n < (int)sizeof(buf))) {
-			buf[n] = (char)0;
-			for (char* l = strtok_r(buf, "\r\n", &ptr); (l); l = strtok_r((char*)0, "\r\n", &ptr)) {
-				int fno = 0;
-				char* devname = (char*)0;
-				char* mcastmac = (char*)0;
-				for (char* f = strtok_r(l, " \t", &ptr2); (f); f = strtok_r((char*)0, " \t", &ptr2)) {
-					if (fno == 1)
-						devname = f;
-					else if (fno == 4)
-						mcastmac = f;
-					++fno;
-				}
-				if ((devname) && (! strcmp(devname, _dev.c_str())) && (mcastmac) && (Utils::unhex(mcastmac, mac, 6) == 6))
-					newGroups.push_back(MulticastGroup(MAC(mac, 6), 0));
-			}
+	std::ifstream ifs("/proc/net/dev_mcast");
+	while (ifs.good()) {
+		char l[256];
+
+		ifs.getline(l, sizeof(l));
+		if (l[0] == '\0')
+			continue;
+
+		int fno = 0;
+		unsigned char mac[6];
+		char* ptr;
+		char* devname = (char*)0;
+		char* mcastmac = (char*)0;
+		for (char* f = strtok_r(l, " \t", &ptr); (f); f = strtok_r((char*)0, " \t", &ptr)) {
+			if (fno == 1)
+				devname = f;
+			else if (fno == 4)
+				mcastmac = f;
+			++fno;
 		}
-		::close(fd);
+		if ((devname) && (! strcmp(devname, _dev.c_str())) && (mcastmac) && (Utils::unhex(mcastmac, mac, 6) == 6))
+			newGroups.push_back(MulticastGroup(MAC(mac, 6), 0));
 	}
 
 	std::vector<InetAddress> allIps(ips());
