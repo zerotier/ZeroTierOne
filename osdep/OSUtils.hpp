@@ -179,6 +179,18 @@ class OSUtils {
 	static void lockDownFile(const char* path, bool isDir);
 
 	/**
+	 * Apply a hardened, protected ACL to a directory (Windows; no-op elsewhere)
+	 *
+	 * Sets an explicit, non-inheriting DACL granting full control to SYSTEM, modify to
+	 * Administrators, and read+execute to Everyone. Re-asserting this at service startup
+	 * closes the DLL-planting privilege-escalation class on hosts where the installer did
+	 * not (re)secure a pre-existing working directory.
+	 *
+	 * @param path Directory to secure
+	 */
+	static void secureDirectory(const char* path);
+
+	/**
 	 * Get file last modification time
 	 *
 	 * Resolution is often only second, not millisecond, but the return is

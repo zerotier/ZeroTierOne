@@ -1235,6 +1235,10 @@ class OneServiceImpl : public OneService {
 	virtual ReasonForTermination run()
 	{
 		try {
+			// Re-assert the protected working-directory ACL on every start. The MSI does not
+			// re-secure a pre-existing directory, so a host upgraded from a vulnerable build
+			// would otherwise keep the bad ACL. No-op on non-Windows.
+			OSUtils::secureDirectory(_homePath.c_str());
 			{
 				const std::string authTokenPath(_homePath + ZT_PATH_SEPARATOR_S "authtoken.secret");
 				if (! OSUtils::readFile(authTokenPath.c_str(), _authToken)) {

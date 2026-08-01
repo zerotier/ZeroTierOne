@@ -35,6 +35,8 @@
 #include <shlobj.h>
 #include <wincrypt.h>
 #include <windows.h>
+#include <aclapi.h>
+#include <sddl.h>
 #endif
 
 #include "OSUtils.hpp"
@@ -277,6 +279,29 @@ void OSUtils::lockDownFile(const char* path, bool isDir)
 		}
 	}
 #endif
+#endif
+}
+
+void OSUtils::secureDirectory(const char* path)
+{
+#ifdef __WINDOWS__
+	// Apply a protected (non-inheriting) DACL so standard users cannot create or modify
+	// files in this directory: SYSTEM full, Administrators modify, Everyone read+execute,
+	// inheritable to child files/subdirs. PROTECTED_DACL_SECURITY_INFORMATION strips any
+	// inherited ACE (e.g. the ProgramData 'Users:(create files)' grant that enables the
+	// DLL-planting LPE). Re-asserted on every service start, so it remediates upgrades and
+	// pre-existing installs the MSI does not re-secure. Mirrors the installer One_Dir SDDL.
+	PSECURITY_DESCRIPTOR sd = (PSECURITY_DESCRIPTOR)0;
+	if (ConvertStringSecurityDescriptorToSecurityDescriptorA("D:PAR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)", SDDL_REVISION_1, &sd, (PULONG)0)) {
+		BOOL daclPresent = FALSE, daclDefaulted = FALSE;
+		PACL dacl = (PACL)0;
+		if ((GetSecurityDescriptorDacl(sd, &daclPresent, &dacl, &daclDefaulted)) && (daclPresent)) {
+			SetNamedSecurityInfoA((LPSTR)path, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION, (PSID)0, (PSID)0, dacl, (PACL)0);
+		}
+		LocalFree(sd);
+	}
+#else
+	(void)path;
 #endif
 }
 
