@@ -222,7 +222,12 @@ class PortMapperImpl {
 					OSUtils::ztsnprintf(inport, sizeof(inport), "%d", localPort);
 
 					int foundValidIGD = 0;
-					if ((foundValidIGD = UPNP_GetValidIGD(devlist, &urls, &data, lanaddr, sizeof(lanaddr))) && (lanaddr[0])) {
+#if MINIUPNPC_API_VERSION < 18
+					if ((foundValidIGD = UPNP_GetValidIGD(devlist,&urls,&data,lanaddr,sizeof(lanaddr)))&&(lanaddr[0])) {
+#else
+					if ((foundValidIGD = UPNP_GetValidIGD(devlist,&urls,&data,lanaddr,sizeof(lanaddr),NULL,0))&&(lanaddr[0])) {
+#endif
+
 #ifdef ZT_PORTMAPPER_TRACE
 						PM_TRACE("PortMapper: UPnP: my LAN IP address: %s" ZT_EOL_S, lanaddr);
 #endif
