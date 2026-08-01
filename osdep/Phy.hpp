@@ -204,6 +204,7 @@ template <typename HANDLER_PTR_TYPE> class Phy {
 		_whackSendSocket = pipes[1];
 		_noDelay = noDelay;
 		_noCheck = noCheck;
+		FD_SET(_whackReceiveSocket, &_readfds);
 	}
 
 	~Phy()

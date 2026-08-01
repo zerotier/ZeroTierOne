@@ -1114,12 +1114,12 @@ class OneServiceImpl : public OneService {
 		curl_global_cleanup();
 #endif
 
-		_controlPlane.stop();
 		if (_serverThreadRunning) {
+			_controlPlane.stop();
 			_serverThread.join();
 		}
-		_controlPlaneV6.stop();
 		if (_serverThreadRunningV6) {
+			_controlPlaneV6.stop();
 			_serverThreadV6.join();
 		}
 		_rxPacketVector_m.lock();
