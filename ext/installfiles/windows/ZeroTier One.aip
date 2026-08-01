@@ -415,15 +415,15 @@
 		<ROW Condition="VersionNT" Description="[ProductName] cannot be installed on [WindowsType9XDisplay]." DescriptionLocId="AI.LaunchCondition.No9X" IsPredefined="true" Builds="DefaultBuild;ExeBuild"/>
 	</COMPONENT>
 	<COMPONENT cid="caphyon.advinst.msicomp.MsiLockPermissionsExComponent">
-		<ROW MsiLockPermissionsEx="Perm_ZeroTier_Dir" LockObject="ZeroTier_Dir" Table="CreateFolder" SDDLText="D:AR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)"/>
-		<ROW MsiLockPermissionsEx="Perm_One_Dir" LockObject="One_Dir" Table="CreateFolder" SDDLText="D:AR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)"/>
-		<ROW MsiLockPermissionsEx="Perm_networks.d_Dir" LockObject="networks.d_Dir" Table="CreateFolder" SDDLText="D:AR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)"/>
-		<ROW MsiLockPermissionsEx="Perm_driverx64_Dir" LockObject="driverx64_Dir" Table="CreateFolder" SDDLText="D:AR(A;OICI;FA;;;SY)(A;OICI;0x1200a9;;;WD)"/>
-		<ROW MsiLockPermissionsEx="Perm_driverx86_Dir" LockObject="driverx86_Dir" Table="CreateFolder" SDDLText="D:AR(A;OICI;FA;;;SY)(A;OICI;0x1200a9;;;WD)"/>
-		<ROW MsiLockPermissionsEx="Perm_driverarm64_Dir" LockObject="driverarm64_Dir" Table="CreateFolder" SDDLText="D:AR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)"/>
-		<ROW MsiLockPermissionsEx="Perm_regid.201001.com.zerotier_Dir" LockObject="regid.201001.com.zerotier_Dir" Table="CreateFolder" SDDLText="D:AR(A;OICI;FA;;;SY)(A;OICI;0x1200a9;;;WD)"/>
-		<ROW MsiLockPermissionsEx="Perm_APPDIR" LockObject="APPDIR" Table="CreateFolder" SDDLText="D:AR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)"/>
-		<ROW MsiLockPermissionsEx="Perm_i686_Dir" LockObject="i686_Dir" Table="CreateFolder" SDDLText="D:AR(A;OICI;FA;;;SY)(A;OICI;0x1200a9;;;WD)"/>
+		<ROW MsiLockPermissionsEx="Perm_ZeroTier_Dir" LockObject="ZeroTier_Dir" Table="CreateFolder" SDDLText="D:PAR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)"/>
+		<ROW MsiLockPermissionsEx="Perm_One_Dir" LockObject="One_Dir" Table="CreateFolder" SDDLText="D:PAR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)"/>
+		<ROW MsiLockPermissionsEx="Perm_networks.d_Dir" LockObject="networks.d_Dir" Table="CreateFolder" SDDLText="D:PAR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)"/>
+		<ROW MsiLockPermissionsEx="Perm_driverx64_Dir" LockObject="driverx64_Dir" Table="CreateFolder" SDDLText="D:PAR(A;OICI;FA;;;SY)(A;OICI;0x1200a9;;;WD)"/>
+		<ROW MsiLockPermissionsEx="Perm_driverx86_Dir" LockObject="driverx86_Dir" Table="CreateFolder" SDDLText="D:PAR(A;OICI;FA;;;SY)(A;OICI;0x1200a9;;;WD)"/>
+		<ROW MsiLockPermissionsEx="Perm_driverarm64_Dir" LockObject="driverarm64_Dir" Table="CreateFolder" SDDLText="D:PAR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)"/>
+		<ROW MsiLockPermissionsEx="Perm_regid.201001.com.zerotier_Dir" LockObject="regid.201001.com.zerotier_Dir" Table="CreateFolder" SDDLText="D:PAR(A;OICI;FA;;;SY)(A;OICI;0x1200a9;;;WD)"/>
+		<ROW MsiLockPermissionsEx="Perm_APPDIR" LockObject="APPDIR" Table="CreateFolder" SDDLText="D:PAR(A;OICI;FA;;;SY)(A;OICI;0x1301bf;;;BA)(A;OICI;0x1200a9;;;WD)"/>
+		<ROW MsiLockPermissionsEx="Perm_i686_Dir" LockObject="i686_Dir" Table="CreateFolder" SDDLText="D:PAR(A;OICI;FA;;;SY)(A;OICI;0x1200a9;;;WD)"/>
 	</COMPONENT>
 	<COMPONENT cid="caphyon.advinst.msicomp.MsiRegLocatorComponent">
 		<ROW Signature_="AI_EXE_PATH_CU" Root="1" Key="Software\Caphyon\Advanced Installer\LZMA\[ProductCode]\[ProductVersion]" Name="AI_ExePath" Type="2"/>
