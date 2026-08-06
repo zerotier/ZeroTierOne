@@ -111,6 +111,8 @@ namespace sdkresource = opentelemetry::v1::sdk::resource;
 #elif defined(__WINDOWS__)
 #include "../osdep/WinDNSHelper.hpp"
 #include "../osdep/WinFWHelper.hpp"
+#elif defined(__linux__)
+#include "../osdep/LinuxDNSHelper.hpp"
 #endif
 
 #ifdef ZT_USE_SYSTEM_HTTP_PARSER
@@ -3577,6 +3579,10 @@ class OneServiceImpl : public OneService {
 				MacDNSHelper::removeDNS(n.config().nwid);
 #elif defined(__WINDOWS__)
 				WinDNSHelper::removeDNS(n.config().nwid);
+#elif defined(__linux__)
+				if (n.tap()) {
+					LinuxDNSHelper::removeDNS(n.tap()->deviceName().c_str());
+				}
 #endif
 			}
 		}

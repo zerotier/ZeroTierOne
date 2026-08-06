@@ -28,6 +28,7 @@ ifeq ($(ZT_EXTOSDEP),1)
 	ONE_OBJS+=osdep/ExtOsdep.o
 	override DEFS += -DZT_EXTOSDEP
 else
+	ONE_OBJS+=osdep/LinuxDNSHelper.o
 	ONE_OBJS+=osdep/LinuxEthernetTap.o
 	ONE_OBJS+=osdep/LinuxNetLink.o
 endif
