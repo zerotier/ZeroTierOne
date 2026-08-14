@@ -67,6 +67,7 @@ class LinuxEthernetTap : public EthernetTap {
 	std::vector<MulticastGroup> _multicastGroups;
 	unsigned int _mtu;
 	int _fd;
+	std::vector<int> _tapFds;
 	int _shutdownSignalPipe[2];
 	std::atomic_bool _enabled;
 	std::atomic_bool _run;
