@@ -120,7 +120,7 @@ LinuxEthernetTap::LinuxEthernetTap(
 	, _mac(mac)
 	, _homePath(homePath)
 	, _mtu(mtu)
-	, _fd(0)
+	, _fd(-1)
 	, _enabled(true)
 	, _run(true)
 	, _lastIfAddrsUpdate(0)
@@ -138,9 +138,9 @@ LinuxEthernetTap::LinuxEthernetTap(
 	OSUtils::ztsnprintf(nwids, sizeof(nwids), "%.16llx", static_cast<unsigned long long>(nwid));
 
 	_fd = ::open("/dev/net/tun", O_RDWR);
-	if (_fd <= 0) {
+	if (_fd < 0) {
 		_fd = ::open("/dev/tun", O_RDWR);
-		if (_fd <= 0)
+		if (_fd < 0)
 			throw std::runtime_error(std::string("could not open TUN/TAP device: ") + strerror(errno));
 	}
 
@@ -206,7 +206,8 @@ LinuxEthernetTap::LinuxEthernetTap(
 #endif
 	}
 
-	ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
+	const short tapFlags = IFF_TAP | IFF_NO_PI | ((concurrency > 1) ? IFF_MULTI_QUEUE : 0);
+	ifr.ifr_flags = tapFlags;
 	if (ioctl(_fd, TUNSETIFF, (void*)&ifr) < 0) {
 		::close(_fd);
 		throw std::runtime_error("unable to configure TUN/TAP device for TAP operation");
@@ -214,12 +215,55 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 	::ioctl(_fd, TUNSETPERSIST, 0);	  // valgrind may generate a false alarm here
 	_dev = ifr.ifr_name;
-	::fcntl(_fd, F_SETFD, fcntl(_fd, F_GETFD) | FD_CLOEXEC);
+	_tapFds.push_back(_fd);
 
-	(void)::pipe(_shutdownSignalPipe);
+	// A shared TAP descriptor lets multiple readers dequeue packets from one
+	// FIFO, which can reorder a single high-rate flow. With Linux multiqueue,
+	// the kernel hashes each flow to a stable queue and every worker owns one
+	// descriptor. This preserves per-flow ordering while retaining parallelism.
+	for (unsigned int i = 1; i < concurrency; ++i) {
+		int queueFd = ::open("/dev/net/tun", O_RDWR);
+		if (queueFd < 0)
+			queueFd = ::open("/dev/tun", O_RDWR);
+
+		struct ifreq queueIfr;
+		memset(&queueIfr, 0, sizeof(queueIfr));
+		Utils::scopy(queueIfr.ifr_name, sizeof(queueIfr.ifr_name), _dev.c_str());
+		queueIfr.ifr_flags = tapFlags;
+		if ((queueFd < 0) || (ioctl(queueFd, TUNSETIFF, (void*)&queueIfr) < 0)) {
+			const int savedErrno = errno;
+			if (queueFd >= 0)
+				::close(queueFd);
+			for (int fd : _tapFds)
+				::close(fd);
+			_tapFds.clear();
+			_fd = -1;
+			throw std::runtime_error(std::string("unable to attach Linux multiqueue TAP descriptor: ") + strerror(savedErrno));
+		}
+
+		::ioctl(queueFd, TUNSETPERSIST, 0);
+		_tapFds.push_back(queueFd);
+	}
+
+	for (int fd : _tapFds) {
+		::fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
+		::fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+	}
+	if (_tapFds.size() > 1)
+		fprintf(stderr, "Configured %zu Linux TAP queues for %s\n", _tapFds.size(), _dev.c_str());
+
+	if (::pipe(_shutdownSignalPipe) != 0) {
+		const int savedErrno = errno;
+		for (int fd : _tapFds)
+			::close(fd);
+		_tapFds.clear();
+		_fd = -1;
+		throw std::runtime_error(std::string("unable to create TAP shutdown pipe: ") + strerror(savedErrno));
+	}
 
 	for (unsigned int i = 0; i < concurrency; ++i) {
 		_rxThreads.push_back(std::thread([this, i, concurrency, pinning] {
+			const int tapFd = _tapFds[i];
 			if (pinning) {
 				int pinCore = i % concurrency;
 				fprintf(stderr, "Pinning tap thread %d to core %d\n", i, pinCore);
@@ -300,8 +344,6 @@ LinuxEthernetTap::LinuxEthernetTap(
 					}
 				}
 
-				fcntl(_fd, F_SETFL, O_NONBLOCK);
-
 				::close(sock);
 			}
 
@@ -311,21 +353,21 @@ LinuxEthernetTap::LinuxEthernetTap(
 
 			FD_ZERO(&readfds);
 			FD_ZERO(&nullfds);
-			nfds = (int)std::max(_shutdownSignalPipe[0], _fd) + 1;
+			nfds = (int)std::max(_shutdownSignalPipe[0], tapFd) + 1;
 
 			r = 0;
 			for (;;) {
 				FD_SET(_shutdownSignalPipe[0], &readfds);
-				FD_SET(_fd, &readfds);
+				FD_SET(tapFd, &readfds);
 				select(nfds, &readfds, &nullfds, &nullfds, (struct timeval*)0);
 
 				if (FD_ISSET(_shutdownSignalPipe[0], &readfds)) {
 					break;
 				}
-				if (FD_ISSET(_fd, &readfds)) {
+				if (FD_ISSET(tapFd, &readfds)) {
 					for (;;) {
 						// read until there are no more packets, then return to outer select() loop
-						n = (int)::read(_fd, b + r, ZT_TAP_BUF_SIZE - r);
+						n = (int)::read(tapFd, b + r, ZT_TAP_BUF_SIZE - r);
 						if (n > 0) {
 							// Some tap drivers like to send the ethernet frame and the
 							// payload in two chunks, so handle that by accumulating
@@ -359,12 +401,15 @@ LinuxEthernetTap::~LinuxEthernetTap()
 {
 	_run = false;
 	(void)::write(_shutdownSignalPipe[1], "\0", 1);
-	::close(_fd);
-	::close(_shutdownSignalPipe[0]);
-	::close(_shutdownSignalPipe[1]);
 	for (std::thread& t : _rxThreads) {
 		t.join();
 	}
+	for (int fd : _tapFds)
+		::close(fd);
+	_tapFds.clear();
+	_fd = -1;
+	::close(_shutdownSignalPipe[0]);
+	::close(_shutdownSignalPipe[1]);
 }
 
 void LinuxEthernetTap::setEnabled(bool en)
