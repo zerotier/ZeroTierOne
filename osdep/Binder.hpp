@@ -449,7 +449,11 @@ class Binder {
 				++bi;
 			}
 			if (bi == _bindingCount) {
-				udps = phy.udpBind(reinterpret_cast<const struct sockaddr*>(&(ii->first)), (void*)0, ZT_UDP_DESIRED_BUF_SIZE);
+				udps = phy.udpBind(
+					reinterpret_cast<const struct sockaddr*>(&(ii->first)),
+					(void*)0,
+					ZT_UDP_DESIRED_RCVBUF_SIZE,
+					ZT_UDP_DESIRED_SNDBUF_SIZE);
 				if (udps) {
 #ifdef __LINUX__
 					// Bind Linux sockets to their device so routes that we manage do not override physical routes (wish all platforms had this!)
