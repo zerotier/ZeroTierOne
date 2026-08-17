@@ -741,12 +741,11 @@
 /**
  * Desired receive and send buffer sizes for physical UDP sockets.
  *
- * Receive capacity is intentionally larger to absorb bursts before ZeroTier's
- * packet-processing loop drains the socket. The send side remains at 1 MiB;
- * enlarging it would add queueing capacity without addressing receive overruns.
+ * The additional capacity absorbs short bursts before ZeroTier's receive loop
+ * or the operating system's transmit path drains the socket.
  */
 #define ZT_UDP_DESIRED_RCVBUF_SIZE 4194304
-#define ZT_UDP_DESIRED_SNDBUF_SIZE 1048576
+#define ZT_UDP_DESIRED_SNDBUF_SIZE 2097152
 
 /**
  * Desired / recommended min stack size for threads (used on some platforms to reset thread stack size)
