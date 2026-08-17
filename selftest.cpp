@@ -1546,7 +1546,7 @@ static int testPhy()
 	testPhyInstance = new Phy<TestPhyHandlers*>(&testPhyHandlers, false, true);
 
 	std::cout << "[phy] Binding UDP listen socket to 127.0.0.1/60002... ";
-	PhySocket* udpListenSock = testPhyInstance->udpBind((const struct sockaddr*)&bindaddr);
+	PhySocket* udpListenSock = testPhyInstance->udpBind((const struct sockaddr*)&bindaddr, (void*)0, 262144, 131072);
 	if (! udpListenSock) {
 		std::cout << "FAILED." << std::endl;
 		return -1;

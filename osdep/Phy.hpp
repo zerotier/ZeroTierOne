@@ -324,11 +324,12 @@ template <typename HANDLER_PTR_TYPE> class Phy {
 	 * Bind a UDP socket
 	 *
 	 * @param localAddress Local endpoint address and port
-	 * @param uptr Initial value of user pointer associated with this socket (default: NULL)
-	 * @param bufferSize Desired socket receive/send buffer size -- will set as close to this as possible (default: 0, leave alone)
+	 * @param uptr Initial value of user pointer associated with this socket
+	 * @param receiveBufferSize Desired socket receive buffer size -- will set as close to this as possible (0: leave alone)
+	 * @param sendBufferSize Desired socket send buffer size -- will set as close to this as possible (0: leave alone)
 	 * @return Socket or NULL on failure to bind
 	 */
-	inline PhySocket* udpBind(const struct sockaddr* localAddress, void* uptr = (void*)0, int bufferSize = 0)
+	inline PhySocket* udpBind(const struct sockaddr* localAddress, void* uptr, int receiveBufferSize, int sendBufferSize)
 	{
 		if (_socks.size() >= ZT_PHY_MAX_SOCKETS)
 			return (PhySocket*)0;
@@ -337,15 +338,17 @@ template <typename HANDLER_PTR_TYPE> class Phy {
 		if (! ZT_PHY_SOCKFD_VALID(s))
 			return (PhySocket*)0;
 
-		if (bufferSize > 0) {
-			int bs = bufferSize;
+		if (receiveBufferSize > 0) {
+			int bs = receiveBufferSize;
 			while (bs >= 65536) {
 				int tmpbs = bs;
 				if (setsockopt(s, SOL_SOCKET, SO_RCVBUF, (const char*)&tmpbs, sizeof(tmpbs)) == 0)
 					break;
 				bs -= 4096;
 			}
-			bs = bufferSize;
+		}
+		if (sendBufferSize > 0) {
+			int bs = sendBufferSize;
 			while (bs >= 65536) {
 				int tmpbs = bs;
 				if (setsockopt(s, SOL_SOCKET, SO_SNDBUF, (const char*)&tmpbs, sizeof(tmpbs)) == 0)
@@ -445,6 +448,16 @@ template <typename HANDLER_PTR_TYPE> class Phy {
 		memcpy(&(sws.saddr), localAddress, (localAddress->sa_family == AF_INET6) ? sizeof(struct sockaddr_in6) : sizeof(struct sockaddr_in));
 
 		return (PhySocket*)&sws;
+	}
+
+	/**
+	 * Bind a UDP socket with one shared receive/send buffer size.
+	 *
+	 * This overload preserves the original API for existing callers.
+	 */
+	inline PhySocket* udpBind(const struct sockaddr* localAddress, void* uptr = (void*)0, int bufferSize = 0)
+	{
+		return udpBind(localAddress, uptr, bufferSize, bufferSize);
 	}
 
 	/**

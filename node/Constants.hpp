@@ -739,9 +739,13 @@
 #define ZT_TRUST_EXPIRATION 600000
 
 /**
- * Desired buffer size for UDP sockets (used in service and osdep but defined here)
+ * Desired receive and send buffer sizes for physical UDP sockets.
+ *
+ * The additional capacity absorbs short bursts before ZeroTier's receive loop
+ * or the operating system's transmit path drains the socket.
  */
-#define ZT_UDP_DESIRED_BUF_SIZE 1048576
+#define ZT_UDP_DESIRED_RCVBUF_SIZE 4194304
+#define ZT_UDP_DESIRED_SNDBUF_SIZE 2097152
 
 /**
  * Desired / recommended min stack size for threads (used on some platforms to reset thread stack size)
