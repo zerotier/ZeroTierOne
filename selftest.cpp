@@ -1525,6 +1525,112 @@ struct TestPhyHandlers {
 	{
 	}
 };
+static int testPhyClosedSocketCleanup()
+{
+	TestPhyHandlers handlers;
+	Phy<TestPhyHandlers*> phy(&handlers, false, false);
+	struct sockaddr_in bindaddr;
+	memset(&bindaddr, 0, sizeof(bindaddr));
+	bindaddr.sin_family = AF_INET;
+	bindaddr.sin_addr.s_addr = Utils::hton((uint32_t)0x7f000001);
+
+	std::cout << "[phy] Reclaiming closed sockets after select timeout... ";
+	PhySocket* active = phy.udpBind((const struct sockaddr*)&bindaddr);
+	if (! active) {
+		std::cout << "FAILED (UDP bind)." << std::endl;
+		return -1;
+	}
+	const unsigned long packetsBefore = phyTestUdpPacketCount;
+
+	// Fill the internal list, not the OS descriptor table. Repeating this also
+	// checks that timeout cleanup restores capacity for subsequent port trials.
+	for (unsigned int round = 0; round < 2; ++round) {
+		while (phy.count() < phy.maxCount()) {
+			PhySocket* trial = (phy.count() & 1) ? phy.udpBind((const struct sockaddr*)&bindaddr)
+												  : phy.tcpListen((const struct sockaddr*)&bindaddr);
+			if (! trial) {
+				std::cout << "FAILED (trial bind)." << std::endl;
+				return -1;
+			}
+			phy.close(trial, false);
+		}
+		if (phy.udpBind((const struct sockaddr*)&bindaddr)) {
+			std::cout << "FAILED (socket limit not reached)." << std::endl;
+			return -1;
+		}
+		// No traffic or whack(): select must time out on the idle UDP socket.
+		phy.poll(1);
+		if ((phy.count() != 1) || (phyTestUdpPacketCount != packetsBefore)) {
+			std::cout << "FAILED (closed records retained or unexpected callback)." << std::endl;
+			return -1;
+		}
+	}
+	std::cout << "OK" << std::endl;
+
+	struct sockaddr_in destination;
+	socklen_t destinationLength = sizeof(destination);
+	if (::getsockname(phy.getDescriptor(active), (struct sockaddr*)&destination, &destinationLength)) {
+		std::cout << "[phy] FAILED (getsockname)." << std::endl;
+		return -1;
+	}
+
+#ifdef __UNIX_LIKE__
+	std::cout << "[phy] Reclaiming closed sockets after select error... ";
+	PhySocket* invalid = phy.udpBind((const struct sockaddr*)&bindaddr);
+	PhySocket* trial = phy.tcpListen((const struct sockaddr*)&bindaddr);
+	if ((! invalid) || (! trial)) {
+		std::cout << "FAILED (error-path setup)." << std::endl;
+		return -1;
+	}
+	phy.close(trial, false);
+	if (! phy.udpSend(active, (const struct sockaddr*)&destination, "test", 4)) {
+		std::cout << "FAILED (UDP send)." << std::endl;
+		return -1;
+	}
+	// Deliberately leave an invalid descriptor in the read set to force EBADF.
+	// A queued datagram must not be dispatched using fd_sets from failed select.
+	::close(phy.getDescriptor(invalid));
+	errno = 0;
+	phy.poll(1);
+	const int pollError = errno;
+	const unsigned long countAfterError = phy.count();
+	// Remove the invalid descriptor before anything can allocate/reuse its fd.
+	phy.close(invalid, false);
+	if ((pollError != EBADF) || (countAfterError != 2) || (phyTestUdpPacketCount != packetsBefore)) {
+		std::cout << "FAILED (error cleanup or unexpected callback)." << std::endl;
+		return -1;
+	}
+	std::cout << "OK" << std::endl;
+#else
+	PhySocket* trial = phy.tcpListen((const struct sockaddr*)&bindaddr);
+	if (! trial) {
+		std::cout << "[phy] FAILED (readiness-path setup)." << std::endl;
+		return -1;
+	}
+	phy.close(trial, false);
+	if (! phy.udpSend(active, (const struct sockaddr*)&destination, "test", 4)) {
+		std::cout << "[phy] FAILED (UDP send)." << std::endl;
+		return -1;
+	}
+#endif
+
+	std::cout << "[phy] Preserving UDP readiness and reclaiming closed sockets... ";
+	phy.poll(100);
+	if ((phy.count() != 1) || (phyTestUdpPacketCount != packetsBefore + 1)) {
+		std::cout << "FAILED." << std::endl;
+		return -1;
+	}
+	phy.close(active, false);
+	phy.poll(1);
+	if (phy.count() != 0) {
+		std::cout << "FAILED (last closed socket retained)." << std::endl;
+		return -1;
+	}
+	phyTestUdpPacketCount = packetsBefore;
+	std::cout << "OK" << std::endl;
+	return 0;
+}
+
 static int testPhy()
 {
 	char udpTestPayload[ZT_TEST_PHY_UDP_PACKET_SIZE];
@@ -1673,6 +1779,7 @@ int main(int argc, char** argv)
 	r |= testPacket();
 	r |= testIdentity();
 	r |= testCertificate();
+	r |= testPhyClosedSocketCleanup();
 	r |= testPhy();
 	//*/
 

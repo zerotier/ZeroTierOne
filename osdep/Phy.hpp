@@ -927,8 +927,17 @@ template <typename HANDLER_PTR_TYPE> class Phy {
 
 		tv.tv_sec = (long)(timeout / 1000);
 		tv.tv_usec = (long)((timeout % 1000) * 1000);
-		if (::select((int)_nfds + 1, &rfds, &wfds, &efds, (timeout > 0) ? &tv : (struct timeval*)0) <= 0)
+		if (::select((int)_nfds + 1, &rfds, &wfds, &efds, (timeout > 0) ? &tv : (struct timeval*)0) <= 0) {
+			// close() defers removal until poll(), even when no sockets are ready.
+			// Do not dispatch events using fd_sets from a failed select().
+			for (typename std::list<PhySocketImpl>::iterator s(_socks.begin()); s != _socks.end();) {
+				if (s->type == ZT_PHY_SOCKET_CLOSED)
+					_socks.erase(s++);
+				else
+					++s;
+			}
 			return;
+		}
 
 		if (FD_ISSET(_whackReceiveSocket, &rfds)) {
 			char tmp[16];
