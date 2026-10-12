@@ -32,6 +32,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <memory>
+
 // FIXME: remove this suppression and actually fix warnings
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wsign-compare"
@@ -470,7 +472,8 @@ ZT_ResultCode Node::join(uint64_t nwid, void* uptr, void* tptr)
 
 ZT_ResultCode Node::leave(uint64_t nwid, void** uptr, void* tptr)
 {
-	ZT_VirtualNetworkConfig ctmp;
+	// Heap, not stack: size grows with ZT_MAX_NETWORK_ROUTES; may run on small-stack threads.
+	std::unique_ptr<ZT_VirtualNetworkConfig> ctmp(new ZT_VirtualNetworkConfig());
 	void** nUserPtr = (void**)0;
 	// Keep a local SharedPtr to the network so we can call the destroy
 	// callback after releasing the lock, without leaving a window during
@@ -486,7 +489,7 @@ ZT_ResultCode Node::leave(uint64_t nwid, void** uptr, void* tptr)
 		if (uptr) {
 			*uptr = (*nw)->userPtr();
 		}
-		(*nw)->externalConfig(&ctmp);
+		(*nw)->externalConfig(ctmp.get());
 		(*nw)->destroy();
 		nUserPtr = (*nw)->userPtr();
 
@@ -498,7 +501,7 @@ ZT_ResultCode Node::leave(uint64_t nwid, void** uptr, void* tptr)
 	}
 
 	if (nUserPtr) {
-		RR->node->configureVirtualNetworkPort(tptr, nwid, nUserPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY, &ctmp);
+		RR->node->configureVirtualNetworkPort(tptr, nwid, nUserPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY, ctmp.get());
 	}
 
 	// nwHold goes out of scope here, finally releasing the Network.

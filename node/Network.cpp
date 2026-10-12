@@ -30,6 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <memory>
+
 namespace ZeroTier {
 
 namespace {
@@ -707,10 +709,11 @@ Network::Network(const RuntimeEnvironment* renv, void* tPtr, uint64_t nwid, void
 	}
 
 	if (! _portInitialized) {
-		ZT_VirtualNetworkConfig ctmp;
-		memset(&ctmp, 0, sizeof(ZT_VirtualNetworkConfig));
-		_externalConfig(&ctmp);
-		_portError = RR->node->configureVirtualNetworkPort(tPtr, _id, &_uPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, &ctmp);
+		// Heap, not stack: size grows with ZT_MAX_NETWORK_ROUTES; may run on small-stack threads.
+		std::unique_ptr<ZT_VirtualNetworkConfig> ctmp(new ZT_VirtualNetworkConfig());
+		memset(ctmp.get(), 0, sizeof(ZT_VirtualNetworkConfig));
+		_externalConfig(ctmp.get());
+		_portError = RR->node->configureVirtualNetworkPort(tPtr, _id, &_uPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, ctmp.get());
 		_portInitialized = true;
 	}
 
@@ -719,15 +722,15 @@ Network::Network(const RuntimeEnvironment* renv, void* tPtr, uint64_t nwid, void
 
 Network::~Network()
 {
-	ZT_VirtualNetworkConfig ctmp;
-	_externalConfig(&ctmp);
+	std::unique_ptr<ZT_VirtualNetworkConfig> ctmp(new ZT_VirtualNetworkConfig());
+	_externalConfig(ctmp.get());
 	Metrics::network_num_joined--;
 	if (_destroyed) {
 		// This is done in Node::leave() so we can pass tPtr properly
 		// RR->node->configureVirtualNetworkPort((void *)0,_id,&_uPtr,ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DESTROY,&ctmp);
 	}
 	else {
-		RR->node->configureVirtualNetworkPort((void*)0, _id, &_uPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN, &ctmp);
+		RR->node->configureVirtualNetworkPort((void*)0, _id, &_uPtr, ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_DOWN, ctmp.get());
 	}
 }
 
@@ -1234,7 +1237,7 @@ int Network::setConfiguration(void* tPtr, const NetworkConfig& nconf, bool saveT
 			return 1;	// OK config, but duplicate of what we already have
 		}
 
-		ZT_VirtualNetworkConfig ctmp;
+		std::unique_ptr<ZT_VirtualNetworkConfig> ctmp(new ZT_VirtualNetworkConfig());
 		bool oldPortInitialized;
 		{	// do things that require lock here, but unlock before calling callbacks
 			Mutex::Lock _l(_lock);
@@ -1246,10 +1249,10 @@ int Network::setConfiguration(void* tPtr, const NetworkConfig& nconf, bool saveT
 			oldPortInitialized = _portInitialized;
 			_portInitialized = true;
 
-			_externalConfig(&ctmp);
+			_externalConfig(ctmp.get());
 		}
 
-		_portError = RR->node->configureVirtualNetworkPort(tPtr, _id, &_uPtr, (oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, &ctmp);
+		_portError = RR->node->configureVirtualNetworkPort(tPtr, _id, &_uPtr, (oldPortInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, ctmp.get());
 		_authenticationURL = nconf.authenticationURL;
 
 		if (saveToDisk) {
@@ -1841,9 +1844,9 @@ void Network::setAuthenticationRequired(void* tPtr, const char* issuerURL, const
 
 void Network::_sendUpdateEvent(void* tPtr)
 {
-	ZT_VirtualNetworkConfig ctmp;
-	_externalConfig(&ctmp);
-	RR->node->configureVirtualNetworkPort(tPtr, _id, &_uPtr, (_portInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, &ctmp);
+	std::unique_ptr<ZT_VirtualNetworkConfig> ctmp(new ZT_VirtualNetworkConfig());
+	_externalConfig(ctmp.get());
+	RR->node->configureVirtualNetworkPort(tPtr, _id, &_uPtr, (_portInitialized) ? ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_CONFIG_UPDATE : ZT_VIRTUAL_NETWORK_CONFIG_OPERATION_UP, ctmp.get());
 }
 
 }	// namespace ZeroTier
