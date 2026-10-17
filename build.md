@@ -108,6 +108,20 @@ The binary is `build/zerotier-one`. (On macOS, append the Homebrew prefixes to
 
 Typing `make selftest` will build a *zerotier-selftest* binary which unit tests various internals and reports on a few aspects of the build environment. It's a good idea to try this on novel platforms or architectures.
 
+On Windows, CMake provides focused DNS registry regressions when `BUILD_TESTING=ON`:
+
+```powershell
+cmake --build --preset windows-x64-debug --target zerotier-windows-dns-test
+ctest --test-dir build-windows-x64 -C Debug -R windows-dns-registry --output-on-failure
+```
+
+Configure `windows-x64` first as described above. These tests call the Windows DNS
+helper with HKLM redirected inside the test process to a unique HKCU tree, which
+is deleted afterward. They require no elevation and do not change active NRPT
+policy. They check raw UTF-16 registry data for new and existing rules, including
+ANSI code-page conversion and string termination; live DNS policy evaluation is
+not covered.
+
 ## Running ZeroTier
 
 Running *zerotier-one* with `-h` option will show help.
