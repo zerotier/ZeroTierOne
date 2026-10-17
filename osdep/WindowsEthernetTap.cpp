@@ -14,6 +14,7 @@
 #include "..\windows\TapDriver6\tap-windows.h"
 #include "OSUtils.hpp"
 #include "WinDNSHelper.hpp"
+#include "WindowsIpInterface.hpp"
 #include "WindowsTapDeviceState.hpp"
 
 #include <IPHlpApi.h>
@@ -710,11 +711,14 @@ bool WindowsEthernetTap::removeIp(const InetAddress& ip)
 		return false;
 
 	try {
+		NET_LUID ipLuid;
+		if (! _ipInterfaceLuid(ipLuid))
+			return false;
 		MIB_UNICASTIPADDRESS_TABLE* ipt = (MIB_UNICASTIPADDRESS_TABLE*)0;
 		if (GetUnicastIpAddressTable(AF_UNSPEC, &ipt) == NO_ERROR) {
 			if ((ipt) && (ipt->NumEntries > 0)) {
 				for (DWORD i = 0; i < (DWORD)ipt->NumEntries; ++i) {
-					if (ipt->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
+					if (ipt->Table[i].InterfaceLuid.Value == ipLuid.Value) {
 						InetAddress addr;
 						switch (ipt->Table[i].Address.si_family) {
 							case AF_INET:
@@ -761,7 +765,6 @@ bool WindowsEthernetTap::removeIp(const InetAddress& ip)
 
 std::vector<InetAddress> WindowsEthernetTap::ips() const
 {
-	static const InetAddress linkLocalLoopback("fe80::1/64");	// what is this and why does Windows assign it?
 	std::vector<InetAddress> addrs;
 
 	if (! _initialized)
@@ -775,12 +778,25 @@ std::vector<InetAddress> WindowsEthernetTap::ips() const
 
 	_lastIfAddrsUpdate = now;
 
+	NET_LUID ipLuid;
+	if (_ipInterfaceLuid(ipLuid))
+		addrs = _ips(ipLuid);
+
+	_ifaddrs = addrs;
+
+	return addrs;
+}
+
+std::vector<InetAddress> WindowsEthernetTap::_ips(const NET_LUID& luid) const
+{
+	static const InetAddress linkLocalLoopback("fe80::1/64");	// what is this and why does Windows assign it?
+	std::vector<InetAddress> addrs;
 	try {
 		MIB_UNICASTIPADDRESS_TABLE* ipt = (MIB_UNICASTIPADDRESS_TABLE*)0;
 		if (GetUnicastIpAddressTable(AF_UNSPEC, &ipt) == NO_ERROR) {
 			if ((ipt) && (ipt->NumEntries > 0)) {
 				for (DWORD i = 0; i < (DWORD)ipt->NumEntries; ++i) {
-					if (ipt->Table[i].InterfaceLuid.Value == _deviceLuid.Value) {
+					if (ipt->Table[i].InterfaceLuid.Value == luid.Value) {
 						switch (ipt->Table[i].Address.si_family) {
 							case AF_INET: {
 								InetAddress ip(&(ipt->Table[i].Address.Ipv4.sin_addr.S_un.S_addr), 4, ipt->Table[i].OnLinkPrefixLength);
@@ -804,8 +820,6 @@ std::vector<InetAddress> WindowsEthernetTap::ips() const
 
 	std::sort(addrs.begin(), addrs.end());
 	addrs.erase(std::unique(addrs.begin(), addrs.end()), addrs.end());
-
-	_ifaddrs = addrs;
 
 	return addrs;
 }
@@ -973,10 +987,36 @@ void WindowsEthernetTap::setMtu(unsigned int mtu)
 	}
 }
 
+bool WindowsEthernetTap::_ipInterfaceLuid(NET_LUID& luid) const
+{
+	try {
+		unsigned char mac[6];
+		for (unsigned int i = 0; i < 6; ++i)
+			mac[i] = _mac[i];
+		ULONG size = 15 * 1024;
+		std::vector<unsigned char> buffer(size);
+		const ULONG flags = GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER;
+		for (unsigned int attempt = 0; attempt < 3; ++attempt) {
+			ULONG result = GetAdaptersAddresses(AF_UNSPEC, flags, NULL, reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data()), &size);
+			if (result == NO_ERROR)
+				return resolveIpInterfaceLuid(_deviceLuid, mac, reinterpret_cast<PIP_ADAPTER_ADDRESSES>(buffer.data()), luid);
+			if ((result != ERROR_BUFFER_OVERFLOW) || (size > 1024 * 1024))
+				return false;
+			buffer.resize(size);
+		}
+	}
+	catch (...) {
+	}
+	return false;
+}
+
 NET_IFINDEX WindowsEthernetTap::interfaceIndex() const
 {
+	NET_LUID ipLuid;
+	if (! _ipInterfaceLuid(ipLuid))
+		return -1;
 	NET_IFINDEX idx = -1;
-	if (ConvertInterfaceLuidToIndex(&_deviceLuid, &idx) == NO_ERROR)
+	if (ConvertInterfaceLuidToIndex(&ipLuid, &idx) == NO_ERROR)
 		return idx;
 	return -1;
 }
@@ -1139,6 +1179,10 @@ void WindowsEthernetTap::threadMain() throw()
 					ULONGLONG tc = GetTickCount64();
 					if ((tc - timeOfLastBorkCheck) >= 2500) {
 						timeOfLastBorkCheck = tc;
+						{
+							Mutex::Lock _l(_assignedIps_m);
+							_syncIps();
+						}
 						if (getTapHealth(_deviceLuid, [](MIB_IF_ROW2* row) { return GetIfEntry2(row); }) == WindowsTapHealth::Unhealthy)
 							break; // Close and reopen the TAP handle (outer loop).
 					}
@@ -1283,7 +1327,10 @@ void WindowsEthernetTap::_syncIps()
 	if (! _initialized)
 		return;
 
-	std::vector<InetAddress> haveIps(ips());
+	NET_LUID ipLuid;
+	if (! _ipInterfaceLuid(ipLuid))
+		return;
+	std::vector<InetAddress> haveIps(_ips(ipLuid));
 
 	for (std::vector<InetAddress>::const_iterator aip(_assignedIps.begin()); aip != _assignedIps.end(); ++aip) {
 		if (std::find(haveIps.begin(), haveIps.end(), *aip) == haveIps.end()) {
@@ -1312,8 +1359,9 @@ void WindowsEthernetTap::_syncIps()
 			ipr.ValidLifetime = 0xffffffff;
 			ipr.PreferredLifetime = 0xffffffff;
 
-			ipr.InterfaceLuid = _deviceLuid;
-			ipr.InterfaceIndex = _getDeviceIndex();
+			ipr.InterfaceLuid = ipLuid;
+			if (ConvertInterfaceLuidToIndex(&ipLuid, &ipr.InterfaceIndex) != NO_ERROR)
+				continue;
 
 			CreateUnicastIpAddressEntry(&ipr);
 		}

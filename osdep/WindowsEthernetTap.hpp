@@ -114,6 +114,8 @@ class WindowsEthernetTap : public EthernetTap {
 	};
 
   private:
+	bool _ipInterfaceLuid(NET_LUID& luid) const;
+	std::vector<InetAddress> _ips(const NET_LUID& luid) const;
 	NET_IFINDEX _getDeviceIndex();	 // throws on failure
 	std::vector<std::string> _getRegistryIPv4Value(const char* regKey);
 	void _setRegistryIPv4Value(const char* regKey, const std::vector<std::string>& value);

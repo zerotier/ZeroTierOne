@@ -687,5 +687,9 @@ if(WIN32)
             windows/WindowsTapDeviceStateTest.cpp
         )
         add_test(NAME windows-tap-device-state COMMAND zerotier-windows-tap-state-test)
+        add_executable(zerotier-windows-ip-interface-test
+            windows/WindowsIpInterfaceTest.cpp
+        )
+        add_test(NAME windows-ip-interface-resolution COMMAND zerotier-windows-ip-interface-test)
     endif()
 endif()
