@@ -38,6 +38,19 @@ static void checkState(DWORD queryResult, NET_IF_ADMIN_STATUS adminStatus, bool 
 	check(enableCount == (expectedEnable ? 1U : 0U), "wrong number of enable requests");
 }
 
+static void checkHealth(DWORD queryResult, IF_OPER_STATUS operStatus, WindowsTapHealth expectedHealth)
+{
+	NET_LUID luid;
+	luid.Value = 0x123456789abcdef0ULL;
+	const WindowsTapHealth health = getTapHealth(luid, [&](PMIB_IF_ROW2 row) {
+		check(row->InterfaceLuid.Value == luid.Value, "health query used the wrong interface LUID");
+		check(row->InterfaceIndex == 0, "health query row was not initialized");
+		row->OperStatus = operStatus;
+		return queryResult;
+	});
+	check(health == expectedHealth, "wrong TAP health classification");
+}
+
 int main()
 {
 	try {
@@ -46,6 +59,16 @@ int main()
 		checkState(NO_ERROR, NET_IF_ADMIN_STATUS_TESTING, false);
 		checkState(ERROR_FILE_NOT_FOUND, NET_IF_ADMIN_STATUS_DOWN, false);
 		checkState(ERROR_ACCESS_DENIED, NET_IF_ADMIN_STATUS_DOWN, false);
+
+		checkHealth(NO_ERROR, IfOperStatusUp, WindowsTapHealth::Healthy);
+		checkHealth(NO_ERROR, IfOperStatusDown, WindowsTapHealth::Unhealthy);
+		checkHealth(NO_ERROR, IfOperStatusTesting, WindowsTapHealth::Unhealthy);
+		checkHealth(NO_ERROR, IfOperStatusUnknown, WindowsTapHealth::Unhealthy);
+		checkHealth(NO_ERROR, IfOperStatusDormant, WindowsTapHealth::Unhealthy);
+		checkHealth(NO_ERROR, IfOperStatusNotPresent, WindowsTapHealth::Unhealthy);
+		checkHealth(NO_ERROR, IfOperStatusLowerLayerDown, WindowsTapHealth::Unhealthy);
+		checkHealth(ERROR_FILE_NOT_FOUND, IfOperStatusDown, WindowsTapHealth::Unknown);
+		checkHealth(ERROR_ACCESS_DENIED, IfOperStatusDown, WindowsTapHealth::Unknown);
 		puts("Windows TAP device state regression passed");
 		return 0;
 	}

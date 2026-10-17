@@ -1139,31 +1139,8 @@ void WindowsEthernetTap::threadMain() throw()
 					ULONGLONG tc = GetTickCount64();
 					if ((tc - timeOfLastBorkCheck) >= 2500) {
 						timeOfLastBorkCheck = tc;
-						char aabuf[16384];
-						ULONG aalen = sizeof(aabuf);
-						if (GetAdaptersAddresses(
-								AF_UNSPEC,
-								GAA_FLAG_SKIP_UNICAST | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME,
-								(void*)0,
-								reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),
-								&aalen)
-							== NO_ERROR) {
-							bool isBorked = false;
-
-							PIP_ADAPTER_ADDRESSES aa = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf);
-							while (aa) {
-								if (_deviceLuid.Value == aa->Luid.Value) {
-									isBorked = (aa->OperStatus != IfOperStatusUp);
-									break;
-								}
-								aa = aa->Next;
-							}
-
-							if (isBorked) {
-								// Close and reopen tap device if there's an issue (outer loop)
-								break;
-							}
-						}
+						if (getTapHealth(_deviceLuid, [](MIB_IF_ROW2* row) { return GetIfEntry2(row); }) == WindowsTapHealth::Unhealthy)
+							break; // Close and reopen the TAP handle (outer loop).
 					}
 				}
 

@@ -21,6 +21,23 @@
 
 namespace ZeroTier {
 
+enum class WindowsTapHealth {
+	Healthy,
+	Unhealthy,
+	Unknown
+};
+
+template <typename QueryInterface>
+WindowsTapHealth getTapHealth(const NET_LUID& luid, QueryInterface queryInterface)
+{
+	MIB_IF_ROW2 row;
+	memset(&row, 0, sizeof(row));
+	row.InterfaceLuid = luid;
+	if (queryInterface(&row) != NO_ERROR)
+		return WindowsTapHealth::Unknown;
+	return (row.OperStatus == IfOperStatusUp) ? WindowsTapHealth::Healthy : WindowsTapHealth::Unhealthy;
+}
+
 template <typename QueryInterface, typename EnableDevice>
 bool enableTapIfAdministrativelyDown(const NET_LUID& luid, QueryInterface queryInterface, EnableDevice enableDevice)
 {
