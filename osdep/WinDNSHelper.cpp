@@ -262,15 +262,21 @@ void WinDNSHelper::setDNS(uint64_t nwid, const char* domain, const std::vector<I
 		}
 	}
 	std::string serverValue = ss.str();
+	// RegSetKeyValueA takes ANSI bytes, including both REG_MULTI_SZ terminators.
+	// Store the NULs in the string so the byte count never reads past its storage.
+	std::string namespaceValue = "." + std::string(domain);
+	namespaceValue.append(2, '\0');
 
 	if (hasConfig.first) {
 		// update existing config
 		HKEY dnsKey;
 		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, hasConfig.second.c_str(), 0, KEY_READ | KEY_WRITE, &dnsKey) == ERROR_SUCCESS) {
-			auto retCode = RegSetKeyValueA(dnsKey, NULL, "GenericDNSServers", REG_SZ, serverValue.data(), (DWORD)serverValue.length());
+			auto retCode = RegSetKeyValueA(dnsKey, NULL, "GenericDNSServers", REG_SZ, serverValue.c_str(), (DWORD)(serverValue.length() + 1));
 			if (retCode != ERROR_SUCCESS) {
 				fprintf(stderr, "Error writing dns servers: %d\n", retCode);
 			}
+			// Also repair namespaces written by older clients and apply domain changes.
+			RegSetKeyValueA(dnsKey, NULL, "Name", REG_MULTI_SZ, namespaceValue.data(), (DWORD)namespaceValue.length());
 		}
 	}
 	else {
@@ -289,15 +295,14 @@ void WinDNSHelper::setDNS(uint64_t nwid, const char* domain, const std::vector<I
 		if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, fullKey, 0, KEY_READ | KEY_WRITE, &dnsKey) == ERROR_SUCCESS) {
 			char nwString[32] = { 0 };
 			sprintf(nwString, "%.16llx", nwid);
-			RegSetKeyValueA(dnsKey, NULL, "Comment", REG_SZ, nwString, strlen(nwString));
+			RegSetKeyValueA(dnsKey, NULL, "Comment", REG_SZ, nwString, (DWORD)(strlen(nwString) + 1));
 
 			DWORD configOpts = 8;
 			RegSetKeyValueA(dnsKey, NULL, "ConfigOptions", REG_DWORD, &configOpts, sizeof(DWORD));
-			RegSetKeyValueA(dnsKey, NULL, "DisplayName", REG_SZ, "", 0);
-			RegSetKeyValueA(dnsKey, NULL, "GenericDNSServers", REG_SZ, serverValue.data(), serverValue.length());
-			RegSetKeyValueA(dnsKey, NULL, "IPSECCARestriction", REG_SZ, "", 0);
-			std::string d = "." + std::string(domain);
-			RegSetKeyValueA(dnsKey, NULL, "Name", REG_MULTI_SZ, d.data(), d.length());
+			RegSetKeyValueA(dnsKey, NULL, "DisplayName", REG_SZ, "", sizeof(""));
+			RegSetKeyValueA(dnsKey, NULL, "GenericDNSServers", REG_SZ, serverValue.c_str(), (DWORD)(serverValue.length() + 1));
+			RegSetKeyValueA(dnsKey, NULL, "IPSECCARestriction", REG_SZ, "", sizeof(""));
+			RegSetKeyValueA(dnsKey, NULL, "Name", REG_MULTI_SZ, namespaceValue.data(), (DWORD)namespaceValue.length());
 			DWORD version = 2;
 			RegSetKeyValueA(dnsKey, NULL, "Version", REG_DWORD, &version, sizeof(DWORD));
 		}

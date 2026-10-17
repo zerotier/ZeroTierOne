@@ -679,3 +679,17 @@ if(NOT WIN32)
         prometheus-cpp-lite
     )
 endif()
+
+# This Windows regression uses a process-local registry sandbox, not live NRPT.
+if(WIN32)
+    include(CTest)
+    if(BUILD_TESTING)
+        add_executable(zerotier-windows-dns-test
+            windows/WinDNSHelperTest.cpp
+            osdep/WinDNSHelper.cpp
+        )
+        target_link_libraries(zerotier-windows-dns-test PRIVATE zerotier-core ws2_32 advapi32 ole32)
+        add_test(NAME windows-dns-registry COMMAND zerotier-windows-dns-test)
+        add_test(NAME windows-dns-registry-existing COMMAND zerotier-windows-dns-test --existing)
+    endif()
+endif()
