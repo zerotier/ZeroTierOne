@@ -14,6 +14,7 @@
 #include "..\windows\TapDriver6\tap-windows.h"
 #include "OSUtils.hpp"
 #include "WinDNSHelper.hpp"
+#include "WindowsTapDeviceState.hpp"
 
 #include <IPHlpApi.h>
 #include <SetupAPI.h>
@@ -997,16 +998,13 @@ void WindowsEthernetTap::threadMain() throw()
 
 	try {
 		while (_run) {
-			// Because Windows
 			Sleep(250);
-			setPersistentTapDeviceState(_deviceInstanceId.c_str(), false);
-			Sleep(250);
-			setPersistentTapDeviceState(_deviceInstanceId.c_str(), true);
-			Sleep(250);
-			setPersistentTapDeviceState(_deviceInstanceId.c_str(), false);
-			Sleep(250);
-			setPersistentTapDeviceState(_deviceInstanceId.c_str(), true);
-			Sleep(250);
+			if (enableTapIfAdministrativelyDown(
+					_deviceLuid,
+					[](MIB_IF_ROW2* row) { return GetIfEntry2(row); },
+					[this]() { setPersistentTapDeviceState(_deviceInstanceId.c_str(), true); })) {
+				Sleep(250);
+			}
 
 			_tap = CreateFileA(tapPath, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, NULL);
 			if (_tap == INVALID_HANDLE_VALUE) {
