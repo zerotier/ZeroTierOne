@@ -14,6 +14,7 @@
 #include "..\windows\TapDriver6\tap-windows.h"
 #include "OSUtils.hpp"
 #include "WinDNSHelper.hpp"
+#include "WindowsTapDeviceState.hpp"
 
 #include <IPHlpApi.h>
 #include <SetupAPI.h>
@@ -997,16 +998,13 @@ void WindowsEthernetTap::threadMain() throw()
 
 	try {
 		while (_run) {
-			// Because Windows
 			Sleep(250);
-			setPersistentTapDeviceState(_deviceInstanceId.c_str(), false);
-			Sleep(250);
-			setPersistentTapDeviceState(_deviceInstanceId.c_str(), true);
-			Sleep(250);
-			setPersistentTapDeviceState(_deviceInstanceId.c_str(), false);
-			Sleep(250);
-			setPersistentTapDeviceState(_deviceInstanceId.c_str(), true);
-			Sleep(250);
+			if (enableTapIfAdministrativelyDown(
+					_deviceLuid,
+					[](MIB_IF_ROW2* row) { return GetIfEntry2(row); },
+					[this]() { setPersistentTapDeviceState(_deviceInstanceId.c_str(), true); })) {
+				Sleep(250);
+			}
 
 			_tap = CreateFileA(tapPath, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED, NULL);
 			if (_tap == INVALID_HANDLE_VALUE) {
@@ -1141,31 +1139,8 @@ void WindowsEthernetTap::threadMain() throw()
 					ULONGLONG tc = GetTickCount64();
 					if ((tc - timeOfLastBorkCheck) >= 2500) {
 						timeOfLastBorkCheck = tc;
-						char aabuf[16384];
-						ULONG aalen = sizeof(aabuf);
-						if (GetAdaptersAddresses(
-								AF_UNSPEC,
-								GAA_FLAG_SKIP_UNICAST | GAA_FLAG_SKIP_ANYCAST | GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_DNS_SERVER | GAA_FLAG_SKIP_FRIENDLY_NAME,
-								(void*)0,
-								reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf),
-								&aalen)
-							== NO_ERROR) {
-							bool isBorked = false;
-
-							PIP_ADAPTER_ADDRESSES aa = reinterpret_cast<PIP_ADAPTER_ADDRESSES>(aabuf);
-							while (aa) {
-								if (_deviceLuid.Value == aa->Luid.Value) {
-									isBorked = (aa->OperStatus != IfOperStatusUp);
-									break;
-								}
-								aa = aa->Next;
-							}
-
-							if (isBorked) {
-								// Close and reopen tap device if there's an issue (outer loop)
-								break;
-							}
-						}
+						if (getTapHealth(_deviceLuid, [](MIB_IF_ROW2* row) { return GetIfEntry2(row); }) == WindowsTapHealth::Unhealthy)
+							break; // Close and reopen the TAP handle (outer loop).
 					}
 				}
 
