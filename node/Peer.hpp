@@ -320,6 +320,39 @@ class Peer {
 	}
 
 	/**
+	 * Acknowledge a scheduled full HELLO after its direct reply path has been accepted.
+	 */
+	inline void acknowledgeFullHello(const SharedPtr<Path>& path, int64_t timestamp)
+	{
+		Mutex::Lock _l(_paths_m);
+		if (_fullHelloPending && timestamp >= _lastSentFullHello) {
+			for (unsigned int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS && _paths[i].p; ++i) {
+				if (_paths[i].p == path) {
+					_fullHelloPending = false;
+					break;
+				}
+			}
+		}
+	}
+
+	/**
+	 * @return True if paths have expired or a full HELLO has had time to receive a reply but remains unanswered
+	 */
+	inline bool needsPathRecovery(int64_t now) const
+	{
+		Mutex::Lock _l(_paths_m);
+		if (_fullHelloPending && ((now - _lastSentFullHello) >= ZT_PATH_HEARTBEAT_PERIOD)) {
+			return true;
+		}
+		for (unsigned int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS && _paths[i].p; ++i) {
+			if ((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/**
 	 * @return Latency in milliseconds of best/aggregate path or 0xffff if unknown / no paths
 	 */
 	inline unsigned int latency(const int64_t now)
@@ -691,6 +724,7 @@ class Peer {
 	int64_t _lastSentFullHello;
 	int64_t _lastEchoCheck;
 
+	bool _fullHelloPending;
 	unsigned char _freeRandomByte;
 
 	uint16_t _vProto;
