@@ -185,9 +185,21 @@ class Peer {
 	 *
 	 * @param now Current time
 	 * @param includeExpired If true, include even expired paths
+	 * @param needsCheck Optional output indicating that the selected path needs a probe before continued use
 	 * @return Best current path or NULL if none
 	 */
-	SharedPtr<Path> getAppropriatePath(int64_t now, bool includeExpired, int32_t flowId = -1);
+	SharedPtr<Path>
+	getAppropriatePath(int64_t now, bool includeExpired, int32_t flowId = -1, bool* needsCheck = nullptr);
+
+	/**
+	 * Probe a quiet direct path and return it, a fresh alternative, or no usable path.
+	 */
+	SharedPtr<Path> checkPath(void* tPtr, const SharedPtr<Path>& path, int64_t now);
+
+	/**
+	 * Refresh an existing path after an ECHO or HELLO reply matches its pending probe.
+	 */
+	void acknowledgePathProbe(const SharedPtr<Path>& path, Packet::Verb verb, uint64_t timestamp);
 
 	/**
 	 * Send VERB_RENDEZVOUS to this and another peer via the best common IP scope and path
@@ -203,8 +215,9 @@ class Peer {
 	 * @param localSocket Local source socket
 	 * @param atAddress Destination address
 	 * @param now Current time
+	 * @param forceSpecificSocket Use only the given socket when checking a retained path
 	 */
-	void sendHELLO(void* tPtr, const int64_t localSocket, const InetAddress& atAddress, int64_t now);
+	void sendHELLO(void* tPtr, const int64_t localSocket, const InetAddress& atAddress, int64_t now, bool forceSpecificSocket = false);
 
 	/**
 	 * Send ECHO (or HELLO for older peers) to this peer at the given address
@@ -216,8 +229,15 @@ class Peer {
 	 * @param atAddress Destination address
 	 * @param now Current time
 	 * @param sendFullHello If true, always send a full HELLO instead of just an ECHO
+	 * @param echoToken Optional token for a pending path probe
 	 */
-	void attemptToContactAt(void* tPtr, const int64_t localSocket, const InetAddress& atAddress, int64_t now, bool sendFullHello);
+	void attemptToContactAt(
+		void* tPtr,
+		const int64_t localSocket,
+		const InetAddress& atAddress,
+		int64_t now,
+		bool sendFullHello,
+		uint64_t echoToken = 0);
 
 	/**
 	 * Try a memorized or statically defined path if any are known
@@ -666,10 +686,16 @@ class Peer {
 
   private:
 	struct _PeerPath {
-		_PeerPath() : lr(0), p(), priority(1)
+		_PeerPath() : lr(0), probeStarted(0), p(), priority(1)
 		{
 		}
+		bool needsProbeCheck(int64_t now) const
+		{
+			// Give remote heartbeats one background tick before starting another check.
+			return (now - lr) >= ZT_PATH_HEARTBEAT_PERIOD + (probeStarted ? 0 : ZT_PING_CHECK_INTERVAL);
+		}
 		int64_t lr;	  // time of last valid ZeroTier packet
+		int64_t probeStarted;	// First unanswered probe; retries share its timestamp.
 		SharedPtr<Path> p;
 		long priority;	 // >= 1, higher is better
 	};

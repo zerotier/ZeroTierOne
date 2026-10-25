@@ -115,6 +115,7 @@ void Peer::received(
 				if (_paths[i].p) {
 					if (_paths[i].p == path) {
 						_paths[i].lr = now;
+						_paths[i].probeStarted = 0;
 						havePath = true;
 						break;
 					}
@@ -167,6 +168,7 @@ void Peer::received(
 				if (replacePath != ZT_MAX_PEER_NETWORK_PATHS) {
 					RR->t->peerLearnedNewPath(tPtr, networkId, *this, path, packetId);
 					_paths[replacePath].lr = now;
+					_paths[replacePath].probeStarted = 0;
 					_paths[replacePath].p = path;
 					_paths[replacePath].priority = 1;
 					Mutex::Lock _l(_bond_m);
@@ -258,10 +260,13 @@ void Peer::received(
 	}
 }
 
-SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int32_t flowId)
+SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int32_t flowId, bool* needsCheck)
 {
 	Mutex::Lock _l(_paths_m);
 	Mutex::Lock _lb(_bond_m);
+	if (needsCheck) {
+		*needsCheck = false;
+	}
 	if (_bond && _bond->isReady()) {
 		return _bond->getAppropriatePath(now, flowId);
 	}
@@ -286,9 +291,79 @@ SharedPtr<Path> Peer::getAppropriatePath(int64_t now, bool includeExpired, int32
 		}
 	}
 	if (bestPath != ZT_MAX_PEER_NETWORK_PATHS) {
+		if (needsCheck && ! _bond && ! RR->node->lowBandwidthModeEnabled()) {
+			*needsCheck = _paths[bestPath].needsProbeCheck(now);
+		}
 		return _paths[bestPath].p;
 	}
 	return SharedPtr<Path>();
+}
+
+SharedPtr<Path> Peer::checkPath(void* tPtr, const SharedPtr<Path>& path, int64_t now)
+{
+	if (RR->node->lowBandwidthModeEnabled() || RR->topology->isUpstream(_id)) {
+		return path;
+	}
+	Mutex::Lock _l(_paths_m);
+	if (_bond) {
+		return path;
+	}
+	for (unsigned int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS && _paths[i].p; ++i) {
+		_PeerPath& p = _paths[i];
+		if (p.p == path) {
+			if ((now - p.lr) >= ZT_PEER_PATH_EXPIRATION) {
+				break;
+			}
+			if (! p.needsProbeCheck(now)) {
+				return path;
+			}
+			if ((now - _lastEchoCheck) >= ZT_PATH_HEARTBEAT_PERIOD
+				&& (! p.probeStarted || (now - p.probeStarted) >= ZT_PATH_HEARTBEAT_PERIOD)) {
+				_lastEchoCheck = now;
+				const bool retry = p.probeStarted != 0;
+				if (! p.probeStarted) {
+					p.probeStarted = now;
+				}
+				attemptToContactAt(tPtr, path->localSocket(), path->address(), now, retry, p.probeStarted);
+				path->sent(now);
+			}
+			if ((! p.probeStarted) || ((now - p.probeStarted) < ZT_PATH_HEARTBEAT_PERIOD)) {
+				return path;
+			}
+			break;
+		}
+	}
+	unsigned int bestPath = ZT_MAX_PEER_NETWORK_PATHS;
+	long bestPathQuality = 2147483647;
+	for (unsigned int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS && _paths[i].p; ++i) {
+		if ((now - _paths[i].lr) < ZT_PATH_HEARTBEAT_PERIOD) {
+			const long q = _paths[i].p->quality(now) / _paths[i].priority;
+			if (q <= bestPathQuality) {
+				bestPathQuality = q;
+				bestPath = i;
+			}
+		}
+	}
+	return bestPath != ZT_MAX_PEER_NETWORK_PATHS ? _paths[bestPath].p : SharedPtr<Path>();
+}
+
+void Peer::acknowledgePathProbe(const SharedPtr<Path>& path, Packet::Verb verb, uint64_t timestamp)
+{
+	const int64_t now = RR->node->now();
+	Mutex::Lock _l(_paths_m);
+	for (unsigned int i = 0; i < ZT_MAX_PEER_NETWORK_PATHS && _paths[i].p; ++i) {
+		_PeerPath& p = _paths[i];
+		if (p.p == path) {
+			if (p.probeStarted && timestamp <= (uint64_t)now
+				&& ((verb == Packet::VERB_ECHO) ? timestamp == (uint64_t)p.probeStarted
+												: timestamp >= (uint64_t)p.probeStarted)) {
+				_lastReceive = now;
+				p.lr = now;
+				p.probeStarted = 0;
+			}
+			return;
+		}
+	}
 }
 
 void Peer::introduce(void* const tPtr, const int64_t now, const SharedPtr<Peer>& other) const
@@ -423,7 +498,7 @@ void Peer::introduce(void* const tPtr, const int64_t now, const SharedPtr<Peer>&
 	}
 }
 
-void Peer::sendHELLO(void* tPtr, const int64_t localSocket, const InetAddress& atAddress, int64_t now)
+void Peer::sendHELLO(void* tPtr, const int64_t localSocket, const InetAddress& atAddress, int64_t now, bool forceSpecificSocket)
 {
 	Packet outp(_id.address(), RR->identity.address(), Packet::VERB_HELLO);
 
@@ -461,7 +536,7 @@ void Peer::sendHELLO(void* tPtr, const int64_t localSocket, const InetAddress& a
 	if (atAddress) {
 		outp.armor(_key, false, RR->node->encryptedHelloEnabled(), nullptr, _id);
 		RR->node->expectReplyTo(outp.packetId());
-		RR->node->putPacket(tPtr, RR->node->lowBandwidthModeEnabled() ? localSocket : -1, atAddress, outp.data(), outp.size());
+		RR->node->putPacket(tPtr, (forceSpecificSocket || RR->node->lowBandwidthModeEnabled()) ? localSocket : -1, atAddress, outp.data(), outp.size());
 	}
 	else {
 		RR->node->expectReplyTo(outp.packetId());
@@ -469,17 +544,26 @@ void Peer::sendHELLO(void* tPtr, const int64_t localSocket, const InetAddress& a
 	}
 }
 
-void Peer::attemptToContactAt(void* tPtr, const int64_t localSocket, const InetAddress& atAddress, int64_t now, bool sendFullHello)
+void Peer::attemptToContactAt(
+	void* tPtr,
+	const int64_t localSocket,
+	const InetAddress& atAddress,
+	int64_t now,
+	bool sendFullHello,
+	uint64_t echoToken)
 {
 	if ((! sendFullHello) && (_vProto >= 5) && (! ((_vMajor == 1) && (_vMinor == 1) && (_vRevision == 0)))) {
 		Packet outp(_id.address(), RR->identity.address(), Packet::VERB_ECHO);
+		if (echoToken) {
+			outp.append(echoToken);
+		}
 		outp.armor(_key, true, false, aesKeysIfSupported(), _id);
 		Metrics::pkt_echo_out++;
 		RR->node->expectReplyTo(outp.packetId());
 		RR->node->putPacket(tPtr, localSocket, atAddress, outp.data(), outp.size());
 	}
 	else {
-		sendHELLO(tPtr, localSocket, atAddress, now);
+		sendHELLO(tPtr, localSocket, atAddress, now, echoToken != 0);
 	}
 }
 
@@ -540,11 +624,13 @@ void Peer::performMultipathStateCheck(void* tPtr, int64_t now)
 
 unsigned int Peer::doPingAndKeepalive(void* tPtr, int64_t now)
 {
+	const bool probePeer = ! RR->node->lowBandwidthModeEnabled() && ! RR->topology->isUpstream(_id);
 	unsigned int sent = 0;
 	{
 		Mutex::Lock _l(_paths_m);
 
 		performMultipathStateCheck(tPtr, now);
+		const bool trackProbes = probePeer && ! _bond;
 
 		const bool sendFullHello = ((now - _lastSentFullHello) >= ZT_PEER_PING_PERIOD);
 		if (sendFullHello) {
@@ -571,7 +657,13 @@ unsigned int Peer::doPingAndKeepalive(void* tPtr, int64_t now)
 				// Clean expired and reduced priority paths
 				if (((now - _paths[i].lr) < ZT_PEER_PATH_EXPIRATION) && (_paths[i].priority == maxPriority)) {
 					if ((sendFullHello) || (_paths[i].p->needsHeartbeat(now))) {
-						attemptToContactAt(tPtr, _paths[i].p->localSocket(), _paths[i].p->address(), now, sendFullHello);
+						// Full HELLOs can use another socket, so they cannot start a path-specific check.
+						const bool probe = trackProbes && ! sendFullHello;
+						if (probe && ! _paths[i].probeStarted && (now - _paths[i].lr) >= ZT_PATH_HEARTBEAT_PERIOD) {
+							_paths[i].probeStarted = now;
+						}
+						attemptToContactAt(tPtr, _paths[i].p->localSocket(), _paths[i].p->address(), now, sendFullHello,
+							probe ? _paths[i].probeStarted : 0);
 						_paths[i].p->sent(now);
 						sent |= (_paths[i].p->address().ss_family == AF_INET) ? 0x1 : 0x2;
 					}
@@ -654,13 +746,12 @@ void Peer::clusterRedirect(void* tPtr, const SharedPtr<Path>& originatingPath, c
 		}
 		if (j < ZT_MAX_PEER_NETWORK_PATHS) {
 			_paths[j].lr = now;
+			_paths[j].probeStarted = 0;
 			_paths[j].p = np;
 			_paths[j].priority = newPriority;
 			++j;
 			while (j < ZT_MAX_PEER_NETWORK_PATHS) {
-				_paths[j].lr = 0;
-				_paths[j].p.zero();
-				_paths[j].priority = 1;
+				_paths[j] = _PeerPath();
 				++j;
 			}
 		}
@@ -676,6 +767,7 @@ void Peer::resetWithinScope(void* tPtr, InetAddress::IpScope scope, int inetAddr
 				attemptToContactAt(tPtr, _paths[i].p->localSocket(), _paths[i].p->address(), now, false);
 				_paths[i].p->sent(now);
 				_paths[i].lr = 0;	// path will not be used unless it speaks again
+				_paths[i].probeStarted = 0;
 			}
 		}
 		else {

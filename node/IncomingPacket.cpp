@@ -553,6 +553,13 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment* RR, void* tPtr, const Share
 	uint64_t networkId = 0;
 
 	if (! RR->node->expectingReplyTo(inRePacketId)) {
+		// Busy senders can evict probe IDs before their replies arrive.
+		const bool echo = inReVerb == Packet::VERB_ECHO && size() == ZT_PROTO_VERB_OK_IDX_PAYLOAD + sizeof(uint64_t);
+		const bool hello = inReVerb == Packet::VERB_HELLO && size() >= ZT_PROTO_VERB_HELLO__OK__IDX_REVISION + 2
+						   && (*this)[ZT_PROTO_VERB_HELLO__OK__IDX_PROTOCOL_VERSION] >= ZT_PROTO_VERSION_MIN;
+		if (! hops() && (echo || hello)) {
+			peer->acknowledgePathProbe(_path, inReVerb, at<uint64_t>(ZT_PROTO_VERB_OK_IDX_PAYLOAD));
+		}
 		return true;
 	}
 
