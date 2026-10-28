@@ -42,6 +42,13 @@
 // Create a fake unused default route to force detection of network type on networks without gateways
 #define ZT_WINDOWS_CREATE_FAKE_DEFAULT_ROUTE
 
+// Number of frames that may be in flight to the tap driver at once. The driver
+// keeps each write IRP pending until NDIS returns the indicated NBL, and the
+// Windows stack may hold an NBL for seconds (e.g. while resolving ARP for a
+// forwarded packet). With a single write in flight that stalls every other
+// inbound frame. See https://github.com/zerotier/ZeroTierOne/issues/1428
+#define ZT_WINDOWS_TAP_WRITE_SLOTS 16
+
 // Function signatures of dynamically loaded functions, from newdev.h, setupapi.h, and cfgmgr32.h
 typedef BOOL(WINAPI* UpdateDriverForPlugAndPlayDevicesA_t)(_In_opt_ HWND hwndParent, _In_ LPCSTR HardwareId, _In_ LPCSTR FullInfPath, _In_ DWORD InstallFlags, _Out_opt_ PBOOL bRebootRequired);
 typedef BOOL(WINAPI* SetupDiGetINFClassA_t)(_In_ PCSTR InfName, _Out_ LPGUID ClassGuid, _Out_writes_(ClassNameSize) PSTR ClassName, _In_ DWORD ClassNameSize, _Out_opt_ PDWORD RequiredSize);
@@ -990,8 +997,11 @@ void WindowsEthernetTap::threadMain() throw()
 
 	char tapReadBuf[ZT_MAX_MTU + 32];
 	char tapPath[128];
-	HANDLE wait4[3];
-	OVERLAPPED tapOvlRead, tapOvlWrite;
+	HANDLE wait4[2 + ZT_WINDOWS_TAP_WRITE_SLOTS];
+	OVERLAPPED tapOvlRead;
+	OVERLAPPED tapOvlWrite[ZT_WINDOWS_TAP_WRITE_SLOTS];
+	bool writeInProgress[ZT_WINDOWS_TAP_WRITE_SLOTS];
+	std::vector<_InjectPending> writeBuf(ZT_WINDOWS_TAP_WRITE_SLOTS);
 
 	OSUtils::ztsnprintf(tapPath, sizeof(tapPath), "\\\\.\\Global\\%s.tap", _netCfgInstanceId.c_str());
 
@@ -1109,15 +1119,16 @@ void WindowsEthernetTap::threadMain() throw()
 
 			memset(&tapOvlRead, 0, sizeof(tapOvlRead));
 			tapOvlRead.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-			memset(&tapOvlWrite, 0, sizeof(tapOvlWrite));
-			tapOvlWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+			for (unsigned int s = 0; s < ZT_WINDOWS_TAP_WRITE_SLOTS; ++s) {
+				memset(&tapOvlWrite[s], 0, sizeof(OVERLAPPED));
+				tapOvlWrite[s].hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+				writeInProgress[s] = false;
+			}
 
 			wait4[0] = _injectSemaphore;
 			wait4[1] = tapOvlRead.hEvent;
-			wait4[2] = tapOvlWrite.hEvent;	 // only included if writeInProgress is true
 
 			ReadFile(_tap, tapReadBuf, sizeof(tapReadBuf), NULL, &tapOvlRead);
-			bool writeInProgress = false;
 			ULONGLONG timeOfLastBorkCheck = GetTickCount64();
 			_initialized = true;
 			unsigned int oldmtu = _mtu;
@@ -1125,7 +1136,12 @@ void WindowsEthernetTap::threadMain() throw()
 			setFriendlyName(_friendlyName.c_str());
 
 			while (_run) {
-				DWORD waitResult = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2, wait4, FALSE, 2500, TRUE);
+				DWORD waitCount = 2;
+				for (unsigned int s = 0; s < ZT_WINDOWS_TAP_WRITE_SLOTS; ++s) {
+					if (writeInProgress[s])
+						wait4[waitCount++] = tapOvlWrite[s].hEvent;
+				}
+				DWORD waitResult = WaitForMultipleObjectsEx(waitCount, wait4, FALSE, 2500, TRUE);
 				if (! _run)
 					break;	 // will also break outer while(_run) since _run is false
 
@@ -1191,30 +1207,37 @@ void WindowsEthernetTap::threadMain() throw()
 					ReadFile(_tap, tapReadBuf, ZT_MAX_MTU + 32, NULL, &tapOvlRead);
 				}
 
-				if (writeInProgress) {
-					if (HasOverlappedIoCompleted(&tapOvlWrite)) {
-						writeInProgress = false;
-						_injectPending_m.lock();
-						_injectPending.pop();
-					}
-					else
-						continue;	// still writing, so skip code below and wait
-				}
-				else
-					_injectPending_m.lock();
-
-				if (! _injectPending.empty()) {
-					WriteFile(_tap, _injectPending.front().data, _injectPending.front().len, NULL, &tapOvlWrite);
-					writeInProgress = true;
+				for (unsigned int s = 0; s < ZT_WINDOWS_TAP_WRITE_SLOTS; ++s) {
+					if ((writeInProgress[s]) && (HasOverlappedIoCompleted(&tapOvlWrite[s])))
+						writeInProgress[s] = false;
 				}
 
+				_injectPending_m.lock();
+				for (unsigned int s = 0; (s < ZT_WINDOWS_TAP_WRITE_SLOTS) && (! _injectPending.empty()); ++s) {
+					if (writeInProgress[s])
+						continue;
+					// Copy into the slot's own buffer: the driver references it until the write completes
+					writeBuf[s].len = _injectPending.front().len;
+					memcpy(writeBuf[s].data, _injectPending.front().data, writeBuf[s].len);
+					_injectPending.pop();
+					if ((WriteFile(_tap, writeBuf[s].data, writeBuf[s].len, NULL, &tapOvlWrite[s])) || (GetLastError() == ERROR_IO_PENDING))
+						writeInProgress[s] = true;
+				}
 				_injectPending_m.unlock();
 			}
 
 			CancelIo(_tap);
 
 			CloseHandle(tapOvlRead.hEvent);
-			CloseHandle(tapOvlWrite.hEvent);
+			for (unsigned int s = 0; s < ZT_WINDOWS_TAP_WRITE_SLOTS; ++s) {
+				if (writeInProgress[s]) {
+					// Write IRPs are not cancellable; wait until the driver is done with writeBuf[s]
+					DWORD bytesWritten = 0;
+					GetOverlappedResult(_tap, &tapOvlWrite[s], &bytesWritten, TRUE);
+					writeInProgress[s] = false;
+				}
+				CloseHandle(tapOvlWrite[s].hEvent);
+			}
 			CloseHandle(_tap);
 			_tap = INVALID_HANDLE_VALUE;
 
