@@ -972,6 +972,33 @@ void WindowsEthernetTap::setMtu(unsigned int mtu)
 	}
 }
 
+void WindowsEthernetTap::_syncIpInterfaceMtu()
+{
+	// The tap driver enforces the MTU we write to the registry above on transmit, but it
+	// always reports TAP_FRAME_MAX_DATA_SIZE (2800) to NDIS. The Windows IP stack therefore
+	// keeps using 2800 as the interface MTU, never fragments for a smaller network MTU, and
+	// larger packets are silently dropped by the driver. Set the IP interface MTU directly
+	// (equivalent to "netsh interface ipv4 set subinterface ... mtu=N").
+	const unsigned int mtu = _mtu;
+	const ADDRESS_FAMILY families[2] = { AF_INET, AF_INET6 };
+	for (int i = 0; i < 2; ++i) {
+		if ((families[i] == AF_INET6) && (mtu < 1280))
+			continue;
+		MIB_IPINTERFACE_ROW row;
+		InitializeIpInterfaceEntry(&row);
+		row.Family = families[i];
+		row.InterfaceLuid.Value = _deviceLuid.Value;
+		if (GetIpInterfaceEntry(&row) != NO_ERROR)
+			continue;	// family not bound to this adapter (yet)
+		if (row.NlMtu == mtu)
+			continue;
+		row.NlMtu = mtu;
+		if (families[i] == AF_INET)
+			row.SitePrefixLength = 0;	// must be 0 for IPv4 or SetIpInterfaceEntry fails
+		SetIpInterfaceEntry(&row);
+	}
+}
+
 NET_IFINDEX WindowsEthernetTap::interfaceIndex() const
 {
 	NET_IFINDEX idx = -1;
@@ -1123,6 +1150,7 @@ void WindowsEthernetTap::threadMain() throw()
 			unsigned int oldmtu = _mtu;
 
 			setFriendlyName(_friendlyName.c_str());
+			_syncIpInterfaceMtu();
 
 			while (_run) {
 				DWORD waitResult = WaitForMultipleObjectsEx(writeInProgress ? 3 : 2, wait4, FALSE, 2500, TRUE);
@@ -1166,6 +1194,10 @@ void WindowsEthernetTap::threadMain() throw()
 								break;
 							}
 						}
+
+						// The IP interface may not exist yet right after (re)opening the tap,
+						// and Windows can reset its MTU, so keep re-applying it.
+						_syncIpInterfaceMtu();
 					}
 				}
 
