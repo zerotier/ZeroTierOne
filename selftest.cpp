@@ -24,13 +24,18 @@
 #include "node/RuntimeEnvironment.hpp"
 #include "node/SHA512.hpp"
 #include "node/Salsa20.hpp"
+#include "node/Topology.hpp"
 #include "node/Utils.hpp"
+#include "node/World.hpp"
 #include "osdep/OSUtils.hpp"
 #include "osdep/Phy.hpp"
 #include "osdep/PortMapper.hpp"
 #include "osdep/Thread.hpp"
 
+#include <deque>
 #include <iostream>
+#include <map>
+#include <memory>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1192,6 +1197,153 @@ static int testPacket()
 	return 0;
 }
 
+static int testRootRecovery()
+{
+	std::cout << "[root recovery] Testing a lost wake probe and delayed reply... " << std::flush;
+	struct Endpoint {
+		InetAddress address;
+		std::map<ZT_StateObjectType, std::string> state;
+		std::deque<Packet> incoming;
+		Endpoint* remote;
+		int64_t socket = 1;
+		unsigned int hellos = 0;
+		bool connected = true;
+		std::unique_ptr<Node> node;
+	};
+	const auto require = [](bool passed, const char* message) {
+		if (! passed) {
+			throw std::runtime_error(message);
+		}
+	};
+	try {
+		int64_t now = 1000000;
+		Endpoint root { InetAddress("198.51.100.1/9993") }, client { InetAddress("192.0.2.1/9993") };
+		root.remote = &client;
+		client.remote = &root;
+		root.state[ZT_STATE_OBJECT_IDENTITY_SECRET] = KNOWN_GOOD_IDENTITY;
+		const ECC::Pair key = ECC::generate();
+		World::Root worldRoot { Identity(KNOWN_GOOD_IDENTITY), { root.address } };
+		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> planet;
+		World::make(World::TYPE_PLANET, 1, now, key.pub, { worldRoot }, key).serialize(planet);
+		ZT_Node_Callbacks callbacks {};
+		callbacks.stateGetFunction = [](ZT_Node*, void* user, void*, ZT_StateObjectType type, const uint64_t[2],
+										void* buffer, unsigned int capacity) {
+			const auto& state = static_cast<Endpoint*>(user)->state;
+			const auto value = state.find(type);
+			if (value == state.end() || value->second.size() > capacity) {
+				return -1;
+			}
+			memcpy(buffer, value->second.data(), value->second.size());
+			return (int)value->second.size();
+		};
+		callbacks.statePutFunction = [](ZT_Node*, void*, void*, ZT_StateObjectType, const uint64_t[2], const void*,
+										int) {};
+		callbacks.wirePacketSendFunction = [](ZT_Node*, void* user, void*, int64_t localSocket,
+											  const sockaddr_storage* address, const void* bytes, unsigned int length,
+											  unsigned int) {
+			Endpoint& sender = *static_cast<Endpoint*>(user);
+			Packet packet(bytes, length);
+			if (! packet.isEncrypted() && packet.verb() == Packet::VERB_HELLO) {
+				++sender.hellos;
+			}
+			if (sender.connected && (localSocket == -1 || localSocket == sender.socket)) {
+				if (sender.remote->address == *reinterpret_cast<const InetAddress*>(address)) {
+					sender.remote->incoming.push_back(packet);
+				}
+			}
+			return 0;
+		};
+		callbacks.virtualNetworkFrameFunction = [](ZT_Node*, void*, void*, uint64_t, void**, uint64_t, uint64_t,
+												   unsigned int, unsigned int, const void*, unsigned int) {};
+		callbacks.virtualNetworkConfigFunction = [](ZT_Node*, void*, void*, uint64_t, void**,
+													ZT_VirtualNetworkConfigOperation,
+													const ZT_VirtualNetworkConfig*) { return 0; };
+		callbacks.eventCallback = [](ZT_Node*, void*, void*, ZT_Event, const void*) {};
+		ZT_Node_Config config {};
+		for (Endpoint* endpoint : { &root, &client }) {
+			endpoint->state[ZT_STATE_OBJECT_PLANET] = std::string((const char*)planet.data(), planet.size());
+			endpoint->node.reset(new Node(endpoint, nullptr, &config, &callbacks, now));
+		}
+		volatile int64_t deadline;
+		const auto background = [&] {
+			require(
+				client.node->processBackgroundTasks(nullptr, now, &deadline) == ZT_RESULT_OK,
+				"Background tasks failed");
+		};
+		const auto deliver = [&](Endpoint& endpoint) {
+			require(! endpoint.incoming.empty(), "Expected a queued packet");
+			const Packet packet = endpoint.incoming.front();
+			endpoint.incoming.pop_front();
+			require(
+				endpoint.node->processWirePacket(
+					nullptr, now, endpoint.socket, &endpoint.remote->address, packet.data(), packet.size(), &deadline)
+					== ZT_RESULT_OK,
+				"Packet delivery failed");
+		};
+		const auto drain = [&] {
+			unsigned int delivered = 0;
+			while (! root.incoming.empty() || ! client.incoming.empty()) {
+				require(++delivered < 1000, "Packet exchange did not settle");
+				for (Endpoint* endpoint : { &root, &client }) {
+					if (! endpoint->incoming.empty()) {
+						deliver(*endpoint);
+					}
+				}
+			}
+		};
+		const auto tick = [&] {
+			now += ZT_PING_CHECK_INTERVAL;
+			background();
+			drain();
+		};
+		const auto checkQuiet = [&] {
+			const unsigned int hellos = client.hellos;
+			const int64_t until = now + ZT_PEER_PING_PERIOD * 2;
+			while (now < until) {
+				tick();
+			}
+			require(client.hellos == hellos, "A healthy idle root received extra HELLOs");
+		};
+		background();
+		drain();
+		const SharedPtr<Peer> peer(client.node->RR->topology->getPeerNoCache(root.node->identity().address()));
+		require(peer && peer->lastReceive() == now, "Initial root connection failed");
+		checkQuiet();
+
+		// Hold a real reply across sleep, then deliver it after the wake probe has been lost.
+		now += ZT_PEER_PING_PERIOD * 4;
+		background();
+		deliver(root);
+		require(! client.incoming.empty(), "No root reply to delay across sleep");
+		now += 6 * 60 * 60 * 1000;
+		client.connected = false;
+		const unsigned int beforeWake = client.hellos;
+		background();
+		require(client.hellos > beforeWake, "No wake probe was lost");
+		drain();
+		require(peer->lastReceive() == now, "The delayed reply did not arrive");
+
+		++client.socket;
+		client.address = InetAddress("192.0.2.2/9993");
+		client.connected = true;
+		const int64_t restoredAt = now;
+		const unsigned int hellos = client.hellos;
+		now += ZT_PATH_HEARTBEAT_PERIOD;
+		background();
+		drain();
+		require(
+			peer->lastReceive() > restoredAt && client.hellos > hellos,
+			"Root recovery waited for the normal contact interval");
+		checkQuiet();
+	}
+	catch (const std::exception& error) {
+		std::cout << "FAILED: " << error.what() << std::endl;
+		return -1;
+	}
+	std::cout << "OK" << std::endl;
+	return 0;
+}
+
 static int testOther()
 {
 	char buf[1024];
@@ -1673,6 +1825,7 @@ int main(int argc, char** argv)
 	r |= testPacket();
 	r |= testIdentity();
 	r |= testCertificate();
+	r |= testRootRecovery();
 	r |= testPhy();
 	//*/
 

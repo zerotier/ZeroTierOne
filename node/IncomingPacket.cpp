@@ -662,6 +662,9 @@ bool IncomingPacket::_doOK(const RuntimeEnvironment* RR, void* tPtr, const Share
 	}
 
 	peer->received(tPtr, _path, hops(), packetId(), payloadLength(), Packet::VERB_OK, inRePacketId, inReVerb, false, networkId, ZT_QOS_NO_FLOW);
+	if (inReVerb == Packet::VERB_HELLO && ! hops()) {
+		peer->acknowledgeFullHello(_path, at<int64_t>(ZT_PROTO_VERB_HELLO__OK__IDX_TIMESTAMP));
+	}
 
 	return true;
 }

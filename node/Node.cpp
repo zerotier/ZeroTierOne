@@ -260,15 +260,19 @@ class _PingPeersThatNeedPing {
 			// Contact upstream peers as infrequently as possible
 			int roleBasedTimerScale = (role == ZT_PEER_ROLE_LEAF) ? 2 : 16;
 
-			// Unless we don't any have paths to the roots, then we shouldn't wait a long time to contact them
-			bool hasPaths = p->paths(RR->node->now()).size() > 0;
-			roleBasedTimerScale = (role != ZT_PEER_ROLE_LEAF && ! hasPaths) ? 0 : roleBasedTimerScale;
+			// Retry roots promptly when paths expire or a full HELLO goes unanswered.
+			const bool recoverRoot = (role != ZT_PEER_ROLE_LEAF) && p->needsPathRecovery(_now);
+			roleBasedTimerScale = recoverRoot ? 0 : roleBasedTimerScale;
 
 			if ((RR->node->now() - p->lastSentFullHello()) <= (ZT_PATH_HEARTBEAT_PERIOD * roleBasedTimerScale)) {
 				return;
 			}
 
-			const unsigned int sent = p->doPingAndKeepalive(_tPtr, _now);
+			unsigned int sent = p->doPingAndKeepalive(_tPtr, _now);
+			if (recoverRoot) {
+				// Sending on a saved path does not prove that it still reaches the root.
+				sent = 0;
+			}
 			bool contacted = (sent != 0);
 
 			if ((sent & 0x1) == 0) {   // bit 0x1 == IPv4 sent

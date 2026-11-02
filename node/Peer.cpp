@@ -38,6 +38,7 @@ Peer::Peer(const RuntimeEnvironment* renv, const Identity& myIdentity, const Ide
 	, _lastTrustEstablishedPacketReceived(0)
 	, _lastSentFullHello(0)
 	, _lastEchoCheck(0)
+	, _fullHelloPending(false)
 	, _freeRandomByte((unsigned char)((uintptr_t)this >> 4) ^ ++s_freeRandomByteCounter)
 	, _vProto(0)
 	, _vMajor(0)
@@ -549,6 +550,7 @@ unsigned int Peer::doPingAndKeepalive(void* tPtr, int64_t now)
 		const bool sendFullHello = ((now - _lastSentFullHello) >= ZT_PEER_PING_PERIOD);
 		if (sendFullHello) {
 			_lastSentFullHello = now;
+			_fullHelloPending = true;
 		}
 
 		// Right now we only keep pinging links that have the maximum priority. The
