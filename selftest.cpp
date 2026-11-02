@@ -24,13 +24,18 @@
 #include "node/RuntimeEnvironment.hpp"
 #include "node/SHA512.hpp"
 #include "node/Salsa20.hpp"
+#include "node/Topology.hpp"
 #include "node/Utils.hpp"
+#include "node/World.hpp"
 #include "osdep/OSUtils.hpp"
 #include "osdep/Phy.hpp"
 #include "osdep/PortMapper.hpp"
 #include "osdep/Thread.hpp"
 
+#include <deque>
 #include <iostream>
+#include <map>
+#include <memory>
 #include <stdexcept>
 #include <stdio.h>
 #include <stdlib.h>
@@ -1192,6 +1197,206 @@ static int testPacket()
 	return 0;
 }
 
+static int testPeerRecovery()
+{
+	std::cout << "[peer recovery] Testing relay fallback after direct packet loss... " << std::flush;
+	struct Endpoint {
+		InetAddress address;
+		std::map<ZT_StateObjectType, std::string> state;
+		std::deque<std::pair<InetAddress, Packet> > incoming;
+		std::vector<Endpoint*> remotes;
+		bool root = false;
+		bool direct = true;
+		InetAddress lastRoute;
+		uint64_t receivedFrame = 0;
+		std::unique_ptr<Node> node;
+	};
+	const auto require = [](bool passed, const char* message) {
+		if (! passed) {
+			throw std::runtime_error(message);
+		}
+	};
+	try {
+		int64_t now = 1000000;
+		Endpoint root { InetAddress("198.51.100.1/9993") }, sender { InetAddress("192.0.2.1/9993") },
+			receiver { InetAddress("192.0.2.2/9993") };
+		root.root = true;
+		root.state[ZT_STATE_OBJECT_IDENTITY_SECRET] = KNOWN_GOOD_IDENTITY;
+		const ECC::Pair key = ECC::generate();
+		World::Root worldRoot { Identity(KNOWN_GOOD_IDENTITY), { root.address } };
+		Buffer<ZT_WORLD_MAX_SERIALIZED_LENGTH> planet;
+		World::make(World::TYPE_PLANET, 1, now, key.pub, { worldRoot }, key).serialize(planet);
+		ZT_Node_Callbacks callbacks {};
+		callbacks.stateGetFunction = [](ZT_Node*, void* user, void*, ZT_StateObjectType type, const uint64_t[2],
+										void* buffer, unsigned int capacity) {
+			const auto& state = static_cast<Endpoint*>(user)->state;
+			const auto value = state.find(type);
+			if (value == state.end() || value->second.size() > capacity) {
+				return -1;
+			}
+			memcpy(buffer, value->second.data(), value->second.size());
+			return (int)value->second.size();
+		};
+		callbacks.statePutFunction = [](ZT_Node*, void*, void*, ZT_StateObjectType, const uint64_t[2], const void*,
+										int) {};
+		callbacks.wirePacketSendFunction = [](ZT_Node*, void* user, void*, int64_t, const sockaddr_storage* address,
+											  const void* bytes, unsigned int length, unsigned int) {
+			Endpoint& from = *static_cast<Endpoint*>(user);
+			from.lastRoute = *reinterpret_cast<const InetAddress*>(address);
+			for (Endpoint* to : from.remotes) {
+				if (to->address == from.lastRoute && (from.root || to->root || (from.direct && to->direct))) {
+					to->incoming.emplace_back(from.address, Packet(bytes, length));
+				}
+			}
+			return 0;
+		};
+		callbacks.virtualNetworkFrameFunction = [](ZT_Node*, void* user, void*, uint64_t, void**, uint64_t, uint64_t,
+												   unsigned int, unsigned int, const void* bytes, unsigned int length) {
+			if (length == sizeof(uint64_t)) {
+				memcpy(&static_cast<Endpoint*>(user)->receivedFrame, bytes, length);
+			}
+		};
+		callbacks.virtualNetworkConfigFunction = [](ZT_Node*, void*, void*, uint64_t, void**,
+													ZT_VirtualNetworkConfigOperation,
+													const ZT_VirtualNetworkConfig*) { return 0; };
+		callbacks.eventCallback = [](ZT_Node*, void*, void*, ZT_Event, const void*) {};
+		ZT_Node_Config config {};
+		for (Endpoint* endpoint : { &root, &sender, &receiver }) {
+			endpoint->remotes = { &root, &sender, &receiver };
+			endpoint->state[ZT_STATE_OBJECT_PLANET] = std::string((const char*)planet.data(), planet.size());
+			endpoint->node.reset(new Node(endpoint, nullptr, &config, &callbacks, now));
+		}
+		const uint64_t nwid = (root.node->address() << 24) | 1;
+		for (Endpoint* endpoint : { &sender, &receiver }) {
+			NetworkConfig nc;
+			nc.networkId = nwid;
+			nc.issuedTo = endpoint->node->identity().address();
+			nc.type = ZT_NETWORK_TYPE_PUBLIC;
+			nc.ruleCount = 1;
+			nc.rules[0].t = ZT_NETWORK_RULE_ACTION_ACCEPT;
+			Dictionary<ZT_NETWORKCONFIG_DICT_CAPACITY> dictionary;
+			require(nc.toDictionary(dictionary, false), "Network configuration failed");
+			endpoint->state[ZT_STATE_OBJECT_NETWORK_CONFIG] = std::string(dictionary.data(), dictionary.sizeBytes());
+			require(endpoint->node->join(nwid, nullptr, nullptr) == ZT_RESULT_OK, "Network join failed");
+		}
+		volatile int64_t deadline;
+		const auto drain = [&] {
+			unsigned int delivered = 0;
+			while (! root.incoming.empty() || ! sender.incoming.empty() || ! receiver.incoming.empty()) {
+				require(++delivered < 1000, "Packet exchange did not settle");
+				for (Endpoint* endpoint : { &root, &sender, &receiver }) {
+					if (! endpoint->incoming.empty()) {
+						const auto incoming = endpoint->incoming.front();
+						endpoint->incoming.pop_front();
+						require(
+							endpoint->node->processWirePacket(
+								nullptr, now, 1, &incoming.first, incoming.second.data(), incoming.second.size(),
+								&deadline)
+								== ZT_RESULT_OK,
+							"Packet delivery failed");
+					}
+				}
+			}
+		};
+		const auto background = [&] {
+			for (Endpoint* endpoint : { &root, &sender, &receiver }) {
+				require(
+					endpoint->node->processBackgroundTasks(nullptr, now, &deadline) == ZT_RESULT_OK,
+					"Background tasks failed");
+			}
+			drain();
+		};
+		background();
+		const SharedPtr<Peer> peer(sender.node->RR->topology->addPeer(
+			nullptr, SharedPtr<Peer>(new Peer(sender.node->RR, sender.node->identity(), receiver.node->identity()))));
+		peer->sendHELLO(nullptr, 1, receiver.address, now);
+		drain();
+		uint64_t sequence = 0;
+		const auto sendFrame = [&] {
+			++sequence;
+			sender.lastRoute = InetAddress();
+			require(
+				sender.node->processVirtualNetworkFrame(
+					nullptr, now, nwid, MAC(sender.node->identity().address(), nwid).toInt(),
+					MAC(receiver.node->identity().address(), nwid).toInt(), 0x88b5, 0, &sequence, sizeof(sequence),
+					&deadline)
+					== ZT_RESULT_OK,
+				"Frame submission failed");
+			const InetAddress route = sender.lastRoute;
+			// Other outgoing traffic can evict reply records before these packets arrive.
+			for (const auto& incoming : receiver.incoming) {
+				const uint64_t id = incoming.second.packetId();
+				const uint32_t high = (uint32_t)(id >> 32);
+				for (uint32_t i = 1; i <= ZT_EXPECTING_REPLIES_BUCKET_MASK2 + 1; ++i) {
+					sender.node->expectReplyTo(
+						(uint64_t)(uint32_t)(high + i * (ZT_EXPECTING_REPLIES_BUCKET_MASK1 + 1)) << 32);
+				}
+				require(! sender.node->expectingReplyTo(id), "Reply record eviction failed");
+			}
+			drain();
+			return route;
+		};
+		// One-way traffic must stay direct even when its data packets suppress ordinary heartbeats.
+		const int64_t healthyUntil = now + 2 * ZT_PEER_PING_PERIOD;
+		while (now < healthyUntil) {
+			require(
+				sendFrame() == receiver.address && receiver.receivedFrame == sequence,
+				"Healthy one-way traffic used a relay or lost a frame");
+			now += 1000;
+			background();
+		}
+		now += 2 * ZT_PEER_PING_PERIOD;
+		require(
+			sendFrame() == receiver.address && receiver.receivedFrame == sequence, "A healthy idle path was rejected");
+		background();
+
+		// UDP sends still succeed, but packets between the two devices disappear.
+		sender.direct = false;
+		const int64_t lostAt = now;
+		bool relayed = false;
+		// Unauthenticated traffic from the old address must not make the peer appear reachable.
+		const Packet noise(sender.node->identity().address(), receiver.node->identity().address(), Packet::VERB_ECHO);
+		while (now - lostAt < 3 * ZT_PATH_HEARTBEAT_PERIOD) {
+			require(
+				sender.node->processWirePacket(
+					nullptr, now, 1, &receiver.address, noise.data(), noise.size(), &deadline)
+					== ZT_RESULT_OK,
+				"Invalid packet processing failed");
+			const InetAddress route = sendFrame();
+			if (receiver.receivedFrame == sequence) {
+				require(route == root.address, "Recovery did not use the root relay");
+				relayed = true;
+				break;
+			}
+			now += 1000;
+			background();
+		}
+		require(relayed, "A failed direct path blocked relay recovery");
+		sender.direct = true;
+		const int64_t restoredAt = now;
+		bool direct = false;
+		while (now - restoredAt < 2 * ZT_PATH_HEARTBEAT_PERIOD) {
+			if (sendFrame() == receiver.address && receiver.receivedFrame == sequence) {
+				direct = true;
+				break;
+			}
+			now += 1000;
+			background();
+		}
+		require(direct, "Direct delivery did not resume after the path recovered");
+		now += ZT_PEER_PATH_EXPIRATION + 1;
+		require(
+			sendFrame() == receiver.address && receiver.receivedFrame == sequence,
+			"An expired path was discarded when no relay was available");
+	}
+	catch (const std::exception& error) {
+		std::cout << "FAILED: " << error.what() << std::endl;
+		return -1;
+	}
+	std::cout << "OK" << std::endl;
+	return 0;
+}
+
 static int testOther()
 {
 	char buf[1024];
@@ -1671,6 +1876,7 @@ int main(int argc, char** argv)
 	r |= testOther();
 	r |= testCrypto();
 	r |= testPacket();
+	r |= testPeerRecovery();
 	r |= testIdentity();
 	r |= testCertificate();
 	r |= testPhy();

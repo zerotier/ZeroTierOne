@@ -1078,7 +1078,11 @@ bool Switch::_trySend(void* tPtr, Packet& packet, bool encrypt, const uint64_t n
 			return true;
 		}
 		else {
-			viaPath = peer->getAppropriatePath(now, false, flowId);
+			bool needsCheck;
+			viaPath = peer->getAppropriatePath(now, false, flowId, &needsCheck);
+			if (viaPath && needsCheck) {
+				viaPath = peer->checkPath(tPtr, viaPath, now);
+			}
 			if (! viaPath) {
 				peer->tryMemorizedPath(tPtr, now);	 // periodically attempt memorized or statically defined paths, if any are known
 				const SharedPtr<Peer> relay(RR->topology->getUpstreamPeer(nwid));
