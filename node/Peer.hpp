@@ -416,17 +416,18 @@ class Peer {
 
 	/**
 	 * Rate limit gate for VERB_PUSH_DIRECT_PATHS
+	 *
+	 * Allows at most ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT pushes per ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME
+	 * window. The count restarts when a window expires, so a peer pushing at the regular
+	 * ZT_DIRECT_PATH_PUSH_INTERVAL is never cut off permanently.
 	 */
 	inline bool rateGatePushDirectPaths(const int64_t now)
 	{
-		if ((now - _lastDirectPathPushReceive) <= ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME) {
-			++_directPathPushCutoffCount;
-		}
-		else {
+		if ((now - _directPathPushWindowStart) > ZT_PUSH_DIRECT_PATHS_CUTOFF_TIME) {
+			_directPathPushWindowStart = now;
 			_directPathPushCutoffCount = 0;
 		}
-		_lastDirectPathPushReceive = now;
-		return (_directPathPushCutoffCount < ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT);
+		return (++_directPathPushCutoffCount <= ZT_PUSH_DIRECT_PATHS_CUTOFF_LIMIT);
 	}
 
 	/**
@@ -683,7 +684,7 @@ class Peer {
 	int64_t _lastNontrivialReceive;	  // frames, things like netconf, etc.
 	int64_t _lastTriedMemorizedPath;
 	int64_t _lastDirectPathPushSent;
-	int64_t _lastDirectPathPushReceive;
+	int64_t _directPathPushWindowStart;
 	int64_t _lastCredentialRequestSent;
 	int64_t _lastWhoisRequestReceived;
 	int64_t _lastCredentialsReceived;
