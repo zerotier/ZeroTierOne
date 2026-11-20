@@ -96,7 +96,7 @@ void Membership::pushCredentials(const RuntimeEnvironment* RR, void* tPtr, const
 	_lastPushedCredentials = now;
 }
 
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const CertificateOfMembership& com)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const CertificateOfMembership& com, int pre)
 {
 	const int64_t newts = com.timestamp();
 	if (newts <= _comRevocationThreshold) {
@@ -113,7 +113,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 		return ADD_ACCEPTED_REDUNDANT;
 	}
 
-	switch (com.verify(RR, tPtr)) {
+	switch (((pre == 0) || (pre == -1)) ? pre : com.verify(RR, tPtr)) {
 		default:
 			RR->t->credentialRejected(tPtr, com, "invalid");
 			return ADD_REJECTED;
@@ -128,7 +128,7 @@ Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironme
 
 // Template out addCredential() for many cred types to avoid copypasta
 template <typename C>
-static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t, C>& remoteCreds, const Hashtable<uint64_t, int64_t>& revocations, const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const C& cred)
+static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t, C>& remoteCreds, const Hashtable<uint64_t, int64_t>& revocations, const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const C& cred, int pre)
 {
 	C* rc = remoteCreds.get(cred.id());
 	if (rc) {
@@ -147,7 +147,7 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t, C>& remo
 		return Membership::ADD_REJECTED;
 	}
 
-	switch (cred.verify(RR, tPtr)) {
+	switch (((pre == 0) || (pre == -1)) ? pre : cred.verify(RR, tPtr)) {
 		default:
 			RR->t->credentialRejected(tPtr, cred, "invalid");
 			return Membership::ADD_REJECTED;
@@ -162,17 +162,65 @@ static Membership::AddCredentialResult _addCredImpl(Hashtable<uint32_t, C>& remo
 	}
 }
 
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const Tag& tag)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const Tag& tag, int pre)
 {
-	return _addCredImpl<Tag>(_remoteTags, _revocations, RR, tPtr, nconf, tag);
+	return _addCredImpl<Tag>(_remoteTags, _revocations, RR, tPtr, nconf, tag, pre);
 }
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const Capability& cap)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const Capability& cap, int pre)
 {
-	return _addCredImpl<Capability>(_remoteCaps, _revocations, RR, tPtr, nconf, cap);
+	return _addCredImpl<Capability>(_remoteCaps, _revocations, RR, tPtr, nconf, cap, pre);
 }
-Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const CertificateOfOwnership& coo)
+Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const CertificateOfOwnership& coo, int pre)
 {
-	return _addCredImpl<CertificateOfOwnership>(_remoteCoos, _revocations, RR, tPtr, nconf, coo);
+	return _addCredImpl<CertificateOfOwnership>(_remoteCoos, _revocations, RR, tPtr, nconf, coo, pre);
+}
+
+// the cheap checks that precede verify() in addCredential(), so the caller can verify outside Network::_lock only when needed
+bool Membership::needsVerify(const CertificateOfMembership& com) const
+{
+	const int64_t newts = com.timestamp();
+	if (newts <= _comRevocationThreshold) {
+		return false;
+	}
+	if (newts < _com.timestamp()) {
+		return false;
+	}
+	if (_com == com) {
+		return false;
+	}
+	return true;
+}
+
+template <typename C>
+static bool _needsVerifyImpl(Hashtable<uint32_t, C>& remoteCreds, const Hashtable<uint64_t, int64_t>& revocations, const C& cred)
+{
+	C* rc = remoteCreds.get(cred.id());
+	if (rc) {
+		if (rc->timestamp() > cred.timestamp()) {
+			return false;
+		}
+		if (*rc == cred) {
+			return false;
+		}
+	}
+	const int64_t* const rt = revocations.get(Membership::credentialKey(C::credentialType(), cred.id()));
+	if ((rt) && (*rt >= cred.timestamp())) {
+		return false;
+	}
+	return true;
+}
+
+bool Membership::needsVerify(const Tag& tag)
+{
+	return _needsVerifyImpl<Tag>(_remoteTags, _revocations, tag);
+}
+bool Membership::needsVerify(const Capability& cap)
+{
+	return _needsVerifyImpl<Capability>(_remoteCaps, _revocations, cap);
+}
+bool Membership::needsVerify(const CertificateOfOwnership& coo)
+{
+	return _needsVerifyImpl<CertificateOfOwnership>(_remoteCoos, _revocations, coo);
 }
 
 Membership::AddCredentialResult Membership::addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const Revocation& rev)

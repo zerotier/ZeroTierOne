@@ -359,8 +359,9 @@ class Network {
 		if (cap.networkId() != _id) {
 			return Membership::ADD_REJECTED;
 		}
+		const int pre = _preVerifyOutsideLock(tPtr, cap);
 		Mutex::Lock _l(_lock);
-		return _membership(cap.issuedTo()).addCredential(RR, tPtr, _config, cap);
+		return _membership(cap.issuedTo()).addCredential(RR, tPtr, _config, cap, pre);
 	}
 
 	/**
@@ -371,8 +372,9 @@ class Network {
 		if (tag.networkId() != _id) {
 			return Membership::ADD_REJECTED;
 		}
+		const int pre = _preVerifyOutsideLock(tPtr, tag);
 		Mutex::Lock _l(_lock);
-		return _membership(tag.issuedTo()).addCredential(RR, tPtr, _config, tag);
+		return _membership(tag.issuedTo()).addCredential(RR, tPtr, _config, tag, pre);
 	}
 
 	/**
@@ -388,8 +390,9 @@ class Network {
 		if (coo.networkId() != _id) {
 			return Membership::ADD_REJECTED;
 		}
+		const int pre = _preVerifyOutsideLock(tPtr, coo);
 		Mutex::Lock _l(_lock);
-		return _membership(coo.issuedTo()).addCredential(RR, tPtr, _config, coo);
+		return _membership(coo.issuedTo()).addCredential(RR, tPtr, _config, coo, pre);
 	}
 
 	/**
@@ -461,6 +464,25 @@ class Network {
 	void _announceMulticastGroupsTo(void* tPtr, const Address& peer, const std::vector<MulticastGroup>& allMulticastGroups);
 	std::vector<MulticastGroup> _allMulticastGroups() const;
 	Membership& _membership(const Address& a);
+
+	/**
+	 * verify a credential's signature BEFORE taking _lock. The lock is held only for the cheap 'does it need verifying' peek
+	 * and later for the state update; every frame in both directions needs _lock, so verifying under it stalled the whole data plane.
+	 * @return 0 valid, -1 invalid (both definitive), -2 not done (nothing to verify, or the signer's identity is not known yet and a WHOIS is pending)
+	 */
+	template <typename C> inline int _preVerifyOutsideLock(void* tPtr, const C& cred)
+	{
+		bool need;
+		{
+			Mutex::Lock _l(_lock);
+			need = _membership(cred.issuedTo()).needsVerify(cred);
+		}
+		if (! need) {
+			return -2;
+		}
+		const int r = cred.verify(RR, tPtr);
+		return (((r == 0) || (r == -1)) ? r : -2);
+	}
 	void _sendUpdateEvent(void* tPtr);
 
 	const RuntimeEnvironment* const RR;
