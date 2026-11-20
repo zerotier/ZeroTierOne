@@ -15,6 +15,7 @@
 #include "Peer.hpp"
 #include "Utils.hpp"
 
+#include <atomic>
 #include <stdexcept>
 
 /*
@@ -37,6 +38,10 @@ namespace ZeroTier {
 
 class RuntimeEnvironment;
 class Network;
+
+/** set by ztSlowVerbShutdown() (called from Node::~Node()) so the worker thread stops touching a node that is being destroyed; cleared by Node::Node() */
+extern std::atomic<int> ztSlowVerbStopping;
+void ztSlowVerbShutdown();
 
 /**
  * Subclass of packet that handles the decoding of it
@@ -93,6 +98,11 @@ class IncomingPacket : public Packet {
 	bool tryDecode(const RuntimeEnvironment* RR, void* tPtr, int32_t flowId);
 
 	/**
+	 * run the verb handler of an already authenticated + decompressed packet (used by the slow-verb worker thread)
+	 */
+	bool runDeferred(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
+
+	/**
 	 * @return Time of packet receipt / start of decode
 	 */
 	inline uint64_t receiveTime() const
@@ -125,6 +135,9 @@ class IncomingPacket : public Packet {
 	bool _doPATH_NEGOTIATION_REQUEST(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
 
 	void _sendErrorNeedCredentials(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer, const uint64_t nwid);
+
+	// hand this packet to the slow-verb worker thread, or run it inline when the queue is full or the worker is unavailable
+	bool _slowOrInline(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer);
 
 	uint64_t _receiveTime;
 	SharedPtr<Path> _path;
