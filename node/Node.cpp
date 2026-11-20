@@ -13,6 +13,7 @@
 #include "Constants.hpp"
 #include "ECC.hpp"
 #include "Identity.hpp"
+#include "IncomingPacket.hpp"
 #include "Metrics.hpp"
 #include "Multicaster.hpp"
 #include "Network.hpp"
@@ -55,6 +56,7 @@ Node::Node(void* uptr, void* tptr, const struct ZT_Node_Config* config, const st
 	, _lastMemoizedTraceSettings(0)
 	, _lowBandwidthMode(false)
 {
+	ztSlowVerbStopping = 0;
 	if (callbacks->version != 0) {
 		throw ZT_EXCEPTION_INVALID_ARGUMENT;
 	}
@@ -175,6 +177,7 @@ Node::Node(void* uptr, void* tptr, const struct ZT_Node_Config* config, const st
 
 Node::~Node()
 {
+	ztSlowVerbShutdown();   // stop and drain the slow-verb worker before anything it uses is destroyed
 	{
 		Mutex::Lock _l(_networks_m);
 		_networks.clear();	 // destroy all networks before shutdown

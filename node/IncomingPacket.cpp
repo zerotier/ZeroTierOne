@@ -33,7 +33,225 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <chrono>
+#include <condition_variable>
+#include <deque>
+#include <memory>
+#include <mutex>
+#include <thread>
+
 namespace ZeroTier {
+
+// ---- the packet types that carry signatures (signed network config, credentials) are decoded on one worker thread ----
+// Their handlers verify Ed25519 signatures in software (55-250 ms on a MIPS router); done inline they block every other inbound packet.
+// Queue: bounded (32); if full, if the worker thread cannot be created or during shutdown the handler runs inline exactly as
+// before. A handler that returns false (credential deferred for WHOIS) is re-queued up to 3 more times, 1100 ms apart (the per-peer credentials rate gate is 1000 ms).
+std::atomic<int> ztSlowVerbStopping(0);
+
+namespace {
+struct SlowJob {
+	SlowJob(IncomingPacket* p, const RuntimeEnvironment* r, const SharedPtr<Peer>& pe) : pkt(p), RR(r), peer(pe), tries(0), due(std::chrono::steady_clock::now())
+	{
+	}
+	IncomingPacket* pkt;   // owned by whoever deletes the job (the worker)
+	const RuntimeEnvironment* RR;
+	SharedPtr<Peer> peer;
+	unsigned int tries;
+	std::chrono::steady_clock::time_point due;
+};
+
+class SlowVerbWorker {
+  public:
+	// Created lazily; returns null if the thread could not be created (callers then run inline). Never destroyed.
+	static SlowVerbWorker* instance()
+	{
+		std::lock_guard<std::mutex> l(_initM);
+		if ((! _inst) && (! _failed)) {
+			try {
+				_inst = new SlowVerbWorker();
+			}
+			catch (...) {
+				_inst = (SlowVerbWorker*)0;
+				_failed = true;
+			}
+		}
+		return _inst;
+	}
+
+	// The worker if it was ever created, never creates one
+	static SlowVerbWorker* existing()
+	{
+		std::lock_guard<std::mutex> l(_initM);
+		return _inst;
+	}
+
+	bool post(SlowJob* j)
+	{
+		std::lock_guard<std::mutex> l(_m);
+		if (_q.size() >= 32) {
+			return false;
+		}
+		_q.push_back(j);
+		_cv.notify_one();
+		return true;
+	}
+
+	// Called from ~Node: drop queued jobs and wait (bounded) for a running one, so the worker never touches a destroyed node.
+	void shutdown()
+	{
+		{
+			std::lock_guard<std::mutex> l(_m);
+			for (std::deque<SlowJob*>::iterator it(_q.begin()); it != _q.end(); ++it) {
+				delete (*it)->pkt;
+				delete *it;
+			}
+			_q.clear();
+		}
+		for (int i = 0; i < 6000; ++i) {   // up to about 60 s: one credentials packet can carry dozens of credentials at 55-250 ms each
+			{
+				std::lock_guard<std::mutex> l(_m);
+				if (! _busy) {
+					return;
+				}
+			}
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		}
+	}
+
+  private:
+	SlowVerbWorker() : _busy(false)
+	{
+		std::thread([this]() { this->run(); }).detach();
+	}
+
+	void run()
+	{
+		for (;;) {
+			SlowJob* j = (SlowJob*)0;
+			{
+				std::unique_lock<std::mutex> l(_m);
+				for (;;) {
+					const std::chrono::steady_clock::time_point now(std::chrono::steady_clock::now());
+					bool haveDue = false;
+					std::chrono::steady_clock::time_point earliest;
+					for (std::deque<SlowJob*>::iterator it(_q.begin()); it != _q.end(); ++it) {
+						if ((*it)->due <= now) {
+							j = *it;
+							_q.erase(it);
+							break;
+						}
+						if ((! haveDue) || ((*it)->due < earliest)) {
+							earliest = (*it)->due;
+							haveDue = true;
+						}
+					}
+					if (j) {
+						break;
+					}
+					if (haveDue) {
+						_cv.wait_until(l, earliest);
+					}
+					else {
+						_cv.wait(l);
+					}
+				}
+				_busy = true;
+			}
+			bool retry = false;
+			if (! ztSlowVerbStopping.load()) {
+				try {
+					retry = (! j->pkt->runDeferred(j->RR, (void*)0, j->peer));
+				}
+				catch (...) {
+					retry = false;
+				}
+			}
+			if (retry && (++j->tries < 4) && (! ztSlowVerbStopping.load())) {
+				j->due = std::chrono::steady_clock::now() + std::chrono::milliseconds(1100);
+				bool queued = false;
+				try {
+					std::lock_guard<std::mutex> l(_m);
+					_q.push_back(j);
+					queued = true;
+				}
+				catch (...) {
+					queued = false;   // allocation failure: drop the job instead of letting the exception end the thread
+				}
+				if (! queued) {
+					delete j->pkt;
+					delete j;
+				}
+			}
+			else {
+				delete j->pkt;
+				delete j;
+			}
+			{
+				std::lock_guard<std::mutex> l(_m);
+				_busy = false;
+			}
+		}
+	}
+
+	static std::mutex _initM;
+	static SlowVerbWorker* _inst;
+	static bool _failed;
+
+	std::mutex _m;
+	std::condition_variable _cv;
+	std::deque<SlowJob*> _q;
+	bool _busy;
+};
+std::mutex SlowVerbWorker::_initM;
+SlowVerbWorker* SlowVerbWorker::_inst = (SlowVerbWorker*)0;
+bool SlowVerbWorker::_failed = false;
+}	// anonymous namespace
+
+void ztSlowVerbShutdown()
+{
+	ztSlowVerbStopping = 1;
+	SlowVerbWorker* w = SlowVerbWorker::existing();
+	if (w) {
+		w->shutdown();
+	}
+}
+
+bool IncomingPacket::runDeferred(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer)
+{
+	switch (verb()) {
+		case Packet::VERB_OK:
+			return _doOK(RR, tPtr, peer);
+		case Packet::VERB_NETWORK_CREDENTIALS:
+			return _doNETWORK_CREDENTIALS(RR, tPtr, peer);
+		case Packet::VERB_NETWORK_CONFIG:
+			return _doNETWORK_CONFIG(RR, tPtr, peer);
+		default:
+			return true;
+	}
+}
+
+bool IncomingPacket::_slowOrInline(const RuntimeEnvironment* RR, void* tPtr, const SharedPtr<Peer>& peer)
+{
+	if (! ztSlowVerbStopping.load()) {
+		try {
+			SlowVerbWorker* w = SlowVerbWorker::instance();
+			if (w) {
+				std::unique_ptr<IncomingPacket> copy(new IncomingPacket(*this));
+				std::unique_ptr<SlowJob> job(new SlowJob(copy.get(), RR, peer));
+				if (w->post(job.get())) {
+					copy.release();   // from here on the worker owns both
+					job.release();
+					return true;
+				}
+				// not queued (full): 'job' and 'copy' are freed here, the job does not own the packet
+			}
+		}
+		catch (...) {
+			// fall through: run inline
+		}
+	}
+	return runDeferred(RR, tPtr, peer);
+}
 
 bool IncomingPacket::tryDecode(const RuntimeEnvironment* RR, void* tPtr, int32_t flowId)
 {
@@ -98,7 +316,12 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment* RR, void* tPtr, int32_t
 					r = _doERROR(RR, tPtr, peer);
 					break;
 				case Packet::VERB_OK:
-					r = _doOK(RR, tPtr, peer);
+					if ((Packet::Verb)(*this)[ZT_PROTO_VERB_OK_IDX_IN_RE_VERB] == Packet::VERB_NETWORK_CONFIG_REQUEST) {
+						r = _slowOrInline(RR, tPtr, peer);   // signed network config
+					}
+					else {
+						r = _doOK(RR, tPtr, peer);
+					}
 					break;
 				case Packet::VERB_WHOIS:
 					r = _doWHOIS(RR, tPtr, peer);
@@ -119,13 +342,13 @@ bool IncomingPacket::tryDecode(const RuntimeEnvironment* RR, void* tPtr, int32_t
 					r = _doMULTICAST_LIKE(RR, tPtr, peer);
 					break;
 				case Packet::VERB_NETWORK_CREDENTIALS:
-					r = _doNETWORK_CREDENTIALS(RR, tPtr, peer);
+					r = _slowOrInline(RR, tPtr, peer);
 					break;
 				case Packet::VERB_NETWORK_CONFIG_REQUEST:
 					r = _doNETWORK_CONFIG_REQUEST(RR, tPtr, peer);
 					break;
 				case Packet::VERB_NETWORK_CONFIG:
-					r = _doNETWORK_CONFIG(RR, tPtr, peer);
+					r = _slowOrInline(RR, tPtr, peer);
 					break;
 				case Packet::VERB_MULTICAST_GATHER:
 					r = _doMULTICAST_GATHER(RR, tPtr, peer);
