@@ -1082,6 +1082,62 @@ uint64_t Network::handleConfigChunk(void* tPtr, const uint64_t packetId, const A
 	const void* chunkData = chunk.field(ptr, chunkLen);
 	ptr += chunkLen;
 
+	// verify the signature of a signed chunk BEFORE taking _lock (same checks and offsets as below). A duplicate chunk is still
+	// dropped without verifying; everything that fails or throws here falls through to the original locked path. The locked path only skips its own
+	// verification if it is looking at exactly the signature offset and pointer that were verified here.
+	bool preVerified = false;
+	unsigned int pvSigOff = 0;
+	const uint8_t* pvSigPtr = (const uint8_t*)0;
+	if ((ptr < chunk.size())) {
+		try {
+			unsigned int q = ptr + 1;   // flags byte
+			const uint64_t pvUpdateId = chunk.at<uint64_t>(q);
+			q += 8;
+			const unsigned long pvTotal = chunk.at<uint32_t>(q);
+			q += 4;
+			const unsigned long pvIndex = chunk.at<uint32_t>(q);
+			q += 4;
+			if (((pvIndex + chunkLen) <= pvTotal) && (pvTotal < ZT_NETWORKCONFIG_DICT_CAPACITY) && (chunk[q] == 1) && (chunk.at<uint16_t>(q + 1) == ZT_ECC_SIGNATURE_LEN)) {
+				const uint8_t* pvSig = reinterpret_cast<const uint8_t*>(chunk.field(q + 3, ZT_ECC_SIGNATURE_LEN));
+				uint64_t pvChunkId = 0;
+				for (unsigned int i = 0; i < 16; ++i) {
+					reinterpret_cast<uint8_t*>(&pvChunkId)[i & 7] ^= pvSig[i];
+				}
+				bool pvDuplicate = false;
+				{
+					Mutex::Lock _l(_lock);
+					for (int i = 0; i < ZT_NETWORK_MAX_INCOMING_UPDATES; ++i) {
+						if (_incomingConfigChunks[i].updateId == pvUpdateId) {
+							for (unsigned long j = 0; j < _incomingConfigChunks[i].haveChunks; ++j) {
+								if (_incomingConfigChunks[i].haveChunkIds[j] == pvChunkId) {
+									pvDuplicate = true;
+									break;
+								}
+							}
+							break;
+						}
+					}
+				}
+				if (pvDuplicate) {
+					return 0;
+				}
+				const Identity pvControllerId(RR->topology->getIdentity(tPtr, controller()));
+				if (! pvControllerId) {
+					return 0;
+				}
+				if (! pvControllerId.verify(chunk.field(start, q - start), q - start, pvSig, ZT_ECC_SIGNATURE_LEN)) {
+					return 0;
+				}
+				preVerified = true;
+				pvSigOff = q;
+				pvSigPtr = pvSig;
+			}
+		}
+		catch (...) {
+			preVerified = false;
+		}
+	}
+
 	NetworkConfig* nc = (NetworkConfig*)0;
 	uint64_t configUpdateId;
 	{
@@ -1130,13 +1186,15 @@ uint64_t Network::handleConfigChunk(void* tPtr, const uint64_t packetId, const A
 				}
 			}
 
-			// If it's not a duplicate, check chunk signature
-			const Identity controllerId(RR->topology->getIdentity(tPtr, controller()));
-			if (! controllerId) {	// we should always have the controller identity by now, otherwise how would we have queried it the first time?
-				return 0;
-			}
-			if (! controllerId.verify(chunk.field(start, ptr - start), ptr - start, sig, ZT_ECC_SIGNATURE_LEN)) {
-				return 0;
+			// If it's not a duplicate, check chunk signature (already done above, outside _lock, for exactly this offset and signature when preVerified)
+			if (! (preVerified && (ptr == pvSigOff) && (sig == pvSigPtr))) {
+				const Identity controllerId(RR->topology->getIdentity(tPtr, controller()));
+				if (! controllerId) {	// we should always have the controller identity by now, otherwise how would we have queried it the first time?
+					return 0;
+				}
+				if (! controllerId.verify(chunk.field(start, ptr - start), ptr - start, sig, ZT_ECC_SIGNATURE_LEN)) {
+					return 0;
+				}
 			}
 
 			// New properly verified chunks can be flooded "virally" through the network
@@ -1588,8 +1646,9 @@ Membership::AddCredentialResult Network::addCredential(void* tPtr, const Certifi
 	if (com.networkId() != _id) {
 		return Membership::ADD_REJECTED;
 	}
+	const int pre = _preVerifyOutsideLock(tPtr, com);
 	Mutex::Lock _l(_lock);
-	return _membership(com.issuedTo()).addCredential(RR, tPtr, _config, com);
+	return _membership(com.issuedTo()).addCredential(RR, tPtr, _config, com, pre);
 }
 
 Membership::AddCredentialResult Network::addCredential(void* tPtr, const Address& sentFrom, const Revocation& rev)

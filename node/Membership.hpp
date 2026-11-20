@@ -134,27 +134,37 @@ class Membership {
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const CertificateOfMembership& com);
+	AddCredentialResult addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const CertificateOfMembership& com, int pre = -2);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const Tag& tag);
+	AddCredentialResult addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const Tag& tag, int pre = -2);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const Capability& cap);
+	AddCredentialResult addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const Capability& cap, int pre = -2);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
-	AddCredentialResult addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const CertificateOfOwnership& coo);
+	AddCredentialResult addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const CertificateOfOwnership& coo, int pre = -2);
 
 	/**
 	 * Validate and add a credential if signature is okay and it's otherwise good
 	 */
 	AddCredentialResult addCredential(const RuntimeEnvironment* RR, void* tPtr, const NetworkConfig& nconf, const Revocation& rev);
+
+	/**
+	 * true if addCredential() would have to run a signature verification for this credential, i.e. it passes the cheap
+	 * checks that precede verify() (not revoked, not older, not identical to what we hold). Caller holds Network::_lock.
+	 * The 'pre' argument of addCredential() carries the result of a verify() done earlier outside the lock: 0 valid, -1 invalid, anything else = not done.
+	 */
+	bool needsVerify(const CertificateOfMembership& com) const;
+	bool needsVerify(const Tag& tag);
+	bool needsVerify(const Capability& cap);
+	bool needsVerify(const CertificateOfOwnership& coo);
 
 	/**
 	 * Clean internal databases of stale entries
